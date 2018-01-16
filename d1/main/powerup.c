@@ -186,7 +186,7 @@ int pick_up_vulcan_ammo(void)
 	int	used=0;
 
 //added/killed on 1/21/99 by Victor Rachels ... how is this wrong?
-//-killed-        int     pwsave = Primary_weapon;                // Ugh, save selected primary weapon around the picking up of the ammo.  I apologize for this code.  Matthew A. Toschlog
+//-killed-        int     pwsave = Players[Player_num].primary_weapon;                // Ugh, save selected primary weapon around the picking up of the ammo.  I apologize for this code.  Matthew A. Toschlog
 	if (pick_up_ammo(CLASS_PRIMARY, VULCAN_INDEX, VULCAN_AMMO_AMOUNT)) {
 		powerup_basic(7, 14, 21, VULCAN_AMMO_SCORE, "%s!", TXT_VULCAN_AMMO);
 		used = 1;
@@ -194,7 +194,7 @@ int pick_up_vulcan_ammo(void)
 		HUD_init_message(HM_DEFAULT|HM_REDUNDANT|HM_MAYDUPL, "%s %d %s!",TXT_ALREADY_HAVE,f2i(VULCAN_AMMO_SCALE * Primary_ammo_max[VULCAN_INDEX]),TXT_VULCAN_ROUNDS);
 		used = 0;
 	}
-//-killed-        Primary_weapon = pwsave;
+//-killed-        Players[Player_num].primary_weapon = pwsave;
 //end this section kill - VR
 
 	return used;

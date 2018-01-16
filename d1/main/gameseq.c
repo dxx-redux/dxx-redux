@@ -367,8 +367,8 @@ void init_player_stats_new_ship(ubyte pnum)
 			newdemo_record_player_weapon(1, 0);
 		}
 		Global_laser_firing_count=0;
-		Primary_weapon = 0;
-		Secondary_weapon = 0;
+		Players[Player_num].primary_weapon = 0;
+		Players[Player_num].secondary_weapon = 0;
 		dead_player_end(); //player no longer dead
 		Player_is_dead = 0;
 		Player_exploded = 0;

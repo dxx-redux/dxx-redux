@@ -87,6 +87,8 @@ typedef struct player {
 	ubyte		secondary_weapon_flags;					//	bit set indicates the player has this weapon.
 	ushort  primary_ammo[MAX_PRIMARY_WEAPONS]; // How much ammo of each type.
 	ushort  secondary_ammo[MAX_SECONDARY_WEAPONS]; // How much ammo of each type.
+	sbyte	primary_weapon;			// The currently selected primary weapon.
+	sbyte	secondary_weapon;		// The currently selected secondary weapon.
 
 	//  -- make sure you're 4 byte aligned now
 

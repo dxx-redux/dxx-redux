@@ -1035,7 +1035,7 @@ void hud_show_weapons_mode(int type,int vertical,int x,int y){
 	}
 	if (type==0){
 		for (i=4;i>=0;i--){
-			if (Primary_weapon==i)
+			if (Players[Player_num].primary_weapon==i)
 				gr_set_fontcolor(BM_XRGB(20,0,0),-1);
 			else{
 				if (player_has_weapon(i,0) & HAS_WEAPON_FLAG)
@@ -1072,7 +1072,7 @@ void hud_show_weapons_mode(int type,int vertical,int x,int y){
 		}
 	} else {
 		for (i=4;i>=0;i--){
-			if (Secondary_weapon==i)
+			if (Players[Player_num].secondary_weapon==i)
 				gr_set_fontcolor(BM_XRGB(20,0,0),-1);
 			else{
 				if (Players[Player_num].secondary_ammo[i]>0)
@@ -1129,7 +1129,7 @@ void hud_show_weapons(void)
 		char    weapon_str[32];
 		int	w, h, aw;
 
-		switch (Primary_weapon) {
+		switch (Players[Player_num].primary_weapon) {
 			case 0:
 				if (Players[Player_num].flags & PLAYER_FLAGS_QUAD_LASERS)
 					sprintf(weapon_str, "%s %s %i", TXT_QUAD, TXT_LASER, Players[Player_num].laser_level+1);
@@ -1138,7 +1138,7 @@ void hud_show_weapons(void)
 				disp_primary_weapon_name = weapon_str;
 				break;
 			case 1:
-				sprintf(weapon_str, "%s: %i", TXT_W_VULCAN_S, f2i(Players[Player_num].primary_ammo[Primary_weapon] * VULCAN_AMMO_SCALE));
+				sprintf(weapon_str, "%s: %i", TXT_W_VULCAN_S, f2i(Players[Player_num].primary_ammo[Players[Player_num].primary_weapon] * VULCAN_AMMO_SCALE));
 				disp_primary_weapon_name = weapon_str;
 				break;
 			case 2:
@@ -1159,19 +1159,19 @@ void hud_show_weapons(void)
 		gr_get_string_size(disp_primary_weapon_name, &w, &h, &aw );
 		gr_string(grd_curcanv->cv_bitmap.bm_w-w-FSPACX(1), y-(LINE_SPACING*2), disp_primary_weapon_name);//originally y-8
 
-		snprintf(weapon_str, sizeof(weapon_str), "%s %d",SECONDARY_WEAPON_NAMES_VERY_SHORT(Secondary_weapon),Players[Player_num].secondary_ammo[Secondary_weapon]);
+		snprintf(weapon_str, sizeof(weapon_str), "%s %d",SECONDARY_WEAPON_NAMES_VERY_SHORT(Players[Player_num].secondary_weapon),Players[Player_num].secondary_ammo[Players[Player_num].secondary_weapon]);
 		gr_get_string_size(weapon_str, &w, &h, &aw );
 		gr_string(grd_curcanv->cv_bitmap.bm_w-w-FSPACX(1), y-LINE_SPACING, weapon_str);
 
 		show_bomb_count(grd_curcanv->cv_bitmap.bm_w-FSPACX(1), y-(LINE_SPACING*3),-1,1, 1);
 	}
 
-	if (Primary_weapon == VULCAN_INDEX)
+	if (Players[Player_num].primary_weapon == VULCAN_INDEX)
 		if (Newdemo_state == ND_STATE_RECORDING)
-			newdemo_record_primary_ammo(Players[Player_num].primary_ammo[Primary_weapon]);
+			newdemo_record_primary_ammo(Players[Player_num].primary_ammo[Players[Player_num].primary_weapon]);
 
 	if (Newdemo_state == ND_STATE_RECORDING)
-		newdemo_record_secondary_ammo(Players[Player_num].secondary_ammo[Secondary_weapon]);
+		newdemo_record_secondary_ammo(Players[Player_num].secondary_ammo[Players[Player_num].secondary_weapon]);
 }
 
 void hud_show_cloak_invuln(void)
@@ -1854,28 +1854,28 @@ void draw_weapon_box(int weapon_type,int weapon_num)
 
 void draw_weapon_boxes()
 {
-	draw_weapon_box(0,Primary_weapon);
+	draw_weapon_box(0,Players[Player_num].primary_weapon);
 
 	if (weapon_box_states[0] == WS_SET)
-		if (Primary_weapon == VULCAN_INDEX)
+		if (Players[Player_num].primary_weapon == VULCAN_INDEX)
 		{
 			if (Newdemo_state == ND_STATE_RECORDING)
-				newdemo_record_primary_ammo(Players[Player_num].primary_ammo[Primary_weapon]);
-			draw_primary_ammo_info(f2i(VULCAN_AMMO_SCALE * Players[Player_num].primary_ammo[Primary_weapon]));
+				newdemo_record_primary_ammo(Players[Player_num].primary_ammo[Players[Player_num].primary_weapon]);
+			draw_primary_ammo_info(f2i(VULCAN_AMMO_SCALE * Players[Player_num].primary_ammo[Players[Player_num].primary_weapon]));
 		}
 
-	draw_weapon_box(1,Secondary_weapon);
+	draw_weapon_box(1,Players[Player_num].secondary_weapon);
 
 	if (weapon_box_states[1] == WS_SET)
 		if (Newdemo_state == ND_STATE_RECORDING)
-			newdemo_record_secondary_ammo(Players[Player_num].secondary_ammo[Secondary_weapon]);
+			newdemo_record_secondary_ammo(Players[Player_num].secondary_ammo[Players[Player_num].secondary_weapon]);
 
-	draw_secondary_ammo_info(Players[Player_num].secondary_ammo[Secondary_weapon]);
+	draw_secondary_ammo_info(Players[Player_num].secondary_ammo[Players[Player_num].secondary_weapon]);
 
 	if(PlayerCfg.HudMode!=0)
 	{
-		draw_primary_ammo_info(f2i(VULCAN_AMMO_SCALE * Players[Player_num].primary_ammo[Primary_weapon]));
-		draw_secondary_ammo_info(Players[Player_num].secondary_ammo[Secondary_weapon]);
+		draw_primary_ammo_info(f2i(VULCAN_AMMO_SCALE * Players[Player_num].primary_ammo[Players[Player_num].primary_weapon]));
+		draw_secondary_ammo_info(Players[Player_num].secondary_ammo[Players[Player_num].secondary_weapon]);
 	}
 }
 
@@ -2042,16 +2042,16 @@ void show_reticle(int reticle_type, int secondary_display)
 	laser_ready = allowed_to_fire_laser();
 	missile_ready = allowed_to_fire_missile();
 
-	laser_ammo = player_has_weapon(Primary_weapon,0);
-	missile_ammo = player_has_weapon(Secondary_weapon,1);
+	laser_ammo = player_has_weapon(Players[Player_num].primary_weapon,0);
+	missile_ammo = player_has_weapon(Players[Player_num].secondary_weapon,1);
 
 	primary_bm_num = (laser_ready && laser_ammo==HAS_ALL);
 	secondary_bm_num = (missile_ready && missile_ammo==HAS_ALL);
 
-	if (primary_bm_num && Primary_weapon==LASER_INDEX && (Players[Player_num].flags & PLAYER_FLAGS_QUAD_LASERS))
+	if (primary_bm_num && Players[Player_num].primary_weapon==LASER_INDEX && (Players[Player_num].flags & PLAYER_FLAGS_QUAD_LASERS))
 		primary_bm_num++;
 
-	if (Secondary_weapon!=CONCUSSION_INDEX && Secondary_weapon!=HOMING_INDEX)
+	if (Players[Player_num].secondary_weapon!=CONCUSSION_INDEX && Players[Player_num].secondary_weapon!=HOMING_INDEX)
 		secondary_bm_num += 3;
 	else if (secondary_bm_num && !(Missile_gun&1))
 			secondary_bm_num++;
