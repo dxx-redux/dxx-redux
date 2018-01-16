@@ -68,7 +68,7 @@ void net_udp_flush();
 void net_udp_update_netgame(void);
 void net_udp_send_objects(void);
 void net_udp_send_rejoin_sync(int player_num);
-void net_udp_send_game_info(struct _sockaddr sender_addr, ubyte info_upid);
+void net_udp_send_game_info(struct _sockaddr sender_addr, ubyte info_upid, ubyte send_to_observers);
 void net_udp_send_netgame_update();
 void net_udp_do_refuse_stuff (UDP_sequence_packet *their);
 void net_udp_read_sync_packet( ubyte * data, int data_len, struct _sockaddr sender_addr );
@@ -2419,7 +2419,7 @@ void net_udp_send_rejoin_sync(int player_num)
 	Netgame.level_time = Players[Player_num].time_level;
 	Netgame.monitor_vector = net_udp_create_monitor_vector();
 
-	net_udp_send_game_info(UDP_sync_player.player.protocol.udp.addr, UPID_SYNC);
+	net_udp_send_game_info(UDP_sync_player.player.protocol.udp.addr, UPID_SYNC, 1);
 	net_udp_send_door_updates();
 
 	return;
@@ -2447,7 +2447,7 @@ void net_udp_resend_sync_due_to_packet_loss()
 	Netgame.level_time = Players[Player_num].time_level;
 	Netgame.monitor_vector = net_udp_create_monitor_vector();
 
-	net_udp_send_game_info(UDP_sync_player.player.protocol.udp.addr, UPID_SYNC);
+	net_udp_send_game_info(UDP_sync_player.player.protocol.udp.addr, UPID_SYNC, 0);
 }
 
 char * net_udp_get_player_name( int objnum )
@@ -2750,7 +2750,7 @@ int net_udp_check_game_info_request(ubyte *data, int lite)
 
 extern fix ThisLevelTime;
 
-void net_udp_send_game_info(struct _sockaddr sender_addr, ubyte info_upid)
+void net_udp_send_game_info(struct _sockaddr sender_addr, ubyte info_upid, ubyte send_to_observers)
 {
 	//static fix64 last_full_req_time = 0;
 	//if (timer_query() < last_full_req_time+(F1_0/5)) // answer 5 times per second max
@@ -2924,15 +2924,19 @@ void net_udp_send_game_info(struct _sockaddr sender_addr, ubyte info_upid)
 			PUT_INTEL_INT(buf + len, netgame_token); len += 4; 
 		}
 
-		dxx_sendto (UDP_Socket[0], buf, len, 0, (struct sockaddr *)&sender_addr, sizeof(struct _sockaddr));
+		if (send_to_observers != 2)
+			dxx_sendto (UDP_Socket[0], buf, len, 0, (struct sockaddr *)&sender_addr, sizeof(struct _sockaddr));
+
+		if (send_to_observers != 0)
+			forward_to_observers(buf, len);
 	}
 }
 
 static void net_udp_broadcast_game_info(ubyte info_upid)
 {
-	net_udp_send_game_info(GBcast, info_upid);
+	net_udp_send_game_info(GBcast, info_upid, 0);
 #ifdef IPv6
-	net_udp_send_game_info(GMcast_v6, info_upid);
+	net_udp_send_game_info(GMcast_v6, info_upid, 0);
 #endif
 }
 
@@ -2945,7 +2949,7 @@ void net_udp_send_netgame_update()
 	{
 		if (Players[i].connected == CONNECT_DISCONNECTED)
 			continue;
-		net_udp_send_game_info(Netgame.players[i].protocol.udp.addr, UPID_GAME_INFO);
+		net_udp_send_game_info(Netgame.players[i].protocol.udp.addr, UPID_GAME_INFO, 0);
 	}
 	net_udp_broadcast_game_info(UPID_GAME_INFO_LITE);
 }
@@ -3263,7 +3267,7 @@ void net_udp_process_packet(ubyte *data, struct _sockaddr sender_addr, int lengt
 			if (result == -1)
 				net_udp_send_version_deny(sender_addr);
 			else if (result == 1)
-				net_udp_send_game_info(sender_addr, UPID_GAME_INFO);
+				net_udp_send_game_info(sender_addr, UPID_GAME_INFO, 0);
 			break;
 		
 		case UPID_GAME_INFO:
@@ -3272,7 +3276,7 @@ void net_udp_process_packet(ubyte *data, struct _sockaddr sender_addr, int lengt
 
 		case UPID_GAME_INFO_LITE_REQ:		
 			if (net_udp_check_game_info_request(data, 1) == 1)
-				net_udp_send_game_info(sender_addr, UPID_GAME_INFO_LITE);
+				net_udp_send_game_info(sender_addr, UPID_GAME_INFO_LITE, 0);
 			break;
 		
 		case UPID_GAME_INFO_LITE:
@@ -4405,7 +4409,7 @@ int net_udp_send_sync(void)
 			if (Players[i].connected == CONNECT_DISCONNECTED)
 				continue;
 			net_udp_dump_player(Netgame.players[i].protocol.udp.addr, player_tokens[i], DUMP_ABORTED);
-			net_udp_send_game_info(Netgame.players[i].protocol.udp.addr, UPID_GAME_INFO);
+			net_udp_send_game_info(Netgame.players[i].protocol.udp.addr, UPID_GAME_INFO, 0);
 		}
 		net_udp_broadcast_game_info(UPID_GAME_INFO_LITE);
 		return -1;
@@ -4444,12 +4448,15 @@ int net_udp_send_sync(void)
 	Netgame.game_status = NETSTAT_PLAYING;
 	Netgame.segments_checksum = my_segments_checksum;
 
+	if (multi_i_am_master())
+		net_udp_send_game_info(Netgame.players[0].protocol.udp.addr, UPID_SYNC, 2);
+
 	for (i=0; i<N_players; i++ )
 	{
 		if ((!Players[i].connected) || (i == Player_num))
 			continue;
 
-		net_udp_send_game_info(Netgame.players[i].protocol.udp.addr, UPID_SYNC);
+		net_udp_send_game_info(Netgame.players[i].protocol.udp.addr, UPID_SYNC, 0);
 		connection_statuses[i].type = DIRECT; 
 	}
 
@@ -4600,7 +4607,7 @@ abort:
 			if (Players[i].connected == CONNECT_DISCONNECTED)
 				continue;
 			net_udp_dump_player(Netgame.players[i].protocol.udp.addr, player_tokens[i], DUMP_ABORTED);
-			net_udp_send_game_info(Netgame.players[i].protocol.udp.addr, UPID_GAME_INFO);
+			net_udp_send_game_info(Netgame.players[i].protocol.udp.addr, UPID_GAME_INFO, 0);
 		}
 		net_udp_broadcast_game_info(UPID_GAME_INFO_LITE);
 		Netgame.numplayers = save_nplayers;
@@ -4946,7 +4953,7 @@ void net_udp_leave_game()
 		{
 			if (Players[i].connected == CONNECT_DISCONNECTED)
 				continue;
-			net_udp_send_game_info(Netgame.players[i].protocol.udp.addr, UPID_GAME_INFO);
+			net_udp_send_game_info(Netgame.players[i].protocol.udp.addr, UPID_GAME_INFO, 0);
 		}
 		net_udp_broadcast_game_info(UPID_GAME_INFO_LITE);
 		N_players=nsave;
