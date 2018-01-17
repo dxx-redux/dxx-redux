@@ -97,6 +97,7 @@ object Objects[MAX_OBJECTS];
 int num_objects=0;
 int Highest_object_index=0;
 int Highest_ever_object_index=0;
+fix64 next_refuel_update = 0;
 
 // grs_bitmap *robot_bms[MAX_ROBOT_BITMAPS];	//all bitmaps for all robots
 
@@ -1744,6 +1745,14 @@ void object_move_one( object * obj )
 		fuel=fuelcen_give_fuel( &Segments[obj->segnum], i2f(100)-Players[Player_num].energy );
 		if (fuel > 0 )	{
 			Players[Player_num].energy += fuel;
+
+			// We want to send the ship status to observers, but we don't want to be spammy.  Only send updates at most 6 times per second.
+			if (Game_mode & GM_MULTI)
+				if (GameTime64 > next_refuel_update)
+				{
+					next_refuel_update = GameTime64 + F1_0 / 6;
+					multi_send_ship_status();
+				}
 		}
 	}
 

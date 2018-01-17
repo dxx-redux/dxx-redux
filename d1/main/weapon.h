@@ -152,7 +152,7 @@ extern const ubyte	Secondary_ammo_max[MAX_PRIMARY_WEAPONS];
 //      HAS_WEAPON_FLAG
 //      HAS_ENERGY_FLAG
 //      HAS_AMMO_FLAG
-extern int player_has_weapon(int weapon_num, int secondary_flag);
+extern int player_has_weapon(ubyte pnum, int weapon_num, int secondary_flag);
 
 //called when one of these weapons is picked up
 //when you pick up a secondary, you always get the weapon & ammo for it

@@ -1038,7 +1038,7 @@ void hud_show_weapons_mode(int type,int vertical,int x,int y){
 			if (Players[Player_num].primary_weapon==i)
 				gr_set_fontcolor(BM_XRGB(20,0,0),-1);
 			else{
-				if (player_has_weapon(i,0) & HAS_WEAPON_FLAG)
+				if (player_has_weapon(Player_num, i, 0) & HAS_WEAPON_FLAG)
 					gr_set_fontcolor(BM_XRGB(0,15,0),-1);
 				else
 					gr_set_fontcolor(BM_XRGB(3,3,3),-1);
@@ -2042,8 +2042,8 @@ void show_reticle(int reticle_type, int secondary_display)
 	laser_ready = allowed_to_fire_laser();
 	missile_ready = allowed_to_fire_missile();
 
-	laser_ammo = player_has_weapon(Players[Player_num].primary_weapon,0);
-	missile_ammo = player_has_weapon(Players[Player_num].secondary_weapon,1);
+	laser_ammo = player_has_weapon(Player_num, Players[Player_num].primary_weapon, 0);
+	missile_ammo = player_has_weapon(Player_num, Players[Player_num].secondary_weapon, 1);
 
 	primary_bm_num = (laser_ready && laser_ammo==HAS_ALL);
 	secondary_bm_num = (missile_ready && missile_ammo==HAS_ALL);

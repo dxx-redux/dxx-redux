@@ -890,7 +890,10 @@ void Flare_create(object *obj)
 
 		#ifdef NETWORK
 		if (Game_mode & GM_MULTI)
+		{
 			multi_send_fire(FLARE_ID+MISSILE_ADJUST, 0, 0, 1, -1);
+			multi_send_ship_status();
+		}
 		#endif
 	}
 
