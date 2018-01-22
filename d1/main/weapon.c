@@ -484,9 +484,6 @@ int pick_up_secondary(int weapon_index,int count)
 	if (num_picked_up>1) {
 		PALETTE_FLASH_ADD(15,15,15);
 		HUD_init_message(HM_DEFAULT, "%d %s%s",num_picked_up,SECONDARY_WEAPON_NAMES(weapon_index), TXT_SX);
-
-		if (Game_mode & GM_MULTI)
-			multi_send_ship_status();
 	}
 	else {
 		PALETTE_FLASH_ADD(10,10,10);
@@ -641,9 +638,6 @@ int pick_up_primary_helper(int weapon_index, int is_quads)
 
    if (weapon_index!=LASER_INDEX)
 		HUD_init_message(HM_DEFAULT, "%s!",PRIMARY_WEAPON_NAMES(weapon_index));
-
-	if (Game_mode & GM_MULTI)
-		multi_send_ship_status();
 
 	return 1;
 }

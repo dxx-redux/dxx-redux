@@ -1225,6 +1225,8 @@ void do_laser_firing_player(void)
 
 			auto_select_weapon(0);		//	Make sure the player can fire from this weapon.
 
+			if (Game_mode & GM_MULTI)
+				multi_send_ship_status();
 		} else
 			break;	//	Couldn't fire weapon, so abort.
 	}
@@ -1561,6 +1563,9 @@ void do_missile_firing(int drop_bomb)
 		// don't autoselect if dropping prox and prox not current weapon
 		if (!drop_bomb || Players[Player_num].secondary_weapon == PROXIMITY_INDEX)
 			auto_select_weapon(1);		//select next missile, if this one out of ammo
+		
+		if (Game_mode & GM_MULTI)
+			multi_send_ship_status();
 	}
 }
 
