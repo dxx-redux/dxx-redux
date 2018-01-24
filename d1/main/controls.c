@@ -66,7 +66,7 @@ void read_flying_controls( object * obj )
 	}
 
 	
-	if (obj->mtype.phys_info.flags & PF_WIGGLE) {
+	if (!(Game_mode & GM_OBSERVER) && obj->mtype.phys_info.flags & PF_WIGGLE) {
 		fix swiggle;
 		fix_fastsincos(((fix)GameTime64), &swiggle, NULL);
 		if (FrameTime < F1_0) // Only scale wiggle if getting at least 1 FPS, to avoid causing the opposite problem.
