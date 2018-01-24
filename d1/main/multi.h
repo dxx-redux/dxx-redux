@@ -120,6 +120,7 @@ extern int multi_protocol; // set and determinate used protocol
 	VALUE(MULTI_OBS_UPDATE           , 4 + 8*MAX_OBSERVERS)	\
 	VALUE(MULTI_DAMAGE               , 15)  \
 	VALUE(MULTI_REPAIR               , 11)  \
+	VALUE(MULTI_SHIP_STATUS          , 29)  \
 	AFTER
 for_each_multiplayer_command(enum {, define_multiplayer_command, });
 
@@ -242,6 +243,9 @@ void multi_send_damage(fix damage, fix shields, ubyte killer_type, ubyte killer_
 void multi_do_damage( const ubyte *buf );
 void multi_send_repair(fix repair, fix shields, ubyte sourcetype);
 void multi_do_repair( const ubyte *buf );
+void multi_send_ship_status();
+void multi_do_ship_status( const ubyte *buf );
+
 
 void multi_send_bounty( void );
 void multi_endlevel_score(void);
@@ -278,6 +282,7 @@ void multi_object_rw_to_object(object_rw *obj_rw, object *obj);
 int get_color_for_player(int id, int missile); 
 int get_color_for_team(int team, int missile);
 void multi_send_obs_update(ubyte event, ubyte event_data);
+void multi_send_ship_status_for_frame();
 
 // Exported variables
 
@@ -367,6 +372,11 @@ extern fix64 RefuseTimeLimit;
 extern struct netgame_info Netgame;
 
 extern int multi_received_objects; 
+
+
+extern ubyte Send_ship_status; // Whether we owe observers a ship status packet.
+extern fix64 Next_ship_status_time; // The next time we are allowed to send a ship status.
+
 
 /*
  * The Network Players structure

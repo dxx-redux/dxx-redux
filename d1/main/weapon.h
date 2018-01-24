@@ -127,8 +127,6 @@ extern weapon_info Weapon_info[];
 extern int N_weapon_types;
 extern void do_weapon_select(int weapon_num, int secondary_flag);
 
-extern sbyte Primary_weapon, Secondary_weapon;
-
 extern const ubyte Primary_weapon_to_weapon_info[MAX_PRIMARY_WEAPONS];
 extern const ubyte Secondary_weapon_to_weapon_info[MAX_SECONDARY_WEAPONS];
 //for each primary weapon, what kind of powerup gives weapon
@@ -154,7 +152,7 @@ extern const ubyte	Secondary_ammo_max[MAX_PRIMARY_WEAPONS];
 //      HAS_WEAPON_FLAG
 //      HAS_ENERGY_FLAG
 //      HAS_AMMO_FLAG
-extern int player_has_weapon(int weapon_num, int secondary_flag);
+extern int player_has_weapon(ubyte pnum, int weapon_num, int secondary_flag);
 
 //called when one of these weapons is picked up
 //when you pick up a secondary, you always get the weapon & ammo for it

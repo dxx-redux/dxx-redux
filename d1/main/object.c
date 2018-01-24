@@ -1744,6 +1744,9 @@ void object_move_one( object * obj )
 		fuel=fuelcen_give_fuel( &Segments[obj->segnum], i2f(100)-Players[Player_num].energy );
 		if (fuel > 0 )	{
 			Players[Player_num].energy += fuel;
+
+			if (Game_mode & GM_MULTI)
+				multi_send_ship_status();
 		}
 	}
 

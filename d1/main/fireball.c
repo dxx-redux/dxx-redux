@@ -788,7 +788,7 @@ void maybe_replace_powerup_with_energy(object *del_obj)
 	if (((weapon_index == VULCAN_INDEX) || (del_obj->contains_id == POW_VULCAN_AMMO)) && (Players[Player_num].primary_ammo[VULCAN_INDEX] >= VULCAN_AMMO_MAX))
 		del_obj->contains_count = 0;
 	else if (weapon_index != -1) {
-		if ((player_has_weapon(weapon_index, 0) & HAS_WEAPON_FLAG) || weapon_nearby(del_obj, del_obj->contains_id)) {
+		if ((player_has_weapon(Player_num, weapon_index, 0) & HAS_WEAPON_FLAG) || weapon_nearby(del_obj, del_obj->contains_id)) {
 			if (d_rand() > 16384) {
 				del_obj->contains_count = 1;
 				del_obj->contains_type = OBJ_POWERUP;

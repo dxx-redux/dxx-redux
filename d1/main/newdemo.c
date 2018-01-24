@@ -881,8 +881,8 @@ void newdemo_record_start_demo()
 	nd_write_byte((sbyte)(f2ir(Players[Player_num].shields)));
 	nd_record_v_player_flags = Players[Player_num].flags;
 	nd_write_int(Players[Player_num].flags);        // be sure players flags are set
-	nd_write_byte((sbyte)Primary_weapon);
-	nd_write_byte((sbyte)Secondary_weapon);
+	nd_write_byte((sbyte)Players[Player_num].primary_weapon);
+	nd_write_byte((sbyte)Players[Player_num].secondary_weapon);
 	nd_record_v_start_frame = nd_record_v_frame_number = 0;
 	newdemo_set_new_level(Current_level_num);
 	newdemo_record_oneframeevent_update(1);
@@ -1112,9 +1112,9 @@ void newdemo_record_player_weapon(int weapon_type, int weapon_num)
 	nd_write_byte((sbyte)weapon_type);
 	nd_write_byte((sbyte)weapon_num);
 	if (weapon_type)
-		nd_write_byte((sbyte)Secondary_weapon);
+		nd_write_byte((sbyte)Players[Player_num].secondary_weapon);
 	else
-		nd_write_byte((sbyte)Primary_weapon);
+		nd_write_byte((sbyte)Players[Player_num].primary_weapon);
 	nd_record_v_weapon_type = weapon_type;
 	nd_record_v_weapon_num = weapon_num;
 	start_time();
@@ -1570,12 +1570,12 @@ int newdemo_read_demo_start(enum purpose_type purpose)
 	if (Players[Player_num].flags & PLAYER_FLAGS_INVULNERABLE)
 		Players[Player_num].invulnerable_time = GameTime64 - (INVULNERABLE_TIME_MAX / 2);
 
-	nd_read_byte((sbyte *)&Primary_weapon);
-	nd_read_byte((sbyte *)&Secondary_weapon);
+	nd_read_byte((sbyte *)&Players[Player_num].primary_weapon);
+	nd_read_byte((sbyte *)&Players[Player_num].secondary_weapon);
 	if (purpose == PURPOSE_REWRITE)
 	{
-		nd_write_byte(Primary_weapon);
-		nd_write_byte(Secondary_weapon);
+		nd_write_byte(Players[Player_num].primary_weapon);
+		nd_write_byte(Players[Player_num].secondary_weapon);
 	}
 
 // Next bit of code to fix problem that I introduced between 1.0 and 1.1
@@ -1594,9 +1594,9 @@ int newdemo_read_demo_start(enum purpose_type purpose)
 			energy = shield;
 			shield = (unsigned char)flags;
 			flags = (flags >> 8) & 0x00ffffff;
-			flags |= (Primary_weapon << 24);
-			Primary_weapon = Secondary_weapon;
-			Secondary_weapon = c;
+			flags |= (Players[Player_num].primary_weapon << 24);
+			Players[Player_num].primary_weapon = Players[Player_num].secondary_weapon;
+			Players[Player_num].secondary_weapon = c;
 		} else
 			PHYSFS_seek(infile, PHYSFS_tell(infile) - 1);
 	}
@@ -2108,9 +2108,9 @@ int newdemo_read_frame_information(int rewrite)
 			}
 
 			if (weapon_type == 0)
-				Primary_weapon = (int)weapon_num;
+				Players[Player_num].primary_weapon = (int)weapon_num;
 			else
-				Secondary_weapon = (int)weapon_num;
+				Players[Player_num].secondary_weapon = (int)weapon_num;
 
 			break;
 		}
@@ -2131,14 +2131,14 @@ int newdemo_read_frame_information(int rewrite)
 			}
 			if ((Newdemo_vcr_state == ND_STATE_PLAYBACK) || (Newdemo_vcr_state == ND_STATE_FASTFORWARD) || (Newdemo_vcr_state == ND_STATE_ONEFRAMEFORWARD)) {
 				if (weapon_type == 0)
-					Primary_weapon = (int)weapon_num;
+					Players[Player_num].primary_weapon = (int)weapon_num;
 				else
-					Secondary_weapon = (int)weapon_num;
+					Players[Player_num].secondary_weapon = (int)weapon_num;
 			} else if ((Newdemo_vcr_state == ND_STATE_REWINDING) || (Newdemo_vcr_state == ND_STATE_ONEFRAMEBACKWARD)) {
 				if (weapon_type == 0)
-					Primary_weapon = (int)old_weapon;
+					Players[Player_num].primary_weapon = (int)old_weapon;
 				else
-					Secondary_weapon = (int)old_weapon;
+					Players[Player_num].secondary_weapon = (int)old_weapon;
 			}
 			break;
 		}
@@ -2481,9 +2481,9 @@ int newdemo_read_frame_information(int rewrite)
 			}
 
 			if ((Newdemo_vcr_state == ND_STATE_REWINDING) || (Newdemo_vcr_state == ND_STATE_ONEFRAMEBACKWARD))
-				Players[Player_num].primary_ammo[Primary_weapon] = old_ammo;
+				Players[Player_num].primary_ammo[Players[Player_num].primary_weapon] = old_ammo;
 			else if ((Newdemo_vcr_state == ND_STATE_PLAYBACK) || (Newdemo_vcr_state == ND_STATE_FASTFORWARD) || (Newdemo_vcr_state == ND_STATE_ONEFRAMEFORWARD))
-				Players[Player_num].primary_ammo[Primary_weapon] = new_ammo;
+				Players[Player_num].primary_ammo[Players[Player_num].primary_weapon] = new_ammo;
 			break;
 		}
 
@@ -2500,9 +2500,9 @@ int newdemo_read_frame_information(int rewrite)
 			}
 
 			if ((Newdemo_vcr_state == ND_STATE_REWINDING) || (Newdemo_vcr_state == ND_STATE_ONEFRAMEBACKWARD))
-				Players[Player_num].secondary_ammo[Secondary_weapon] = old_ammo;
+				Players[Player_num].secondary_ammo[Players[Player_num].secondary_weapon] = old_ammo;
 			else if ((Newdemo_vcr_state == ND_STATE_PLAYBACK) || (Newdemo_vcr_state == ND_STATE_FASTFORWARD) || (Newdemo_vcr_state == ND_STATE_ONEFRAMEFORWARD))
-				Players[Player_num].secondary_ammo[Secondary_weapon] = new_ammo;
+				Players[Player_num].secondary_ammo[Players[Player_num].secondary_weapon] = new_ammo;
 			break;
 		}
 
@@ -2737,8 +2737,8 @@ void newdemo_goto_end(int to_rewrite)
 		}
 		if (Players[Player_num].flags & PLAYER_FLAGS_INVULNERABLE)
 			Players[Player_num].invulnerable_time = GameTime64 - (INVULNERABLE_TIME_MAX / 2);
-		nd_read_byte((sbyte *)&Primary_weapon);
-		nd_read_byte((sbyte *)&Secondary_weapon);
+		nd_read_byte((sbyte *)&Players[Player_num].primary_weapon);
+		nd_read_byte((sbyte *)&Players[Player_num].secondary_weapon);
 		for (i = 0; i < MAX_PRIMARY_WEAPONS; i++)
 			nd_read_short((short *)&(Players[Player_num].primary_ammo[i]));
 		for (i = 0; i < MAX_SECONDARY_WEAPONS; i++)
@@ -3157,8 +3157,8 @@ void newdemo_write_end()
 		nd_write_byte((sbyte)(f2ir(Players[Player_num].energy)));
 		nd_write_byte((sbyte)(f2ir(Players[Player_num].shields)));
 		nd_write_int(Players[Player_num].flags);        // be sure players flags are set
-		nd_write_byte((sbyte)Primary_weapon);
-		nd_write_byte((sbyte)Secondary_weapon);
+		nd_write_byte((sbyte)Players[Player_num].primary_weapon);
+		nd_write_byte((sbyte)Players[Player_num].secondary_weapon);
 		byte_count += 8;
 
 		for (i = 0; i < MAX_PRIMARY_WEAPONS; i++)

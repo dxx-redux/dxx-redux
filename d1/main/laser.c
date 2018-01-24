@@ -890,7 +890,10 @@ void Flare_create(object *obj)
 
 		#ifdef NETWORK
 		if (Game_mode & GM_MULTI)
+		{
 			multi_send_fire(FLARE_ID+MISSILE_ADJUST, 0, 0, 1, -1);
+			multi_send_ship_status();
+		}
 		#endif
 	}
 
@@ -980,8 +983,11 @@ void Laser_do_weapon_sequence(object *obj, int doHomerFrame, fix idealHomerFrame
 
 					dist_to_player = vm_vec_dist_quick(&obj->pos, &Objects[track_goal].pos);
 					if ((dist_to_player < Players[Player_num].homing_object_dist) || (Players[Player_num].homing_object_dist < 0))
+					{
 						Players[Player_num].homing_object_dist = dist_to_player;
-
+						if (Game_mode & GM_MULTI)
+							multi_send_ship_status();
+					}
 				}
 			}
 
@@ -1114,7 +1120,7 @@ void do_laser_firing_player(void)
 	if (Player_is_dead)
 		return;
 
-	weapon_index = Primary_weapon_to_weapon_info[Primary_weapon];
+	weapon_index = Primary_weapon_to_weapon_info[Players[Player_num].primary_weapon];
 	energy_used = Weapon_info[weapon_index].energy_usage;
 
 	if (Difficulty_level < 2)
@@ -1123,7 +1129,7 @@ void do_laser_firing_player(void)
 	ammo_used = Weapon_info[weapon_index].ammo_usage;
 
 	while (Next_laser_fire_time <= GameTime64) {
-		if	((plp->energy >= energy_used) || ((Primary_weapon == VULCAN_INDEX) && (plp->primary_ammo[Primary_weapon] >= ammo_used)) ) {
+		if	((plp->energy >= energy_used) || ((Players[Player_num].primary_weapon == VULCAN_INDEX) && (plp->primary_ammo[Players[Player_num].primary_weapon] >= ammo_used)) ) {
 			int laser_level, flags, fire_frame_overhead = 0;
 
 			if (GameTime64 - Next_laser_fire_time <= FrameTime) // if firing is prolonged by FrameTime overhead, let's try to fix that.
@@ -1140,7 +1146,7 @@ void do_laser_firing_player(void)
 
 			flags = 0;
 
-			if (Primary_weapon == SPREADFIRE_INDEX) {
+			if (Players[Player_num].primary_weapon == SPREADFIRE_INDEX) {
 				if (Spreadfire_toggle)
 					flags |= LASER_SPREADFIRE_TOGGLED;
 				Spreadfire_toggle = !Spreadfire_toggle;
@@ -1150,14 +1156,14 @@ void do_laser_firing_player(void)
 				flags |= LASER_QUAD;
 
 			/* CED sniperpackets */ 
-			rval += do_laser_firing(Players[Player_num].objnum, Primary_weapon, laser_level, flags, nfires, Objects[Players[Player_num].objnum].orient.fvec);
+			rval += do_laser_firing(Players[Player_num].objnum, Players[Player_num].primary_weapon, laser_level, flags, nfires, Objects[Players[Player_num].objnum].orient.fvec);
 
 			int warning_increment = 250/12;
 			int pre_ammo = plp->primary_ammo[VULCAN_INDEX];
 			int post_ammo = plp->primary_ammo[VULCAN_INDEX] - ammo_used; 
 
 			//int bump = 1; 
-			if(Primary_weapon == VULCAN_INDEX && PlayerCfg.VulcanAmmoWarnings) {
+			if(Players[Player_num].primary_weapon == VULCAN_INDEX && PlayerCfg.VulcanAmmoWarnings) {
 				//if(pre_ammo > warning_increment*4 + bump && post_ammo <= warning_increment*4 + bump) {
 				//	digi_play_sample(SOUND_HUD_MESSAGE, F1_0);
 				//}
@@ -1191,7 +1197,7 @@ void do_laser_firing_player(void)
 			pre_ammo = (Players[Player_num].energy)/F1_0; 
 			post_ammo = (Players[Player_num].energy - (energy_used * rval) / Weapon_info[weapon_index].fire_count)/F1_0; 
 			warning_increment = 5; 
-			if(Primary_weapon != VULCAN_INDEX && PlayerCfg.VulcanAmmoWarnings) {
+			if(Players[Player_num].primary_weapon != VULCAN_INDEX && PlayerCfg.VulcanAmmoWarnings) {
 			
 				if(pre_ammo >= warning_increment*4 && post_ammo < warning_increment*4) {
 					HUD_init_message_literal(HM_MULTI, "Energy warning."); 
@@ -1215,13 +1221,15 @@ void do_laser_firing_player(void)
 			if (plp->energy < 0)
 				plp->energy = 0;
 
-				if (ammo_used > plp->primary_ammo[Primary_weapon])
-					plp->primary_ammo[Primary_weapon] = 0;
+				if (ammo_used > plp->primary_ammo[Players[Player_num].primary_weapon])
+					plp->primary_ammo[Players[Player_num].primary_weapon] = 0;
 				else
-					plp->primary_ammo[Primary_weapon] -= ammo_used;
+					plp->primary_ammo[Players[Player_num].primary_weapon] -= ammo_used;
 
 			auto_select_weapon(0);		//	Make sure the player can fire from this weapon.
 
+			if (Game_mode & GM_MULTI)
+				multi_send_ship_status();
 		} else
 			break;	//	Couldn't fire weapon, so abort.
 	}
@@ -1316,7 +1324,7 @@ int do_laser_firing(int objnum, int weapon_num, int level, int flags, int nfires
 
 		default:
 			Int3();	//	Contact Mike: Unknown Primary weapon type, setting to 0.
-			Primary_weapon = 0;
+			Players[Player_num].primary_weapon = 0;
 	}
 
 	// Set values to be recognized during comunication phase, if we are the
@@ -1462,7 +1470,7 @@ int Missile_gun=0, Proximity_dropped = 0;
 void do_missile_firing(int drop_bomb)
 {
 	int bomb = which_bomb();
-	int weapon = (drop_bomb) ? bomb : Secondary_weapon;
+	int weapon = (drop_bomb) ? bomb : Players[Player_num].secondary_weapon;
 	fix fire_frame_overhead = 0;
 
 	Network_laser_track = -1;
@@ -1556,8 +1564,11 @@ void do_missile_firing(int drop_bomb)
 #endif
 
 		// don't autoselect if dropping prox and prox not current weapon
-		if (!drop_bomb || Secondary_weapon == PROXIMITY_INDEX)
+		if (!drop_bomb || Players[Player_num].secondary_weapon == PROXIMITY_INDEX)
 			auto_select_weapon(1);		//select next missile, if this one out of ammo
+		
+		if (Game_mode & GM_MULTI)
+			multi_send_ship_status();
 	}
 }
 

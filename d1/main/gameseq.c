@@ -283,6 +283,8 @@ void init_player_stats_game(ubyte pnum)
 
 	init_player_stats_new_ship(pnum);
 
+	if (pnum == Player_num && Game_mode & GM_MULTI)
+		multi_send_ship_status();
 }
 
 void init_ammo_and_energy(void)
@@ -351,6 +353,9 @@ void init_player_stats_level(int secret_flag)
 	Next_flare_fire_time = Last_laser_fired_time = Next_laser_fire_time = Next_missile_fire_time = GameTime64;
 
 	init_gauges();
+
+	if (Game_mode & GM_MULTI)
+		multi_send_ship_status();
 }
 
 // Setup player for a brand-new ship
@@ -367,8 +372,8 @@ void init_player_stats_new_ship(ubyte pnum)
 			newdemo_record_player_weapon(1, 0);
 		}
 		Global_laser_firing_count=0;
-		Primary_weapon = 0;
-		Secondary_weapon = 0;
+		Players[Player_num].primary_weapon = 0;
+		Players[Player_num].secondary_weapon = 0;
 		dead_player_end(); //player no longer dead
 		Player_is_dead = 0;
 		Player_exploded = 0;
@@ -404,6 +409,9 @@ void init_player_stats_new_ship(ubyte pnum)
 	RespawningConcussions[pnum] = 0; 
 
 	digi_kill_sound_linked_to_object(Players[pnum].objnum);
+	
+	if (pnum == Player_num && Game_mode & GM_MULTI)
+		multi_send_ship_status();
 }
 
 #ifdef EDITOR
