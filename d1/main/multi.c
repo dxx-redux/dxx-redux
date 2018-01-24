@@ -461,10 +461,6 @@ multi_new_game(void)
 			reset_obs();
 		}
 
-		Players[i].net_killed_total = 0;
-		Players[i].net_kills_total = 0;
-		Players[i].flags = 0;
-		Players[i].KillGoalCount=0;
 		multi_sending_message[i] = 0;
 	}
 
@@ -3976,6 +3972,16 @@ int multi_maybe_disable_friendly_fire(object *killer)
 	return 0; // all other cases -> harm me!
 }
 
+void multi_do_request_status()
+{
+	if (Game_mode & GM_OBSERVER) { return; }
+
+	if (Netgame.max_numobservers == 0) { return; }
+
+	multi_send_repair(0, Player[Player_num]->shields, 0);
+	multi_send_ship_status();
+}
+
 void multi_send_damage(fix damage, fix shields, ubyte killer_type, ubyte killer_id, ubyte damage_type, object* source)
 {
 	if (Game_mode & GM_OBSERVER) { return; }
@@ -4045,7 +4051,7 @@ void multi_send_repair(fix repair, fix shields, ubyte sourcetype)
 {
 	if (Game_mode & GM_OBSERVER) { return; }
 
-	// Sending damage to the host isn't interesting if there cannot be any observers.
+	// Sending repairs to the host isn't interesting if there cannot be any observers.
 	if (Netgame.max_numobservers == 0) { return; }
 
 	// Calculate new shields amount.
@@ -4191,6 +4197,11 @@ void multi_send_obs_update(ubyte event, ubyte event_data) {
 	}
 
 	multi_send_data( multibuf, 4 + 8*MAX_OBSERVERS, 2 );
+
+	if (!(Game_mode & GM_OBSERVER))
+	{
+		multi_do_request_status();
+	}
 }
 
 void multi_do_obs_update(const ubyte *buf) {
@@ -4209,6 +4220,11 @@ void multi_do_obs_update(const ubyte *buf) {
 		char who_joined[9];
 		strncpy(who_joined, (char*) &buf[4 + buf[2]*8], 8); 
 		HUD_init_message(HM_MULTI, "%s is now observing.", who_joined);
+
+		if (!(Game_mode & GM_OBSERVER))
+		{
+			multi_do_request_status();
+		}
 	}
 }
 
