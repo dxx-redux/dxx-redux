@@ -305,7 +305,7 @@ int kmatrix_handler(window *wind, d_event *event, kmatrix_screen *km)
 
 			// Check if all connected players are also looking at this screen ...
 			for (i = 0; i < MAX_PLAYERS; i++)
-				if (Netgame.numobservers == 0 || i != OBSERVER_PLAYER_ID)
+				if (Netgame.max_numobservers == 0 || i != OBSERVER_PLAYER_ID)
 					if (Players[i].connected)
 						if (Players[i].connected != CONNECT_END_MENU && Players[i].connected != CONNECT_DIED_IN_MINE)
 							km->playing = 1;
@@ -323,6 +323,8 @@ int kmatrix_handler(window *wind, d_event *event, kmatrix_screen *km)
 			{
 				if (km->network)
 					multi_send_endlevel_packet();  // make sure
+				
+				Netgame.numobservers = 0;
 				
 				window_close(wind);
 				break;
