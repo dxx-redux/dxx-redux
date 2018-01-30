@@ -305,9 +305,10 @@ int kmatrix_handler(window *wind, d_event *event, kmatrix_screen *km)
 
 			// Check if all connected players are also looking at this screen ...
 			for (i = 0; i < MAX_PLAYERS; i++)
-				if (Players[i].connected)
-					if (Players[i].connected != CONNECT_END_MENU && Players[i].connected != CONNECT_DIED_IN_MINE)
-						km->playing = 1;
+				if (Netgame.max_numobservers == 0 || i != OBSERVER_PLAYER_ID)
+					if (Players[i].connected)
+						if (Players[i].connected != CONNECT_END_MENU && Players[i].connected != CONNECT_DIED_IN_MINE)
+							km->playing = 1;
 			
 			// ... and let the reactor blow sky high!
 			if (!km->playing)
@@ -322,6 +323,8 @@ int kmatrix_handler(window *wind, d_event *event, kmatrix_screen *km)
 			{
 				if (km->network)
 					multi_send_endlevel_packet();  // make sure
+				
+				Netgame.numobservers = 0;
 				
 				window_close(wind);
 				break;

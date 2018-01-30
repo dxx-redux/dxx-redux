@@ -1869,8 +1869,18 @@ void multi_do_controlcen_destroy(const ubyte *buf)
 	}
 }
 
-void
-multi_do_escape(const ubyte *buf)
+void multi_obs_check_all_escaped()
+{
+	for (int i = 0; i < MAX_PLAYERS; i++)
+	{
+		if (Players[i].connected == CONNECT_PLAYING)
+			return;
+	}
+
+	PlayerFinishedLevel(0);
+}
+
+void multi_do_escape(const ubyte *buf)
 {
 	int objnum;
 
@@ -1911,6 +1921,10 @@ multi_do_escape(const ubyte *buf)
 
 	create_player_appearance_effect(&Objects[objnum]);
 	multi_make_player_ghost(buf[1]);
+
+	if (Game_mode & GM_OBSERVER) {
+		multi_obs_check_all_escaped();
+	}
 }
 
 #define MAX_PACKETS 200 // Memory's cheap ;)
@@ -2092,11 +2106,15 @@ void multi_disconnect_player(int pnum)
 		return;
 	}
 
-	for (i = 0; i < N_players; i++)
-		if (Players[i].connected) n++;
-	if (n == 1)
-	{
-		HUD_init_message_literal(HM_MULTI, "You are the only person remaining in this netgame");
+	if (Game_mode & GM_OBSERVER) {
+		multi_obs_check_all_escaped();
+	} else {
+		for (i = 0; i < N_players; i++)
+			if (Players[i].connected) n++;
+		if (n == 1)
+		{
+			HUD_init_message_literal(HM_MULTI, "You are the only person remaining in this netgame");
+		}
 	}
 }
 
@@ -2139,6 +2157,19 @@ multi_do_decloak(const ubyte *buf)
 	if (Newdemo_state == ND_STATE_RECORDING)
 		newdemo_record_multi_decloak(pnum);
 
+}
+
+void
+multi_do_invuln(const ubyte *buf)
+{
+	int pnum;
+
+	pnum = buf[1];
+
+	Assert(pnum < N_players);
+
+	Players[pnum].flags |= PLAYER_FLAGS_INVULNERABLE;
+	Players[pnum].invulnerable_time = GameTime64;
 }
 
 void
@@ -2627,6 +2658,10 @@ multi_send_endlevel_start(int secret)
 				Error("Protocol handling missing in multi_send_endlevel_start\n");
 				break;
 		}
+
+		if (Game_mode & GM_OBSERVER) {
+			multi_obs_check_all_escaped();
+		}
 	}
 }
 
@@ -3071,6 +3106,21 @@ multi_send_decloak(void)
 	if(Game_mode & GM_OBSERVER) { return; }
 
 	multibuf[0] = MULTI_DECLOAK;
+	multibuf[1] = (char)Player_num;
+
+	if(Netgame.RetroProtocol) {
+		multi_send_data(multibuf, 2, 1);
+	}
+	multi_send_data(multibuf, 2, 2);
+}
+
+void
+multi_send_invuln(void)
+{
+	// Broadcast a change in our pflags (made to support invuln)
+	if(Game_mode & GM_OBSERVER || Netgame.max_numobservers == 0) { return; }
+
+	multibuf[0] = MULTI_INVULN;
 	multibuf[1] = (char)Player_num;
 
 	if(Netgame.RetroProtocol) {
@@ -4550,6 +4600,8 @@ multi_process_data(const ubyte *buf, int len)
 			if (!Endlevel_sequence) multi_do_cloak(buf); break;
 		case MULTI_DECLOAK:
 			if (!Endlevel_sequence) multi_do_decloak(buf); break;
+		case MULTI_INVULN:
+			if (!Endlevel_sequence) multi_do_invuln(buf); break;
 		case MULTI_DOOR_OPEN:
 			if (!Endlevel_sequence) multi_do_door_open(buf); break;
 		case MULTI_CREATE_EXPLOSION:
