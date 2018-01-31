@@ -1010,6 +1010,8 @@ void DoPlayerDead()
 	}
 #endif
 
+	reset_auto_select();
+
 	if (Game_wind && cycle_window_vis)
 		window_set_visible(Game_wind, 0);
 

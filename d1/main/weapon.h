@@ -174,6 +174,8 @@ int pick_up_ammo(int class_flag,int weapon_index,int ammo_count);
 extern void maybe_select_primary(int weapon_index);
 extern void maybe_select_secondary(int weapon_index);
 
+extern void reset_auto_select();
+
 /*
  * reads n weapon_info structs from a PHYSFS_file
  */
