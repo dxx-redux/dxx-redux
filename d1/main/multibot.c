@@ -1286,7 +1286,7 @@ multi_drop_robot_powerups(int objnum)
 
 	robptr = &Robot_info[del_obj->id];
 
-	if(Game_mode & GM_MULTI_ROBOTS)
+	if(Game_mode & GM_MULTI_ROBOTS && !(Game_mode & GM_MULTI_COOP))
 		return; 
 
 	Net_create_loc = 0;
