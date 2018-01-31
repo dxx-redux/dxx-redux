@@ -103,7 +103,7 @@ int ogl_texture_list_cur;
 extern GLubyte *pixels;
 extern GLubyte *texbuf;
 void ogl_filltexbuf(unsigned char *data, GLubyte *texp, int truewidth, int width, int height, int dxo, int dyo, int twidth, int theight, int type, int bm_flags, int data_format);
-void ogl_loadbmtexture(grs_bitmap *bm);
+void ogl_loadbmtexture(grs_bitmap *bm, int filter_blueship_wing);
 int ogl_loadtexture(unsigned char *data, int dxo, int dyo, ogl_texture *tex, int bm_flags, int data_format, int texfilt);
 void ogl_freetexture(ogl_texture *gltexture);
 
@@ -317,7 +317,7 @@ void ogl_texture_stats(void)
 
 void ogl_bindbmtex(grs_bitmap *bm){
 	if (bm->gltexture==NULL || bm->gltexture->handle<=0)
-		ogl_loadbmtexture(bm);
+		ogl_loadbmtexture(bm, 0);
 	OGL_BINDTEXTURE(bm->gltexture->handle);
 	bm->gltexture->numrend++;
 }
@@ -339,7 +339,6 @@ void ogl_texwrap(ogl_texture *gltexture,int state)
 //similarly, with the objects(esp weapons), we could just go through and cache em all instead, but that would get ones that might not even be on the level
 //TODO: doors
 
-int filter_blueship_wing = 0;
 void ogl_cache_polymodel_textures(int model_num)
 {
 	polymodel *po;
@@ -350,11 +349,10 @@ void ogl_cache_polymodel_textures(int model_num)
 	po = &Polygon_models[model_num];
 	for (i=0;i<po->n_textures;i++)  {
 		if(model_num == 43 && i == 5) { // wings
-			filter_blueship_wing = 1;
+			ogl_loadbmtexture(&GameBitmaps[ObjBitmaps[ObjBitmapPtrs[po->first_texture+i]].index], 1);
 		} else {
-			filter_blueship_wing = 0;
+			ogl_loadbmtexture(&GameBitmaps[ObjBitmaps[ObjBitmapPtrs[po->first_texture+i]].index], 0);
 		}
-		ogl_loadbmtexture(&GameBitmaps[ObjBitmaps[ObjBitmapPtrs[po->first_texture+i]].index]);
 	}
 }
 
@@ -362,7 +360,7 @@ void ogl_cache_vclip_textures(vclip *vc){
 	int i;
 	for (i=0;i<vc->num_frames;i++){
 		PIGGY_PAGE_IN(vc->frames[i]);
-		ogl_loadbmtexture(&GameBitmaps[vc->frames[i].index]);
+		ogl_loadbmtexture(&GameBitmaps[vc->frames[i].index], 0);
 	}
 }
 
@@ -436,10 +434,10 @@ void ogl_cache_level_textures(void)
 					if (GameArg.DbgAltTexMerge == 0 || (bm2->bm_flags & BM_FLAG_SUPER_TRANSPARENT))
 						bm = texmerge_get_cached_bitmap( tmap1, tmap2 );
 					else {
-						ogl_loadbmtexture(bm2);
+						ogl_loadbmtexture(bm2, 0);
 					}
 				}
-				ogl_loadbmtexture(bm);
+				ogl_loadbmtexture(bm, 0);
 			}
 		}
 		glmprintf((0,"finished ef:%i\n",ef));
@@ -495,7 +493,7 @@ void ogl_cache_level_textures(void)
 					ogl_cache_weapon_textures(Robot_info[Objects[i].id].weapon_type);
 				}
 				if (Objects[i].rtype.pobj_info.tmap_override != -1)
-					ogl_loadbmtexture(&GameBitmaps[Textures[Objects[i].rtype.pobj_info.tmap_override].index]);
+					ogl_loadbmtexture(&GameBitmaps[Textures[Objects[i].rtype.pobj_info.tmap_override].index], 0);
 				else
 					ogl_cache_polymodel_textures(Objects[i].rtype.pobj_info.model_num);
 			}
@@ -1667,7 +1665,7 @@ unsigned char blackpyro_tex2[8] = {255, 168, 255, 168, 226, 168, 224, 255 };
 unsigned char whitepyro_tex1[8] = {60, 59, 27, 27, 27, 27, 23, 60}; 
 unsigned char whitepyro_tex2[8] = {255, 144, 255, 144, 226, 144, 224, 255};
 
-void ogl_loadbmtexture_f(grs_bitmap *bm, int texfilt)
+void ogl_loadbmtexture_f(grs_bitmap *bm, int texfilt, int filter_blueship_wing)
 {
 	unsigned char *buf;
 #ifdef HAVE_LIBPNG
@@ -1854,9 +1852,9 @@ void ogl_loadbmtexture_f(grs_bitmap *bm, int texfilt)
 	ogl_loadtexture(buf, 0, 0, bm->gltexture, bm->bm_flags, 0, texfilt);
 }
 
-void ogl_loadbmtexture(grs_bitmap *bm)
+void ogl_loadbmtexture(grs_bitmap *bm, int filter_blueship_wing)
 {
-	ogl_loadbmtexture_f(bm, GameCfg.TexFilt);
+	ogl_loadbmtexture_f(bm, GameCfg.TexFilt, filter_blueship_wing);
 }
 
 void ogl_freetexture(ogl_texture *gltexture)
