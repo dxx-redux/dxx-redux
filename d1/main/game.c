@@ -206,6 +206,7 @@ void init_cockpit()
 			break;
 		}
 		case CM_FULL_SCREEN:
+		case CM_OBSERVATORY:
 			game_init_render_sub_buffers(0, 0, SWIDTH, SHEIGHT);
 			break;
 
