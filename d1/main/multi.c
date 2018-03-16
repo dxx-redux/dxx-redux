@@ -4160,8 +4160,11 @@ void multi_do_damage( const ubyte *buf )
 			Players[buf[1]].shields_delta = 0;
 		}
 		Players[buf[1]].shields_delta -= GET_INTEL_INT(buf + 2);
-		Players[buf[1]].shields_time = Players[Player_num].time_total;
-		Players[buf[1]].shields_time_hours = Players[Player_num].hours_total;
+
+		if (GET_INTEL_INT(buf + 2) != 0) {
+			Players[buf[1]].shields_time = Players[Player_num].time_total;
+			Players[buf[1]].shields_time_hours = Players[Player_num].hours_total;
+		}
 	}
 }
 
@@ -4197,8 +4200,11 @@ void multi_do_repair( const ubyte *buf )
 			Players[buf[1]].shields_delta = 0;
 		}
 		Players[buf[1]].shields_delta += GET_INTEL_INT(buf + 2);
-		Players[buf[1]].shields_time = Players[Player_num].time_total;
-		Players[buf[1]].shields_time_hours = Players[Player_num].hours_total;
+
+		if (GET_INTEL_INT(buf + 2) != 0) {
+			Players[buf[1]].shields_time = Players[Player_num].time_total;
+			Players[buf[1]].shields_time_hours = Players[Player_num].hours_total;
+		}
 	}
 }
 
