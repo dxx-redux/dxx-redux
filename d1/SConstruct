@@ -178,7 +178,7 @@ class DXXCommon:
 			print "%s: compiling on Mac OS X" % self.PROGRAM_NAME
 			platform = self.DarwinPlatformSettings
 		elif sys.platform == 'cygwin':
-			print "%s: compiling on Widnows Cygwin" % self.PROGRAM_NAME
+			print "%s: compiling on Windows Cygwin" % self.PROGRAM_NAME
 			platform = self.Win32PlatformSettings
 		else:
 			print "%s: compiling on *NIX" % self.PROGRAM_NAME
