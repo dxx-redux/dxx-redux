@@ -492,7 +492,10 @@ void update_cockpits();
 void game_render_frame_mono(int flip)
 {
 	if (!(Game_mode & GM_OBSERVER) && PlayerCfg.CockpitMode[1] == CM_OBSERVATORY) {
-		PlayerCfg.CockpitMode[1] == CM_FULL_COCKPIT
+		if (PlayerCfg.DisableCockpit)
+			PlayerCfg.CockpitMode[1] = CM_STATUS_BAR;
+		else
+			PlayerCfg.CockpitMode[1] = CM_FULL_COCKPIT;
 	}
 
 	gr_set_current_canvas(&Screen_3d_window);
