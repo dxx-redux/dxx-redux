@@ -589,7 +589,8 @@ int load_exit_models()
 void compute_average_rgb(grs_bitmap *bm, fix *rgb)
 {
 	ubyte *buf;
-	int i, x, y, color, count;
+	int i, x, y, color;
+	int count = 0;
 	fix t_rgb[3] = { 0, 0, 0 };
 
 	rgb[0] = rgb[1] = rgb[2] = 0;
