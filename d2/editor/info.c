@@ -320,7 +320,7 @@ int info_display_all(window *wind, d_event *event, void *userdata)
 	switch (event->type)
 	{
 		case EVENT_WINDOW_DRAW:
-			userdata++;		//kill warning
+			userdata;		//kill warning
 
 			gr_set_current_canvas(window_get_canvas(wind));
 
