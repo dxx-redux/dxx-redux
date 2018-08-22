@@ -13,7 +13,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#ifdef __unix__
 #include <sys/time.h>
+#endif
 
 #include "pstypes.h"
 #include "window.h"
@@ -60,6 +62,14 @@
 #ifdef _WIN32
 #include <Windows.h>
 #include <wincrypt.h>
+#endif
+
+#ifndef __unix__
+#ifndef _SSIZE_T_
+#define _SSIZE_T_
+typedef long _ssize_t;
+typedef _ssize_t ssize_t;
+#endif
 #endif
 
 // Prototypes
@@ -588,7 +598,10 @@ int udp_tracker_unregister()
 {
 	// Variables
 	int iLen = 5;
-	ubyte pBuf[iLen];
+	ubyte *pBuf;
+	ssize_t result;
+
+	pBuf = malloc( iLen );
 	
 	// Put the opcode
 	pBuf[0] = TRACKER_PKT_UNREGISTER;
@@ -597,7 +610,11 @@ int udp_tracker_unregister()
 	PUT_INTEL_INT( pBuf+1, Netgame.protocol.udp.GameID );
 	
 	// Send it off
-	return dxx_sendto( UDP_Socket[2], pBuf, iLen, 0, (struct sockaddr *)&TrackerSocket, sizeof( TrackerSocket ) );
+	result = dxx_sendto( UDP_Socket[2], pBuf, iLen, 0, (struct sockaddr *)&TrackerSocket, sizeof( TrackerSocket ) );
+
+	free( pBuf );
+
+	return result;
 }
 
 /* Tell the tracker we're starting a game */
@@ -605,7 +622,10 @@ int udp_tracker_register()
 {
 	// Variables
 	int iLen = 15;
-	ubyte pBuf[iLen];
+	ubyte *pBuf;
+	ssize_t result;
+
+	pBuf = malloc( iLen );
 	
 	// Reset the last tracker message
 	iTrackerVerified = 0;
@@ -631,7 +651,11 @@ int udp_tracker_register()
 	PUT_INTEL_SHORT( pBuf+13, DXX_VERSION_MICROi );
 	
 	// Send it off
-	return dxx_sendto( UDP_Socket[2], pBuf, iLen, 0, (struct sockaddr *)&TrackerSocket, sizeof( TrackerSocket ) );
+	result = dxx_sendto( UDP_Socket[2], pBuf, iLen, 0, (struct sockaddr *)&TrackerSocket, sizeof( TrackerSocket ) );
+
+	free( pBuf );
+
+	return result;
 }
 
 /* Ask the tracker to send us a list of games */
@@ -639,7 +663,10 @@ int udp_tracker_reqgames()
 {
 	// Variables
 	int iLen = 3;
-	ubyte pBuf[iLen];
+	ubyte *pBuf;
+	ssize_t result;
+
+	pBuf = malloc( iLen );
 	
 	// Put the opcode
 	pBuf[0] = TRACKER_PKT_GAMELIST;
@@ -655,7 +682,11 @@ int udp_tracker_reqgames()
 #endif
 	
 	// Send it off
-	return dxx_sendto( UDP_Socket[2], pBuf, iLen, 0, (struct sockaddr *)&TrackerSocket, sizeof( TrackerSocket ) );
+	result = dxx_sendto( UDP_Socket[2], pBuf, iLen, 0, (struct sockaddr *)&TrackerSocket, sizeof( TrackerSocket ) );
+
+	free( pBuf );
+
+	return result;
 }
 
 /* The tracker has sent us a game.  Let's list it. */
@@ -6227,8 +6258,9 @@ void net_udp_send_to_player_proxy(ubyte* data, int data_len, int to_player, int 
 	// Only proxy through direct connections; drop the packet if we try something else
 	if(connection_statuses[through_player].type != DIRECT) { return; }
 
-	ubyte buf[data_len + UPID_PROXY_HEADER_SIZE]; 
+	ubyte *buf;
 	int len = 0;
+	buf = malloc(data_len + UPID_PROXY_HEADER_SIZE);
 
 	buf[len] = UPID_PROXY; len++; 
 	PUT_INTEL_INT(buf + len, netgame_token); len += 4; 
@@ -6237,6 +6269,7 @@ void net_udp_send_to_player_proxy(ubyte* data, int data_len, int to_player, int 
 	memcpy(buf + len, data, data_len); len += data_len; 
 
 	dxx_sendto(UDP_Socket[0], buf, len, 0, (struct sockaddr *)&Netgame.players[through_player].protocol.udp.addr, sizeof(struct _sockaddr));
+	free(buf);
 }
 
 void net_udp_process_proxy(ubyte* data, struct _sockaddr sender_addr, int data_len) {
