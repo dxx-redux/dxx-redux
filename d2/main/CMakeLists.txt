@@ -84,7 +84,6 @@ if(WIN32)
         ${CMAKE_SOURCE_DIR}/arch/win32/d2x-rebirth.ico
         ${CMAKE_SOURCE_DIR}/arch/win32/d2x-rebirth.rc
         )
-    target_compile_definitions(d2x-retro PUBLIC WINDOWS)
     set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} /NODEFAULTLIB:msvcrt.lib")
 endif()
 
