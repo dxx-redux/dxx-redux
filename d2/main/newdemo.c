@@ -3329,6 +3329,10 @@ void newdemo_start_recording()
 
 	PHYSFS_mkdir(DEMO_DIR); //always try making directory - could only exist in read-only path
 
+	if(PHYSFSX_exists(DEMO_FILENAME, 0)) {
+		PHYSFSX_rename(DEMO_FILENAME, "demos/tmp2.dem");
+	}
+
 	outfile = PHYSFSX_openWriteBuffered(DEMO_FILENAME);
 
 	if (outfile == NULL)
@@ -3428,22 +3432,61 @@ void newdemo_stop_recording()
 	Newdemo_state = ND_STATE_NORMAL;
 	gr_palette_load( gr_palette );
 
-	if (filename[0] != '\0') {
-		int num, i = strlen(filename) - 1;
-		char newfile[PATH_MAX];
+	if(Game_mode & GM_MULTI) {
+		char p1[8];
+		sprintf(p1, Players[Player_num].callsign);
 
-		while (isdigit(filename[i])) {
-			i--;
-			if (i == -1)
-				break;
+		char p2[16];
+
+		if(Game_mode & GM_MULTI_COOP) {
+			sprintf(p2, "COOP");
+		} else if (strlen(Players[0].callsign) && strlen(Players[1].callsign) && ! strlen(Players[2].callsign)) {
+			int me = Player_num;
+			int you = Player_num ? 0 : 1;
+
+			sprintf(p2, "%s_%d_%d", Players[you].callsign, Players[me].net_kills_total, Players[you].net_kills_total);
+		} else {
+			sprintf(p2, "ANARCHY");
 		}
-		i++;
-		num = atoi(&(filename[i]));
-		num++;
-		filename[i] = '\0';
-		sprintf (newfile, "%s%d", filename, num);
-		strncpy(filename, newfile, PATH_MAX);
-		filename[PATH_MAX - 1] = '\0';
+
+		char basename[PATH_MAX] = "";
+		char testpath[PATH_MAX] = "";
+		int attemptnum = 2;
+
+		sprintf(basename, "%s_%s_%s", p1, p2, Netgame.mission_name);
+
+		sprintf(testpath, "%s%s%s", DEMO_DIR, basename, DEMO_EXT);
+		while(PHYSFSX_exists(testpath, 0) && attemptnum < 20) {
+			sprintf(testpath, "%s%s_%d%s", DEMO_DIR, basename, attemptnum++, DEMO_EXT);
+		}
+
+		con_printf(CON_NORMAL, "%s does not exist!", testpath);
+
+		if(attemptnum > 2) {
+			sprintf(filename, "%s_%d", basename, attemptnum - 1);
+		} else {
+			strncpy(filename, basename, PATH_MAX);
+		}
+
+	} else {
+
+		if (filename[0] != '\0') {
+			int num, i = strlen(filename) - 1;
+			char newfile[PATH_MAX];
+
+			while (isdigit(filename[i])) {
+				i--;
+				if (i == -1)
+					break;
+			}
+			i++;
+			num = atoi(&(filename[i]));
+			num++;
+			filename[i] = '\0';
+			sprintf (newfile, "%s%d", filename, num);
+			strncpy(filename, newfile, PATH_MAX);
+			filename[PATH_MAX - 1] = '\0';
+		}
 	}
 
 try_again:
@@ -3473,8 +3516,9 @@ try_again:
 		PHYSFSX_rename(DEMO_FILENAME, save_file);
 		return;
 	}
+	// Nooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo
 	if (exit == -1) {               // pressed ESC
-		PHYSFS_delete(DEMO_FILENAME);   // might as well remove the file
+	//	PHYSFS_delete(DEMO_FILENAME);   // might as well remove the file
 		return;                     // return without doing anything
 	}
 

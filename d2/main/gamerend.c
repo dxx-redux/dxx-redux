@@ -464,13 +464,14 @@ void game_draw_hud_stuff()
 
 		if (Newdemo_state == ND_STATE_PLAYBACK) {
 			if (Newdemo_show_percentage) {
-			  	sprintf(message, "%s (%d%%%% %s)", TXT_DEMO_PLAYBACK, newdemo_get_percent_done(), TXT_DONE);
+			  	sprintf(message, "%s (%d%% %s)", TXT_DEMO_PLAYBACK, newdemo_get_percent_done(), TXT_DONE);
 			} else {
 				sprintf (message, " ");
 			}
 		} else {
 			extern int Newdemo_num_written;
-			sprintf (message, "%s (%dK)", TXT_DEMO_RECORDING, (Newdemo_num_written / 1024));
+			//sprintf (message, "%s (%dK)", TXT_DEMO_RECORDING, (Newdemo_num_written / 1024));
+			sprintf (message, "%s", TXT_DEMO_RECORDING);
 		}
 
 		gr_set_curfont( GAME_FONT );
