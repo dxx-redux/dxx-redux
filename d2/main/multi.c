@@ -814,7 +814,7 @@ void multi_compute_kill(int killer, int killed)
 				add_points_to_score(-1000);
 
 			if (Game_mode & GM_MULTI_ROBOTS)
-				add_points_to_score(5000);
+				add_points_to_score(10000);
 		}
 		else if (killed_pnum == Player_num)
 		{

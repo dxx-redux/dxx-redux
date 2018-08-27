@@ -61,6 +61,6 @@ void check_robot_respawns();
 void multi_send_respawn_robot(short objnum);
 void multi_do_respawn_robot(const ubyte *buf);
 
-short respawn_robot(ubyte id, short segnum, vms_vector pos, vms_matrix orient, fix size);
+short respawn_robot(ubyte id, short segnum, vms_vector pos, vms_matrix orient, fix size, ubyte behavior);
 
 #endif /* _MULTIBOT_H */

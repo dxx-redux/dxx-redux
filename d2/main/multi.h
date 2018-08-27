@@ -137,7 +137,7 @@ extern int multi_protocol; // set and determinate used protocol
 	VALUE(MULTI_GOT_ORB              , 2)	\
 	VALUE(MULTI_DROP_ORB             , 12)	\
 	VALUE(MULTI_PLAY_BY_PLAY         , 4)	\
-	VALUE(MULTI_RESPAWN_ROBOT        , 59)	\
+	VALUE(MULTI_RESPAWN_ROBOT        , 60)	\
 	AFTER
 for_each_multiplayer_command(enum {, define_multiplayer_command, });
 
