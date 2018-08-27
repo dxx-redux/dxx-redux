@@ -1809,7 +1809,11 @@ void maybe_drop_secondary_weapon_egg(object *playerobj, int weapon_index, int co
 	if (Players[playerobj->id].secondary_weapon_flags & weapon_flag) {
 		int	i, max_count;
 
-		max_count = min(count, 3);
+		if(weapon_index == PROXIMITY_INDEX) {
+			max_count = min(count, 3);
+		} else {
+			max_count = count; // Drop 5 smarts/megas! 
+		}
 		for (i=0; i<max_count; i++)
 			call_object_create_egg(playerobj, 1, OBJ_POWERUP, powerup_num);
 	}
