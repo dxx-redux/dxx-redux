@@ -893,6 +893,10 @@ multi_do_robot_explode(const ubyte *buf)
 
 	if (rval && (killer == Players[Player_num].objnum))
 		add_points_to_score(Robot_info[Objects[botnum].id].score_value);
+
+	if(multi_i_am_master() && (Game_mode & GM_MULTI_ROBOTS)) {
+		kill_respawnable_robot(Objects + botnum);
+	}
 }
 
 extern fix EnergyToCreateOneRobot; // From fuelcen.c 
@@ -949,6 +953,172 @@ multi_do_create_robot(const ubyte *buf)
 	map_objnum_local_to_remote(obj-Objects, objnum, pnum);
 
 	Assert(obj->ctype.ai_info.REMOTE_OWNER == -1);
+}
+
+#define MAX_ROBOTS 1000
+fix NextRespawnWave=0;
+fix RespawnWaveLength=F1_0*30;
+fix RobotRechargeTime=F1_0*60;
+object respawnable_bots[MAX_ROBOTS]; 
+short roboid_to_objid[MAX_ROBOTS];
+fix robo_death_time[MAX_ROBOTS];
+short num_respawnable_bots = 0; 
+void reset_respawnable_bots() {
+	num_respawnable_bots = 0; 
+	NextRespawnWave=0;
+	for(int i = 0; i < MAX_OBJECTS && num_respawnable_bots < MAX_ROBOTS; i++) {
+		if (Objects[i].type == OBJ_ROBOT) {
+			roboid_to_objid[num_respawnable_bots] = i;
+			robo_death_time[num_respawnable_bots] = 0;
+			respawnable_bots[num_respawnable_bots++] = Objects[i];
+		}
+	}
+}
+
+void kill_respawnable_robot(object *bot) {
+	short id = bot - Objects;
+	short roboid = -1;
+	for(int i = 0; i < num_respawnable_bots; i++) {
+		if(roboid_to_objid[i] == id) {
+			roboid = i;
+			break;
+		}
+	}
+
+	if(roboid == -1)
+		return;
+
+	robo_death_time[roboid] = GameTime64;
+	//respawn_robot(roboid); 
+} 
+
+short master_respawn_robot(short robo_id);
+
+void check_robot_respawns() { 
+	if(! multi_i_am_master()) { return; } 
+	if(! (Game_mode & GM_MULTI_ROBOTS)) { return; }
+
+	if(GameTime64 > NextRespawnWave) {
+		NextRespawnWave = GameTime64 + RespawnWaveLength; 
+		for(int i = 0; i < num_respawnable_bots; i++) {
+			if(robo_death_time[i] == 0) { continue; } // Still alive
+			if(GameTime64 - robo_death_time[i] < RobotRechargeTime) { continue; }
+			short objnum = master_respawn_robot(i);
+
+			// Tell everyone else to do the same
+			multi_send_respawn_robot(objnum);
+		}
+	}
+ } 
+
+void multi_send_respawn_robot(short objnum) {
+	assert(multi_i_am_master()); 
+
+	object *bot = Objects + objnum; 
+
+	int loc = 0;
+
+	multibuf[loc] = MULTI_RESPAWN_ROBOT;					loc += 1;
+	multibuf[loc] = bot->id;								loc += 1;
+	PUT_INTEL_SHORT(multibuf + loc, bot->segnum);           loc += 2; 
+	PUT_INTEL_INT(multibuf + loc, bot->pos.x);              loc += 4;
+	PUT_INTEL_INT(multibuf + loc, bot->pos.y);              loc += 4;
+	PUT_INTEL_INT(multibuf + loc, bot->pos.z);              loc += 4;
+	PUT_INTEL_INT(multibuf + loc, bot->orient.rvec.x);      loc += 4;
+	PUT_INTEL_INT(multibuf + loc, bot->orient.rvec.y);      loc += 4;
+	PUT_INTEL_INT(multibuf + loc, bot->orient.rvec.z);      loc += 4;
+	PUT_INTEL_INT(multibuf + loc, bot->orient.uvec.x);      loc += 4;
+	PUT_INTEL_INT(multibuf + loc, bot->orient.uvec.y);      loc += 4;
+	PUT_INTEL_INT(multibuf + loc, bot->orient.uvec.z);      loc += 4;	
+	PUT_INTEL_INT(multibuf + loc, bot->orient.fvec.x);      loc += 4;
+	PUT_INTEL_INT(multibuf + loc, bot->orient.fvec.y);      loc += 4;
+	PUT_INTEL_INT(multibuf + loc, bot->orient.fvec.z);      loc += 4;	
+	PUT_INTEL_INT(multibuf + loc, bot->size);               loc += 4;
+	multibuf[loc] = 0;                                      loc += 1; // player num
+	PUT_INTEL_SHORT(multibuf + loc, objnum);                loc += 2; 	
+
+	multi_send_data(multibuf, loc, 2);
+}
+
+void multi_do_respawn_robot(const ubyte *buf) {
+
+	int loc = 1; 
+	short segnum; 
+	vms_vector pos; 
+	vms_matrix orient; 
+	fix size;
+
+	ubyte id      = buf[loc];                      loc += 1; 
+	segnum        = GET_INTEL_SHORT(buf + loc);    loc += 2; 
+	pos.x         = GET_INTEL_INT(buf + loc);      loc += 4;
+	pos.y         = GET_INTEL_INT(buf + loc);      loc += 4;
+	pos.z         = GET_INTEL_INT(buf + loc);      loc += 4;
+	orient.rvec.x = GET_INTEL_INT(buf + loc);      loc += 4;
+	orient.rvec.y = GET_INTEL_INT(buf + loc);      loc += 4;
+	orient.rvec.z = GET_INTEL_INT(buf + loc);      loc += 4;
+	orient.uvec.x = GET_INTEL_INT(buf + loc);      loc += 4;
+	orient.uvec.y = GET_INTEL_INT(buf + loc);      loc += 4;
+	orient.uvec.z = GET_INTEL_INT(buf + loc);      loc += 4;
+	orient.fvec.x = GET_INTEL_INT(buf + loc);      loc += 4;
+	orient.fvec.y = GET_INTEL_INT(buf + loc);      loc += 4;
+	orient.fvec.z = GET_INTEL_INT(buf + loc);      loc += 4;	
+	size          = GET_INTEL_INT(buf + loc);      loc += 4;
+	ubyte rplr    = buf[loc];                      loc += 1; 
+	short robjnum = GET_INTEL_SHORT(buf + loc);    loc += 2; 
+
+	short objnum = respawn_robot(id, segnum, pos, orient, size); 
+
+	map_objnum_local_to_remote(objnum, robjnum, rplr); 
+}
+
+short master_respawn_robot(short robo_id) {
+	object *robo = respawnable_bots + robo_id; 
+
+	short objnum = respawn_robot(robo->id, robo->segnum, robo->pos, robo->orient, robo->size); 
+
+	roboid_to_objid[robo_id] = objnum;
+	robo_death_time[robo_id] = 0;
+
+	map_objnum_local_to_local(objnum);
+
+	return objnum; 
+}
+
+short respawn_robot(ubyte id, short segnum, vms_vector pos, vms_matrix orient, fix size) // robo ID 
+{
+	robot_info	*robodata = &Robot_info[id];
+
+	short objnum = obj_create(OBJ_ROBOT, id, segnum, &pos, &orient, size, CT_AI, MT_PHYSICS, RT_POLYOBJ);
+	if ( objnum < 0 ) {
+		return objnum;
+	}
+
+	object *objp = &Objects[objnum];
+
+	objp->rtype.pobj_info.model_num = robodata->model_num;
+	objp->rtype.pobj_info.subobj_flags = 0;
+
+	objp->mtype.phys_info.mass = robodata->mass;
+	objp->mtype.phys_info.drag = robodata->drag;
+
+	objp->mtype.phys_info.flags |= (PF_LEVELLING);
+
+	objp->shields = robodata->strength;
+	
+	int default_behavior = AIB_NORMAL;
+	if (id == 10)						//	This is a toaster guy!
+		default_behavior = AIB_RUN_FROM;
+
+	init_ai_object(objp-Objects, default_behavior, -1 );		//	Note, -1 = segment this robot goes to to hide, should probably be something useful
+
+	object_create_explosion(segnum, &pos, i2f(10), VCLIP_MORPHING_ROBOT );
+	digi_link_sound_to_pos( Vclip[VCLIP_MORPHING_ROBOT].sound_num, segnum, 0,  &pos, 0 , F1_0);
+	morph_start(objp);
+
+	Players[Player_num].num_robots_level++;
+	Players[Player_num].num_robots_total++;
+
+	return objnum;
 }
 
 void
@@ -1131,6 +1301,9 @@ multi_drop_robot_powerups(int objnum)
 	}
 
 	robptr = &Robot_info[del_obj->id];
+
+	if(Game_mode & GM_MULTI_ROBOTS)
+		return;
 
 	Net_create_loc = 0;
 

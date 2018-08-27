@@ -75,6 +75,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #endif
 #include "collide.h"
 #include "escort.h"
+#include "multibot.h"
 
 #define WALL_DAMAGE_SCALE (128) // Was 32 before 8:55 am on Thursday, September 15, changed by MK, walls were hurting me more than robots!
 #define WALL_DAMAGE_THRESHOLD (F1_0/3)
@@ -1361,6 +1362,10 @@ int apply_damage_to_robot(object *robot, fix damage, int killer_objnum)
 				  Stolen_items[(int)i]=temp_stolen[(int)i];
 
 				multi_send_robot_explode(robot-Objects, killer_objnum,Robot_info[robot->id].thief);
+
+				if (multi_i_am_master() && Game_mode & GM_MULTI_ROBOTS) {
+					kill_respawnable_robot(robot);
+				}
 
 	     	   if (isthief)
    				for (i=0;i<MAX_STOLEN_ITEMS;i++)

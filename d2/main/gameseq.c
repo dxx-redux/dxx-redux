@@ -105,6 +105,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "byteswap.h"
 #include "segment.h"
 #include "gameseg.h"
+#include "multibot.h"
 
 
 void StartNewLevelSecret(int level_num, int page_in_textures);
@@ -1582,6 +1583,8 @@ void StartNewLevelSub(int level_num, int page_in_textures, int secret_flag)
 	copy_defaults_to_robot_all();
 	init_controlcen_for_level();
 
+	reset_respawnable_bots();
+
 	//	Say player can use FLASH cheat to mark path to exit.
 	Last_level_path_created = -1;
 
@@ -1589,6 +1592,10 @@ void StartNewLevelSub(int level_num, int page_in_textures, int secret_flag)
 	// Also takes care of nm_draw_background() possibly being called
 	if (!((Game_mode & GM_MULTI) && (Newdemo_state != ND_STATE_PLAYBACK)))
 		full_palette_save();
+
+	if(Game_mode & GM_MULTI && PlayerCfg.AutoDemo && Newdemo_state != ND_STATE_RECORDING) {
+		newdemo_start_recording();
+	}
 
 	if (!Game_wind)
 		game();
@@ -1854,7 +1861,7 @@ void StartLevel(int random_flag)
 
 	if (Game_mode & GM_MULTI)
 	{
-		if (Game_mode & GM_MULTI_COOP)
+		if ((Game_mode & GM_MULTI_COOP) || (Game_mode & GM_MULTI_ROBOTS))
 			multi_send_score();
 	 	multi_send_reappear();
 		multi_do_protocol_frame(1, 1);

@@ -563,7 +563,7 @@ multi_sort_kill_list(void)
 
 	for (i = 0; i < MAX_PLAYERS; i++)
 	{
-		if (Game_mode & GM_MULTI_COOP)
+		if ((Game_mode & GM_MULTI_COOP) || (Game_mode & GM_MULTI_ROBOTS))
 			kills[i] = Players[i].score;
 		else
 		if (Show_kill_list==2)
@@ -590,6 +590,18 @@ multi_sort_kill_list(void)
 				changed = 1;
 			}
 		}
+	}
+}
+
+void robo_anarchy_suicide_penalty() {
+	if(Game_mode & GM_MULTI_ROBOTS) {
+		if(Players[Player_num].score > 1000) {
+			Players[Player_num].score -= 1000;
+		} else {
+			Players[Player_num].score = 0; 
+		}
+		
+		multi_send_score();
 	}
 }
 
@@ -653,6 +665,8 @@ void multi_compute_kill(int killer, int killed)
 		{
 			HUD_init_message(HM_MULTI, "%s %s.", TXT_YOU_WERE, TXT_KILLED_BY_NONPLAY);
 			multi_add_lifetime_killed ();
+
+			robo_anarchy_suicide_penalty();
 		}
 		else
 			HUD_init_message(HM_MULTI, "%s %s %s.", killed_name, TXT_WAS, TXT_KILLED_BY_NONPLAY );
@@ -674,6 +688,8 @@ void multi_compute_kill(int killer, int killed)
 			{
 				HUD_init_message(HM_MULTI, "%s %s.", TXT_YOU_WERE, TXT_KILLED_BY_ROBOT);
 				multi_add_lifetime_killed();
+
+				robo_anarchy_suicide_penalty();
 			}
 			else
 				HUD_init_message(HM_MULTI, "%s %s %s.", killed_name, TXT_WAS, TXT_KILLED_BY_ROBOT );
@@ -705,6 +721,8 @@ void multi_compute_kill(int killer, int killed)
 				team_kills[get_team(killed_pnum)] -= 1;
 				Netgame.TeamKillGoalCount[get_team(killed_pnum)] -= 1; 
 			}
+
+			robo_anarchy_suicide_penalty();
 
 			Players[killed_pnum].net_killed_total += 1;
 			Players[killed_pnum].net_kills_total -= 1;
@@ -794,6 +812,9 @@ void multi_compute_kill(int killer, int killed)
 			multi_add_lifetime_kills();
 			if ((Game_mode & GM_MULTI_COOP) && (Players[Player_num].score >= 1000))
 				add_points_to_score(-1000);
+
+			if (Game_mode & GM_MULTI_ROBOTS)
+				add_points_to_score(5000);
 		}
 		else if (killed_pnum == Player_num)
 		{
@@ -3411,7 +3432,7 @@ multi_send_score(void)
 	// synced.
 	int count = 0;
 
-	if (Game_mode & GM_MULTI_COOP) {
+	if ((Game_mode & GM_MULTI_COOP) || (Game_mode & GM_MULTI_ROBOTS)) {
 		multi_sort_kill_list();
 		multibuf[count] = MULTI_SCORE;                  count += 1;
 		multibuf[count] = Player_num;                           count += 1;
@@ -5916,6 +5937,8 @@ multi_process_data(const ubyte *buf, int len)
 			if (!Endlevel_sequence) multi_do_release_robot(buf); break;
 		case MULTI_ROBOT_FIRE:
 			if (!Endlevel_sequence) multi_do_robot_fire(buf); break;
+		case MULTI_RESPAWN_ROBOT:
+			if(! Endlevel_sequence) multi_do_respawn_robot(buf); break;
 		case MULTI_SCORE:
 			if (!Endlevel_sequence) multi_do_score(buf); break;
 		case MULTI_CREATE_ROBOT:

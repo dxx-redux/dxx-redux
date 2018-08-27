@@ -55,4 +55,12 @@ void multi_check_robot_timeout(void);
 
 void multi_robot_request_change(object *robot, int playernum);
 
+void reset_respawnable_bots();
+void kill_respawnable_robot(object *bot);
+void check_robot_respawns();
+void multi_send_respawn_robot(short objnum);
+void multi_do_respawn_robot(const ubyte *buf);
+
+short respawn_robot(ubyte id, short segnum, vms_vector pos, vms_matrix orient, fix size);
+
 #endif /* _MULTIBOT_H */
