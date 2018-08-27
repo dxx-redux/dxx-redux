@@ -940,7 +940,10 @@ multi_send_data(const ubyte *buf, int len, int priority)
 {
 	if (len != message_length[(int)buf[0]]) {
 		//Error("multi_send_data: Packet type %i length: %i, expected: %i\n", buf[0], len, message_length[(int)buf[0]]);
-		con_printf(CON_URGENT, "multi_send_data: Packet type %i length: %i, expected: %i\n", buf[0], len, message_length[(int)buf[0]]);
+		con_printf(CON_URGENT, "multi_send_data: Packet type %i length: %i priority %i, expected: %i\n", buf[0], len, priority, message_length[(int)buf[0]]);
+		for(int i = 0; i < len; i++) {
+			con_printf(CON_URGENT, "    %d: %d\n", i, buf[i]);
+		}
 		return;
 	}
 
@@ -1877,7 +1880,7 @@ multi_do_kill(const ubyte *buf)
 		multibuf[0] = MULTI_KILL_HOST;
 		multibuf[5] = Netgame.team_vector;
 		multibuf[6] = Bounty_target;
-		
+
 		multi_send_data(multibuf, 7, 2);
 	}
 
@@ -3130,8 +3133,8 @@ multi_send_kill(int objnum)
 
 	if (multi_i_am_master())
 	{
-		multi_compute_kill(killer_objnum, objnum);
 		multi_send_data(multibuf, count, 2);
+		multi_compute_kill(killer_objnum, objnum); // THIS TRASHES THE MULTIBUF!!!
 	}
 	else
 		multi_send_data_direct((ubyte*)multibuf, count, multi_who_is_master(), 2); // I am just a client so I'll only send my kill but not compute it, yet. I'll get response from host so I can compute it correctly
