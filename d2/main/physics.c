@@ -20,6 +20,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <math.h>
 
 #include "joy.h"
@@ -315,6 +316,8 @@ void fix_illegal_wall_intersection(object *obj, vms_vector *origin)
 //Simulate a physics object for this frame
 void do_physics_sim(object *obj)
 {
+	bool observer = true; // TODO: Set this boolean to indicate whether the user is in observer mode or not so that it won't try to teleport observers back into the level.
+
 	int ignore_obj_list[MAX_IGNORE_OBJS],n_ignore_objs;
 	int iseg;
 	int try_again;
@@ -539,8 +542,11 @@ void do_physics_sim(object *obj)
 					obj_relink(objnum, n );
 				}
 				else {
-					compute_segment_center(&obj->pos,&Segments[obj->segnum]);
-					obj->pos.x += objnum;
+					// Don't center the player object if they are in observer mode, because they are allowed to be outside the level.
+					if (!(observer && obj == ConsoleObject)) {
+						compute_segment_center(&obj->pos,&Segments[obj->segnum]);
+						obj->pos.x += objnum;
+					}
 				}
 				if (obj->type == OBJ_WEAPON)
 					obj->flags |= OF_SHOULD_BE_DEAD;
