@@ -14,7 +14,6 @@ if(NOT OPENGL)
     target_sources(arch_sdl PRIVATE gr.c)
 endif()
 if(SDLMIXER)
-    target_compile_definitions(arch_sdl PUBLIC USE_SDLMIXER)
     target_sources(arch_sdl PRIVATE
         digi_mixer.c
         digi_mixer_music.c
