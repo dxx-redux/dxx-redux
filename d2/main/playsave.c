@@ -97,7 +97,7 @@ int new_player_config()
 	PlayerCfg.JoystickSens[0] = PlayerCfg.JoystickSens[1] = PlayerCfg.JoystickSens[2] = PlayerCfg.JoystickSens[3] = PlayerCfg.JoystickSens[4] = PlayerCfg.JoystickSens[5] = 8;
 	PlayerCfg.JoystickDead[0] = PlayerCfg.JoystickDead[1] = PlayerCfg.JoystickDead[2] = PlayerCfg.JoystickDead[3] = PlayerCfg.JoystickDead[4] = PlayerCfg.JoystickDead[5] = 0;
 	PlayerCfg.JoystickUndercalibrate[0] = PlayerCfg.JoystickUndercalibrate[1] = PlayerCfg.JoystickUndercalibrate[2] = PlayerCfg.JoystickUndercalibrate[3] = PlayerCfg.JoystickUndercalibrate[4] = PlayerCfg.JoystickUndercalibrate[5] = 0;
-	PlayerCfg.MouseControlStyle = MOUSE_CONTROL_OLDSCHOOL; /* Old School Mouse */
+	PlayerCfg.MouseControlStyle = MOUSE_CONTROL_REBIRTH; /* Old School Mouse */
 	PlayerCfg.MouseImpulse = 8;
 	PlayerCfg.MouseSens[0] = PlayerCfg.MouseSens[1] = PlayerCfg.MouseSens[2] = PlayerCfg.MouseSens[3] = PlayerCfg.MouseSens[4] = PlayerCfg.MouseSens[5] = 8;
     PlayerCfg.MouseOverrun[0] = PlayerCfg.MouseOverrun[1] = PlayerCfg.MouseOverrun[2] = PlayerCfg.MouseOverrun[3] = PlayerCfg.MouseOverrun[4] = PlayerCfg.MouseOverrun[5] = 0;
@@ -1033,6 +1033,10 @@ void read_netgame_profile(netgame_info *ng)
 				ng->RefusePlayers = strtol(value, NULL, 10);
 			else if (!strcmp(token, "difficulty"))
 				ng->difficulty = strtol(value, NULL, 10);
+			else if (!strcmp(token, "maxplayers"))
+				ng->max_numplayers = strtol(value, NULL, 10);
+			else if (!strcmp(token, "maxobservers"))
+				ng->max_numobservers = strtol(value, NULL, 10);
 			else if (!strcmp(token, "game_flags"))
 				ng->game_flags = strtol(value, NULL, 10);
 			else if (!strcmp(token, "AllowedItems"))
@@ -1108,6 +1112,8 @@ void write_netgame_profile(netgame_info *ng)
 	PHYSFSX_printf(file, "gamemode=%i\n", ng->gamemode);
 	PHYSFSX_printf(file, "RefusePlayers=%i\n", ng->RefusePlayers);
 	PHYSFSX_printf(file, "difficulty=%i\n", ng->difficulty);
+	PHYSFSX_printf(file, "numplayers=%i\n", ng->max_numplayers);
+	PHYSFSX_printf(file, "maxobservers=%i\n", ng->max_numobservers);
 	PHYSFSX_printf(file, "game_flags=%i\n", ng->game_flags);
 	PHYSFSX_printf(file, "AllowedItems=%i\n", ng->AllowedItems);
 	PHYSFSX_printf(file, "Allow_marker_view=%i\n", ng->Allow_marker_view);

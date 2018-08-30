@@ -3438,7 +3438,9 @@ void newdemo_stop_recording()
 
 		char p2[16];
 
-		if(Game_mode & GM_MULTI_COOP) {
+		if(Game_mode & GM_OBSERVER) {
+			sprintf(p2, "OBS");
+		} else if(Game_mode & GM_MULTI_COOP) {
 			sprintf(p2, "COOP");
 		} else if (strlen(Players[0].callsign) && strlen(Players[1].callsign) && ! strlen(Players[2].callsign)) {
 			int me = Player_num;

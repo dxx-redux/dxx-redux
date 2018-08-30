@@ -2125,7 +2125,6 @@ void render_mine(int start_seg_num,fix eye_offset, int window_num)
 		}
 	}
 #else
-con_printf(CON_NORMAL, "Rendering %d segments\n", N_render_segs);
 	// Sorting elements for Alpha - 3 passes
 	// First Pass: render opaque level geometry + transculent level geometry with high Alpha-Test func
 	for (nn=N_render_segs;nn--;)

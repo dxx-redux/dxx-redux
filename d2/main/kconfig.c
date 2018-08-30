@@ -1261,7 +1261,7 @@ ubyte Last_angles_read = 0;
 
 void kconfig_read_controls(d_event *event, int automap_flag)
 {
-	bool observer = true; // TODO: Set this boolean to indicate whether the user is in observer mode or not to set the proper speed_factor.
+	bool observer = Game_mode & GM_OBSERVER;
 
 	int i = 0, j = 0, speed_factor = (cheats.turbo || observer)?2:1;
 	static fix64 mouse_delta_time = 0;

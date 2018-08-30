@@ -58,7 +58,7 @@ void net_udp_send_netgame_update();
 #define UPID_ADDPLAYER				  7 // Packet from Host containing info about a new player.
 #define UPID_REQUEST				  8 // New player says: "I want to be inside of you!" (haha, sorry I could not resist) / Packet containing request to join the game actually.
 #define UPID_QUIT_JOINING			  9 // Packet from a player who suddenly quits joining.
-#define UPID_SEQUENCE_SIZE			 (3 + 4 + (CALLSIGN_LEN+1) + sizeof(struct _sockaddr) + 2)
+#define UPID_SEQUENCE_SIZE			 (3 + 4 + (CALLSIGN_LEN+1) + sizeof(struct _sockaddr) + 2 + 1)
 #define UPID_SYNC				 10 // Packet from host containing full netgame info to sync players up.
 #define UPID_OBJECT_DATA			 11 // Packet from host containing object buffer.
 #define UPID_PING				 12 // Packet from host containing his GameTime and the Ping list. Client returns this time to host as UPID_PONG and adapts the ping list.

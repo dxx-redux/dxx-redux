@@ -2640,7 +2640,7 @@ void hud_show_kill_list()
 		}
 
 
-		if(Show_network_stats && player_num != Player_num && Players[player_num].connected && Show_kill_list != 3) {
+		if((Show_network_stats && !(Game_mode & GM_OBSERVER)) && player_num != Player_num && Players[player_num].connected && Show_kill_list != 3) {
 			int lag = -1; 
 			
 			if(Netgame.RetroProtocol) {
