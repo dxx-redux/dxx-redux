@@ -228,6 +228,20 @@ gameseq_init_network_players()
 
 	}
 	NumNetPlayerPositions = k;
+
+	if((Game_mode & GM_MULTI_COOP) && (Game_mode & GM_OBSERVER)) {
+		Objects[7].type=OBJ_PLAYER;
+		Objects[7].pos = Objects[0].pos;
+		Objects[7].orient = Objects[0].orient;
+		Objects[7].segnum = Objects[0].segnum;
+
+		Player_init[7].pos = Objects[i].pos;
+		Player_init[7].pos.z = Player_init[7].pos.z + F1_0;
+		Player_init[7].orient = Objects[i].orient;
+		Player_init[7].segnum = Objects[i].segnum;
+		Players[7].objnum = 7;
+		Objects[7].id = 7;
+	}
 }
 
 void gameseq_remove_unused_players()

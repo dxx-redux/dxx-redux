@@ -458,11 +458,12 @@ void do_physics_sim(object *obj)
 		// The rest of this function is collision stuff
 		// Observers just fly free
 		
-		if(Game_mode & GM_OBSERVER && obj->id == Player_num) {
+		if(Game_mode & GM_OBSERVER && 
+			((obj->id == Player_num) ||
+			((Game_mode & GM_MULTI_COOP) && (obj - Objects == 7))) ) {
 			obj->pos = new_pos;
 			return;
 		}
-
 
 		ignore_obj_list[n_ignore_objs] = -1;
 
