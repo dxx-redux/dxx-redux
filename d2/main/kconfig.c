@@ -1261,7 +1261,9 @@ ubyte Last_angles_read = 0;
 
 void kconfig_read_controls(d_event *event, int automap_flag)
 {
-	int i = 0, j = 0, speed_factor = cheats.turbo?2:1;
+	bool observer = true; // TODO: Set this boolean to indicate whether the user is in observer mode or not to set the proper speed_factor.
+
+	int i = 0, j = 0, speed_factor = (cheats.turbo || observer)?2:1;
 	static fix64 mouse_delta_time = 0;
     int overruns = 0;
 
@@ -1782,23 +1784,23 @@ void kconfig_read_controls(d_event *event, int automap_flag)
         }
         Controls.heading_time = -FrameTime;
     }
-    if (Controls.vertical_thrust_time > FrameTime ) {
+    if (Controls.vertical_thrust_time > speed_factor * FrameTime ) {
         if (overruns & 4 || (Controls.mouse_axis[kc_mouse[19].value] || (Controls.slide_on_state && Controls.mouse_axis[kc_mouse[13].value]))) {
-            Controls.vertical_thrust_time_overrun += (Controls.vertical_thrust_time - FrameTime);
+            Controls.vertical_thrust_time_overrun += (Controls.vertical_thrust_time - speed_factor * FrameTime);
             if (Controls.vertical_thrust_time_overrun > F1_0 * PlayerCfg.MouseOverrun[3] / 16) {
                 Controls.vertical_thrust_time_overrun = F1_0 * PlayerCfg.MouseOverrun[3] / 16;
             }
         }
-        Controls.vertical_thrust_time = FrameTime;
+        Controls.vertical_thrust_time = speed_factor * FrameTime;
     }
-    if (Controls.sideways_thrust_time > FrameTime ) {
+    if (Controls.sideways_thrust_time > speed_factor * FrameTime ) {
         if (overruns & 8 || (Controls.mouse_axis[kc_mouse[17].value] || (Controls.slide_on_state && Controls.mouse_axis[kc_mouse[15].value]))) {
-            Controls.sideways_thrust_time_overrun += (Controls.sideways_thrust_time - FrameTime);
+            Controls.sideways_thrust_time_overrun += (Controls.sideways_thrust_time - speed_factor * FrameTime);
             if (Controls.sideways_thrust_time_overrun > F1_0 * PlayerCfg.MouseOverrun[2] / 16) {
                 Controls.sideways_thrust_time_overrun = F1_0 * PlayerCfg.MouseOverrun[2] / 16;
             }
         }
-        Controls.sideways_thrust_time = FrameTime;
+        Controls.sideways_thrust_time = speed_factor * FrameTime;
     }
     if (Controls.bank_time > FrameTime ) {
         if (overruns & 16 || (Controls.mouse_axis[kc_mouse[21].value] || (Controls.bank_on_state && Controls.mouse_axis[kc_mouse[15].value]))) {
@@ -1809,32 +1811,32 @@ void kconfig_read_controls(d_event *event, int automap_flag)
         }
         Controls.bank_time = FrameTime;
     }
-    if (Controls.forward_thrust_time > FrameTime ) {
+    if (Controls.forward_thrust_time > speed_factor * FrameTime ) {
         if (overruns & 32 || (Controls.mouse_axis[kc_mouse[23].value])) {
-            Controls.forward_thrust_time_overrun += (Controls.forward_thrust_time - FrameTime);
+            Controls.forward_thrust_time_overrun += (Controls.forward_thrust_time - speed_factor * FrameTime);
             if (Controls.forward_thrust_time_overrun > F1_0 * PlayerCfg.MouseOverrun[5] / 16) {
                 Controls.forward_thrust_time_overrun = F1_0 * PlayerCfg.MouseOverrun[5] / 16;
             }
         }
-        Controls.forward_thrust_time = FrameTime;
+        Controls.forward_thrust_time = speed_factor * FrameTime;
     }
-    if (Controls.vertical_thrust_time < -FrameTime ) {
+    if (Controls.vertical_thrust_time < -speed_factor * FrameTime ) {
         if (overruns & 4 || (Controls.mouse_axis[kc_mouse[19].value] || (Controls.slide_on_state && Controls.mouse_axis[kc_mouse[13].value]))) {
-            Controls.vertical_thrust_time_overrun += (Controls.vertical_thrust_time + FrameTime);
+            Controls.vertical_thrust_time_overrun += (Controls.vertical_thrust_time + speed_factor * FrameTime);
             if (Controls.vertical_thrust_time_overrun < F1_0 * -PlayerCfg.MouseOverrun[3] / 16) {
                 Controls.vertical_thrust_time_overrun = F1_0 * -PlayerCfg.MouseOverrun[3] / 16;
             }
         }
-        Controls.vertical_thrust_time = -FrameTime;
+        Controls.vertical_thrust_time = -speed_factor * FrameTime;
     }
-    if (Controls.sideways_thrust_time < -FrameTime ) {
+    if (Controls.sideways_thrust_time < -speed_factor * FrameTime ) {
         if (overruns & 8 || (Controls.mouse_axis[kc_mouse[17].value] || (Controls.slide_on_state && Controls.mouse_axis[kc_mouse[15].value]))) {
-            Controls.sideways_thrust_time_overrun += (Controls.sideways_thrust_time + FrameTime);
+            Controls.sideways_thrust_time_overrun += (Controls.sideways_thrust_time + speed_factor * FrameTime);
             if (Controls.sideways_thrust_time_overrun < F1_0 * -PlayerCfg.MouseOverrun[2] / 16) {
                 Controls.sideways_thrust_time_overrun = F1_0 * -PlayerCfg.MouseOverrun[2] / 16;
             }
         }
-        Controls.sideways_thrust_time = -FrameTime;
+        Controls.sideways_thrust_time = -speed_factor * FrameTime;
     }
     if (Controls.bank_time < -FrameTime ) {
         if (overruns & 16 || (Controls.mouse_axis[kc_mouse[21].value] || (Controls.bank_on_state && Controls.mouse_axis[kc_mouse[15].value]))) {
@@ -1845,14 +1847,14 @@ void kconfig_read_controls(d_event *event, int automap_flag)
         }
         Controls.bank_time = -FrameTime;
     }
-    if (Controls.forward_thrust_time < -FrameTime ) {
+    if (Controls.forward_thrust_time < -speed_factor * FrameTime ) {
         if (overruns & 32 || (Controls.mouse_axis[kc_mouse[23].value])) {
-            Controls.forward_thrust_time_overrun += (Controls.forward_thrust_time + FrameTime);
+            Controls.forward_thrust_time_overrun += (Controls.forward_thrust_time + speed_factor * FrameTime);
             if (Controls.forward_thrust_time_overrun < F1_0 * -PlayerCfg.MouseOverrun[5] / 16) {
                 Controls.forward_thrust_time_overrun = F1_0 * -PlayerCfg.MouseOverrun[5] / 16;
             }
         }
-        Controls.forward_thrust_time = -FrameTime;
+        Controls.forward_thrust_time = -speed_factor * FrameTime;
     }
 }
 
