@@ -1727,7 +1727,7 @@ void update_rendered_data(int window_num, object *viewer, int rear_view_flag, in
 //fills in Render_list & N_render_segs
 void build_segment_list(int start_seg_num, int window_num)
 {
-	bool observer = Game_mode & GM_OBSERVER;
+	bool observer = (Game_mode & GM_OBSERVER) != 0;
 	int	lcnt,scnt,ecnt;
 	int	l,c;
 	int	ch;

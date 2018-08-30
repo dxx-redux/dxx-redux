@@ -1620,7 +1620,7 @@ int newdemo_read_demo_start(enum purpose_type purpose)
 		Game_mode = Newdemo_game_mode;
 		if (purpose != PURPOSE_REWRITE)
 			multi_sort_kill_list();
-		Game_mode = GM_NORMAL;
+		Game_mode = GM_NORMAL | (Game_mode & GM_OBSERVER);
 	} else
 #endif
 	{
@@ -2470,7 +2470,7 @@ int newdemo_read_frame_information(int rewrite)
 			}
 			Game_mode = Newdemo_game_mode;
 			multi_sort_kill_list();
-			Game_mode = GM_NORMAL;
+			Game_mode = GM_NORMAL | (Game_mode & GM_OBSERVER);
 			break;
 		}
 
@@ -2819,7 +2819,7 @@ int newdemo_read_frame_information(int rewrite)
 
 				if (Game_mode & GM_CAPTURE || Game_mode & GM_HOARD)
 					multi_apply_goal_textures ();
-				Game_mode = GM_NORMAL;
+				Game_mode = GM_NORMAL | (Game_mode & GM_OBSERVER);
 #endif
 			}
 
@@ -3629,7 +3629,7 @@ void newdemo_start_playback(char * filename)
 		return;
 	}
 
-	Game_mode = GM_NORMAL;
+	Game_mode = GM_NORMAL | (Game_mode & GM_OBSERVER);
 	Newdemo_state = ND_STATE_PLAYBACK;
 	Newdemo_vcr_state = ND_STATE_PLAYBACK;
 	nd_playback_v_demosize = PHYSFS_fileLength(infile);

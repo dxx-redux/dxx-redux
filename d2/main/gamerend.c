@@ -497,7 +497,7 @@ void game_draw_hud_stuff()
 	draw_hud();
 
 	if (Newdemo_state == ND_STATE_PLAYBACK)
-		Game_mode = GM_NORMAL;
+		Game_mode = GM_NORMAL | (Game_mode & GM_OBSERVER);
 
 	if ( Player_is_dead )
 		player_dead_message();
@@ -807,7 +807,7 @@ void game_render_frame_mono(int flip)
 		render_gauges();
 
 	if (Newdemo_state == ND_STATE_PLAYBACK)
-		Game_mode = GM_NORMAL;
+		Game_mode = GM_NORMAL | (Game_mode & GM_OBSERVER);
 
 	gr_set_current_canvas(&Screen_3d_window);
 	if (!no_draw_hud)

@@ -316,7 +316,7 @@ void fix_illegal_wall_intersection(object *obj, vms_vector *origin)
 //Simulate a physics object for this frame
 void do_physics_sim(object *obj)
 {
-	bool observer = Game_mode & GM_OBSERVER;
+	bool observer = (Game_mode & GM_OBSERVER) != 0;
 
 	int ignore_obj_list[MAX_IGNORE_OBJS],n_ignore_objs;
 	int iseg;
