@@ -508,7 +508,7 @@ void game_draw_hud_stuff()
 				sprintf (message, " ");
 			}
 		} else {
-			extern int Newdemo_num_written;
+			//extern int Newdemo_num_written;
 			//sprintf (message, "%s (%dK)", TXT_DEMO_RECORDING, (Newdemo_num_written / 1024));
 			sprintf (message, "%s", TXT_DEMO_RECORDING);
 		}
