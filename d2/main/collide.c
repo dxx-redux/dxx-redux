@@ -642,6 +642,8 @@ void collide_weapon_and_wall( object * weapon, fix hitspeed, short hitseg, short
 	int playernum;
 	int	robot_escort;
 
+	fix volume = ((Game_mode & GM_OBSERVER) != 0 && Objects[weapon->ctype.laser_info.parent_num].type == OBJ_CNTRLCEN) ? F1_0 / 4 : F1_0;
+
 	if (weapon->id == OMEGA_ID)
 		if (!ok_to_do_omega_damage(weapon)) // see comment in laser.c
 			return;
@@ -661,10 +663,10 @@ void collide_weapon_and_wall( object * weapon, fix hitspeed, short hitseg, short
 		 !(weapon->type == OBJ_WEAPON && Weapon_info[weapon->id].energy_usage==0)) {
 
 		//make sound
-		digi_link_sound_to_pos( SOUND_FORCEFIELD_BOUNCE_WEAPON, hitseg, 0, hitpt, 0, f1_0 );
+		digi_link_sound_to_pos( SOUND_FORCEFIELD_BOUNCE_WEAPON, hitseg, 0, hitpt, 0, volume );
 #ifdef NETWORK
 		if (Game_mode & GM_MULTI)
-			multi_send_play_sound(SOUND_FORCEFIELD_BOUNCE_WEAPON, f1_0);
+			multi_send_play_sound(SOUND_FORCEFIELD_BOUNCE_WEAPON, volume);
 #endif
 
 		return;	//bail here. physics code will bounce this object
@@ -737,7 +739,7 @@ void collide_weapon_and_wall( object * weapon, fix hitspeed, short hitseg, short
 
 		//we've hit a volatile wall
 
-		digi_link_sound_to_pos( SOUND_VOLATILE_WALL_HIT,hitseg, 0, hitpt, 0, F1_0 );
+		digi_link_sound_to_pos( SOUND_VOLATILE_WALL_HIT,hitseg, 0, hitpt, 0, volume );
 
 		//for most weapons, use volatile wall hit.  For mega, use its special vclip
 		vclip = (weapon->id == MEGA_ID)?Weapon_info[weapon->id].robot_hit_vclip:VCLIP_VOLATILE_WALL_HIT;
@@ -766,11 +768,11 @@ void collide_weapon_and_wall( object * weapon, fix hitspeed, short hitseg, short
 		//	MK: 09/13/95: Badass in water is 1/2 normal intensity.
 		if ( Weapon_info[weapon->id].matter ) {
 
-			digi_link_sound_to_pos( SOUND_MISSILE_HIT_WATER,hitseg, 0, hitpt, 0, F1_0 );
+			digi_link_sound_to_pos( SOUND_MISSILE_HIT_WATER,hitseg, 0, hitpt, 0, volume );
 
 			if ( Weapon_info[weapon->id].damage_radius ) {
 
-				digi_link_sound_to_object(SOUND_BADASS_EXPLOSION, weapon-Objects, 0, F1_0);
+				digi_link_sound_to_object(SOUND_BADASS_EXPLOSION, weapon-Objects, 0, volume);
 
 				//	MK: 09/13/95: Badass in water is 1/2 normal intensity.
 				object_create_badass_explosion( weapon, hitseg, hitpt,
@@ -785,7 +787,7 @@ void collide_weapon_and_wall( object * weapon, fix hitspeed, short hitseg, short
 				object_create_explosion( weapon->segnum, &weapon->pos, Weapon_info[weapon->id].impact_size, Weapon_info[weapon->id].wall_hit_vclip );
 
 		} else {
-			digi_link_sound_to_pos( SOUND_LASER_HIT_WATER,hitseg, 0, hitpt, 0, F1_0 );
+			digi_link_sound_to_pos( SOUND_LASER_HIT_WATER,hitseg, 0, hitpt, 0, volume );
 			object_create_explosion( weapon->segnum, &weapon->pos, Weapon_info[weapon->id].impact_size, VCLIP_WATER_HIT );
 		}
 
@@ -805,7 +807,7 @@ void collide_weapon_and_wall( object * weapon, fix hitspeed, short hitseg, short
 			//is no wall, and no blowing up monitor, then play sound
 			if ((weapon->ctype.laser_info.parent_type != OBJ_PLAYER) ||	((seg->sides[hitwall].wall_num == -1 || wall_type==WHP_NOT_SPECIAL) && !blew_up))
 				if ((Weapon_info[weapon->id].wall_hit_sound > -1 ) && (!(weapon->flags & OF_SILENT)))
-				digi_link_sound_to_pos( Weapon_info[weapon->id].wall_hit_sound,weapon->segnum, 0, &weapon->pos, 0, F1_0 );
+				digi_link_sound_to_pos( Weapon_info[weapon->id].wall_hit_sound,weapon->segnum, 0, &weapon->pos, 0, volume );
 
 			if ( Weapon_info[weapon->id].wall_hit_vclip > -1 )	{
 				if ( Weapon_info[weapon->id].damage_radius )
@@ -838,15 +840,15 @@ void collide_weapon_and_wall( object * weapon, fix hitspeed, short hitseg, short
 
 					case WHP_NOT_SPECIAL:
 						//should be handled above
-						//digi_link_sound_to_pos( Weapon_info[weapon->id].wall_hit_sound, weapon->segnum, 0, &weapon->pos, 0, F1_0 );
+						//digi_link_sound_to_pos( Weapon_info[weapon->id].wall_hit_sound, weapon->segnum, 0, &weapon->pos, 0, volume );
 						break;
 
 					case WHP_NO_KEY:
 						//play special hit door sound (if/when we get it)
-						digi_link_sound_to_pos( SOUND_WEAPON_HIT_DOOR, weapon->segnum, 0, &weapon->pos, 0, F1_0 );
+						digi_link_sound_to_pos( SOUND_WEAPON_HIT_DOOR, weapon->segnum, 0, &weapon->pos, 0, volume );
 #ifdef NETWORK
 			         if (Game_mode & GM_MULTI)
-							multi_send_play_sound( SOUND_WEAPON_HIT_DOOR, F1_0 );
+							multi_send_play_sound( SOUND_WEAPON_HIT_DOOR, volume );
 #endif
 
 						break;
@@ -854,7 +856,7 @@ void collide_weapon_and_wall( object * weapon, fix hitspeed, short hitseg, short
 					case WHP_BLASTABLE:
 						//play special blastable wall sound (if/when we get it)
 						if ((Weapon_info[weapon->id].wall_hit_sound > -1 ) && (!(weapon->flags & OF_SILENT)))
-							digi_link_sound_to_pos( SOUND_WEAPON_HIT_BLASTABLE, weapon->segnum, 0, &weapon->pos, 0, F1_0 );
+							digi_link_sound_to_pos( SOUND_WEAPON_HIT_BLASTABLE, weapon->segnum, 0, &weapon->pos, 0, volume );
 						break;
 
 					case WHP_DOOR:

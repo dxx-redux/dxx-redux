@@ -752,8 +752,12 @@ int Laser_create_new( vms_vector * direction, vms_vector * position, int segnum,
 				if(weapon_type == PLASMA_ID && PlayerCfg.QuietPlasma)  // Plasma's a bit loud, too
 					volume = F1_0  * 3 / 4; 
 
-				if(Weapon_info[obj->id].flash_sound == 22)  // Reactor ball
-					volume = F1_0  * 3 / 4; 		
+				if(Weapon_info[obj->id].flash_sound == 22) {  // Reactor ball
+					if ((Game_mode & GM_OBSERVER) != 0)
+						volume = F1_0  * 3 / 16;
+					else
+						volume = F1_0  * 3 / 4;
+				}
 
 				digi_link_sound_to_pos( Weapon_info[obj->id].flash_sound, obj->segnum, 0, &obj->pos, 0, volume );
 			}
