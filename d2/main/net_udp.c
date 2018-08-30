@@ -6289,6 +6289,7 @@ void net_udp_process_p2p_ping(ubyte *data, struct _sockaddr sender_addr, int dat
 		for(int i = 0; i < Netgame.numobservers; i++) {
 			if(! memcmp(&Netgame.observers[i].protocol.udp.addr, &sender_addr, sizeof(struct _sockaddr))) {
 				Netgame.observers[i].LastPacketTime = timer_query();
+				return;
 			}
 		}
 		return;
