@@ -2576,7 +2576,7 @@ int get_color_for_player(int player, int missile) {
 		return(color); 
 	}
 
-	if(Game_mode & GM_MULTI && Netgame.FairColors) {
+	if(Game_mode & GM_MULTI && Netgame.FairColors && ! (Game_mode & GM_OBSERVER)) {
 		return 0;
 	}
 
