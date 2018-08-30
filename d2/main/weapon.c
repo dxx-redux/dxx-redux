@@ -456,6 +456,37 @@ void do_weapon_select(int weapon_num, int secondary_flag)
 // Weapon type: 0==primary, 1==secondary
 void auto_select_weapon(int weapon_type)
 {
+	// Can you fire your current weapon? 
+	if(weapon_type == 0 && player_has_weapon(  Primary_weapon, 0) == HAS_ALL) { return; }
+	if(weapon_type == 1 && player_has_weapon(Secondary_weapon, 1) == HAS_ALL) { return; }
+
+	// Ok, no.  Let's find you a new one. 
+	int selected_weapon = 0; 
+	int max_weapons = weapon_type == 0 ? MAX_PRIMARY_WEAPONS + 1 : MAX_SECONDARY_WEAPONS + 1; 
+	for(int i = 0; i < max_weapons; i++) {
+		int next_weapon = weapon_type == 0 ? PlayerCfg.PrimaryOrder[i] : PlayerCfg.SecondaryOrder[i];
+
+		if(next_weapon == 255) { continue; } // Breakpoint in list
+		if(next_weapon == PROXIMITY_INDEX && weapon_type == 1) { continue; } // Don't autoselect proxies.  Ever.
+		if(player_has_weapon(next_weapon, weapon_type) != HAS_ALL) { continue; } // Missing weapon or ammo
+
+		select_weapon(next_weapon, weapon_type, 0, 1); 
+		selected_weapon = 1; 
+		break; 
+	}
+
+	// Nothing will shoot?  Bummer.
+	if(! selected_weapon ) {
+		if(weapon_type == 0) {
+			select_weapon(0, 0, 0, 1); // Apparently you have to select lasers because if you leave it on vulcan, you can keep shooting!
+			HUD_init_message_literal(HM_DEFAULT, "No primary weapons available!");
+		} else {
+			HUD_init_message_literal(HM_DEFAULT, "No secondary weapons available!");
+		}
+	}
+
+	// Wow.  That's an awful lot of work to do the wrong thing. --CED
+	/*
 	int	r;
 	int cutpoint;
 	int looped=0;
@@ -548,6 +579,7 @@ void auto_select_weapon(int weapon_type)
 
 
 	}
+	*/
 
 }
 
