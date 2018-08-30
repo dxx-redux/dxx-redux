@@ -664,6 +664,7 @@ void gr_bitblt_find_transparent_area(grs_bitmap *bm, int *minx, int *miny, int *
 		memcpy(&buf, bm->bm_data, sizeof(unsigned char)*(bm->bm_w*bm->bm_h));
 	}
 
+	i = 0;
 	for (y = 0; y < bm->bm_h; y++) {
 		for (x = 0; x < bm->bm_w; x++) {
 			c = buf[i++];
