@@ -1986,7 +1986,7 @@ void print_missile_color(char* color_string, int color_value) {
 
 void do_misc_menu()
 {
-	newmenu_item m[20];
+	newmenu_item m[21];
 	int i = 0;
 
 	do {
@@ -2025,6 +2025,8 @@ void do_misc_menu()
 		m[19].min_value=0; 
 		m[19].max_value=8; 
 
+		ADD_CHECK(20, "Show Custom Ship Colors", PlayerCfg.ShowCustomColors);
+
 		i = newmenu_do1( NULL, "Misc Options", sizeof(m)/sizeof(*m), m, menu_misc_options_handler, NULL, i );
 
 		PlayerCfg.AutoLeveling			= m[0].value;
@@ -2045,6 +2047,7 @@ void do_misc_menu()
 		PlayerCfg.VulcanAmmoWarnings = m[15].value; 
 		PlayerCfg.ShieldWarnings = m[16].value;
 		PlayerCfg.AutoDemo = m[17].value;
+		PlayerCfg.ShowCustomColors = m[20].value;
 
 	} while( i>-1 );
 

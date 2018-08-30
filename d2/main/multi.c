@@ -2500,17 +2500,7 @@ multi_reset_player_object(object *objp)
 
 }
 
-void multi_reset_object_texture (object *objp)
-{
-	int id,wid,mid,i;
-
-	if (Game_mode & GM_TEAM)
-		id = get_team(objp->id);
-	else
-		id = objp->id;
-
-
-	// turn off FairColors if more than 2 players
+void disable_faircolors_if_3_connected() {
 	if(Game_mode & GM_MULTI && Netgame.FairColors) {
 		int num_connected = 0; 
 		for(int i = 0; i < MAX_PLAYERS; i++) {
@@ -2523,14 +2513,72 @@ void multi_reset_object_texture (object *objp)
 			Netgame.FairColors = 0; 
 		}
 	}
+}
+
+int get_color_for_first_team_player(int team, int missile) {
+	for(int i = 0; i < MAX_PLAYERS; i++) {
+		if(get_team(i) == team) {
+			if(missile) { return Netgame.players[i].missilecolor; }
+			return Netgame.players[i].color;
+		}
+	}
+	con_printf(CON_NORMAL, "Couldn't find team color for team %d\n", team);
+	return team; 
+}
+
+int get_color_for_player(int player, int missile) {
+	int color = 0;
+
+	if((! PlayerCfg.ShowCustomColors) || (! Netgame.AllowPreferredColors)) {
+		if(Game_mode & GM_TEAM) {
+			color = get_team(player);
+		} else {
+			color = player; 
+		}
+	} else {
+		if(Game_mode & GM_TEAM) {
+			color = get_color_for_first_team_player(get_team(player), missile);
+		} else {
+			if(missile) { color = Netgame.players[player].missilecolor; }
+			else        { color = Netgame.players[player].color;  }
+		}
+	}
+
+	if (Game_mode & GM_TEAM) {
+		return(color); 
+	}
 
 	if(Game_mode & GM_MULTI && Netgame.FairColors) {
-		wid = 0;
-		mid = 0;
-	} else {
-		wid = Netgame.players[objp->id].color;
-		mid = Netgame.players[objp->id].missilecolor;
+		return 0;
 	}
+
+	return(color); 
+}
+
+int get_color_for_team(int team, int missile) {
+	for(int i = 0; i < MAX_PLAYERS; i++) {
+		if(get_team(i) == team) {
+			return get_color_for_player(i, missile);
+		}
+	}
+
+	return team; 
+}
+
+void multi_reset_object_texture (object *objp)
+{
+	disable_faircolors_if_3_connected();
+
+	int wid = get_color_for_player(objp->id, 0);
+	int mid = get_color_for_player(objp->id, 1);
+
+	con_printf(CON_NORMAL, "Custom color for player %d is %d,%d\n", objp->id, wid, mid);
+
+	int id;
+	if (Game_mode & GM_TEAM)
+		id = get_team(objp->id);
+	else
+		id = objp->id;
 
 	if (id == 0) {
 		if(wid == 0 && mid == 0) {
@@ -2548,7 +2596,7 @@ void multi_reset_object_texture (object *objp)
 		if (N_PLAYER_SHIP_TEXTURES < Polygon_models[objp->rtype.pobj_info.model_num].n_textures)
 			Error("Too many player ship textures!\n");
 
-		for (i=0;i<Polygon_models[objp->rtype.pobj_info.model_num].n_textures;i++)
+		for (int i=0;i<Polygon_models[objp->rtype.pobj_info.model_num].n_textures;i++)
 			multi_player_textures[id-1][i] = ObjBitmaps[ObjBitmapPtrs[Polygon_models[objp->rtype.pobj_info.model_num].first_texture+i]];
 
 		multi_player_textures[id-1][4] = ObjBitmaps[ObjBitmapPtrs[First_multi_bitmap_num+(mid-1)*2]];

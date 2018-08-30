@@ -2492,9 +2492,7 @@ void hud_show_kill_list()
 	else
 		n_left = (n_players+1)/2;
 
-	if(Netgame.FairColors)
-		selected_player_rgb = player_rgb_all_blue; 
-	else if(Netgame.BlackAndWhitePyros) 
+	if(Netgame.BlackAndWhitePyros) 
 		selected_player_rgb = player_rgb_alt; 
 	else
 		selected_player_rgb = player_rgb;
@@ -2579,24 +2577,16 @@ void hud_show_kill_list()
 		else
 			player_num = player_list[i];
 
-		if (Show_kill_list == 1 || Show_kill_list==2)
-		{
-			int color;
+		int color;
 
-			if (Players[player_num].connected != CONNECT_PLAYING)
-				gr_set_fontcolor(BM_XRGB(12, 12, 12), -1);
-			else if (Game_mode & GM_TEAM) {
-				color = get_team(player_num);
-				gr_set_fontcolor(BM_XRGB(selected_player_rgb[color].r,selected_player_rgb[color].g,selected_player_rgb[color].b),-1 );
-			}
-			else {
-				color = Netgame.players[player_num].color;//player_num;
-				gr_set_fontcolor(BM_XRGB(selected_player_rgb[color].r,selected_player_rgb[color].g,selected_player_rgb[color].b),-1 );
-			}
-		}
-		else
-		{
-			gr_set_fontcolor(BM_XRGB(player_rgb[player_num].r,player_rgb[player_num].g,player_rgb[player_num].b),-1 );
+		if (Players[player_num].connected != CONNECT_PLAYING) {
+			gr_set_fontcolor(BM_XRGB(12, 12, 12), -1);
+		} else if (Game_mode & GM_TEAM) {
+			color = get_color_for_team(player_num, 0);
+			gr_set_fontcolor(BM_XRGB(selected_player_rgb[color].r,selected_player_rgb[color].g,selected_player_rgb[color].b),-1 );
+		} else {
+			color = get_color_for_player(player_num, 0);
+			gr_set_fontcolor(BM_XRGB(selected_player_rgb[color].r,selected_player_rgb[color].g,selected_player_rgb[color].b),-1 );
 		}
 
 		if (Show_kill_list == 3)
@@ -2612,8 +2602,14 @@ void hud_show_kill_list()
 		}
 		gr_printf(x0,y,"%s",name);
 
-		if(Netgame.AllowPreferredColors) {
-			x1 = ox1 + FSPACX(5); 
+		if (Players[player_num].connected == CONNECT_PLAYING) {
+			if (Game_mode & GM_TEAM) {
+				color = get_color_for_team(player_num, 1);
+				gr_set_fontcolor(BM_XRGB(selected_player_rgb[color].r,selected_player_rgb[color].g,selected_player_rgb[color].b),-1 );
+			} else {
+				color = get_color_for_player(player_num, 1);
+				gr_set_fontcolor(BM_XRGB(selected_player_rgb[color].r,selected_player_rgb[color].g,selected_player_rgb[color].b),-1 );
+			}
 		}
 
 		if (Show_kill_list==2)
@@ -2643,17 +2639,6 @@ void hud_show_kill_list()
 
 		}
 
-		if(Netgame.AllowPreferredColors) {
-			if ( (Show_kill_list == 1 || Show_kill_list==2) &&
-			     (Players[player_num].connected == CONNECT_PLAYING) &&
-			     (! (Game_mode & GM_TEAM)) )
-			{
-				int score_color = Netgame.players[player_num].missilecolor;
-				gr_set_fontcolor(BM_XRGB(selected_player_rgb[score_color].r,selected_player_rgb[score_color].g,selected_player_rgb[score_color].b),-1 );
-				
-			}
-			//gr_printf(x0+FSPACX(40),y,"-",name);
-		}
 
 		if(Show_network_stats && player_num != Player_num && Players[player_num].connected && Show_kill_list != 3) {
 			int lag = -1; 
@@ -2750,9 +2735,7 @@ void show_HUD_names()
 {
 	int is_friend = 0, show_friend_name = 0, show_enemy_name = 0, show_name = 0, show_typing = 0, show_indi = 0, pnum = 0, objnum = 0;
 	
-	if(Netgame.FairColors)
-		selected_player_rgb = player_rgb_all_blue; 
-	else if(Netgame.BlackAndWhitePyros) 
+	if(Netgame.BlackAndWhitePyros) 
 		selected_player_rgb = player_rgb_alt; 
 	else
 		selected_player_rgb = player_rgb;

@@ -312,6 +312,8 @@ void multi_initiate_restore_game();
 void multi_disconnect_player(int pnum);
 void multi_object_to_object_rw(object *obj, object_rw *obj_rw);
 void multi_object_rw_to_object(object_rw *obj_rw, object *obj);
+int get_color_for_player(int id, int missile);
+int get_color_for_team(int team, int missile);
 
 
 // Exported variables

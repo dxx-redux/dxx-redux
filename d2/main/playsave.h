@@ -86,6 +86,7 @@ typedef struct player_config
 	ubyte VulcanAmmoWarnings;
 	ubyte ShieldWarnings; 
 	ubyte AutoDemo;
+	ubyte ShowCustomColors;
 	ubyte QuietPlasma; 	
 	int AlphaEffects;
 	int DynLightColor;
