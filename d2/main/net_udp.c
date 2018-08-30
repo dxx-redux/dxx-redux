@@ -1906,12 +1906,12 @@ void net_udp_welcome_player(UDP_sequence_packet *their)
 			Netgame.observers[obsnum].LastPacketTime = timer_query();
 			Netgame.observers[obsnum].connected = 1; 
 			Netgame.observers[obsnum].protocol.udp.addr = their->player.protocol.udp.addr;
+			strncpy((char*) &Netgame.observers[obsnum].callsign, (char*) &their->player.callsign, 8);
 
-			multi_send_obs_update(UDP_sync_player.player.callsign, 0, Netgame.numobservers);
-			HUD_init_message(HM_MULTI, "%s is now observing. (Observers: %d)", UDP_sync_player.player.callsign, Netgame.numobservers);
+			multi_send_obs_update(0, obsnum);
+			HUD_init_message(HM_MULTI, "%s is now observing.", UDP_sync_player.player.callsign);
 
 			net_udp_send_objects();
-
 		}
 
 		return;
@@ -5929,6 +5929,8 @@ void clean_pdata(fix64 now) {
 }
 
 void check_observers(fix64 now) {
+	if(! multi_i_am_master() ) { return; }
+
 	int changed_something = 0; 
 	for(int i = 0; i < Netgame.numobservers; i++) {
 		if(now - Netgame.observers[i].LastPacketTime > F1_0*10) {
@@ -5943,8 +5945,7 @@ void check_observers(fix64 now) {
 	}
 
 	if(changed_something) {
-		multi_send_obs_update("", 1, Netgame.numobservers); 
-		HUD_init_message(HM_MULTI, "Observers: %d", Netgame.numobservers);
+		multi_send_obs_update(1, 0);
 	}
 
 }
@@ -6289,6 +6290,9 @@ void net_udp_process_p2p_ping(ubyte *data, struct _sockaddr sender_addr, int dat
 		for(int i = 0; i < Netgame.numobservers; i++) {
 			if(! memcmp(&Netgame.observers[i].protocol.udp.addr, &sender_addr, sizeof(struct _sockaddr))) {
 				Netgame.observers[i].LastPacketTime = timer_query();
+				if(i == 0 && multi_i_am_master()) {
+					multi_send_obs_update(1, 0);
+				}
 				return;
 			}
 		}

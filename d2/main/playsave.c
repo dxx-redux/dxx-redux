@@ -136,7 +136,10 @@ int new_player_config()
 	PlayerCfg.QuietPlasma = 1; 
 	PlayerCfg.maxFps = GameArg.SysMaxFPS; 
 	PlayerCfg.ShipColor = 8;
-	PlayerCfg.MissileColor = 8;	
+	PlayerCfg.MissileColor = 8;
+	PlayerCfg.ObsTurbo = 0;
+	PlayerCfg.ObsShowNames = 0;
+	PlayerCfg.ObsShowObs = 1;
 
 	// Default taunt macros
 	#ifdef NETWORK
@@ -381,8 +384,14 @@ int read_player_d2x(char *filename)
 				if(!strcmp(word,"SHIPCOLOR"))
 					PlayerCfg.ShipColor = atoi(line);	
 				if(!strcmp(word,"MISSILECOLOR"))
-					PlayerCfg.MissileColor = atoi(line);																
+					PlayerCfg.MissileColor = atoi(line);
 
+				if(!strcmp(word,"OBSTURBO"))
+					PlayerCfg.ObsTurbo = atoi(line);
+				if(!strcmp(word,"OBSSHOWNAMES"))
+					PlayerCfg.ObsShowNames = atoi(line);
+				if(!strcmp(word,"OBSSHOWOBS"))
+					PlayerCfg.ObsShowObs = atoi(line);
 				//if(!strcmp(word,"QUIETPLASMA"))
 				//	PlayerCfg.QuietPlasma = atoi(line);							
 				if(!strcmp(word,"MAXFPS")) {
@@ -565,6 +574,9 @@ int write_player_d2x(char *filename)
 		PHYSFSX_printf(fout,"showcustomcolors=%i\n",PlayerCfg.ShowCustomColors);
 		PHYSFSX_printf(fout,"shipcolor=%i\n",PlayerCfg.ShipColor);	
 		PHYSFSX_printf(fout,"missilecolor=%i\n",PlayerCfg.MissileColor);
+		PHYSFSX_printf(fout,"obsturbo=%i\n",PlayerCfg.ObsTurbo);
+		PHYSFSX_printf(fout,"obsshownames=%i\n",PlayerCfg.ObsShowNames);
+		PHYSFSX_printf(fout,"obsshowobs=%i\n",PlayerCfg.ObsShowObs);
 		//PHYSFSX_printf(fout,"quietplasma=%i\n",PlayerCfg.QuietPlasma);	
 		PHYSFSX_printf(fout,"maxfps=%i\n",PlayerCfg.maxFps);	
 		PHYSFSX_printf(fout,"[end]\n");

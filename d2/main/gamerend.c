@@ -126,6 +126,44 @@ void show_framerate()
 	gr_printf(SWIDTH-(GameArg.SysMaxFPS>999?FSPACX(43):FSPACX(37)),y,"FPS: %i",fps_rate);
 }
 
+void show_observers() {
+	if(Netgame.max_numobservers == 0) {
+		return;
+	}
+
+	int y = GHEIGHT;
+
+	gr_set_curfont(GAME_FONT);
+	gr_set_fontcolor(BM_XRGB(8,8,32),-1);
+
+	if (PlayerCfg.CockpitMode[1] == CM_FULL_SCREEN) {
+		if ((Game_mode & GM_MULTI) || (Newdemo_state == ND_STATE_PLAYBACK && Newdemo_game_mode & GM_MULTI))
+			y -= LINE_SPACING * 10;
+		else
+			y -= LINE_SPACING * 4;
+	} else if (PlayerCfg.CockpitMode[1] == CM_STATUS_BAR) {
+		if ((Game_mode & GM_MULTI) || (Newdemo_state == ND_STATE_PLAYBACK && Newdemo_game_mode & GM_MULTI))
+			y -= LINE_SPACING * 6;
+		else
+			y -= LINE_SPACING * 1;
+	} else {
+		if ((Game_mode & GM_MULTI) || (Newdemo_state == ND_STATE_PLAYBACK && Newdemo_game_mode & GM_MULTI))
+			y -= LINE_SPACING * 7;
+		else
+			y -= LINE_SPACING * 2;
+	}
+
+	y -= LINE_SPACING*2;
+
+	for(int i = 0; i < Netgame.numobservers; i++) {
+		gr_printf(SWIDTH-FSPACX(strlen(Netgame.observers[i].callsign)*5 + 5),y,"%s",Netgame.observers[i].callsign);
+		y -= LINE_SPACING; 
+	}
+
+	gr_set_fontcolor(BM_XRGB(8,8,32),-1);
+	gr_printf(SWIDTH-FSPACX(37+15),y,"Observers:");
+	y -= LINE_SPACING;
+}
 
 void set_font_present() { gr_set_fontcolor(BM_XRGB(25,25,25),-1); }
 void set_font_absent() { gr_set_fontcolor(BM_XRGB(12,12,12),-1); }
@@ -490,6 +528,10 @@ void game_draw_hud_stuff()
 
 	if (GameCfg.FPSIndicator && PlayerCfg.CockpitMode[1] != CM_REAR_VIEW)
 		show_framerate();
+
+	if ( (Game_mode & GM_MULTI) && (PlayerCfg.ObsShowObs)) {
+		show_observers(); 
+	}
 
 	if (Newdemo_state == ND_STATE_PLAYBACK)
 		Game_mode = Newdemo_game_mode;

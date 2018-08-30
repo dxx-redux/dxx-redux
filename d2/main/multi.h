@@ -138,7 +138,7 @@ extern int multi_protocol; // set and determinate used protocol
 	VALUE(MULTI_DROP_ORB             , 12)	\
 	VALUE(MULTI_PLAY_BY_PLAY         , 4)	\
 	VALUE(MULTI_RESPAWN_ROBOT        , 60)	\
-	VALUE(MULTI_OBS_UPDATE           , 11)	\
+	VALUE(MULTI_OBS_UPDATE           , 4 + 8*MAX_OBSERVERS)	\
 	AFTER
 for_each_multiplayer_command(enum {, define_multiplayer_command, });
 
@@ -315,7 +315,7 @@ void multi_object_to_object_rw(object *obj, object_rw *obj_rw);
 void multi_object_rw_to_object(object_rw *obj_rw, object *obj);
 int get_color_for_player(int id, int missile);
 int get_color_for_team(int team, int missile);
-void multi_send_obs_update(char* callsign, ubyte event, ubyte observers);
+void multi_send_obs_update(ubyte event, ubyte event_data);
 
 
 // Exported variables

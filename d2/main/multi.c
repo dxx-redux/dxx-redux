@@ -1446,7 +1446,7 @@ void multi_send_message_end()
 			}
 			Netgame.numobservers = 0; 
 			HUD_init_message(HM_MULTI, "All observers disconnected.");
-			multi_send_obs_update("", 1, 0); 
+			multi_send_obs_update(1, 0);
 		}
 		multi_message_index = 0;
 		multi_sending_message[Player_num] = 0;
@@ -5491,20 +5491,38 @@ void multi_new_bounty_target( int pnum )
 	digi_play_sample( SOUND_BUDDY_MET_GOAL, F1_0 * 2 );
 }
 
-void multi_send_obs_update(char* callsign, ubyte event, ubyte observers) {
+void multi_send_obs_update(ubyte event, ubyte event_data) {
+	if(! multi_i_am_master()) { return; }
+
 	multibuf[0] = MULTI_OBS_UPDATE; 
 	multibuf[1] = event;
-	multibuf[2] = observers;
-	strncpy((char*) &multibuf[3], callsign, 8);
-	multi_send_data( multibuf, 11, 2 );
+	multibuf[2] = event_data;
+	multibuf[3] = Netgame.numobservers;
+
+	for(int i = 0; i < Netgame.numobservers; i++) {
+		memcpy(&multibuf[4 + i*8], &Netgame.observers[i].callsign, 8);
+con_printf(CON_NORMAL, "Observer %d is %s\n", i, Netgame.observers[i].callsign); 
+	}
+
+	multi_send_data( multibuf, 4 + 8*MAX_OBSERVERS, 2 );
 }
 
 void multi_do_obs_update(const ubyte *buf) {
+	if(multi_i_am_master()) { return; }
+
+	if(Netgame.max_numobservers < Netgame.numobservers) {
+		Netgame.max_numobservers = Netgame.numobservers;
+	}
+	Netgame.numobservers = buf[3];
+	for(int i = 0; i < Netgame.numobservers; i++) {
+		memcpy(&Netgame.observers[i].callsign, &buf[4+i*8], 8); 
+	}
+
 	// Someone joined
 	if(buf[1] == 0) {
-		HUD_init_message(HM_MULTI, "%s is now observing. (Observers: %d)", buf + 3, buf[2]);
-	} else {
-		HUD_init_message(HM_MULTI, "Observers: %d", buf[2]);
+		char who_joined[9];
+		strncpy(who_joined, (char*) &buf[4 + buf[2]*8], 8);
+		HUD_init_message(HM_MULTI, "%s is now observing.", who_joined);
 	}
 }
 

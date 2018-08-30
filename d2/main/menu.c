@@ -851,6 +851,7 @@ void input_config();
 void change_res();
 void graphics_config();
 void do_misc_menu();
+void do_obs_menu();
 
 int options_menuset(newmenu *menu, d_event *event, void *userdata)
 {
@@ -869,6 +870,7 @@ int options_menuset(newmenu *menu, d_event *event, void *userdata)
 				case  7: ReorderPrimary();		break;
 				case  8: ReorderSecondary();		break;
 				case  9: do_misc_menu();		break;
+				case 10: do_obs_menu();         break;
 			}
 			return 1;	// stay in menu until escape
 			break;
@@ -2075,6 +2077,48 @@ int menu_misc_options_handler ( newmenu *menu, d_event *event, void *userdata )
 	return 0;
 }
 
+int menu_obs_options_handler ( newmenu *menu, d_event *event, void *userdata );
+
+void do_obs_menu()
+{
+	newmenu_item m[3];
+	int i = 0;
+
+	do {
+		ADD_CHECK(0, "Fly Fast",          PlayerCfg.ObsTurbo);
+		ADD_CHECK(1, "Show Player Names", PlayerCfg.ObsShowNames);
+		ADD_CHECK(2, "List observers",    PlayerCfg.ObsShowObs);
+
+		i = newmenu_do1( NULL, "JinX Mode Options", sizeof(m)/sizeof(*m), m, menu_obs_options_handler, NULL, i );
+
+		PlayerCfg.ObsTurbo			= m[0].value;
+		PlayerCfg.ObsShowNames		= m[1].value;
+		PlayerCfg.ObsShowObs 		= m[2].value;
+
+	} while( i>-1 );
+
+}
+
+int menu_obs_options_handler ( newmenu *menu, d_event *event, void *userdata )
+{
+	/*
+	newmenu_item *menus = newmenu_get_items(menu);
+	int citem = newmenu_get_citem(menu);
+	
+	if (event->type == EVENT_NEWMENU_CHANGED)
+	{
+		if (citem == 14) {
+			PlayerCfg.ShipColor = menus[14].value;
+			print_ship_color(menus[14].text, PlayerCfg.ShipColor);
+		} else if (citem == 15) {
+			PlayerCfg.MissileColor = menus[15].value;
+			print_missile_color(menus[15].text, PlayerCfg.MissileColor);
+		}
+	}
+	*/
+	return 0;
+}
+
 #if defined(USE_UDP)
 static int multi_player_menu_handler(newmenu *menu, d_event *event, int *menu_choice)
 {
@@ -2133,7 +2177,7 @@ void do_options_menu()
 {
 	newmenu_item *m;
 
-	MALLOC(m, newmenu_item, 10);
+	MALLOC(m, newmenu_item, 11);
 	if (!m)
 		return;
 
@@ -2147,10 +2191,11 @@ void do_options_menu()
 	m[ 7].type = NM_TYPE_MENU;   m[ 7].text="Primary autoselect ordering...";
 	m[ 8].type = NM_TYPE_MENU;   m[ 8].text="Secondary autoselect ordering...";
 	m[ 9].type = NM_TYPE_MENU;   m[ 9].text="Misc Options...";
+	m[10].type = NM_TYPE_MENU;   m[10].text="Observer Options...";
 
 	// Fall back to main event loop
 	// Allows clean closing and re-opening when resolution changes
-	newmenu_do3( NULL, TXT_OPTIONS, 10, m, options_menuset, NULL, 0, NULL );
+	newmenu_do3( NULL, TXT_OPTIONS, 11, m, options_menuset, NULL, 0, NULL );
 }
 
 #ifndef RELEASE

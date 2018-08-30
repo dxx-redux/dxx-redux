@@ -2748,7 +2748,7 @@ void show_HUD_names()
 		is_friend = (Game_mode & GM_MULTI_COOP || (Game_mode & GM_TEAM && get_team(pnum) == get_team(Player_num)));
 		show_friend_name = Show_reticle_name;
 		show_enemy_name = Show_reticle_name && Netgame.ShowEnemyNames && !(Players[pnum].flags & PLAYER_FLAGS_CLOAKED);
-		show_name = ((is_friend && show_friend_name) || (!is_friend && show_enemy_name));
+		show_name = ((is_friend && show_friend_name) || (!is_friend && show_enemy_name)) || ((Game_mode & GM_OBSERVER) && (PlayerCfg.ObsShowNames)) ;
 		show_typing = is_friend || !(Players[pnum].flags & PLAYER_FLAGS_CLOAKED);
 		show_indi = (((Game_mode & ( GM_CAPTURE | GM_HOARD ) && Players[pnum].flags & PLAYER_FLAGS_FLAG) || (Game_mode & GM_BOUNTY &&  pnum == Bounty_target)) && (is_friend || !(Players[pnum].flags & PLAYER_FLAGS_CLOAKED)));
 
@@ -2763,7 +2763,7 @@ void show_HUD_names()
 		else
 			objnum = Players[pnum].objnum;
 
-		if ((show_name || show_typing || show_indi) && see_object(objnum))
+		if ((show_name || show_typing || show_indi) && (see_object(objnum) || (Game_mode & GM_OBSERVER)))
 		{
 			g3s_point player_point;
 			g3_rotate_point(&player_point,&Objects[objnum].pos);
