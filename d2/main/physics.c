@@ -316,7 +316,7 @@ void fix_illegal_wall_intersection(object *obj, vms_vector *origin)
 //Simulate a physics object for this frame
 void do_physics_sim(object *obj)
 {
-	bool observer = true; // TODO: Set this boolean to indicate whether the user is in observer mode or not so that it won't try to teleport observers back into the level.
+	bool observer = Game_mode & GM_OBSERVER;
 
 	int ignore_obj_list[MAX_IGNORE_OBJS],n_ignore_objs;
 	int iseg;
