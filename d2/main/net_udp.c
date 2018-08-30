@@ -1720,7 +1720,7 @@ net_udp_can_join_netgame(netgame_info *game, ubyte join_as_obs)
 	int i, num_players;
 
 	if (game->game_status == NETSTAT_STARTING)
-		return ! join_as_obs;
+		return join_as_obs ? 2 : 1;
 
 	if (game->game_status != NETSTAT_PLAYING)
 	{
@@ -5043,13 +5043,17 @@ int net_udp_do_join_game(ubyte join_as_obs)
 
 	Network_status = NETSTAT_BROWSING; // We are looking at a game menu
 
-	if (!net_udp_can_join_netgame(&Netgame, join_as_obs))
+	switch (net_udp_can_join_netgame(&Netgame, join_as_obs))
 	{
-		if (Netgame.numplayers == Netgame.max_numplayers)
-			nm_messagebox(TXT_SORRY, 1, TXT_OK, TXT_GAME_FULL);
-		else
-			nm_messagebox(TXT_SORRY, 1, TXT_OK, TXT_IN_PROGRESS);
-		return 0;
+		case 0:
+			if (Netgame.numplayers == Netgame.max_numplayers)
+				nm_messagebox(TXT_SORRY, 1, TXT_OK, TXT_GAME_FULL);
+			else
+				nm_messagebox(TXT_SORRY, 1, TXT_OK, TXT_IN_PROGRESS);
+			return 0;
+		case 2:
+			nm_messagebox(TXT_SORRY, 1, TXT_OK, "You cannot observe a game\nthat hasn't started yet!");
+			return 0;
 	}
 
 	// Choice is valid, prepare to join in
@@ -6044,7 +6048,7 @@ void check_observers(fix64 now) {
 	for(int i = 0; i < Netgame.numobservers; i++) {
 		if(now - Netgame.observers[i].LastPacketTime > F1_0*10) {
 			for(int j = i+1; j < Netgame.numobservers; j++) {
-				Netgame.observers[j] = Netgame.observers[j+1]; 
+				Netgame.observers[j-1] = Netgame.observers[j];
 			}
 
 			i--;
