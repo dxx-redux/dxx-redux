@@ -2572,7 +2572,7 @@ void multi_reset_object_texture (object *objp)
 	int wid = get_color_for_player(objp->id, 0);
 	int mid = get_color_for_player(objp->id, 1);
 
-	con_printf(CON_NORMAL, "Custom color for player %d is %d,%d\n", objp->id, wid, mid);
+	//con_printf(CON_NORMAL, "Custom color for player %d is %d,%d\n", objp->id, wid, mid);
 
 	int id;
 	if (Game_mode & GM_TEAM)

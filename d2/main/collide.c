@@ -2341,7 +2341,7 @@ void collide_player_and_weapon( object * playerobj, object * weapon, vms_vector 
 		vms_vector player2weapon;
 		vm_vec_sub(&player2weapon, collision_point, &playerobj->pos);
 		fix mag = vm_vec_mag(&player2weapon); 
-		if(mag < playerobj->size && mag > 0) {
+		if(/*mag < playerobj->size &&*/ mag > 0) {
 			vm_vec_scale_add(collision_point, &playerobj->pos, &player2weapon, fixdiv(playerobj->size, mag)); 
 		}
 		
@@ -2390,7 +2390,8 @@ void collide_player_and_weapon( object * playerobj, object * weapon, vms_vector 
 				 
 				#ifdef NETWORK
 				if (Game_mode & GM_MULTI) {
-					con_printf(CON_NORMAL, "You took %0.1f damage from %s's %s!\n", (double)(damage)/(double)(F1_0), killer_name, weapon_name); 
+					con_printf(CON_NORMAL, "You took %0.1f damage from %s's %s!\n",
+						(double)(damage)/(double)(F1_0), killer_name, weapon_name);
 				}
 				#endif
 			}
