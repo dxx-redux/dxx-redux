@@ -130,8 +130,22 @@ void drop_rx_packet(ubyte  *data, char* reason);
 
 void forward_to_observers(ubyte *data, int data_len);
 void check_observers(fix64 now);
+void add_message_to_obs_buffer(ubyte *data, int data_len);
+void check_obs_buffer(fix64 now);
+void forward_to_observers_nodelay(ubyte *data, int data_len);
 
 void net_udp_reset_connection_statuses(); 
+
+#define OBSERVER_DELAY 15
+#define MAX_OBS_MESSAGES (OBSERVER_DELAY*8*60)
+#define MAX_MESSAGE_SIZE 100 // Not really, but mdata bigger than that is rare
+
+ubyte* observer_data_buffer;
+fix64 observer_message_timestamps[MAX_OBS_MESSAGES];
+int   observer_message_offsets[MAX_OBS_MESSAGES];
+int   observer_message_lengths[MAX_OBS_MESSAGES];
+int   cur_obs_msg = 0;
+int   next_obs_msg_to_send = 0;
 
 // Variables
 int UDP_num_sendto = 0, UDP_len_sendto = 0, UDP_num_recvfrom = 0, UDP_len_recvfrom = 0;
@@ -1309,6 +1323,9 @@ int net_udp_list_join_poll( newmenu *menu, d_event *event, direct_join *dj )
 			d_free(ljtext);
 			d_free(menus);
 			d_free(dj);
+			if(observer_data_buffer != 0) {
+				d_free(observer_data_buffer);
+			}
 			if (!Game_wind)
 			{
 				net_udp_close();
@@ -4020,7 +4037,7 @@ int net_udp_more_options_handler( newmenu *menu, d_event *event, void *userdata 
 typedef struct param_opt
 {
 	int start_game, name, level, mode, mode_end, moreopts;
-	int closed, refuse, maxnet, maxobs, anarchy, team_anarchy, robot_anarchy, coop, capture, hoard, team_hoard, bounty;
+	int closed, refuse, maxnet, maxobs, obsdelay, anarchy, team_anarchy, robot_anarchy, coop, capture, hoard, team_hoard, bounty;
 } param_opt;
 
 int net_udp_start_game(void);
@@ -4192,6 +4209,7 @@ int net_udp_setup_game()
 	char level_text[32];
 	char srmaxnet[50];
 	char srmaxobs[50];
+	char srbdelay[50];
 
 	net_udp_init();
 
@@ -4288,6 +4306,10 @@ int net_udp_setup_game()
 	opt.refuse = optnum;
 	m[optnum].type = NM_TYPE_RADIO; m[optnum].text = "Restricted Game              "; m[optnum].group=1; m[optnum].value=Netgame.RefusePlayers; optnum++;
 
+	if( (Netgame.max_numobservers > 0) && (Netgame.max_numplayers > 7)) {
+		Netgame.max_numplayers = 7;
+	}
+
 	opt.maxnet = optnum;
 	sprintf( srmaxnet, "Maximum players: %d", Netgame.max_numplayers);
 	m[optnum].type = NM_TYPE_SLIDER; m[optnum].value=Netgame.max_numplayers-2; m[optnum].text= srmaxnet; m[optnum].min_value=0; 
@@ -4297,6 +4319,11 @@ int net_udp_setup_game()
 	sprintf( srmaxobs, "Maximum observers: %d", Netgame.max_numobservers);
 	m[optnum].type = NM_TYPE_SLIDER; m[optnum].value=Netgame.max_numobservers/2; m[optnum].text= srmaxobs; m[optnum].min_value=0; 
 	m[optnum].max_value=MAX_OBSERVERS/2; optnum++;
+
+	opt.obsdelay = optnum;
+	sprintf( srbdelay, "Broadcast delay %d seconds", OBSERVER_DELAY);
+	m[optnum].type = NM_TYPE_CHECK; m[optnum].text = srbdelay; m[optnum].value = Netgame.obs_delay;
+	optnum++;
 	
 	opt.moreopts=optnum;
 	m[optnum].type = NM_TYPE_MENU;  m[optnum].text = "Advanced Options"; optnum++;
@@ -4307,6 +4334,8 @@ int net_udp_setup_game()
 
 	if (i < 0)
 		net_udp_close();
+
+	Netgame.obs_delay = m[opt.obsdelay].value;
 
 	write_netgame_profile(&Netgame);
 
@@ -5278,6 +5307,7 @@ void net_udp_do_frame(int force, int listen)
 	clean_pdata(time); 
 
 	check_observers(time);
+	check_obs_buffer(time);
 
 	if (listen)
 	{
@@ -5737,14 +5767,93 @@ void net_udp_process_mdata (ubyte *data, int data_len, struct _sockaddr sender_a
 	multi_process_bigdata(data+dataoffset, data_len-dataoffset );
 }
 
+// Would like observer info packets to avoid delay, but as mdata they're indistinguishable from things
+// we really do want to delay.  The options are deep packet inspection (difficult with mdata) and sending these
+// things in one packet, or building an mdata_nodelay packet which needs to snuggle in with the needack infrastructure
+// For now, I'm accepting the glitch that observer info is outdated for observers by broadcast_delay
+// It isn't outdated for players, which is the main thing.
 void forward_to_observers(ubyte *data, int data_len) {
+	if(Netgame.max_numobservers == 0) { return; }
+
+	if(Netgame.obs_delay) {
+		add_message_to_obs_buffer(data, data_len);
+	} else {
+		forward_to_observers_nodelay(data, data_len); 
+	}
+}
+
+void add_message_to_obs_buffer(ubyte *data, int data_len) {
+	//con_printf(CON_NORMAL, "Queueing obs message; next: %d, cur: %d, max: %d\n", next_obs_msg_to_send, cur_obs_msg, MAX_OBS_MESSAGES); 
+	if(observer_data_buffer == 0) {
+		observer_data_buffer = d_malloc(MAX_OBS_MESSAGES*MAX_MESSAGE_SIZE); 
+		next_obs_msg_to_send = cur_obs_msg = 0; 
+	}
+
+	if( (next_obs_msg_to_send == cur_obs_msg + 1) ||
+		((next_obs_msg_to_send == 0) && (cur_obs_msg == MAX_OBS_MESSAGES -1)) )  {
+		con_printf(CON_URGENT, "Observer message queue full!  Message dropped.\n"); 
+		return;
+	}
+
+	// Find a spot for the message
+	int bufslot = observer_message_offsets[cur_obs_msg] + observer_message_lengths[cur_obs_msg];
+	if(bufslot + data_len >= MAX_OBS_MESSAGES * MAX_MESSAGE_SIZE) {
+		bufslot = 0;
+	}
+
+	if( 
+		// Come up on it from behind
+		((observer_message_offsets[cur_obs_msg] < observer_message_offsets[next_obs_msg_to_send]) ||
+
+		// Hit it during wraparound
+		(bufslot == 0 && observer_message_offsets[cur_obs_msg] != 0))
+
+		 &&
+		(bufslot + data_len >= observer_message_offsets[next_obs_msg_to_send])
+		
+	  ) {
+		con_printf(CON_URGENT, "Observer message queue out of space!  Message dropped.\n"); 
+		return;
+	}
+
+	cur_obs_msg++; 
+	if(cur_obs_msg >= MAX_OBS_MESSAGES*MAX_MESSAGE_SIZE) {
+		cur_obs_msg = 0; 
+	}
+	memcpy(observer_data_buffer + bufslot, data, data_len);
+	observer_message_offsets[cur_obs_msg] = bufslot;
+	observer_message_lengths[cur_obs_msg] = data_len;
+	observer_message_timestamps[cur_obs_msg] = timer_query();
+
+	//con_printf(CON_NORMAL, "Put message length %d in slot %d, buffer offset %d\n", data_len, cur_obs_msg, bufslot); 
+}
+
+void check_obs_buffer(fix64 now) {
+	if (! multi_i_am_master()) { return; }
+
+	//con_printf(CON_NORMAL, "Checking obs buffer; %d != %d && %f < %f\n", next_obs_msg_to_send, cur_obs_msg, (double)(observer_message_timestamps[next_obs_msg_to_send])/(double)(F1_0), (double)(now - OBSERVER_DELAY*F1_0)/(double)(F1_0)) ;
+
+	while( (next_obs_msg_to_send != cur_obs_msg) &&
+		   (observer_message_timestamps[next_obs_msg_to_send] < now - OBSERVER_DELAY*F1_0)) {
+
+		forward_to_observers_nodelay(observer_data_buffer + observer_message_offsets[next_obs_msg_to_send], 
+			observer_message_lengths[next_obs_msg_to_send]);
+
+	    next_obs_msg_to_send++;
+
+	    if(next_obs_msg_to_send >= MAX_OBS_MESSAGES) {
+	    	next_obs_msg_to_send = 0; 
+	    }
+
+	    //con_printf(CON_NORMAL, "Sent obs message; next: %d, cur: %d, max: %d\n", next_obs_msg_to_send, cur_obs_msg, MAX_OBS_MESSAGES); 
+	
+	}
+}
+
+void forward_to_observers_nodelay(ubyte *data, int data_len) {
 	if (multi_i_am_master()) {
 		for (int i = 0; i < Netgame.numobservers; i++) {
 			if (Netgame.observers[i].connected) {
-				//struct sockaddr_in *addrin = (struct sockaddr_in*) &Netgame.observers[i].protocol.udp.addr;
-				//char *ip = inet_ntoa(addrin->sin_addr); 
-				//ushort port = SWAPSHORT(addrin->sin_port);
-				//con_printf(CON_NORMAL, "   Sending %d to %s:%d \n", data[0], ip, port); 
 				dxx_sendto (UDP_Socket[0], data, data_len, 0, (struct sockaddr *)&Netgame.observers[i].protocol.udp.addr, sizeof(struct _sockaddr));
 			}
 		}

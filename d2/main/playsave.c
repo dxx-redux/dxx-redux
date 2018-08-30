@@ -1096,7 +1096,9 @@ void read_netgame_profile(netgame_info *ng)
 			else if (!strcmp(token, "BornWithBurner"))
 				ng->BornWithBurner = strtol(value, NULL, 10);	
 			else if (!strcmp(token, "OriginalD1Weapons"))
-				ng->OriginalD1Weapons = strtol(value, NULL, 10);										
+				ng->OriginalD1Weapons = strtol(value, NULL, 10);
+			else if (!strcmp(token, "ObsDelay"))
+				ng->obs_delay = strtol(value, NULL, 10);
 #ifdef USE_TRACKER
 			else if (!strcmp(token, "Tracker"))
 				ng->Tracker = strtol(value, NULL, 10);
@@ -1150,6 +1152,7 @@ void write_netgame_profile(netgame_info *ng)
 	PHYSFSX_printf(file, "BlackAndWhitePyros=%i\n", ng->BlackAndWhitePyros);
 	PHYSFSX_printf(file, "BornWithBurner=%i\n", ng->BornWithBurner);
 	PHYSFSX_printf(file, "OriginalD1Weapons=%i\n", ng->OriginalD1Weapons);
+	PHYSFSX_printf(file, "ObsDelay=%i\n", ng->obs_delay);
 	
 #ifdef USE_TRACKER
 	PHYSFSX_printf(file, "Tracker=%i\n", ng->Tracker);

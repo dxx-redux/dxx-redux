@@ -5501,7 +5501,6 @@ void multi_send_obs_update(ubyte event, ubyte event_data) {
 
 	for(int i = 0; i < Netgame.numobservers; i++) {
 		memcpy(&multibuf[4 + i*8], &Netgame.observers[i].callsign, 8);
-con_printf(CON_NORMAL, "Observer %d is %s\n", i, Netgame.observers[i].callsign); 
 	}
 
 	multi_send_data( multibuf, 4 + 8*MAX_OBSERVERS, 2 );
