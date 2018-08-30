@@ -998,6 +998,7 @@ short master_respawn_robot(short robo_id);
 void check_robot_respawns() { 
 	if(! multi_i_am_master()) { return; } 
 	if(! (Game_mode & GM_MULTI_ROBOTS)) { return; }
+	if( Game_mode & GM_MULTI_COOP ) { return; }
 
 	if(GameTime64 > NextRespawnWave) {
 		NextRespawnWave = GameTime64 + RespawnWaveLength; 
