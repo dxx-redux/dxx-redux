@@ -3518,6 +3518,7 @@ try_again:
 	}
 	// Nooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo
 	if (exit == -1) {               // pressed ESC
+		HUD_init_message_literal( HM_DEFAULT|HM_MULTI, "Demo saved as tmpdemo.dem" );
 	//	PHYSFS_delete(DEMO_FILENAME);   // might as well remove the file
 		return;                     // return without doing anything
 	}
