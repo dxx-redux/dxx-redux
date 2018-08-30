@@ -923,7 +923,7 @@ int fvi_sub(vms_vector *intp,int *ints,vms_vector *p0,int startseg,vms_vector *p
 
 						//if what we have hit is a door, check the adjoining seg
 
-						if ( (thisobjnum == Players[Player_num].objnum) && (cheats.ghostphysics) )	{
+						if ( (thisobjnum == Players[Player_num].objnum) && (cheats.ghostphysics || Game_mode & GM_OBSERVER) )	{
 							wid_flag = WALL_IS_DOORWAY(seg, side);
 							if (seg->children[side] >= 0 )
  								wid_flag |= WID_FLY_FLAG;

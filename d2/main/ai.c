@@ -326,6 +326,11 @@ void do_ai_frame(object *obj)
 		return;
 	}
 
+	// Robots do nothing for observers; those controlling them handle their actions
+	if (Game_mode & GM_OBSERVER) {
+		return;
+	}
+
 	robptr = &Robot_info[obj->id];
 	Assert(robptr->always_0xabcd == 0xabcd);
 
@@ -1349,6 +1354,10 @@ int add_awareness_event(object *objp, int type)
 // The object (probably player or weapon) which created the awareness is objp.
 void create_awareness_event(object *objp, int type)
 {
+	if( (Game_mode & GM_OBSERVER) && objp->id == Player_num) {
+		return;
+	}
+
 	// If not in multiplayer, or in multiplayer with robots, do this, else unnecessary!
 	if (!(Game_mode & GM_MULTI) || (Game_mode & GM_MULTI_ROBOTS)) {
 		if (add_awareness_event(objp, type)) {

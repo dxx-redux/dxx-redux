@@ -4248,6 +4248,9 @@ net_udp_set_game_mode(int gamemode)
 	}
 	else
 		Int3();
+
+	// For dev -- force obs mode on
+	Game_mode |= GM_OBSERVER;
 }
 
 void net_udp_read_sync_packet( ubyte * data, int data_len, struct _sockaddr sender_addr )

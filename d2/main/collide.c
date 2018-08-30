@@ -313,6 +313,8 @@ void collide_player_and_wall( object * playerobj, fix hitspeed, short hitseg, sh
 	if (playerobj->id != Player_num) // Execute only for local player
 		return;
 
+	if(Game_mode & GM_OBSERVER) { return; }
+
 	tmap_num = Segments[hitseg].sides[hitwall].tmap_num;
 
 	//	If this wall does damage, don't make *BONK* sound, we'll be making another sound.
@@ -950,6 +952,10 @@ void collide_robot_and_player( object * robot, object * playerobj, vms_vector *c
 {
 	int	steal_attempt = 0;
 
+	if (playerobj->id == Player_num && Game_mode & GM_OBSERVER) {
+		return;
+	}
+
 	if (robot->flags&OF_EXPLODING)
 		return;
 
@@ -1081,6 +1087,10 @@ void apply_damage_to_controlcen(object *controlcen, fix damage, short who)
 
 void collide_player_and_controlcen( object * controlcen, object * playerobj, vms_vector *collision_point )
 {
+	if (playerobj->id == Player_num && Game_mode & GM_OBSERVER) {
+		return;
+	}
+
 	if (playerobj->id == Player_num) {
 		Control_center_been_hit = 1;
 		ai_do_cloak_stuff();				//	In case player cloaked, make control center know where he is.
@@ -1703,6 +1713,10 @@ void collide_robot_and_weapon( object * robot, object * weapon, vms_vector *coll
 //##}
 
 void collide_hostage_and_player( object * hostage, object * player, vms_vector *collision_point ) {
+	if (player->id == Player_num && Game_mode & GM_OBSERVER) {
+		return;
+	}
+
 	// Give player points, etc.
 	if ( player == ConsoleObject )	{
 		detect_escort_goal_accomplished(hostage-Objects);
@@ -1760,6 +1774,10 @@ void collide_hostage_and_player( object * hostage, object * player, vms_vector *
 
 void collide_player_and_player( object * player1, object * player2, vms_vector *collision_point )
 {
+	if ((player1->id == Player_num || player2->id == Player_num) && Game_mode & GM_OBSERVER) {
+		return;
+	}
+
 	static fix64 last_player_bump[MAX_PLAYERS] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 	int damage_flag = 1, otherpl = -1;
 
@@ -2194,6 +2212,10 @@ void apply_damage_to_player(object *playerobj, object *killer, fix damage, ubyte
 	if (Endlevel_sequence)
 		return;
 
+	if (playerobj->id == Player_num && Game_mode & GM_OBSERVER) {
+		return;
+	}
+
 	//for the player, the 'real' shields are maintained in the Players[]
 	//array.  The shields value in the player's object are, I think, not
 	//used anywhere.  This routine, however, sets the objects shields to
@@ -2269,6 +2291,9 @@ void collide_player_and_weapon( object * playerobj, object * weapon, vms_vector 
 	fix		damage = weapon->shields;
 	object * killer=NULL;
 
+	if (playerobj->id == Player_num && Game_mode & GM_OBSERVER) {
+		return;
+	}
 
 	if (weapon->id == OMEGA_ID)
 		if (!ok_to_do_omega_damage(weapon)) // see comment in laser.c
@@ -2411,6 +2436,10 @@ void collide_player_and_weapon( object * playerobj, object * weapon, vms_vector 
 //	Nasty robots are the ones that attack you by running into you and doing lots of damage.
 void collide_player_and_nasty_robot( object * playerobj, object * robot, vms_vector *collision_point )
 {
+	if (playerobj->id == Player_num && Game_mode & GM_OBSERVER) {
+		return;
+	}
+
 //	if (!(Robot_info[robot->id].energy_drain && Players[playerobj->id].energy))
 		digi_link_sound_to_pos( Robot_info[robot->id].claw_sound, playerobj->segnum, 0, collision_point, 0, F1_0 );
 
@@ -2431,6 +2460,10 @@ void collide_player_and_nasty_robot( object * playerobj, object * robot, vms_vec
 
 void collide_player_and_materialization_center(object *objp)
 {
+	if (Game_mode & GM_OBSERVER) {
+		return;
+	}
+
 	int	side;
 	vms_vector	exit_dir;
 	segment	*segp = &Segments[objp->segnum];
@@ -2500,6 +2533,10 @@ void collide_robot_and_materialization_center(object *objp)
 extern int Network_got_powerup; // HACK!!!
 
 void collide_player_and_powerup( object * playerobj, object * powerup, vms_vector *collision_point ) {
+	if (playerobj->id == Player_num && Game_mode & GM_OBSERVER) {
+		return;
+	}
+
 	if (!Endlevel_sequence && !Player_is_dead && (playerobj->id == Player_num )) {
 		int powerup_used;
 
@@ -2539,6 +2576,10 @@ void collide_player_and_powerup( object * playerobj, object * powerup, vms_vecto
 //##}
 
 void collide_player_and_clutter( object * playerobj, object * clutter, vms_vector *collision_point ) {
+	if (playerobj->id == Player_num && Game_mode & GM_OBSERVER) {
+		return;
+	}
+
 	if (check_collision_delayfunc_exec())
 		digi_link_sound_to_pos( SOUND_ROBOT_HIT_PLAYER, playerobj->segnum, 0, collision_point, 0, F1_0 );
 	bump_two_objects(clutter, playerobj, 1);
@@ -2688,6 +2729,10 @@ void collide_weapon_and_debris( object * weapon, object * debris, vms_vector *co
 void collide_two_objects( object * A, object * B, vms_vector *collision_point )
 {
 	int collision_type;
+
+	if ((A->id == Player_num || B->id == Player_num) && Game_mode & GM_OBSERVER) {
+		return;
+	}
 
 	collision_type = COLLISION_OF(A->type,B->type);
 

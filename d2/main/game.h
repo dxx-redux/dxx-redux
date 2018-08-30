@@ -83,7 +83,7 @@ extern int ft_preference;
 #define GM_BOUNTY	2048	/* New bounty mode by Matt1360 */
 #define GM_NORMAL       0       // You are in normal play mode, no multiplayer stuff
 #define GM_MULTI        38      // You are in some type of multiplayer game
-
+#define GM_OBSERVER     4096    // You are observing this game
 
 #define NDL 5       // Number of difficulty levels.
 

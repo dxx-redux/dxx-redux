@@ -324,6 +324,11 @@ void do_controlcen_frame(object *obj)
 		return;
 	}
 
+	if(Game_mode & GM_OBSERVER) {
+		Control_center_player_been_seen = 0; 
+		return;
+	}
+
 	//	Periodically, make the reactor fall asleep if player not visible.
 	if (Control_center_been_hit || Control_center_player_been_seen) {
 		if ((Last_time_cc_vis_check + F1_0*5 < GameTime64) || (Last_time_cc_vis_check > GameTime64)) {

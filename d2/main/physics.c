@@ -452,6 +452,15 @@ void do_physics_sim(object *obj)
 
 		vm_vec_add(&new_pos,&obj->pos,&frame_vec);
 
+		// The rest of this function is collision stuff
+		// Observers just fly free
+		
+		if(Game_mode & GM_OBSERVER && obj->id == Player_num) {
+			obj->pos = new_pos;
+			return;
+		}
+
+
 		ignore_obj_list[n_ignore_objs] = -1;
 
 		fq.p0						= &obj->pos;
@@ -788,7 +797,7 @@ void do_physics_sim(object *obj)
 		do_physics_align_object( obj );
 
 	//hack to keep player from going through closed doors
-	if (obj->type==OBJ_PLAYER && obj->segnum!=orig_segnum && (!cheats.ghostphysics) ) {
+	if (obj->type==OBJ_PLAYER && obj->segnum!=orig_segnum && (!cheats.ghostphysics) && (! (Game_mode & GM_OBSERVER)) ) {
 		int sidenum;
 
 		sidenum = find_connect_side(&Segments[obj->segnum],&Segments[orig_segnum]);
