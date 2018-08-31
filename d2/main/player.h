@@ -210,6 +210,9 @@ extern int Guided_missile_sig[MAX_PLAYERS];
 
 vms_vector Last_pos; // Saved position of observer prior to following a player.
 vms_matrix Last_orient; // Saved orientation of observer prior to following a player.
+fix Last_real_update; // How long ago in seconds the observed player's real position got updated.
+vms_vector Real_pos; // The observed player's position.
+vms_matrix Real_orient; // The observed player's orientation.
 
 /*
  * reads a player_ship structure from a PHYSFS_file
