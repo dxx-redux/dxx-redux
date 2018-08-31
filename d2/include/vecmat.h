@@ -433,4 +433,9 @@ fix vm_dist_to_plane (const vms_vector * checkp, const vms_vector * norm, const 
 // convert from quaternion to vector matrix and back
 void vms_quaternion_from_matrix(vms_quaternion * q, const vms_matrix * m);
 void vms_matrix_from_quaternion(vms_matrix * m, const vms_quaternion * q);
+
+// vector equality
+bool vm_vec_equal(const vms_vector * v1, const vms_vector * v2);
+bool vm_mat_equal(const vms_matrix * m1, const vms_matrix * m2);
+
 #endif  /* !_VECMAT_H */

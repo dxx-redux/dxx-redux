@@ -1911,8 +1911,64 @@ int ReadControls(d_event *event)
 		}
 
 	if (Game_mode & GM_OBSERVER) {
-		ConsoleObject->pos = Objects[Players[Current_obs_player].objnum].pos;
-		ConsoleObject->orient = Objects[Players[Current_obs_player].objnum].orient;
+		// Force the observer to a certain camera based on whether they are freely observing or observing a specific player.
+		if (Current_obs_player == OBSERVER_PLAYER_ID) {
+			// If we're freely observing, just update position and orientation as normal.
+			ConsoleObject->pos = Objects[Players[Current_obs_player].objnum].pos;
+			ConsoleObject->orient = Objects[Players[Current_obs_player].objnum].orient;
+		} else {
+			// We're observing a player directly, and need to interpolate the position and orientation.  Check to see if the real position has updated, and accumulate Last_real_update time.
+			if (vm_vec_equal(&Real_pos, &Objects[Players[Current_obs_player].objnum].pos) && vm_mat_equal(&Real_orient, &Objects[Players[Current_obs_player].objnum].orient)) {
+				Last_real_update += FrameTime;
+			} else {
+				Real_pos = Objects[Players[Current_obs_player].objnum].pos;
+				Real_orient = Objects[Players[Current_obs_player].objnum].orient;
+				Last_real_update = 0;
+			}
+
+			// Update the console position if it's different from the real position.
+			if (!vm_vec_equal(&Real_pos, &ConsoleObject->pos) || vm_mat_equal(&Real_orient, &ConsoleObject->orient)) {
+				// We take a sample time of 1.5 times the packet frequency to help offset stuttering from lag.
+				fix sample_time = 1.5 * F1_0 / Netgame.PacketsPerSec;
+
+				if (sample_time <= Last_real_update) {
+					// We haven't updated the real position within the sample time, so just update position and orientation as normal.
+					ConsoleObject->pos = Real_pos;
+					ConsoleObject->orient = Real_orient;
+				} else {
+					// Determine how close we should get to the real position and orientation, and update the console object accordingly.
+					fix factor = F1_0 * FrameTime / (sample_time - Last_real_update);
+
+					vms_vector  fvec1, fvec2, rvec1, rvec2;
+					fix         mag1;
+
+					// Update orientation.
+					fvec1 = ConsoleObject->orient.fvec;
+					vm_vec_scale(&fvec1, F1_0-factor);
+					fvec2 = Real_orient.fvec;
+					vm_vec_scale(&fvec2, factor);
+					vm_vec_add2(&fvec1, &fvec2);
+					mag1 = vm_vec_normalize_quick(&fvec1);
+					if (mag1 > F1_0/256) {
+						rvec1 = ConsoleObject->orient.rvec;
+						vm_vec_scale(&rvec1, F1_0-factor);
+						rvec2 = Real_orient.rvec;
+						vm_vec_scale(&rvec2, factor);
+						vm_vec_add2(&rvec1, &rvec2);
+						vm_vec_normalize_quick(&rvec1); // Note: Doesn't matter if this is null, if null, vm_vector_2_matrix will just use fvec1
+						vm_vector_2_matrix(&ConsoleObject->orient, &fvec1, NULL, &rvec1);
+					}
+
+					// Update position.
+					vms_vector vec_diff = vm_vec_sub(Real_pos, ConsoleObject->pos);
+					vm_vec_scale(&vec_diff, factor);
+					vm_vec_add2(&Real_pos, vec_diff)
+
+					ConsoleObject->pos = Objects[Players[Current_obs_player].objnum].pos;
+					ConsoleObject->orient = Objects[Players[Current_obs_player].objnum].orient;
+				}
+			}
+		}
 	}
 
 	if (Newdemo_state == ND_STATE_PLAYBACK)

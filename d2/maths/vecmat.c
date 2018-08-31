@@ -860,3 +860,11 @@ void vms_matrix_from_quaternion(vms_matrix * m, const vms_quaternion * q)
 	m->fvec.y = fixmul(fixmul(fl2f(2.0), (tmp1 + tmp2)), invs);
 	m->uvec.z = fixmul(fixmul(fl2f(2.0), (tmp1 - tmp2)), invs);
 }
+
+bool vm_vec_equal(const vms_vector * v1, const vms_vector * v2) {
+	return v1->x == v2->x && v1->y == v2->y && v1->z == v2->z;
+}
+
+bool vm_mat_equal(const vms_matrix * m1, const vms_matrix * m2) {
+	return vm_vec_equal(&m1->rvec, &m2->rvec) && vm_vec_equal(&m1->uvec, &m2->uvec) && vm_vec_equal(&m1->fvec, &m2->fvec);
+}
