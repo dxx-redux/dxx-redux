@@ -101,9 +101,9 @@ class DXXCommon:
 			env['VERSION_NUM'] = VERSION
 			env['VERSION_NAME'] = program.PROGRAM_NAME + ' v' + VERSION
 			env.Append(CPPDEFINES = ['HAVE_STRUCT_TIMESPEC', 'HAVE_STRUCT_TIMEVAL', '__unix__'])
-			env.Append(CPPPATH = [os.path.join(program.srcdir, '../physfs'), os.path.join(os.getenv("HOME"), 'Library/Frameworks/SDL.framework/Headers'), '/Library/Frameworks/SDL.framework/Headers'])
-			env.Append(FRAMEWORKS = ['ApplicationServices', 'Carbon', 'Cocoa', 'SDL'])
-			env.Append(FRAMEWORKPATH = [os.path.join(os.getenv("HOME"), 'Library/Frameworks'), '/System/Library/Frameworks/ApplicationServices.framework/Versions/A/Frameworks'])
+			env.Append(CPPPATH = [os.path.join(program.srcdir, '../physfs'), os.path.join(os.getenv("HOME"), 'Library/Frameworks/SDL.framework/Headers'), '/Library/Frameworks/SDL.framework/Headers', '/opt/local/include', '/opt/local/include/SDL'])
+			env.Append(FRAMEWORKS = ['ApplicationServices', 'Cocoa', 'SDL'])
+			env.Append(FRAMEWORKPATH = ['/opt/local/Library/Frameworks', os.path.join(os.getenv("HOME"), 'Library/Frameworks'), '/System/Library/Frameworks/ApplicationServices.framework/Versions/A/Frameworks'])
 			self.libs = ['']
 			env['LIBPATH'] = '../physfs/build/Debug'
 	# Settings to apply to Linux builds
@@ -295,11 +295,12 @@ class DXXProgram(DXXCommon):
 	# execute.
 	class DarwinPlatformSettings(DXXCommon.DarwinPlatformSettings):
 		def __init__(self,user_settings):
-			DXXCommon.DarwinPlatformSettings.__init__(self)
+			DXXCommon.DarwinPlatformSettings.__init__(self,user_settings)
 			user_settings.sharepath = ''
 		def adjust_environment(self,program,env):
 			DXXCommon.DarwinPlatformSettings.adjust_environment(self, program, env)
-			self.platform_sources = [os.path.join(program.srcdir, f) for f in ['arch/cocoa/SDLMain.m', 'arch/carbon/messagebox.c']]
+			self.platform_sources = [os.path.join(program.srcdir, f) for f in ['arch/cocoa/SDLMain.m', 'arch/cocoa/messagebox.mm']]
+			env['LIBPATH'] = '/opt/local/lib'
 	# Settings to apply to Linux builds
 	class LinuxPlatformSettings(DXXCommon.LinuxPlatformSettings):
 		def __init__(self,user_settings):

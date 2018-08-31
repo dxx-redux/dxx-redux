@@ -300,7 +300,7 @@ jmp_buf LeaveEvents;
 int main(int argc, char *argv[])
 {
 	mem_init();
-#ifdef __LINUX__
+#if defined(__LINUX__) || defined(__APPLE__)
 	error_init(NULL);
 #else
 	error_init(msgbox_error);

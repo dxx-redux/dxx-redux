@@ -33,7 +33,11 @@
 /* #undef RELEASE */
 
 /* Define this to be the shared game directory root */
+#ifdef __APPLE__
+#define SHAREPATH "../.."
+#else
 #define SHAREPATH "."
+#endif
 
 /* Define if your processor needs data to be word-aligned */
 /* #undef WORDS_NEED_ALIGNMENT */

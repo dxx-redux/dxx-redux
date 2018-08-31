@@ -1727,8 +1727,8 @@ int newdemo_read_frame_information(int rewrite)
 	sbyte c,WhichWindow;
 	object extraobj;
 	segment *seg;
-	bool shields_updated = FALSE, energy_updated = FALSE; // Flags to indicate if shields or energy has already been updated when rewinding.  Rewinds should only take the first update.
-	bool afterburner_updated = FALSE; // Added in D2 port of fix - looks likely to affect this too
+	bool shields_updated = 0, energy_updated = 0; // Flags to indicate if shields or energy has already been updated when rewinding.  Rewinds should only take the first update.
+	bool afterburner_updated = 0; // Added in D2 port of fix - looks likely to affect this too
 
 	done = 0;
 
@@ -2149,7 +2149,7 @@ int newdemo_read_frame_information(int rewrite)
 			} else if ((Newdemo_vcr_state == ND_STATE_REWINDING) || (Newdemo_vcr_state == ND_STATE_ONEFRAMEBACKWARD)) {
 				if (!energy_updated && old_energy != 255) {
 					Players[Player_num].energy = i2f(old_energy);
-					energy_updated = TRUE;
+					energy_updated = 1;
 				}
 			}
 			break;
@@ -2174,7 +2174,7 @@ int newdemo_read_frame_information(int rewrite)
 			} else if ((Newdemo_vcr_state == ND_STATE_REWINDING) || (Newdemo_vcr_state == ND_STATE_ONEFRAMEBACKWARD)) {
 				if (!afterburner_updated && old_afterburner != 255) {
 					Afterburner_charge = old_afterburner<<9;
-					afterburner_updated = TRUE;
+					afterburner_updated = 1;
 				}
 			}
 			break;
@@ -2198,7 +2198,7 @@ int newdemo_read_frame_information(int rewrite)
 			} else if ((Newdemo_vcr_state == ND_STATE_REWINDING) || (Newdemo_vcr_state == ND_STATE_ONEFRAMEBACKWARD)) {
 				if (!shields_updated && old_shield != 255) {
 					Players[Player_num].shields = i2f(old_shield);
-					shields_updated = TRUE;
+					shields_updated = 1;
 				}
 			}
 			break;
