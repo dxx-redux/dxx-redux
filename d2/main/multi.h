@@ -236,6 +236,9 @@ extern char *multi_allow_powerup_text[MULTI_ALLOW_POWERUP_MAX];
 extern const char GMNames[MULTI_GAME_TYPE_COUNT][MULTI_GAME_NAME_LENGTH];
 extern const char GMNamesShrt[MULTI_GAME_TYPE_COUNT][8];
 
+int Current_obs_player; // Current player being observed. Defaults to 7 (the observer player).
+bool Obs_at_distance; // True if you're viewing the player from a cube back.
+
 // Exported functions
 
 extern int GetMyNetRanking();

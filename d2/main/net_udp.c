@@ -3506,6 +3506,10 @@ void net_udp_read_endlevel_packet( ubyte *data, int data_len, struct _sockaddr s
 
 		if ((int)data[len] == CONNECT_DISCONNECTED)
 			multi_disconnect_player(pnum);
+
+		if (Current_obs_player == pnum)
+			Current_obs_player = OBSERVER_PLAYER_ID;
+
 		Players[pnum].connected = data[len];					len++;
 		tmpvar = data[len];							len++;
 		if ((Network_status != NETSTAT_PLAYING) && (Players[pnum].connected == CONNECT_PLAYING) && (tmpvar < Countdown_seconds_left))
@@ -3542,6 +3546,10 @@ void net_udp_read_endlevel_packet( ubyte *data, int data_len, struct _sockaddr s
 
 			if ((int)data[len] == CONNECT_DISCONNECTED)
 				multi_disconnect_player(i);
+
+			if (Current_obs_player == i)
+				Current_obs_player = OBSERVER_PLAYER_ID;
+
 			Players[i].connected = data[len];				len++;
 			Players[i].net_kills_total = GET_INTEL_SHORT(&(data[len]));	len += 2;
 			Players[i].net_killed_total = GET_INTEL_SHORT(&(data[len]));	len += 2;
@@ -4459,6 +4467,10 @@ void net_udp_read_sync_packet( ubyte * data, int data_len, struct _sockaddr send
 		memcpy( Players[i].callsign, Netgame.players[i].callsign, CALLSIGN_LEN+1 );
 
 		Players[i].connected = Netgame.players[i].connected;
+
+		if (Current_obs_player == i && Players[i].connected != CONNECT_PLAYING)
+			Current_obs_player = OBSERVER_PLAYER_ID;
+
 		Players[i].net_kills_total = Netgame.player_kills[i];
 		Players[i].net_killed_total = Netgame.killed[i];
 		if ((Network_rejoined) || (i != Player_num))
@@ -4991,6 +5003,10 @@ net_udp_level_sync(void)
 	if (result)
 	{
 		Players[Player_num].connected = CONNECT_DISCONNECTED;
+
+		if (Current_obs_player == Player_num)
+			Current_obs_player = OBSERVER_PLAYER_ID;
+
 		net_udp_send_endlevel_packet();
 		if (Game_wind)
 			window_close(Game_wind);
@@ -5099,6 +5115,10 @@ void net_udp_leave_game()
 	}
 
 	Players[Player_num].connected = CONNECT_DISCONNECTED;
+
+	if (Current_obs_player == Player_num)
+		Current_obs_player = OBSERVER_PLAYER_ID;
+
 	change_playernum_to(0);
 	write_player_file();
 

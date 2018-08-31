@@ -1221,7 +1221,12 @@ void PlayerFinishedLevel(int secret_flag)
 	Players[Player_num].hostages_rescued_total += Players[Player_num].hostages_on_board;
 
 	if (Game_mode & GM_NETWORK)
+	{
 		Players[Player_num].connected = CONNECT_WAITING; // Finished but did not die
+	
+		if (Current_obs_player == Player_num)
+			Current_obs_player = OBSERVER_PLAYER_ID;
+	}
 
 	last_drawn_cockpit = -1;
 
@@ -1422,6 +1427,9 @@ void DoPlayerDead()
 		Players[Player_num].energy = 0;
 		Players[Player_num].shields = 0;
 		Players[Player_num].connected = CONNECT_DIED_IN_MINE;
+
+		if (Current_obs_player == Player_num)
+			Current_obs_player = OBSERVER_PLAYER_ID;
 
 		do_screen_message(TXT_DIED_IN_MINE); // Give them some indication of what happened
 
@@ -1797,6 +1805,11 @@ void InitPlayerPosition(int random_flag)
 	if ((Game_mode & GM_MULTI) && (Netgame.SpawnStyle == SPAWN_STYLE_PREVIEW) && Dead_player_camera != NULL) {
 		ConsoleObject->orient = Dead_player_camera->orient;  
 		Dead_player_camera = NULL; 
+	}
+
+	if (Game_mode & GM_OBSERVER) {
+		ConsoleObject->pos = Objects[Players[Current_obs_player].objnum].pos;
+		ConsoleObject->orient = Objects[Players[Current_obs_player].objnum].orient;
 	}
 #endif		
 	obj_relink(ConsoleObject-Objects,Player_init[NewPlayer].segnum);

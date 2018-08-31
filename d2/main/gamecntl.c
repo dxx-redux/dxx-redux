@@ -1054,6 +1054,69 @@ int HandleGameKey(int key)
 					game_flush_inputs();
 				}
 			return 1;
+		case KEY_CTRLED + KEY_1:
+		case KEY_CTRLED + KEY_2:
+		case KEY_CTRLED + KEY_3:
+		case KEY_CTRLED + KEY_4:
+		case KEY_CTRLED + KEY_5:
+		case KEY_CTRLED + KEY_6:
+		case KEY_CTRLED + KEY_7:
+			if (Players[key - KEY_CTRLED - KEY_1].connected == CONNECT_PLAYING) {
+				if (Current_obs_player != key - KEY_CTRLED - KEY_1) {
+					HUD_init_message(HM_DEFAULT, "Observing %s!", Players[key - KEY_CTRLED - KEY_1].callsign);
+				}
+				Current_obs_player = key - KEY_CTRLED - KEY_1;
+			} else {
+				if (Current_obs_player != 7) {
+					HUD_init_message_literal(HM_MULTI, "Observing freely.");
+				}
+				Current_obs_player = 7;
+			}
+			return 1;
+		case KEY_CTRLED + KEY_8:
+			if (Current_obs_player != 7) {
+				HUD_init_message_literal(HM_MULTI, "Observing freely.");
+			}
+			Current_obs_player = 7;
+			return 1;
+		case KEY_CTRLED + KEY_9:
+			while (1) {
+				Current_obs_player = (Current_obs_player - 1) % MAX_PLAYERS;
+				if (Current_obs_player == 7) {
+					HUD_init_message_literal(HM_MULTI, "Observing freely.");
+					break;
+				}
+				if (Players[Current_obs_player].connected == CONNECT_PLAYING) {
+					HUD_init_message(HM_MULTI, "Observing %s!", Players[Current_obs_player].callsign);
+					break;
+				}
+			}
+			return 1;
+		case KEY_CTRLED + KEY_0:
+			while (1) {
+				Current_obs_player = (Current_obs_player + 1) % MAX_PLAYERS;
+				if (Current_obs_player == 7) {
+					HUD_init_message_literal(HM_MULTI, "Observing freely.");
+					break;
+				}
+				if (Players[Current_obs_player].connected == CONNECT_PLAYING) {
+					HUD_init_message(HM_MULTI, "Observing %s!", Players[Current_obs_player].callsign);
+					break;
+				}
+			}
+			return 1;
+		case KEY_CTRLED + KEY_MINUS:
+			if (Obs_at_distance == 1 && Current_obs_player != 7) {
+				HUD_init_message_literal(HM_MULTI, "Observing first person.");
+				Obs_at_distance = 0;
+			}
+			return 1;
+		case KEY_CTRLED + KEY_EQUAL:
+			if (Obs_at_distance == 0 && Current_obs_player != 7) {
+				HUD_init_message_literal(HM_MULTI, "Observing third person.");
+				Obs_at_distance = 1;
+			}
+			return 1;
 #endif
 
 		default:
@@ -1825,6 +1888,11 @@ int ReadControls(d_event *event)
 				return 1;
 			}
 		}
+
+	if (Game_mode & GM_OBSERVER) {
+		ConsoleObject->pos = Objects[Players[Current_obs_player].objnum].pos;
+		ConsoleObject->orient = Objects[Players[Current_obs_player].objnum].orient;
+	}
 
 	if (Newdemo_state == ND_STATE_PLAYBACK)
 		update_vcr_state();

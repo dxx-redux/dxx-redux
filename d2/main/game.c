@@ -904,6 +904,13 @@ void show_netgame_help()
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "";
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "(Use \x85-# for F#. e.g. \x85-1 for F1)";
 #endif
+	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "";
+	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "OBSERVERS:";
+	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "CTRL+1 to CTRL+7\t  OBSERVE SPECIFIC PLAYER";
+	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "CTRL+8\t  FLY FREELY";
+	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "CTRL+9/0\t  OBSERVE PREVIOUS/NEXT PLAYER";
+	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "CTRL+MINUS\t  OBSERVE PLAYER IN FIRST PERSON";
+	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "CTRL+EQUALS\t  OBSERVE PLAYER IN THIRD PERSON";
 
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "";
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "MULTIPLAYER MESSAGE COMMANDS:";
