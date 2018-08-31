@@ -230,17 +230,17 @@ gameseq_init_network_players()
 	NumNetPlayerPositions = k;
 
 	if((Game_mode & GM_MULTI_COOP) && (Game_mode & GM_OBSERVER)) {
-		Objects[7].type=OBJ_PLAYER;
-		Objects[7].pos = Objects[0].pos;
-		Objects[7].orient = Objects[0].orient;
-		Objects[7].segnum = Objects[0].segnum;
+		Objects[OBSERVER_PLAYER_ID].type=OBJ_PLAYER;
+		Objects[OBSERVER_PLAYER_ID].pos = Objects[0].pos;
+		Objects[OBSERVER_PLAYER_ID].orient = Objects[0].orient;
+		Objects[OBSERVER_PLAYER_ID].segnum = Objects[0].segnum;
 
-		Player_init[7].pos = Objects[i].pos;
-		Player_init[7].pos.z = Player_init[7].pos.z + F1_0;
-		Player_init[7].orient = Objects[i].orient;
-		Player_init[7].segnum = Objects[i].segnum;
-		Players[7].objnum = 7;
-		Objects[7].id = 7;
+		Player_init[OBSERVER_PLAYER_ID].pos = Objects[i].pos;
+		Player_init[OBSERVER_PLAYER_ID].pos.z = Player_init[OBSERVER_PLAYER_ID].pos.z + F1_0;
+		Player_init[OBSERVER_PLAYER_ID].orient = Objects[i].orient;
+		Player_init[OBSERVER_PLAYER_ID].segnum = Objects[i].segnum;
+		Players[OBSERVER_PLAYER_ID].objnum = OBSERVER_PLAYER_ID;
+		Objects[OBSERVER_PLAYER_ID].id = OBSERVER_PLAYER_ID;
 	}
 }
 
@@ -1223,9 +1223,6 @@ void PlayerFinishedLevel(int secret_flag)
 	if (Game_mode & GM_NETWORK)
 	{
 		Players[Player_num].connected = CONNECT_WAITING; // Finished but did not die
-	
-		if (Current_obs_player == Player_num)
-			Current_obs_player = OBSERVER_PLAYER_ID;
 	}
 
 	last_drawn_cockpit = -1;
@@ -1427,9 +1424,6 @@ void DoPlayerDead()
 		Players[Player_num].energy = 0;
 		Players[Player_num].shields = 0;
 		Players[Player_num].connected = CONNECT_DIED_IN_MINE;
-
-		if (Current_obs_player == Player_num)
-			Current_obs_player = OBSERVER_PLAYER_ID;
 
 		do_screen_message(TXT_DIED_IN_MINE); // Give them some indication of what happened
 

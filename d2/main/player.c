@@ -6,6 +6,8 @@
  */
 
 #include "player.h"
+#include "multi.h"
+#include "hudmsg.h"
 #include "byteswap.h"
 
 int RespawningConcussions[MAX_PLAYERS]; 
@@ -68,4 +70,32 @@ void player_ship_read(player_ship *ps, PHYSFS_file *fp)
 	ps->max_rotthrust = PHYSFSX_readFix(fp);
 	for (i = 0; i < N_PLAYER_GUNS; i++)
 		PHYSFSX_readVector(&(ps->gun_points[i]), fp);
+}
+
+void reset_obs() {
+	if (Current_obs_player == OBSERVER_PLAYER_ID)
+		return;
+	
+	Current_obs_player = OBSERVER_PLAYER_ID;
+	Objects[Players[OBSERVER_PLAYER_ID].objnum].pos = Last_pos;
+	Objects[Players[OBSERVER_PLAYER_ID].objnum].orient = Last_orient;
+	ConsoleObject->pos = Last_pos;
+	ConsoleObject->orient = Last_orient;
+	HUD_init_message_literal(HM_MULTI, "Observing freely.");
+}
+
+void set_obs(int pnum) {
+	if (Current_obs_player == OBSERVER_PLAYER_ID) {
+		Last_pos = Objects[Players[OBSERVER_PLAYER_ID].objnum].pos;
+		Last_orient = Objects[Players[OBSERVER_PLAYER_ID].objnum].orient;
+	}
+
+	if (Players[pnum].connected == CONNECT_PLAYING) {
+		if (Current_obs_player != pnum) {
+			HUD_init_message(HM_DEFAULT, "Observing %s!", Players[pnum].callsign);
+		}
+		Current_obs_player = pnum;
+	} else {
+		reset_obs();
+	}
 }
