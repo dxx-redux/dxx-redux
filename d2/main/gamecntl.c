@@ -1061,6 +1061,11 @@ int HandleGameKey(int key)
 		case KEY_CTRLED + KEY_5:
 		case KEY_CTRLED + KEY_6:
 		case KEY_CTRLED + KEY_7:
+			if (Current_obs_player == OBSERVER_PLAYER_ID) {
+				Last_pos = Objects[Players[OBSERVER_PLAYER_ID].objnum].pos;
+				Last_orient = Objects[Players[OBSERVER_PLAYER_ID].objnum].orient;
+			}
+
 			if (Players[key - KEY_CTRLED - KEY_1].connected == CONNECT_PLAYING) {
 				if (Current_obs_player != key - KEY_CTRLED - KEY_1) {
 					HUD_init_message(HM_DEFAULT, "Observing %s!", Players[key - KEY_CTRLED - KEY_1].callsign);
@@ -1078,12 +1083,21 @@ int HandleGameKey(int key)
 				HUD_init_message_literal(HM_MULTI, "Observing freely.");
 			}
 			Current_obs_player = 7;
+			Objects[Players[OBSERVER_PLAYER_ID].objnum].pos = Last_pos;
+			Objects[Players[OBSERVER_PLAYER_ID].objnum].orient = Last_orient;
 			return 1;
 		case KEY_CTRLED + KEY_9:
+			if (Current_obs_player == OBSERVER_PLAYER_ID) {
+				Last_pos = Objects[Players[OBSERVER_PLAYER_ID].objnum].pos;
+				Last_orient = Objects[Players[OBSERVER_PLAYER_ID].objnum].orient;
+			}
+
 			while (1) {
 				Current_obs_player = (Current_obs_player - 1) % MAX_PLAYERS;
 				if (Current_obs_player == 7) {
 					HUD_init_message_literal(HM_MULTI, "Observing freely.");
+					Objects[Players[OBSERVER_PLAYER_ID].objnum].pos = Last_pos;
+					Objects[Players[OBSERVER_PLAYER_ID].objnum].orient = Last_orient;
 					break;
 				}
 				if (Players[Current_obs_player].connected == CONNECT_PLAYING) {
@@ -1093,10 +1107,17 @@ int HandleGameKey(int key)
 			}
 			return 1;
 		case KEY_CTRLED + KEY_0:
+			if (Current_obs_player == OBSERVER_PLAYER_ID) {
+				Last_pos = Objects[Players[OBSERVER_PLAYER_ID].objnum].pos;
+				Last_orient = Objects[Players[OBSERVER_PLAYER_ID].objnum].orient;
+			}
+
 			while (1) {
 				Current_obs_player = (Current_obs_player + 1) % MAX_PLAYERS;
 				if (Current_obs_player == 7) {
 					HUD_init_message_literal(HM_MULTI, "Observing freely.");
+					Objects[Players[OBSERVER_PLAYER_ID].objnum].pos = Last_pos;
+					Objects[Players[OBSERVER_PLAYER_ID].objnum].orient = Last_orient;
 					break;
 				}
 				if (Players[Current_obs_player].connected == CONNECT_PLAYING) {

@@ -746,6 +746,11 @@ void render_object(object *obj)
 	if ( obj == Viewer )
 		return;
 
+	// Don't draw a player if we are observing them in first person.
+	if (Game_mode & GM_OBSERVER && Obs_at_distance == 0 && obj->type == (Current_obs_player == OBSERVER_PLAYER_ID || Objects[Players[Current_obs_player].objnum].id == obj->id)) {
+		return;
+	}
+
 	if ( obj->type==OBJ_NONE )
 	{
 		#ifndef NDEBUG

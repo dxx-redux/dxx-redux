@@ -238,6 +238,8 @@ extern const char GMNamesShrt[MULTI_GAME_TYPE_COUNT][8];
 
 int Current_obs_player; // Current player being observed. Defaults to 7 (the observer player).
 bool Obs_at_distance; // True if you're viewing the player from a cube back.
+vms_vector Last_pos;        // absolute x,y,z coordinate of center of object
+vms_matrix Last_orient;     // orientation of object in world
 
 // Exported functions
 
