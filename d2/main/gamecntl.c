@@ -1924,6 +1924,15 @@ int ReadControls(d_event *event)
 				Real_pos = Objects[Players[Current_obs_player].objnum].pos;
 				Real_orient = Objects[Players[Current_obs_player].objnum].orient;
 				Last_real_update = 0;
+
+				// If we're obsserving at a distance, move the camera accordingly.achieved_state
+				if (Obs_at_distance == 1) {
+					vms_vector move = ZERO_VECTOR;
+					vm_vec_copy_scale(&move, &Real_orient.fvec, -20);
+					Real_pos.x += move.x;
+					Real_pos.y += move.y;
+					Real_pos.z += move.z;
+				}
 			}
 
 			// Update the console position if it's different from the real position.
