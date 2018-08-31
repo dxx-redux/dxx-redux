@@ -1633,7 +1633,7 @@ extern int Player_fired_laser_this_frame;
 //	--------------------------------------------------------------------------------------------------
 // Assumption: This is only called by the actual console player, not for network players
 
-int do_laser_firing_player(void)
+void do_laser_firing_player(void)
 {
 	player	*plp = &Players[Player_num];
 	fix		energy_used;

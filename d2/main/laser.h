@@ -107,7 +107,7 @@ void Laser_do_weapon_sequence(struct object *obj, int doHomerFrame, fix idealHom
 void Flare_create(struct object *obj);
 int laser_are_related(int o1, int o2);
 
-extern int do_laser_firing_player(void);
+extern void do_laser_firing_player(void);
 extern void do_missile_firing(int drop_bomb);
 extern void net_missile_firing(int player, int weapon, int flags);
 extern int Network_laser_track;

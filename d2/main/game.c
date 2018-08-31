@@ -1433,10 +1433,7 @@ void GameProcessFrame(void)
 		}
 
 		if (Global_laser_firing_count)
-			Global_laser_firing_count -= do_laser_firing_player();
-
-		if (Global_laser_firing_count < 0)
-			Global_laser_firing_count = 0;
+			do_laser_firing_player();
 
 		delayed_autoselect(); /* SelectAfterFire */ 
 		do_shield_warnings(); 
