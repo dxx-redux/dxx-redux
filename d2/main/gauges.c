@@ -2820,9 +2820,9 @@ void show_HUD_names()
 							snprintf(s, sizeof(s), "%+0.1f", diff);
 
 							gr_get_string_size(s, &w, &h, &aw);
-							gr_set_fontcolor(BM_XRGB(diff < 0 ? (diff < -50 ? 255 : (diff > -10 ? 64 : 255 - (diff + 50) * 191 / 40)) : 0, diff > 0 ? 255 : 0, 0), -1);
+							gr_set_fontcolor(BM_XRGB(diff < 0 ? (diff < -50 ? 32 : (diff > -10 ? 8 : 32 - (diff + 50) * 24 / 40)) : 0, diff > 0 ? 32 : 0, 0), -1);
 							x1 = f2i(x) - w / 2;
-							y1 = f2i(y + dy) - FSPACY(1.5);
+							y1 = f2i(y+dy)-FSPACY(6);
 							gr_string(x1, y1, s);
 						}
 					}
