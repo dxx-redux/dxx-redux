@@ -4598,7 +4598,7 @@ int net_udp_send_sync(void)
 	Netgame.game_status = NETSTAT_PLAYING;
 	Netgame.segments_checksum = my_segments_checksum;
 
-	if (multi_am_i_master())
+	if (multi_i_am_master())
 		net_udp_send_game_info(Netgame.players[0].protocol.udp.addr, UPID_SYNC, 2);
 
 	for (i=0; i<N_players; i++ )
