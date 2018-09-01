@@ -139,6 +139,7 @@ extern int multi_protocol; // set and determinate used protocol
 	VALUE(MULTI_PLAY_BY_PLAY         , 4)	\
 	VALUE(MULTI_RESPAWN_ROBOT        , 60)	\
 	VALUE(MULTI_OBS_UPDATE           , 4 + 8*MAX_OBSERVERS)	\
+	VALUE(MULTI_DAMAGE               , 11)  \
 	AFTER
 for_each_multiplayer_command(enum {, define_multiplayer_command, });
 
@@ -283,6 +284,8 @@ void multi_send_drop_weapon (int objnum,int seed);
 void multi_send_drop_marker (int player,vms_vector position,char messagenum,char text[]);
 void multi_send_markers();
 void multi_send_guided_info (object *miss,char);
+void multi_send_damage(fix damage, fix shields, ubyte killer_type, ubyte killer_id, ubyte damage_type, object* source);
+void multi_do_damage( const ubyte *buf );
 void multi_send_bounty( void );
 
 void multi_endlevel_score(void);
@@ -543,4 +546,16 @@ typedef struct netgame_info
 	ubyte						Tracker;
 #endif
 } __pack__ netgame_info;
+
+enum damage_type
+{
+	DAMAGE_WEAPON = 0,
+	DAMAGE_BLAST = 1,
+	DAMAGE_COLLISION = 2,
+	DAMAGE_WALL = 3,
+	DAMAGE_LAVA = 4,
+	DAMAGE_OVERCHARGE = 5,
+	DAMAGE_UNKNOWN = 255
+};
+
 #endif /* _MULTI_H */

@@ -2783,12 +2783,17 @@ void show_HUD_names()
 					dy = -fixmuldiv(fixmul(Objects[objnum].size,Matrix_scale.y),i2f(grd_curcanv->cv_bitmap.bm_h)/2,player_point.p3_z);
 					dx = fixmul(dy,grd_curscreen->sc_aspect);
 					color_num = (Game_mode & GM_TEAM)?get_team(pnum):Netgame.players[pnum].color;//pnum;
-					memset(&s, '\0', CALLSIGN_LEN+10);
+					memset(&s, '\0', CALLSIGN_LEN+20);
 					/* Set the text to show */
 					if( Game_mode & GM_BOUNTY && pnum == Bounty_target )
 						strncpy( s, "Target", 6 );
 					else if (show_name)
-						snprintf( s, sizeof(s), "%s", Players[pnum].callsign );
+					{
+						if (Game_mode & GM_OBSERVER)
+							snprintf( s, sizeof(s), "%s (%0.1f)", Players[pnum].callsign, f2db(Players[pnum].shields) );
+						else
+							snprintf( s, sizeof(s), "%s", Players[pnum].callsign );
+					}
 					if (show_typing && multi_sending_message[pnum])
 					{
 						if (s[0])

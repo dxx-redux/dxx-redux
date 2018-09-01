@@ -5462,6 +5462,61 @@ int multi_maybe_disable_friendly_fire(object *killer)
 	return 0; // all other cases -> harm me!
 }
 
+void multi_send_damage(fix damage, fix shields, ubyte killer_type, ubyte killer_id, ubyte damage_type, object* source)
+{
+	if (Game_mode & GM_OBSERVER) { return; }
+
+	// Sending damage to the host isn't interesting if there cannot be any observers.
+	if (Netgame.max_numobservers == 0) { return; }
+
+	multibuf[0] = MULTI_DAMAGE;
+	multibuf[1] = Player_num;
+	multibuf[2] = (ubyte)f2i(damage);
+	multibuf[3] = (ubyte)f2i(damage * 256) % 256;
+	multibuf[4] = (ubyte)f2i(shields);
+	multibuf[5] = (ubyte)f2i(shields * 256) % 256;
+	multibuf[6] = killer_type;
+	multibuf[7] = killer_id;
+	multibuf[8] = damage_type;
+	if (source == NULL)
+	{
+		multibuf[9] = 0;
+		multibuf[10] = 0;
+	}
+	else if (source->type == OBJ_WEAPON)
+	{
+		multibuf[9] = OBJ_WEAPON;
+		multibuf[10] = 0;
+	}
+	else if (source->type == OBJ_PLAYER)
+	{
+		multibuf[9] = OBJ_WEAPON;
+		multibuf[10] = source->id;
+	}
+	else
+	{
+		multibuf[9] = 0;
+		multibuf[10] = 0;
+	}
+
+	if (multi_i_am_master()) {
+		multi_do_damage( multibuf );
+		forward_to_observers( multibuf, 11 );
+	} else {
+		multi_send_data_direct( multibuf, 11, multi_who_is_master(), 2 );
+	}
+}
+
+void multi_do_damage( const ubyte *buf )
+{
+	if (Game_mode & GM_OBSERVER) {
+		Players[buf[1]].shields = i2f(buf[4]) + i2f(buf[5]) / 256;
+		// TODO: Float damage number over ship
+	} else {
+		// TODO: Store and save damage history
+	}
+}
+
 /* Bounty packer sender and handler */
 void multi_send_bounty( void )
 {
@@ -6178,6 +6233,8 @@ multi_process_data(const ubyte *buf, int len)
 			multi_do_kill(buf); break;
 		case MULTI_OBS_UPDATE:
 			multi_do_obs_update(buf); break;
+		case MULTI_DAMAGE:
+			multi_do_damage(buf); break;
 		default:
 			Int3();
 	}
