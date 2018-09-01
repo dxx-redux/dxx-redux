@@ -2775,7 +2775,7 @@ void show_HUD_names()
 				if (!(player_point.p3_flags & PF_OVERFLOW))
 				{
 					fix x,y,dx,dy;
-					char s[CALLSIGN_LEN+10];
+					char s[CALLSIGN_LEN+20];
 					int w, h, aw, x1, y1, color_num;
 
 					x = player_point.p3_sx;
@@ -2808,6 +2808,23 @@ void show_HUD_names()
 						x1 = f2i(x)-w/2;
 						y1 = f2i(y-dy)+FSPACY(1);
 						gr_string (x1, y1, s);
+					}
+
+					if (Game_mode & GM_OBSERVER)
+					{
+						if (Players[pnum].shields_delta != 0 && (Players[Player_num].hours_total - Players[pnum].shields_time_hours == 1 && i2f(3600) + Players[Player_num].time_total - Players[pnum].shields_time < i2f(2) || Players[Player_num].time_total - Players[pnum].shields_time < i2f(2)))
+						{
+							double diff = (double)(int)Players[pnum].shields_delta / 65536;
+
+							memset(&s, '\0', CALLSIGN_LEN + 20);
+							snprintf(s, sizeof(s), "%+0.1f", diff);
+
+							gr_get_string_size(s, &w, &h, &aw);
+							gr_set_fontcolor(BM_XRGB(diff < 0 ? 255 : 0, diff > 0 ? 255 : 0, 0), -1);
+							x1 = f2i(x) - w / 2;
+							y1 = f2i(y + dy) - FSPACY(1);
+							gr_string(x1, y1, s);
+						}
 					}
 
 					/* Draw box on HUD */
