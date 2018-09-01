@@ -277,6 +277,9 @@ int do_powerup(object *obj)
 				fix boost = 3*F1_0 + 3*F1_0*(NDL - Difficulty_level);
 				if (Difficulty_level == 0)
 					boost += boost/2;
+				if (Game_mode & GM_MULTI)
+					multi_send_repair(boost, Players[Player_num].shields, OBJ_POWERUP);
+
 				Players[Player_num].shields += boost;
 				if (Players[Player_num].shields > MAX_SHIELDS)
 					Players[Player_num].shields = MAX_SHIELDS;

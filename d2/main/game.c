@@ -1726,7 +1726,7 @@ void FireLaser()
 						multi_send_play_sound(11, F1_0);
 						con_printf(CON_NORMAL, "You took %0.1f damage from overcharging fusion!\n", (double)(damage)/(double)(F1_0)); 
 
-						multi_send_damage(damage, Players[Player_num].shields - damage, OBJ_PLAYER, Player_num, DAMAGE_OVERCHARGE, NULL);
+						multi_send_damage(damage, Players[Player_num].shields, OBJ_PLAYER, Player_num, DAMAGE_OVERCHARGE, NULL);
 					}
 					#endif
 					

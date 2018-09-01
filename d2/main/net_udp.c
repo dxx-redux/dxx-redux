@@ -5633,7 +5633,10 @@ void net_udp_send_mdata_direct(ubyte *data, int data_len, int pnum, int needack)
 	}
 	memcpy(&buf[len], data, sizeof(char)*data_len);								len += data_len;
 
-	dxx_sendto (UDP_Socket[0], buf, len, 0, (struct sockaddr *)&Netgame.players[pnum].protocol.udp.addr, sizeof(struct _sockaddr));
+	if (pnum == Player_num && multi_i_am_master())
+		forward_to_observers(buf, len); 
+	else
+		dxx_sendto (UDP_Socket[0], buf, len, 0, (struct sockaddr *)&Netgame.players[pnum].protocol.udp.addr, sizeof(struct _sockaddr));
 
 	if (needack)
 		net_udp_noloss_add_queue_pkt(UDP_MData.pkt_num, timer_query(), data, data_len, Player_num, pack);

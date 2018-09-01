@@ -271,7 +271,7 @@ object *object_create_explosion_sub(object *objp, short segnum, vms_vector * pos
 										 
 										con_printf(CON_NORMAL, "You took %0.1f damage from %s's %s blast!\n", (double)(damage)/(double)(F1_0), killer_name, weapon_name);
 
-										multi_send_damage(damage, obj0p->shields - damage, killer->type, killer->id, DAMAGE_BLAST, objp);
+										multi_send_damage(damage, obj0p->shields, killer->type, killer->id, DAMAGE_BLAST, objp);
 									}
 
 									apply_damage_to_player(obj0p, killer, damage, 0 );
