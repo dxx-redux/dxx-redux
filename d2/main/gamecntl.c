@@ -1063,48 +1063,54 @@ int HandleGameKey(int key)
 		case KEY_CTRLED + KEY_5:
 		case KEY_CTRLED + KEY_6:
 		case KEY_CTRLED + KEY_7:
-			set_obs(key - KEY_CTRLED - KEY_1);
+			if (Game_mode && GM_OBSERVER)
+				set_obs(key - KEY_CTRLED - KEY_1);
 			return 1;
 		case KEY_CTRLED + KEY_8:
-			reset_obs();
+			if (Game_mode && GM_OBSERVER)
+				reset_obs();
 			return 1;
 		case KEY_CTRLED + KEY_9:
-			while (1) {
-				new_obs = (MAX_PLAYERS + new_obs - 1) % MAX_PLAYERS;
-				if (new_obs == OBSERVER_PLAYER_ID) {
-					reset_obs();
-					break;
+			if (Game_mode && GM_OBSERVER)
+				while (1) {
+					new_obs = (MAX_PLAYERS + new_obs - 1) % MAX_PLAYERS;
+					if (new_obs == OBSERVER_PLAYER_ID) {
+						reset_obs();
+						break;
+					}
+					if (Players[new_obs].connected == CONNECT_PLAYING) {
+						set_obs(new_obs);
+						break;
+					}
 				}
-				if (Players[new_obs].connected == CONNECT_PLAYING) {
-					set_obs(new_obs);
-					break;
-				}
-			}
 			return 1;
 		case KEY_CTRLED + KEY_0:
-			while (1) {
-				new_obs = (new_obs + 1) % MAX_PLAYERS;
-				if (new_obs == OBSERVER_PLAYER_ID) {
-					reset_obs();
-					break;
+			if (Game_mode && GM_OBSERVER)
+				while (1) {
+					new_obs = (new_obs + 1) % MAX_PLAYERS;
+					if (new_obs == OBSERVER_PLAYER_ID) {
+						reset_obs();
+						break;
+					}
+					if (Players[new_obs].connected == CONNECT_PLAYING) {
+						set_obs(new_obs);
+						break;
+					}
 				}
-				if (Players[new_obs].connected == CONNECT_PLAYING) {
-					set_obs(new_obs);
-					break;
-				}
-			}
 			return 1;
 		case KEY_CTRLED + KEY_MINUS:
-			if (Obs_at_distance == 1 && Current_obs_player != OBSERVER_PLAYER_ID) {
-				HUD_init_message_literal(HM_MULTI, "Observing first person.");
-				Obs_at_distance = 0;
-			}
+			if (Game_mode && GM_OBSERVER)
+				if (Obs_at_distance == 1 && Current_obs_player != OBSERVER_PLAYER_ID) {
+					HUD_init_message_literal(HM_MULTI, "Observing first person.");
+					Obs_at_distance = 0;
+				}
 			return 1;
 		case KEY_CTRLED + KEY_EQUAL:
-			if (Obs_at_distance == 0 && Current_obs_player != OBSERVER_PLAYER_ID) {
-				HUD_init_message_literal(HM_MULTI, "Observing third person.");
-				Obs_at_distance = 1;
-			}
+			if (Game_mode && GM_OBSERVER)
+				if (Obs_at_distance == 0 && Current_obs_player != OBSERVER_PLAYER_ID) {
+					HUD_init_message_literal(HM_MULTI, "Observing third person.");
+					Obs_at_distance = 1;
+				}
 			return 1;
 #endif
 
