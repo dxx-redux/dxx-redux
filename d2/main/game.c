@@ -887,38 +887,46 @@ void show_netgame_help()
 		return;
 
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "F1\t  THIS SCREEN";
-	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "ALT-0\t  DROP FLAG";
+	if (!(Game_mode & GM_OBSERVER)) {
+		m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "ALT-0\t  DROP FLAG";
 #if !(defined(__APPLE__) || defined(macintosh))
-	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "Alt-F2/F3\t  SAVE/LOAD COOP GAME";
+		m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "Alt-F2/F3\t  SAVE/LOAD COOP GAME";
 #else
-	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "Alt-F2/F3 (\x85-SHIFT-s/\x85-o)\t  SAVE/LOAD COOP GAME";
+		m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "Alt-F2/F3 (\x85-SHIFT-s/\x85-o)\t  SAVE/LOAD COOP GAME";
 #endif
+	}
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "ALT-F4\t  SHOW PLAYER NAMES ON HUD";
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "F6\t  TOGGLE CONNECTION STATS";	
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "F7\t  TOGGLE KILL LIST";
-	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "F8\t  SEND MESSAGE";
-	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "(SHIFT-)F9 to F12\t  (DEFINE)SEND MACRO";
+	if (!(Game_mode & GM_OBSERVER)) {
+		m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "F8\t  SEND MESSAGE";
+		m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "(SHIFT-)F9 to F12\t  (DEFINE)SEND MACRO";
+	}
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "PAUSE\t  SHOW NETGAME INFORMATION";
 
 #if (defined(__APPLE__) || defined(macintosh))
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "";
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "(Use \x85-# for F#. e.g. \x85-1 for F1)";
 #endif
-	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "";
-	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "OBSERVERS:";
-	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "CTRL+1 to CTRL+7\t  OBSERVE SPECIFIC PLAYER";
-	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "CTRL+8\t  FLY FREELY";
-	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "CTRL+9/0\t  OBSERVE PREVIOUS/NEXT PLAYER";
-	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "CTRL+MINUS\t  OBSERVE PLAYER IN FIRST PERSON";
-	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "CTRL+EQUALS\t  OBSERVE PLAYER IN THIRD PERSON";
-
-	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "";
-	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "MULTIPLAYER MESSAGE COMMANDS:";
-	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "(*): TEXT\t  SEND TEXT TO PLAYER/TEAM (*)";
-	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "/Handicap: (*)\t  SET YOUR STARTING SHIELDS TO (*) [10-100]";
-	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "/move: (*)\t  MOVE PLAYER (*) TO OTHER TEAM (Host-only)";
-	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "/kick: (*)\t  KICK PLAYER (*) FROM GAME (Host-only)";
-	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "/KillReactor\t  BLOW UP THE MINE (Host-only)";
+	if (Game_mode & GM_OBSERVER) {
+		m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "";
+		m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "OBSERVERS:";
+		m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "CTRL+1 to CTRL+7\t  OBSERVE SPECIFIC PLAYER";
+		m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "CTRL+8\t  FLY FREELY";
+		m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "CTRL+9/0\t  OBSERVE PREVIOUS/NEXT PLAYER";
+		m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "CTRL+MINUS\t  OBSERVE PLAYER IN FIRST PERSON";
+		m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "CTRL+EQUALS\t  OBSERVE PLAYER IN THIRD PERSON";
+	}
+	else {
+		m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "";
+		m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "MULTIPLAYER MESSAGE COMMANDS:";
+		m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "(*): TEXT\t  SEND TEXT TO PLAYER/TEAM (*)";
+		m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "/Handicap: (*)\t  SET YOUR STARTING SHIELDS TO (*) [10-100]";
+		m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "/move: (*)\t  MOVE PLAYER (*) TO OTHER TEAM (Host-only)";
+		m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "/kick: (*)\t  KICK PLAYER (*) FROM GAME (Host-only)";
+		m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "/KillReactor\t  BLOW UP THE MINE (Host-only)";
+		m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "/noobs\t  KICK OBSERVERS (Host-only)";
+	}
 
 	newmenu_dotiny( NULL, TXT_KEYS, nitems, m, 0, free_help, NULL );
 }
