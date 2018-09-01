@@ -5521,11 +5521,12 @@ void multi_do_damage( const ubyte *buf )
 	if (Game_mode & GM_OBSERVER)
 	{
 		Players[buf[1]].shields = ((fix)buf[6] << 24) + ((fix)buf[7] << 16) + ((fix)buf[8] << 8) + (fix)buf[9];
-		// TODO: Float damage number over ship
-	}
-	else
-	{
-		// TODO: Store and save damage history
+		if (Players[buf[1]].shields_time_hours < Players[Player_num].hours_total || Players[Player_num].time_total - Players[buf[1]].shields_time > i2f(2)) {
+			Players[buf[1]].shields_delta = 0;
+		}
+		Players[buf[1]].shields_delta -= ((fix)buf[6] << 24) + ((fix)buf[7] << 16) + ((fix)buf[8] << 8) + (fix)buf[9];
+		Players[buf[1]].shields_time = Players[Player_num].time_total;
+		Players[buf[1]].shields_time_hours = Players[Player_num].hours_total;
 	}
 }
 
@@ -5566,11 +5567,12 @@ void multi_do_repair(const ubyte *buf)
 	if (Game_mode & GM_OBSERVER)
 	{
 		Players[buf[1]].shields = ((fix)buf[6] << 24) + ((fix)buf[7] << 16) + ((fix)buf[8] << 8) + (fix)buf[9];
-		// TODO: Float repair number over ship
-	}
-	else
-	{
-		// TODO: Store and save repair history
+		if (Players[buf[1]].shields_time_hours < Players[Player_num].hours_total || Players[Player_num].time_total - Players[buf[1]].shields_time > i2f(2)) {
+			Players[buf[1]].shields_delta = 0;
+		}
+		Players[buf[1]].shields_delta += ((fix)buf[6] << 24) + ((fix)buf[7] << 16) + ((fix)buf[8] << 8) + (fix)buf[9];
+		Players[buf[1]].shields_time = Players[Player_num].time_total;
+		Players[buf[1]].shields_time_hours = Players[Player_num].hours_total;
 	}
 }
 

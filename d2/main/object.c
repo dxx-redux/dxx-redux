@@ -1782,7 +1782,7 @@ void start_player_death_sequence(object *player)
 	player->flags &= ~OF_SHOULD_BE_DEAD;
 //	Players[Player_num].flags |= PLAYER_FLAGS_INVULNERABLE;
 	player->control_type = CT_NONE;
-	player->shields = F1_0*100;
+	player->shields = INITIAL_SHIELDS;
 
 	PALETTE_FLASH_SET(0,0,0);
 }

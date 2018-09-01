@@ -142,6 +142,9 @@ typedef struct player_rw {
 	uint    flags;                  // Powerup flags, see below...
 	fix     energy;                 // Amount of energy remaining.
 	fix     shields;                // shields remaining (protection)
+	fix     shields_delta;          // recent change to shields
+	fix     shields_time;           // the time the shields recently changed
+	sbyte   shields_time_hours;     // the time the shields recently changed (hours)
 	ubyte   lives;                  // Lives remaining, 0 = game over.
 	sbyte   level;                  // Current level player is playing. (must be signed for secret levels)
 	ubyte   laser_level;            // Current level of the laser.
