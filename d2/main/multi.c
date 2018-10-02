@@ -186,6 +186,9 @@ int     VerifyPlayerJoined=-1;      // Player (num) to enter game before any ing
 int     Player_joining_extras=-1;  // This is so we know who to send 'latecomer' packets to.
 int     Network_player_added = 0;   // Is this a new player or a returning player?
 
+ubyte Send_ship_status = 0; // Whether we owe observers a ship status packet.
+fix64 Next_ship_status_time = 0; // The next time we are allowed to send a ship status.
+
 ushort          my_segments_checksum = 0;
 
 netgame_info Netgame;
@@ -5577,6 +5580,11 @@ void multi_send_ship_status()
 	// Sending ship status to the host isn't interesting if there cannot be any observers.
 	if (Netgame.max_numobservers == 0) { return; }
 
+	Send_ship_status = 1;
+}
+
+void multi_send_ship_status_for_frame()
+{
 	// Setup ship status packet.
 	multibuf[0] = MULTI_SHIP_STATUS;
 	multibuf[1] = Player_num;
@@ -5603,8 +5611,12 @@ void multi_send_ship_status()
 	multibuf[22] = (Players[Player_num].energy >> 16) & 0xFF;
 	multibuf[23] = (Players[Player_num].energy >> 8) & 0xFF;
 	multibuf[24] = Players[Player_num].energy & 0xFF;
+	multibuf[25] = (Players[Player_num].homing_object_dist >> 24) & 0xFF;
+	multibuf[26] = (Players[Player_num].homing_object_dist >> 16) & 0xFF;
+	multibuf[27] = (Players[Player_num].homing_object_dist >> 8) & 0xFF;
+	multibuf[28] = Players[Player_num].homing_object_dist & 0xFF;
 
-	multi_send_data_direct( multibuf, 24, multi_who_is_master(), 2);
+	multi_send_data_direct( multibuf, 29, multi_who_is_master(), 2);
 }
 
 void multi_do_ship_status( const ubyte *buf )
@@ -5624,6 +5636,7 @@ void multi_do_ship_status( const ubyte *buf )
 		Players[buf[1]].secondary_weapon_flags = buf[19];
 		Players[buf[1]].secondary_weapon = (sbyte)buf[20];
 		Players[buf[1]].energy = ((fix)buf[21] << 24) + ((fix)buf[22] << 16) + ((fix)buf[23] << 8) + (fix)buf[24];
+		Players[buf[1]].homing_object_dist = ((fix)buf[25] << 24) + ((fix)buf[26] << 16) + ((fix)buf[27] << 8) + (fix)buf[28];
 	}
 }
 

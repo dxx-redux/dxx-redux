@@ -1513,8 +1513,12 @@ void Laser_do_weapon_sequence(object *obj, int doHomerFrame, fix idealHomerFrame
 
 					dist_to_player = vm_vec_dist_quick(&obj->pos, &Objects[track_goal].pos);
 					if ((dist_to_player < Players[Player_num].homing_object_dist) || (Players[Player_num].homing_object_dist < 0))
+					{
 						Players[Player_num].homing_object_dist = dist_to_player;
 
+						if (Game_mode & GM_MULTI)
+							multi_send_ship_status();
+					}
 				}
 			}
 

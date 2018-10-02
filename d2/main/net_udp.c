@@ -6004,6 +6004,15 @@ void net_udp_send_pdata()
 			dxx_sendto (UDP_Socket[0], buf, len, 0, (struct sockaddr *)&Netgame.players[0].protocol.udp.addr, sizeof(struct _sockaddr));
 		}
 	}
+
+	if (Send_ship_status && GameTime64 >= Next_ship_status_time)
+	{
+		multi_send_ship_status_for_frame();
+
+		// Send at most 6 ship statuses per second.
+		Next_ship_status_time += F1_0 / 6;
+		Send_ship_status = 0;
+	}
 }
 
 void received_pdata_num(int player, ubyte num) {
