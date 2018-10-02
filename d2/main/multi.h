@@ -141,7 +141,7 @@ extern int multi_protocol; // set and determinate used protocol
 	VALUE(MULTI_OBS_UPDATE           , 4 + 8*MAX_OBSERVERS)	\
 	VALUE(MULTI_DAMAGE               , 15)  \
 	VALUE(MULTI_REPAIR               , 11)  \
-	VALUE(MULTI_SHIP_STATUS          , 23)  \
+	VALUE(MULTI_SHIP_STATUS          , 24)  \
 	AFTER
 for_each_multiplayer_command(enum {, define_multiplayer_command, });
 

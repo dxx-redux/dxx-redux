@@ -5510,9 +5510,6 @@ void multi_send_damage(fix damage, fix shields, ubyte killer_type, ubyte killer_
 		multibuf[14] = 0;
 	}
 
-	if (multi_i_am_master())
-		multi_do_damage( multibuf );
-
 	multi_send_data_direct( multibuf, 11, multi_who_is_master(), 2 );
 }
 
@@ -5556,9 +5553,6 @@ void multi_send_repair(fix repair, fix shields, ubyte sourcetype)
 	multibuf[9] = shields & 0xFF;
 	multibuf[10] = sourcetype;
 
-	if (multi_i_am_master())
-		multi_do_repair( multibuf );
-	
 	multi_send_data_direct( multibuf, 11, multi_who_is_master(), 2);
 }
 
@@ -5587,37 +5581,47 @@ void multi_send_ship_status()
 	multibuf[0] = MULTI_SHIP_STATUS;
 	multibuf[1] = Player_num;
 	multibuf[2] = Players[Player_num].laser_level;
-	multibuf[3] = Players[Player_num].flags & PLAYER_FLAGS_QUAD_LASERS ? 1 : 0;
-	multibuf[4] = (Players[Player_num].primary_ammo[1] >> 8) & 0xFF;
-	multibuf[5] = Players[Player_num].primary_ammo[1] & 0xFF;
-	multibuf[6] = Players[Player_num].primary_weapon_flags;
-	multibuf[7] = (ubyte)Players[Player_num].primary_weapon;
-	multibuf[8] = (Players[Player_num].secondary_ammo[0] >> 8) & 0xFF;
-	multibuf[9] = Players[Player_num].secondary_ammo[0] & 0xFF;
-	multibuf[10] = (Players[Player_num].secondary_ammo[1] >> 8) & 0xFF;
-	multibuf[11] = Players[Player_num].secondary_ammo[1] & 0xFF;
-	multibuf[12] = (Players[Player_num].secondary_ammo[2] >> 8) & 0xFF;
-	multibuf[13] = Players[Player_num].secondary_ammo[2] & 0xFF;
-	multibuf[14] = (Players[Player_num].secondary_ammo[3] >> 8) & 0xFF;
-	multibuf[15] = Players[Player_num].secondary_ammo[3] & 0xFF;
-	multibuf[16] = (Players[Player_num].secondary_ammo[4] >> 8) & 0xFF;
-	multibuf[17] = Players[Player_num].secondary_ammo[4] & 0xFF;
-	multibuf[18] = (ubyte)Players[Player_num].secondary_weapon;
-	multibuf[19] = (Players[Player_num].energy >> 24) & 0xFF;
-	multibuf[20] = (Players[Player_num].energy >> 16) & 0xFF;
-	multibuf[21] = (Players[Player_num].energy >> 8) & 0xFF;
-	multibuf[22] = Players[Player_num].energy & 0xFF;
+	multibuf[3] = (Players[Player_num].flags >> 8) & 0xFF;
+	multibuf[4] = Players[Player_num].flags & 0xFF;
+	multibuf[5] = (Players[Player_num].primary_ammo[1] >> 8) & 0xFF;
+	multibuf[6] = Players[Player_num].primary_ammo[1] & 0xFF;
+	multibuf[7] = Players[Player_num].primary_weapon_flags;
+	multibuf[8] = (ubyte)Players[Player_num].primary_weapon;
+	multibuf[9] = (Players[Player_num].secondary_ammo[0] >> 8) & 0xFF;
+	multibuf[10] = Players[Player_num].secondary_ammo[0] & 0xFF;
+	multibuf[11] = (Players[Player_num].secondary_ammo[1] >> 8) & 0xFF;
+	multibuf[12] = Players[Player_num].secondary_ammo[1] & 0xFF;
+	multibuf[13] = (Players[Player_num].secondary_ammo[2] >> 8) & 0xFF;
+	multibuf[14] = Players[Player_num].secondary_ammo[2] & 0xFF;
+	multibuf[15] = (Players[Player_num].secondary_ammo[3] >> 8) & 0xFF;
+	multibuf[16] = Players[Player_num].secondary_ammo[3] & 0xFF;
+	multibuf[17] = (Players[Player_num].secondary_ammo[4] >> 8) & 0xFF;
+	multibuf[18] = Players[Player_num].secondary_ammo[4] & 0xFF;
+	multibuf[19] = (ubyte)Players[Player_num].secondary_weapon;
+	multibuf[20] = (Players[Player_num].energy >> 24) & 0xFF;
+	multibuf[21] = (Players[Player_num].energy >> 16) & 0xFF;
+	multibuf[22] = (Players[Player_num].energy >> 8) & 0xFF;
+	multibuf[23] = Players[Player_num].energy & 0xFF;
 
-	if (multi_i_am_master())
-		multi_do_ship_status( multibuf );
-
-	multi_send_data_direct( multibuf, 23, multi_who_is_master(), 2);
+	multi_send_data_direct( multibuf, 24, multi_who_is_master(), 2);
 }
 
 void multi_do_ship_status( const ubyte *buf )
 {
 	if (Game_mode & GM_OBSERVER)
 	{
+		Players[buf[1]].laser_level = buf[2];
+		Players[buf[1]].flags = ((ushort)buf[3] << 8) + (ushort)buf[4];
+		Players[buf[1]].primary_ammo[1] = ((ushort)buf[5] << 8) + (ushort)buf[6];
+		Players[buf[1]].primary_weapon_flags = buf[7];
+		Players[buf[1]].primary_weapon = (sbyte)buf[8];
+		Players[buf[1]].secondary_ammo[0] = ((ushort)buf[9] << 8) + (ushort)buf[10];
+		Players[buf[1]].secondary_ammo[1] = ((ushort)buf[11] << 8) + (ushort)buf[12];
+		Players[buf[1]].secondary_ammo[2] = ((ushort)buf[13] << 8) + (ushort)buf[14];
+		Players[buf[1]].secondary_ammo[3] = ((ushort)buf[15] << 8) + (ushort)buf[16];
+		Players[buf[1]].secondary_ammo[4] = ((ushort)buf[17] << 8) + (ushort)buf[18];
+		Players[buf[1]].secondary_weapon = (sbyte)buf[19];
+		Players[buf[1]].energy = ((fix)buf[20] << 24) + ((fix)buf[21] << 16) + ((fix)buf[22] << 8) + (fix)buf[23];
 	}
 }
 
