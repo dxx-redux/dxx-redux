@@ -159,47 +159,47 @@ const sbyte   Weapon_is_energy[MAX_WEAPON_TYPES] = {
 //		HAS_ENERGY_FLAG
 //		HAS_AMMO_FLAG
 // See weapon.h for bit values
-int player_has_weapon(int weapon_num, int secondary_flag)
+int player_has_weapon(ubyte pnum, int weapon_num, int secondary_flag)
 {
 	int	return_value = 0;
 	int	weapon_index;
 
 	//	Hack! If energy goes negative, you can't fire a weapon that doesn't require energy.
 	//	But energy should not go negative (but it does), so find out why it does!
-	if (Players[Player_num].energy < 0)
-		Players[Player_num].energy = 0;
+	if (Players[pnum].energy < 0)
+		Players[pnum].energy = 0;
 
 	if (!secondary_flag) {
 		weapon_index = Primary_weapon_to_weapon_info[weapon_num];
 
-		if (Players[Player_num].primary_weapon_flags & (1 << weapon_num))
+		if (Players[pnum].primary_weapon_flags & (1 << weapon_num))
 			return_value |= HAS_WEAPON_FLAG;
 
 		// Special case: Gauss cannon uses vulcan ammo.
 		if (weapon_num == GAUSS_INDEX) {
-			if (Weapon_info[weapon_index].ammo_usage <= Players[Player_num].primary_ammo[VULCAN_INDEX])
+			if (Weapon_info[weapon_index].ammo_usage <= Players[pnum].primary_ammo[VULCAN_INDEX])
 				return_value |= HAS_AMMO_FLAG;
 		} else
-			if (Weapon_info[weapon_index].ammo_usage <= Players[Player_num].primary_ammo[weapon_num])
+			if (Weapon_info[weapon_index].ammo_usage <= Players[pnum].primary_ammo[weapon_num])
 				return_value |= HAS_AMMO_FLAG;
 
 		if (weapon_num == OMEGA_INDEX) {	// Hack: Make sure player has energy to omega
-			if (Players[Player_num].energy || Omega_charge)
+			if (Players[pnum].energy || Omega_charge)
 				return_value |= HAS_ENERGY_FLAG;
 		} else
-			if (Weapon_info[weapon_index].energy_usage <= Players[Player_num].energy)
+			if (Weapon_info[weapon_index].energy_usage <= Players[pnum].energy)
 				return_value |= HAS_ENERGY_FLAG;
 
 	} else {
 		weapon_index = Secondary_weapon_to_weapon_info[weapon_num];
 
-		if (Players[Player_num].secondary_weapon_flags & (1 << weapon_num))
+		if (Players[pnum].secondary_weapon_flags & (1 << weapon_num))
 			return_value |= HAS_WEAPON_FLAG;
 
-		if (Weapon_info[weapon_index].ammo_usage <= Players[Player_num].secondary_ammo[weapon_num])
+		if (Weapon_info[weapon_index].ammo_usage <= Players[pnum].secondary_ammo[weapon_num])
 			return_value |= HAS_AMMO_FLAG;
 
-		if (Weapon_info[weapon_index].energy_usage <= Players[Player_num].energy)
+		if (Weapon_info[weapon_index].energy_usage <= Players[pnum].energy)
 			return_value |= HAS_ENERGY_FLAG;
 	}
 
@@ -259,7 +259,7 @@ void CyclePrimary ()
 				desired_weapon = LASER_INDEX;
 		}
 		// select the weapon if we have it
-		if (player_has_weapon(desired_weapon, 0) == HAS_ALL)
+		if (player_has_weapon(Player_num, desired_weapon, 0) == HAS_ALL)
 		{
 			select_weapon(desired_weapon, 0, 1, 1);
 			return;
@@ -292,7 +292,7 @@ void CycleSecondary ()
 		}
 		desired_weapon = PlayerCfg.SecondaryOrder[cur_order_slot]; // now that is the weapon next to our current one
 		// select the weapon if we have it
-		if (player_has_weapon(desired_weapon, 1) == HAS_ALL)
+		if (player_has_weapon(Player_num, desired_weapon, 1) == HAS_ALL)
 		{
 			select_weapon(desired_weapon, 1, 1, 1);
 			return;
@@ -382,6 +382,8 @@ void select_weapon(int weapon_num, int secondary_flag, int print_message, int wa
 			HUD_init_message(HM_DEFAULT, "%s %s", weapon_name, TXT_SELECTED);
 	}
 
+	if (Game_mode & GM_MULTI)
+		multi_send_ship_status();
 }
 
 //flags whether the last time we use this weapon, it was the 'super' version
@@ -412,7 +414,7 @@ void do_weapon_select(int weapon_num, int secondary_flag)
 		//already have this selected, so toggle to other of normal/super version
 
 		weapon_num += weapon_num+SUPER_WEAPON - current;
-		weapon_status = player_has_weapon(weapon_num, secondary_flag);
+		weapon_status = player_has_weapon(Player_num, weapon_num, secondary_flag);
 	}
 	else {
 
@@ -421,13 +423,13 @@ void do_weapon_select(int weapon_num, int secondary_flag)
 		if (last_was_super)
 			weapon_num += SUPER_WEAPON;
 
-		weapon_status = player_has_weapon(weapon_num, secondary_flag);
+		weapon_status = player_has_weapon(Player_num, weapon_num, secondary_flag);
 
 		//if don't have last-selected, try other version
 
 		if ((weapon_status & has_flag) != has_flag) {
 			weapon_num = 2*weapon_num_save+SUPER_WEAPON - weapon_num;
-			weapon_status = player_has_weapon(weapon_num, secondary_flag);
+			weapon_status = player_has_weapon(Player_num, weapon_num, secondary_flag);
 			if ((weapon_status & has_flag) != has_flag)
 				weapon_num = 2*weapon_num_save+SUPER_WEAPON - weapon_num;
 		}
@@ -456,8 +458,8 @@ void do_weapon_select(int weapon_num, int secondary_flag)
 void auto_select_weapon(int weapon_type)
 {
 	// Can you fire your current weapon? 
-	if(weapon_type == 0 && player_has_weapon(  Players[Player_num].primary_weapon, 0) == HAS_ALL) { return; }
-	if(weapon_type == 1 && player_has_weapon(Players[Player_num].secondary_weapon, 1) == HAS_ALL) { return; }
+	if(weapon_type == 0 && player_has_weapon(Player_num, Players[Player_num].primary_weapon, 0) == HAS_ALL) { return; }
+	if(weapon_type == 1 && player_has_weapon(Player_num, Players[Player_num].secondary_weapon, 1) == HAS_ALL) { return; }
 
 	// Ok, no.  Let's find you a new one. 
 	int selected_weapon = 0; 
@@ -467,7 +469,7 @@ void auto_select_weapon(int weapon_type)
 
 		if(next_weapon == 255) { continue; } // Breakpoint in list
 		if(next_weapon == PROXIMITY_INDEX && weapon_type == 1) { continue; } // Don't autoselect proxies.  Ever.
-		if(player_has_weapon(next_weapon, weapon_type) != HAS_ALL) { continue; } // Missing weapon or ammo
+		if(player_has_weapon(Player_num, next_weapon, weapon_type) != HAS_ALL) { continue; } // Missing weapon or ammo
 
 		select_weapon(next_weapon, weapon_type, 0, 1); 
 		selected_weapon = 1; 
@@ -483,103 +485,6 @@ void auto_select_weapon(int weapon_type)
 			HUD_init_message_literal(HM_DEFAULT, "No secondary weapons available!");
 		}
 	}
-
-	// Wow.  That's an awful lot of work to do the wrong thing. --CED
-	/*
-	int	r;
-	int cutpoint;
-	int looped=0;
-
-	if (weapon_type==0) {
-		r = player_has_weapon(Players[Player_num].primary_weapon, 0);
-		if (r != HAS_ALL) {
-			int	cur_weapon;
-			int	try_again = 1;
-
-			cur_weapon = POrderList(Players[Player_num].primary_weapon);
-			cutpoint = POrderList (255);
-
-			while (try_again) {
-				cur_weapon++;
-
-				if (cur_weapon>=cutpoint)
-				{
-					if (looped)
-					{
-						HUD_init_message_literal(HM_DEFAULT, TXT_NO_PRIMARY);
-						select_weapon(0, 0, 0, 1);
-						try_again = 0;
-						continue;
-					}
-					cur_weapon=0;
-					looped=1;
-				}
-
-
-				if (cur_weapon==MAX_PRIMARY_WEAPONS)
-					cur_weapon = 0;
-
-				//	Hack alert!  Because the fusion uses 0 energy at the end (it's got the weird chargeup)
-				//	it looks like it takes 0 to fire, but it doesn't, so never auto-select.
-				// if (PlayerCfg.PrimaryOrder[cur_weapon] == FUSION_INDEX)
-				//	continue;
-
-				if (PlayerCfg.PrimaryOrder[cur_weapon] == Players[Player_num].primary_weapon) {
-					HUD_init_message_literal(HM_DEFAULT, TXT_NO_PRIMARY);
-					select_weapon(0, 0, 0, 1);
-					try_again = 0;			// Tried all weapons!
-
-				} else if (PlayerCfg.PrimaryOrder[cur_weapon]!=255 && player_has_weapon(PlayerCfg.PrimaryOrder[cur_weapon], 0) == HAS_ALL) {
-					select_weapon(PlayerCfg.PrimaryOrder[cur_weapon], 0, 1, 1 );
-					try_again = 0;
-				}
-			}
-		}
-
-	} else {
-
-		Assert(weapon_type==1);
-		r = player_has_weapon(Players[Player_num].secondary_weapon, 1);
-		if (r != HAS_ALL) {
-			int	cur_weapon;
-			int	try_again = 1;
-
-			cur_weapon = SOrderList(Players[Player_num].secondary_weapon);
-			cutpoint = SOrderList (255);
-
-
-			while (try_again) {
-				cur_weapon++;
-
-				if (cur_weapon>=cutpoint)
-				{
-					if (looped)
-					{
-						HUD_init_message_literal(HM_DEFAULT, "No secondary weapons selected!");
-						try_again = 0;
-						continue;
-					}
-					cur_weapon=0;
-					looped=1;
-				}
-
-				if (cur_weapon==MAX_SECONDARY_WEAPONS)
-					cur_weapon = 0;
-
-				if (PlayerCfg.SecondaryOrder[cur_weapon] == Players[Player_num].secondary_weapon) {
-					HUD_init_message_literal(HM_DEFAULT, "No secondary weapons available!");
-					try_again = 0;				// Tried all weapons!
-				} else if (player_has_weapon(PlayerCfg.SecondaryOrder[cur_weapon], 1) == HAS_ALL) {
-					select_weapon(PlayerCfg.SecondaryOrder[cur_weapon], 1, 1, 1 );
-					try_again = 0;
-				}
-			}
-		}
-
-
-	}
-	*/
-
 }
 
 int delayed_secondary_autoselect_weapon_index = -1;
@@ -692,11 +597,17 @@ int pick_up_secondary(int weapon_index,int count)
 	if (num_picked_up>1) {
 		PALETTE_FLASH_ADD(15,15,15);
 		HUD_init_message(HM_DEFAULT, "%d %s%s",num_picked_up,SECONDARY_WEAPON_NAMES(weapon_index), TXT_SX);
+
+		if (Game_mode & GM_MULTI)
+			multi_send_ship_status();
 	}
 	else {
 		PALETTE_FLASH_ADD(10,10,10);
 		HUD_init_message(HM_DEFAULT, "%s!",SECONDARY_WEAPON_NAMES(weapon_index));
 	}
+
+	if (Game_mode & GM_MULTI)
+		multi_send_ship_status();
 
 	return 1;
 }
@@ -823,6 +734,9 @@ int pick_up_primary(int weapon_index)
    if (weapon_index!=LASER_INDEX)
    	HUD_init_message(HM_DEFAULT, "%s!",PRIMARY_WEAPON_NAMES(weapon_index));
 
+	if (Game_mode & GM_MULTI)
+		multi_send_ship_status();
+
 	return 1;
 }
 
@@ -921,6 +835,9 @@ int pick_up_ammo(int class_flag,int weapon_index,int ammo_count)
 
 		//select_weapon(weapon_index,0,0,1);
 	}
+
+	if (Game_mode & GM_MULTI)
+		multi_send_ship_status();
 
 	return ammo_count;	//return amount used
 }

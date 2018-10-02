@@ -478,7 +478,7 @@ void omega_charge_frame(void)
 	if (Omega_charge == MAX_OMEGA_CHARGE)
 		return;
 
-	if (!(player_has_weapon(OMEGA_INDEX, 0) & HAS_WEAPON_FLAG))
+	if (!(player_has_weapon(Player_num, OMEGA_INDEX, 0) & HAS_WEAPON_FLAG))
 		return;
 
 	if (Player_is_dead)
@@ -1414,7 +1414,10 @@ void Flare_create(object *obj)
 
 		#ifdef NETWORK
 		if (Game_mode & GM_MULTI)
+		{
 			multi_send_fire(FLARE_ADJUST, 0, 0, 1, -1);
+			multi_send_ship_status();
+		}
 		#endif
 // -- 	}
 

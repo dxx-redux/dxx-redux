@@ -304,6 +304,9 @@ void init_player_stats_game(ubyte pnum)
 
 	if (pnum == Player_num)
 		First_secret_visit = 1;
+
+	if (pnum == Player_num && Game_mode & GM_MULTI)
+		multi_send_ship_status();
 }
 
 void init_ammo_and_energy(void)
@@ -387,6 +390,9 @@ void init_player_stats_level(int secret_flag)
 	init_gauges();
 
 	Missile_viewer = NULL;
+
+	if (Game_mode & GM_MULTI)
+		multi_send_ship_status();
 }
 
 extern	void init_ai_for_ship(void);
@@ -459,6 +465,9 @@ void init_player_stats_new_ship(ubyte pnum)
 	}
 #endif
 	digi_kill_sound_linked_to_object(Players[pnum].objnum);
+
+	if (pnum == Player_num && Game_mode & GM_MULTI)
+		multi_send_ship_status();
 }
 
 extern void init_stuck_objects(void);

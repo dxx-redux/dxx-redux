@@ -2942,7 +2942,7 @@ void multi_powcap_cap_objects()
 		return;
 	}
 
-	// Don't even try.
+	// Don't even try.  TODO: There is no try, only do.
 	if(Netgame.PrimaryDupFactor > 1 || Netgame.SecondaryDupFactor > 1 || Netgame.SecondaryCapFactor > 1 ) {
 		return;
 	}
@@ -5597,11 +5597,12 @@ void multi_send_ship_status()
 	multibuf[16] = Players[Player_num].secondary_ammo[3] & 0xFF;
 	multibuf[17] = (Players[Player_num].secondary_ammo[4] >> 8) & 0xFF;
 	multibuf[18] = Players[Player_num].secondary_ammo[4] & 0xFF;
-	multibuf[19] = (ubyte)Players[Player_num].secondary_weapon;
-	multibuf[20] = (Players[Player_num].energy >> 24) & 0xFF;
-	multibuf[21] = (Players[Player_num].energy >> 16) & 0xFF;
-	multibuf[22] = (Players[Player_num].energy >> 8) & 0xFF;
-	multibuf[23] = Players[Player_num].energy & 0xFF;
+	multibuf[19] = Players[Player_num].secondary_weapon_flags;
+	multibuf[20] = (ubyte)Players[Player_num].secondary_weapon;
+	multibuf[21] = (Players[Player_num].energy >> 24) & 0xFF;
+	multibuf[22] = (Players[Player_num].energy >> 16) & 0xFF;
+	multibuf[23] = (Players[Player_num].energy >> 8) & 0xFF;
+	multibuf[24] = Players[Player_num].energy & 0xFF;
 
 	multi_send_data_direct( multibuf, 24, multi_who_is_master(), 2);
 }
@@ -5620,8 +5621,9 @@ void multi_do_ship_status( const ubyte *buf )
 		Players[buf[1]].secondary_ammo[2] = ((ushort)buf[13] << 8) + (ushort)buf[14];
 		Players[buf[1]].secondary_ammo[3] = ((ushort)buf[15] << 8) + (ushort)buf[16];
 		Players[buf[1]].secondary_ammo[4] = ((ushort)buf[17] << 8) + (ushort)buf[18];
-		Players[buf[1]].secondary_weapon = (sbyte)buf[19];
-		Players[buf[1]].energy = ((fix)buf[20] << 24) + ((fix)buf[21] << 16) + ((fix)buf[22] << 8) + (fix)buf[23];
+		Players[buf[1]].secondary_weapon_flags = buf[19];
+		Players[buf[1]].secondary_weapon = (sbyte)buf[20];
+		Players[buf[1]].energy = ((fix)buf[21] << 24) + ((fix)buf[22] << 16) + ((fix)buf[23] << 8) + (fix)buf[24];
 	}
 }
 

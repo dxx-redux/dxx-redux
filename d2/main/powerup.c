@@ -192,6 +192,9 @@ int pick_up_energy(void)
 			Players[Player_num].energy = MAX_ENERGY;
 		powerup_basic(15,15,7, ENERGY_SCORE, "%s %s %d",TXT_ENERGY,TXT_BOOSTED_TO,f2ir(Players[Player_num].energy));
 		used=1;
+
+		if (Game_mode & GM_MULTI)
+			multi_send_ship_status();
 	} else
 		HUD_init_message(HM_DEFAULT|HM_REDUNDANT|HM_MAYDUPL, TXT_MAXED_OUT,TXT_ENERGY);
 
@@ -277,6 +280,7 @@ int do_powerup(object *obj)
 				fix boost = 3*F1_0 + 3*F1_0*(NDL - Difficulty_level);
 				if (Difficulty_level == 0)
 					boost += boost/2;
+
 				if (Game_mode & GM_MULTI)
 					multi_send_repair(boost, Players[Player_num].shields, OBJ_POWERUP);
 
@@ -296,10 +300,14 @@ int do_powerup(object *obj)
 				if (Newdemo_state == ND_STATE_RECORDING)
 					newdemo_record_laser_level(Players[Player_num].laser_level, Players[Player_num].laser_level + 1);
 				Players[Player_num].laser_level++;
+
 				powerup_basic(10, 0, 10, LASER_SCORE, "%s %s %d",TXT_LASER,TXT_BOOSTED_TO, Players[Player_num].laser_level+1);
 				update_laser_weapon_info();
 				pick_up_primary (LASER_INDEX);
 				used=1;
+
+				if (Game_mode & GM_MULTI)
+					multi_send_ship_status();
 			}
 			if (!used && !(Game_mode & GM_MULTI) )
 				used = pick_up_energy();
@@ -325,6 +333,10 @@ int do_powerup(object *obj)
 			else
 				used=1;
 			invalidate_escort_goal();
+
+			if (Game_mode & GM_MULTI)
+				multi_send_ship_status();
+
 			break;
 		case POW_KEY_RED:
 			if (Players[Player_num].flags & PLAYER_FLAGS_RED_KEY)
@@ -340,6 +352,10 @@ int do_powerup(object *obj)
 			else
 				used=1;
 			invalidate_escort_goal();
+
+			if (Game_mode & GM_MULTI)
+				multi_send_ship_status();
+
 			break;
 		case POW_KEY_GOLD:
 			if (Players[Player_num].flags & PLAYER_FLAGS_GOLD_KEY)
@@ -355,6 +371,10 @@ int do_powerup(object *obj)
 			else
 				used=1;
 			invalidate_escort_goal();
+
+			if (Game_mode & GM_MULTI)
+				multi_send_ship_status();
+
 			break;
 		case POW_QUAD_FIRE:
 			if (!(Players[Player_num].flags & PLAYER_FLAGS_QUAD_LASERS)) {
@@ -362,6 +382,9 @@ int do_powerup(object *obj)
 				powerup_basic(15, 15, 7, QUAD_FIRE_SCORE, "%s!",TXT_QUAD_LASERS);
 				update_laser_weapon_info();
 				used=1;
+
+				if (Game_mode & GM_MULTI)
+					multi_send_ship_status();
 			} else
 				HUD_init_message(HM_DEFAULT|HM_REDUNDANT|HM_MAYDUPL, "%s %s!",TXT_ALREADY_HAVE,TXT_QUAD_LASERS);
 			if (!used && !(Game_mode & GM_MULTI) )
@@ -494,6 +517,7 @@ int do_powerup(object *obj)
 				#endif
 				powerup_basic(-10,-10,-10, CLOAK_SCORE, "%s!",TXT_CLOAKING_DEVICE);
 				used = 1;
+
 				break;
 			}
 		case	POW_INVULNERABILITY:
@@ -505,6 +529,10 @@ int do_powerup(object *obj)
 				Players[Player_num].flags |= PLAYER_FLAGS_INVULNERABLE;
 				powerup_basic(7, 14, 21, INVULNERABILITY_SCORE, "%s!",TXT_INVULNERABILITY);
 				used = 1;
+
+				if (Game_mode & GM_MULTI)
+					multi_send_ship_status();
+
 				break;
 			}
 	#ifndef RELEASE

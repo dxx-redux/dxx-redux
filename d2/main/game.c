@@ -517,7 +517,10 @@ void do_cloak_stuff(void)
 					digi_play_sample( SOUND_CLOAK_OFF, F1_0);
 #ifdef NETWORK
 					if (Game_mode & GM_MULTI)
+					{
 						multi_send_play_sound(SOUND_CLOAK_OFF, F1_0);
+						multi_send_ship_status();
+					}
 					maybe_drop_net_powerup(POW_CLOAK);
 					if ( Newdemo_state != ND_STATE_PLAYBACK )
 						multi_send_decloak(); // For demo recording
@@ -548,6 +551,9 @@ void do_invulnerable_stuff(void)
 				#endif
 			}
 			FakingInvul=0;
+
+			if (Game_mode & GM_MULTI)
+				multi_send_ship_status();
 		}
 	}
 }
@@ -1462,6 +1468,9 @@ void GameProcessFrame(void)
 				Players[Player_num].invulnerable_time = GameTime64-i2f(27);
 			}
 			FakingInvul=1;
+
+			if (Game_mode & GM_MULTI)
+				multi_send_ship_status();
 		}
 #endif
 	}
@@ -1705,7 +1714,11 @@ void FireLaser()
 			static fix64 Fusion_next_sound_time = 0;
 
 			if (Fusion_charge == 0)
+			{
 				Players[Player_num].energy -= F1_0*2;
+				if (Game_mode & GM_MULTI)
+					multi_send_ship_status();
+			}
 
 			Fusion_charge += FrameTime;
 			Players[Player_num].energy -= FrameTime;
@@ -1748,6 +1761,9 @@ void FireLaser()
 					#endif
 				}
 				Fusion_next_sound_time = GameTime64 + F1_0/8 + d_rand()/4;
+
+				if (Game_mode & GM_MULTI)
+					multi_send_ship_status();
 			}
 		}
 	}
