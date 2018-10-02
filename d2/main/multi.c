@@ -5576,6 +5576,51 @@ void multi_do_repair(const ubyte *buf)
 	}
 }
 
+void multi_send_ship_status()
+{
+	if (Game_mode & GM_OBSERVER) { return; }
+
+	// Sending ship status to the host isn't interesting if there cannot be any observers.
+	if (Netgame.max_numobservers == 0) { return; }
+
+	// Setup ship status packet.
+	multibuf[0] = MULTI_SHIP_STATUS;
+	multibuf[1] = Player_num;
+	multibuf[2] = Players[Player_num].laser_level;
+	multibuf[3] = Players[Player_num].flags & PLAYER_FLAGS_QUAD_LASERS ? 1 : 0;
+	multibuf[4] = (Players[Player_num].primary_ammo[1] >> 8) & 0xFF;
+	multibuf[5] = Players[Player_num].primary_ammo[1] & 0xFF;
+	multibuf[6] = Players[Player_num].primary_weapon_flags;
+	multibuf[7] = (ubyte)Primary_weapon;
+	multibuf[8] = (Players[Player_num].secondary_ammo[0] >> 8) & 0xFF;
+	multibuf[9] = Players[Player_num].secondary_ammo[0] & 0xFF;
+	multibuf[10] = (Players[Player_num].secondary_ammo[1] >> 8) & 0xFF;
+	multibuf[11] = Players[Player_num].secondary_ammo[1] & 0xFF;
+	multibuf[12] = (Players[Player_num].secondary_ammo[2] >> 8) & 0xFF;
+	multibuf[13] = Players[Player_num].secondary_ammo[2] & 0xFF;
+	multibuf[14] = (Players[Player_num].secondary_ammo[3] >> 8) & 0xFF;
+	multibuf[15] = Players[Player_num].secondary_ammo[3] & 0xFF;
+	multibuf[16] = (Players[Player_num].secondary_ammo[4] >> 8) & 0xFF;
+	multibuf[17] = Players[Player_num].secondary_ammo[4] & 0xFF;
+	multibuf[18] = (ubyte)Secondary_weapon;
+	multibuf[19] = (Players[Player_num].energy >> 24) & 0xFF;
+	multibuf[20] = (Players[Player_num].energy >> 16) & 0xFF;
+	multibuf[21] = (Players[Player_num].energy >> 8) & 0xFF;
+	multibuf[22] = Players[Player_num].energy & 0xFF;
+
+	if (multi_i_am_master())
+		multi_do_ship_status( multibuf );
+
+	multi_send_data_direct( multibuf, 23, multi_who_is_master(), 2);
+}
+
+void multi_do_ship_status( const ubyte *buf )
+{
+	if (Game_mode & GM_OBSERVER)
+	{
+	}
+}
+
 /* Bounty packer sender and handler */
 void multi_send_bounty( void )
 {
@@ -6296,6 +6341,8 @@ multi_process_data(const ubyte *buf, int len)
 			multi_do_damage(buf); break;
 		case MULTI_REPAIR:
 			multi_do_repair(buf); break;
+		case MULTI_SHIP_STATUS:
+			multi_do_ship_status(buf); break;
 		default:
 			Int3();
 	}
