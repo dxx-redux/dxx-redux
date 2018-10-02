@@ -404,8 +404,8 @@ void init_player_stats_new_ship(ubyte pnum)
 			newdemo_record_player_weapon(0, 0);
 			newdemo_record_player_weapon(1, 0);
 		}
-		Primary_weapon = 0;
-		Secondary_weapon = 0;
+		Players[Player_num].primary_weapon = 0;
+		Players[Player_num].secondary_weapon = 0;
 		for (i=0; i<MAX_PRIMARY_WEAPONS; i++)
 			Primary_last_was_super[i] = 0;
 		for (i=1; i<MAX_SECONDARY_WEAPONS; i++)
@@ -1070,11 +1070,11 @@ void StartNewLevelSecret(int level_num, int page_in_textures)
 		{
 			int	pw_save, sw_save;
 
-			pw_save = Primary_weapon;
-			sw_save = Secondary_weapon;
+			pw_save = Players[Player_num].primary_weapon;
+			sw_save = Players[Player_num].secondary_weapon;
 			state_restore_all(1, 1, SECRETC_FILENAME);
-			Primary_weapon = pw_save;
-			Secondary_weapon = sw_save;
+			Players[Player_num].primary_weapon = pw_save;
+			Players[Player_num].secondary_weapon = sw_save;
 			reset_special_effects();
 			StartSecretLevel();
 			// -- No: This is only for returning to base level: set_pos_from_return_segment();
@@ -1117,11 +1117,11 @@ void ExitSecretLevel(void)
 		int	pw_save, sw_save;
 
 		do_screen_message(TXT_SECRET_RETURN);
-		pw_save = Primary_weapon;
-		sw_save = Secondary_weapon;
+		pw_save = Players[Player_num].primary_weapon;
+		sw_save = Players[Player_num].secondary_weapon;
 		state_restore_all(1, 1, SECRETB_FILENAME);
-		Primary_weapon = pw_save;
-		Secondary_weapon = sw_save;
+		Players[Player_num].primary_weapon = pw_save;
+		Players[Player_num].secondary_weapon = sw_save;
 	} else {
 		// File doesn't exist, so can't return to base level.  Advance to next one.
 		if (Entered_from_level == Last_level)

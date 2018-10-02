@@ -1647,9 +1647,9 @@ void do_laser_firing_player(void)
 	if (Player_is_dead)
 		return;
 
-	weapon_index = Primary_weapon_to_weapon_info[Primary_weapon];
+	weapon_index = Primary_weapon_to_weapon_info[Players[Player_num].primary_weapon];
 	energy_used = Weapon_info[weapon_index].energy_usage;
-	if (Primary_weapon == OMEGA_INDEX)
+	if (Players[Player_num].primary_weapon == OMEGA_INDEX)
 		energy_used = 0;	//	Omega consumes energy when recharging, not when firing.
 
 	if (Difficulty_level < 2)
@@ -1662,7 +1662,7 @@ void do_laser_firing_player(void)
 
 	ammo_used = Weapon_info[weapon_index].ammo_usage;
 
-	primary_ammo = (Primary_weapon == GAUSS_INDEX)?(plp->primary_ammo[VULCAN_INDEX]):(plp->primary_ammo[Primary_weapon]);
+	primary_ammo = (Players[Player_num].primary_weapon == GAUSS_INDEX)?(plp->primary_ammo[VULCAN_INDEX]):(plp->primary_ammo[Players[Player_num].primary_weapon]);
 
 	if	(!((plp->energy >= energy_used) && (primary_ammo >= ammo_used)))
 		auto_select_weapon(0);		//	Make sure the player can fire from this weapon.
@@ -1685,13 +1685,13 @@ void do_laser_firing_player(void)
 
 			flags = 0;
 
-			if (Primary_weapon == SPREADFIRE_INDEX) {
+			if (Players[Player_num].primary_weapon == SPREADFIRE_INDEX) {
 				if (Spreadfire_toggle)
 					flags |= LASER_SPREADFIRE_TOGGLED;
 				Spreadfire_toggle = !Spreadfire_toggle;
 			}
 
-			if (Primary_weapon == HELIX_INDEX) {
+			if (Players[Player_num].primary_weapon == HELIX_INDEX) {
 				Helix_orientation++;
 				flags |= ((Helix_orientation & LASER_HELIX_MASK) << LASER_HELIX_SHIFT);
 			}
@@ -1699,13 +1699,13 @@ void do_laser_firing_player(void)
 			if (Players[Player_num].flags & PLAYER_FLAGS_QUAD_LASERS)
 				flags |= LASER_QUAD;
 
-			rval += do_laser_firing(Players[Player_num].objnum, Primary_weapon, laser_level, flags, nfires, Objects[Players[Player_num].objnum].orient.fvec);
+			rval += do_laser_firing(Players[Player_num].objnum, Players[Player_num].primary_weapon, laser_level, flags, nfires, Objects[Players[Player_num].objnum].orient.fvec);
 
 			int warning_increment = 250/12;
 			int pre_ammo = plp->primary_ammo[VULCAN_INDEX];
 			int post_ammo = plp->primary_ammo[VULCAN_INDEX] - ammo_used; 
 
-			if((Primary_weapon == VULCAN_INDEX || Primary_weapon == GAUSS_INDEX) && PlayerCfg.VulcanAmmoWarnings) {
+			if((Players[Player_num].primary_weapon == VULCAN_INDEX || Players[Player_num].primary_weapon == GAUSS_INDEX) && PlayerCfg.VulcanAmmoWarnings) {
 				if(pre_ammo >= warning_increment*4 && post_ammo < warning_increment*4) {
 					HUD_init_message_literal(HM_MULTI, "Vulcan ammo warning."); 
 					digi_play_sample(SOUND_BAD_SELECTION, F1_0);
@@ -1725,7 +1725,7 @@ void do_laser_firing_player(void)
 			pre_ammo = (Players[Player_num].energy)/F1_0; 
 			post_ammo = (Players[Player_num].energy - (energy_used * rval) / Weapon_info[weapon_index].fire_count)/F1_0; 
 			warning_increment = 5; 
-			if(Primary_weapon != VULCAN_INDEX && Primary_weapon != GAUSS_INDEX && PlayerCfg.VulcanAmmoWarnings) {
+			if(Players[Player_num].primary_weapon != VULCAN_INDEX && Players[Player_num].primary_weapon != GAUSS_INDEX && PlayerCfg.VulcanAmmoWarnings) {
 			
 				if(pre_ammo >= warning_increment*4 && post_ammo < warning_increment*4) {
 					HUD_init_message_literal(HM_MULTI, "Energy warning."); 
@@ -1749,7 +1749,7 @@ void do_laser_firing_player(void)
 			if (plp->energy < 0)
 				plp->energy = 0;
 
-			if ((Primary_weapon == VULCAN_INDEX) || (Primary_weapon == GAUSS_INDEX)) {
+			if ((Players[Player_num].primary_weapon == VULCAN_INDEX) || (Players[Player_num].primary_weapon == GAUSS_INDEX)) {
 				if (ammo_used > plp->primary_ammo[VULCAN_INDEX])
 					plp->primary_ammo[VULCAN_INDEX] = 0;
 				else
@@ -1941,7 +1941,7 @@ int do_laser_firing(int objnum, int weapon_num, int level, int flags, int nfires
 
 		default:
 			Int3();	//	Contact Yuan: Unknown Primary weapon type, setting to 0.
-			Primary_weapon = 0;
+			Players[Player_num].primary_weapon = 0;
 	}
 
 	// Set values to be recognized during comunication phase, if we are the
@@ -2123,7 +2123,7 @@ void do_missile_firing(int drop_bomb)
 {
 	int gun_flag=0;
 	int bomb = which_bomb();
-	int weapon = (drop_bomb) ? bomb : Secondary_weapon;
+	int weapon = (drop_bomb) ? bomb : Players[Player_num].secondary_weapon;
 	fix fire_frame_overhead = 0;
 
 	Network_laser_track = -1;
@@ -2209,7 +2209,7 @@ void do_missile_firing(int drop_bomb)
 #endif
 
 		// don't autoselect if dropping prox and prox not current weapon
-		if (!drop_bomb || Secondary_weapon == bomb)
+		if (!drop_bomb || Players[Player_num].secondary_weapon == bomb)
 			auto_select_weapon(1);		//select next missile, if this one out of ammo
 	}
 }

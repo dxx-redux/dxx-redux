@@ -1411,7 +1411,7 @@ void GameProcessFrame(void)
 			FireLaser();				// Fire Laser!
 
 		if (Auto_fire_fusion_cannon_time) {
-			if (Primary_weapon != FUSION_INDEX)
+			if (Players[Player_num].primary_weapon != FUSION_INDEX)
 				Auto_fire_fusion_cannon_time = 0;
 			else if (GameTime64 + FrameTime/2 >= Auto_fire_fusion_cannon_time) {
 				Auto_fire_fusion_cannon_time = 0;
@@ -1696,9 +1696,9 @@ int add_flicker(int segnum, int sidenum, fix delay, unsigned long mask)
 void FireLaser()
 {
 
-	Global_laser_firing_count = Controls.fire_primary_state?Weapon_info[Primary_weapon_to_weapon_info[Primary_weapon]].fire_count:0;
+	Global_laser_firing_count = Controls.fire_primary_state?Weapon_info[Primary_weapon_to_weapon_info[Players[Player_num].primary_weapon]].fire_count:0;
 
-	if ((Primary_weapon == FUSION_INDEX) && (Global_laser_firing_count)) {
+	if ((Players[Player_num].primary_weapon == FUSION_INDEX) && (Global_laser_firing_count)) {
 		if ((Players[Player_num].energy < F1_0*2) && (Auto_fire_fusion_cannon_time == 0)) {
 			Global_laser_firing_count = 0;
 		} else {

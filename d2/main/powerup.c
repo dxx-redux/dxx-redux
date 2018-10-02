@@ -202,7 +202,7 @@ int pick_up_vulcan_ammo(void)
 {
 	int	used=0,max;
 
-	int	pwsave = Primary_weapon;		// Ugh, save selected primary weapon around the picking up of the ammo.  I apologize for this code.  Matthew A. Toschlog
+	int	pwsave = Players[Player_num].primary_weapon;		// Ugh, save selected primary weapon around the picking up of the ammo.  I apologize for this code.  Matthew A. Toschlog
 	if (pick_up_ammo(CLASS_PRIMARY, VULCAN_INDEX, VULCAN_AMMO_AMOUNT)) {
 		VulcanAmmoBoxesOnBoard[Player_num] += 1; 
 		VulcanBoxAmmo[Player_num] += VULCAN_AMMO_AMOUNT;
@@ -215,7 +215,7 @@ int pick_up_vulcan_ammo(void)
 		HUD_init_message(HM_DEFAULT|HM_REDUNDANT|HM_MAYDUPL, "%s %d %s!",TXT_ALREADY_HAVE,f2i((unsigned) VULCAN_AMMO_SCALE * (unsigned) max),TXT_VULCAN_ROUNDS);
 		used = 0;
 	}
-	Primary_weapon = pwsave;
+	Players[Player_num].primary_weapon = pwsave;
 
 	return used;
 }
@@ -554,7 +554,7 @@ int do_powerup(object *obj)
 					newdemo_record_laser_level(old_level, Players[Player_num].laser_level);
 				powerup_basic(10, 0, 10, LASER_SCORE, "Super Boost to Laser level %d",Players[Player_num].laser_level+1);
 				update_laser_weapon_info();
-				if (Primary_weapon!=LASER_INDEX)
+				if (Players[Player_num].primary_weapon!=LASER_INDEX)
 			      check_to_use_primary (SUPER_LASER_INDEX);
 				used=1;
 			}

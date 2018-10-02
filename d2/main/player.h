@@ -99,6 +99,8 @@ typedef struct player {
 	ushort  secondary_weapon_flags; // bit set indicates the player has this weapon.
 	ushort  primary_ammo[MAX_PRIMARY_WEAPONS]; // How much ammo of each type.
 	ushort  secondary_ammo[MAX_SECONDARY_WEAPONS]; // How much ammo of each type.
+	sbyte   primary_weapon;         // The currently selected primary weapon.
+	sbyte   secondary_weapon;       // The currently selected secondary weapon.
 
 	ushort  pad; // Pad because increased weapon_flags from byte to short -YW 3/22/95
 

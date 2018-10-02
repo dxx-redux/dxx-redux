@@ -160,8 +160,6 @@ extern int N_weapon_types;
 extern void do_weapon_select(int weapon_num, int secondary_flag);
 extern void show_weapon_status(void);
 
-extern sbyte Primary_weapon, Secondary_weapon;
-
 extern const ubyte Primary_weapon_to_weapon_info[MAX_PRIMARY_WEAPONS];
 extern const ubyte Secondary_weapon_to_weapon_info[MAX_SECONDARY_WEAPONS];
 

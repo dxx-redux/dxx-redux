@@ -5591,7 +5591,7 @@ void multi_send_ship_status()
 	multibuf[4] = (Players[Player_num].primary_ammo[1] >> 8) & 0xFF;
 	multibuf[5] = Players[Player_num].primary_ammo[1] & 0xFF;
 	multibuf[6] = Players[Player_num].primary_weapon_flags;
-	multibuf[7] = (ubyte)Primary_weapon;
+	multibuf[7] = (ubyte)Players[Player_num].primary_weapon;
 	multibuf[8] = (Players[Player_num].secondary_ammo[0] >> 8) & 0xFF;
 	multibuf[9] = Players[Player_num].secondary_ammo[0] & 0xFF;
 	multibuf[10] = (Players[Player_num].secondary_ammo[1] >> 8) & 0xFF;
@@ -5602,7 +5602,7 @@ void multi_send_ship_status()
 	multibuf[15] = Players[Player_num].secondary_ammo[3] & 0xFF;
 	multibuf[16] = (Players[Player_num].secondary_ammo[4] >> 8) & 0xFF;
 	multibuf[17] = Players[Player_num].secondary_ammo[4] & 0xFF;
-	multibuf[18] = (ubyte)Secondary_weapon;
+	multibuf[18] = (ubyte)Players[Player_num].secondary_weapon;
 	multibuf[19] = (Players[Player_num].energy >> 24) & 0xFF;
 	multibuf[20] = (Players[Player_num].energy >> 16) & 0xFF;
 	multibuf[21] = (Players[Player_num].energy >> 8) & 0xFF;

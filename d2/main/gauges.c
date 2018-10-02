@@ -1108,7 +1108,7 @@ void hud_show_weapons_mode(int type,int vertical,int x,int y){
 
 	if (type==0){
 		for (i=4;i>=0;i--){
-			if (Primary_weapon==i)
+			if (Players[Player_num].primary_weapon==i)
 				gr_set_fontcolor(BM_XRGB(20,0,0),-1);
 			else{
 				if (player_has_weapon(i,0) & HAS_WEAPON_FLAG)
@@ -1140,12 +1140,12 @@ void hud_show_weapons_mode(int type,int vertical,int x,int y){
 			}else
 				x-=w+FSPACX(3);
 			gr_string(x, y, weapon_str);
-			if (i == 1 && Primary_weapon == i && PlayerCfg.CockpitMode[1]==CM_FULL_SCREEN)
+			if (i == 1 && Players[Player_num].primary_weapon == i && PlayerCfg.CockpitMode[1]==CM_FULL_SCREEN)
 				gr_printf(x,y-(LINE_SPACING*1),"V:%i",f2i((unsigned int)Players[Player_num].primary_ammo[1] * VULCAN_AMMO_SCALE));
 		}
 	} else {
 		for (i=4;i>=0;i--){
-			if (Secondary_weapon==i)
+			if (Players[Player_num].secondary_weapon==i)
 				gr_set_fontcolor(BM_XRGB(20,0,0),-1);
 			else{
 				if (Players[Player_num].secondary_ammo[i]>0)
@@ -1179,7 +1179,7 @@ void hud_show_weapons_mode(int type,int vertical,int x,int y){
 	if (type==0) {
 
 		for (i=9;i>=5;i--){
-			if (Primary_weapon==i)
+			if (Players[Player_num].primary_weapon==i)
 				gr_set_fontcolor(BM_XRGB(20,0,0),-1);
 			else{
 				if (player_has_weapon(i,0) & HAS_WEAPON_FLAG)
@@ -1216,14 +1216,14 @@ void hud_show_weapons_mode(int type,int vertical,int x,int y){
 
 			gr_string(x, y, weapon_str);
 
-			if (i == 6 && Primary_weapon == i && PlayerCfg.CockpitMode[1]==CM_FULL_SCREEN)
+			if (i == 6 && Players[Player_num].primary_weapon == i && PlayerCfg.CockpitMode[1]==CM_FULL_SCREEN)
 				gr_printf(x+FSPACX(9),y-(LINE_SPACING*2),"G:%i",f2i((unsigned int)Players[Player_num].primary_ammo[1] * VULCAN_AMMO_SCALE));
 
 			// Deal with vulcan ammo uniformly here
 			if (i == 6) {
 				sprintf(weapon_str,"%i", f2i((unsigned int)Players[Player_num].primary_ammo[1] * VULCAN_AMMO_SCALE));
 
-				if (Primary_weapon==1 || Primary_weapon == 6) {
+				if (Players[Player_num].primary_weapon==1 || Players[Player_num].primary_weapon == 6) {
 					gr_set_fontcolor(BM_XRGB(20,0,0),-1);
 				} else if (  (player_has_weapon(1,0) & HAS_WEAPON_FLAG) ||
 					         (player_has_weapon(6,0) & HAS_WEAPON_FLAG)) {
@@ -1239,7 +1239,7 @@ void hud_show_weapons_mode(int type,int vertical,int x,int y){
 		}
 	} else {
 		for (i=9;i>=5;i--){
-			if (Secondary_weapon==i)
+			if (Players[Player_num].secondary_weapon==i)
 				gr_set_fontcolor(BM_XRGB(20,0,0),-1);
 			else{
 				if (Players[Player_num].secondary_ammo[i]>0)
@@ -1300,9 +1300,9 @@ void hud_show_weapons(void)
 	else
 	{
 		const char *disp_primary_weapon_name;
-		weapon_name = PRIMARY_WEAPON_NAMES_SHORT(Primary_weapon);
+		weapon_name = PRIMARY_WEAPON_NAMES_SHORT(Players[Player_num].primary_weapon);
 
-		switch (Primary_weapon) {
+		switch (Players[Player_num].primary_weapon) {
 			case LASER_INDEX:
 				if (Players[Player_num].flags & PLAYER_FLAGS_QUAD_LASERS)
 					sprintf(weapon_str, "%s %s %i", TXT_QUAD, weapon_name, Players[Player_num].laser_level+1);
@@ -1342,9 +1342,9 @@ void hud_show_weapons(void)
 		gr_get_string_size(disp_primary_weapon_name, &w, &h, &aw );
 		gr_string(grd_curcanv->cv_bitmap.bm_w-w-FSPACX(1), y-(LINE_SPACING*2), disp_primary_weapon_name);
 
-		weapon_name = SECONDARY_WEAPON_NAMES_VERY_SHORT(Secondary_weapon);
+		weapon_name = SECONDARY_WEAPON_NAMES_VERY_SHORT(Players[Player_num].secondary_weapon);
 
-		sprintf(weapon_str, "%s %d",weapon_name,Players[Player_num].secondary_ammo[Secondary_weapon]);
+		sprintf(weapon_str, "%s %d",weapon_name,Players[Player_num].secondary_ammo[Players[Player_num].secondary_weapon]);
 		gr_get_string_size(weapon_str, &w, &h, &aw );
 		gr_string(grd_curcanv->cv_bitmap.bm_w-w-FSPACX(1), y-LINE_SPACING, weapon_str);
 
@@ -2103,15 +2103,15 @@ void draw_static(int win)
 void draw_weapon_boxes()
 {
 	if (weapon_box_user[0] == WBU_WEAPON) {
-		draw_weapon_box(0,Primary_weapon);
+		draw_weapon_box(0,Players[Player_num].primary_weapon);
 
 		if (weapon_box_states[0] == WS_SET) {
-			if ((Primary_weapon == VULCAN_INDEX) || (Primary_weapon == GAUSS_INDEX))
+			if ((Players[Player_num].primary_weapon == VULCAN_INDEX) || (Players[Player_num].primary_weapon == GAUSS_INDEX))
 			{
 				draw_primary_ammo_info(f2i((unsigned) VULCAN_AMMO_SCALE * (unsigned) Players[Player_num].primary_ammo[VULCAN_INDEX]));
 			}
 
-			if (Primary_weapon == OMEGA_INDEX)
+			if (Players[Player_num].primary_weapon == OMEGA_INDEX)
 			{
 				draw_primary_ammo_info(Omega_charge * 100/MAX_OMEGA_CHARGE);
 			}
@@ -2121,11 +2121,11 @@ void draw_weapon_boxes()
 		draw_static(0);
 
 	if (weapon_box_user[1] == WBU_WEAPON) {
-		draw_weapon_box(1,Secondary_weapon);
+		draw_weapon_box(1,Players[Player_num].secondary_weapon);
 
 		if (weapon_box_states[1] == WS_SET)
 		{
-			draw_secondary_ammo_info(Players[Player_num].secondary_ammo[Secondary_weapon]);
+			draw_secondary_ammo_info(Players[Player_num].secondary_ammo[Players[Player_num].secondary_weapon]);
 		}
 	}
 	else if (weapon_box_user[1] == WBU_STATIC)
@@ -2313,16 +2313,16 @@ void show_reticle(int reticle_type, int secondary_display)
 	laser_ready = allowed_to_fire_laser();
 	missile_ready = allowed_to_fire_missile();
 
-	laser_ammo = player_has_weapon(Primary_weapon,0);
-	missile_ammo = player_has_weapon(Secondary_weapon,1);
+	laser_ammo = player_has_weapon(Players[Player_num].primary_weapon,0);
+	missile_ammo = player_has_weapon(Players[Player_num].secondary_weapon,1);
 
 	primary_bm_num = (laser_ready && laser_ammo==HAS_ALL);
 	secondary_bm_num = (missile_ready && missile_ammo==HAS_ALL);
 
-	if (primary_bm_num && Primary_weapon==LASER_INDEX && (Players[Player_num].flags & PLAYER_FLAGS_QUAD_LASERS))
+	if (primary_bm_num && Players[Player_num].primary_weapon==LASER_INDEX && (Players[Player_num].flags & PLAYER_FLAGS_QUAD_LASERS))
 		primary_bm_num++;
 
-	if (Secondary_weapon_to_gun_num[Secondary_weapon]==7)
+	if (Secondary_weapon_to_gun_num[Players[Player_num].secondary_weapon]==7)
 		secondary_bm_num += 3;		//now value is 0,1 or 3,4
 	else if (secondary_bm_num && !(Missile_gun&1))
 			secondary_bm_num++;
@@ -2869,11 +2869,11 @@ void draw_hud()
 {
 	if (Newdemo_state == ND_STATE_RECORDING)
 	{
-		if (Primary_weapon == VULCAN_INDEX)
-			newdemo_record_primary_ammo(Players[Player_num].primary_ammo[Primary_weapon]);
-		if (Primary_weapon == OMEGA_INDEX)
+		if (Players[Player_num].primary_weapon == VULCAN_INDEX)
+			newdemo_record_primary_ammo(Players[Player_num].primary_ammo[Players[Player_num].primary_weapon]);
+		if (Players[Player_num].primary_weapon == OMEGA_INDEX)
 			newdemo_record_primary_ammo(Omega_charge);
-		newdemo_record_secondary_ammo(Players[Player_num].secondary_ammo[Secondary_weapon]);
+		newdemo_record_secondary_ammo(Players[Player_num].secondary_ammo[Players[Player_num].secondary_weapon]);
 	}
 	if (PlayerCfg.HudMode==3) // no hud, "immersion mode"
 		return;

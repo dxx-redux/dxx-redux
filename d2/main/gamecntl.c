@@ -253,7 +253,7 @@ void do_weapon_n_item_stuff()
 	}
 
 	if (allowed_to_fire_missile() && Controls.fire_secondary_state)
-		Global_missile_firing_count += Weapon_info[Secondary_weapon_to_weapon_info[Secondary_weapon]].fire_count;
+		Global_missile_firing_count += Weapon_info[Secondary_weapon_to_weapon_info[Players[Player_num].secondary_weapon]].fire_count;
 
 	if (Global_missile_firing_count) {
 		do_missile_firing(0);

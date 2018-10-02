@@ -1492,16 +1492,16 @@ int attempt_to_steal_item_3(object *objp, int player_num)
 		return 1;
 
 	//	If primary weapon = laser, first try to rip away those nasty quad lasers!
-	if (Primary_weapon == 0)
+	if (Players[Player_num].primary_weapon == 0)
 		if (maybe_steal_flag_item(player_num, PLAYER_FLAGS_QUAD_LASERS))
 			return 1;
 
 	//	Makes it more likely to steal primary than secondary.
 	for (i=0; i<2; i++)
-		if (maybe_steal_primary_weapon(player_num, Primary_weapon))
+		if (maybe_steal_primary_weapon(player_num, Players[Player_num].primary_weapon))
 			return 1;
 
-	if (maybe_steal_secondary_weapon(player_num, Secondary_weapon))
+	if (maybe_steal_secondary_weapon(player_num, Players[Player_num].secondary_weapon))
 		return 1;
 
 	//	See what the player has and try to snag something.
