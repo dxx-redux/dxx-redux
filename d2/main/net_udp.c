@@ -1120,7 +1120,7 @@ static int manual_join_game_handler(newmenu *menu, d_event *event, direct_join *
 				multi_new_game();
 				net_udp_reset_connection_statuses();
 				N_players = 0;
-				change_playernum_to(1);
+				change_playernum_to(0);
 				dj->start_time = timer_query();
 				dj->last_time = 0;
 				
@@ -1303,7 +1303,7 @@ int net_udp_list_join_poll( newmenu *menu, d_event *event, direct_join *dj )
 				multi_new_game();
 				net_udp_reset_connection_statuses();
 				N_players = 0;
-				change_playernum_to(1);
+				change_playernum_to(0);
 				dj->start_time = timer_query();
 				dj->last_time = 0;
 				memcpy((struct _sockaddr *)&dj->host_addr, (struct _sockaddr *)&Active_udp_games[(citem+(NLPage*UDP_NETGAMES_PPAGE))-4].game_addr, sizeof(struct _sockaddr));
@@ -1460,7 +1460,7 @@ void net_udp_list_join_game()
 	udp_dns_filladdr(UDP_MCASTv6_ADDR, UDP_PORT_DEFAULT, &GMcast_v6);
 #endif
 
-	change_playernum_to(1);
+	change_playernum_to(0);
 	N_players = 0;
 	Network_send_objects = 0;
 	Network_sending_extras=0;
@@ -1911,23 +1911,21 @@ void net_udp_welcome_player(UDP_sequence_packet *their)
 	Network_player_added = 0;
 
 	if(their->player.observer) {
-		if(Netgame.numobservers < Netgame.max_numobservers) {
-			int obsnum = Netgame.numobservers++;
+		int obsnum = Netgame.numobservers++;
 
-			UDP_sync_player = *their;
-			UDP_sync_player.player.connected = 1;
-			Network_send_objects = 1;
-			Network_send_objnum = -1;
-			Netgame.observers[obsnum].LastPacketTime = timer_query();
-			Netgame.observers[obsnum].connected = 1; 
-			Netgame.observers[obsnum].protocol.udp.addr = their->player.protocol.udp.addr;
-			strncpy((char*) &Netgame.observers[obsnum].callsign, (char*) &their->player.callsign, 8);
+		UDP_sync_player = *their;
+		UDP_sync_player.player.connected = 1;
+		Network_send_objects = 1;
+		Network_send_objnum = -1;
+		Netgame.observers[obsnum].LastPacketTime = timer_query();
+		Netgame.observers[obsnum].connected = 1; 
+		Netgame.observers[obsnum].protocol.udp.addr = their->player.protocol.udp.addr;
+		strncpy((char*) &Netgame.observers[obsnum].callsign, (char*) &their->player.callsign, 8);
 
-			multi_send_obs_update(0, obsnum);
-			HUD_init_message(HM_MULTI, "%s is now observing.", UDP_sync_player.player.callsign);
+		multi_send_obs_update(0, obsnum);
+		HUD_init_message(HM_MULTI, "%s is now observing.", UDP_sync_player.player.callsign);
 
-			net_udp_send_objects();
-		}
+		net_udp_send_objects();
 
 		return;
 	}
@@ -2190,6 +2188,11 @@ ubyte object_buffer[UPID_MAX_SIZE];
 void net_udp_send_objects(void)
 {
 	sbyte owner, player_num = UDP_sync_player.player.connected;
+
+	if (UDP_sync_player.player.observer) {
+		player_num = OBSERVER_PLAYER_ID;
+	}
+
 	static int obj_count = 0;
 	int loc = 0, i = 0, remote_objnum = 0, obj_count_frame = 0;
 	static fix64 last_send_time = 0;
@@ -2202,7 +2205,7 @@ void net_udp_send_objects(void)
 
 	Assert(Network_send_objects != 0);
 	Assert(player_num >= 0);
-	Assert(player_num < Netgame.max_numplayers);
+	Assert(UDP_sync_player.player.observer || player_num < Netgame.max_numplayers);
 
 	if (Endlevel_sequence || Control_center_destroyed)
 	{
@@ -2426,8 +2429,15 @@ void net_udp_send_rejoin_sync(int player_num)
 {
 	int i, j;
 
-	Players[player_num].connected = CONNECT_PLAYING; // connect the new guy
-	Netgame.players[player_num].LastPacketTime = timer_query();
+	if (Netgame.max_numobservers > 0 && player_num == OBSERVER_PLAYER_ID)
+	{
+		Network_player_added = 0;
+	}
+	else
+	{
+		Players[player_num].connected = CONNECT_PLAYING; // connect the new guy
+		Netgame.players[player_num].LastPacketTime = timer_query();
+	}
 
 	if (Endlevel_sequence || Control_center_destroyed)
 	{
@@ -5084,7 +5094,7 @@ int net_udp_do_join_game(ubyte join_as_obs)
 
 	// Choice is valid, prepare to join in
 	Difficulty_level = Netgame.difficulty;
-	if(! join_as_obs) { change_playernum_to(1); }
+	if(! join_as_obs) { change_playernum_to(0); }
 
 	net_udp_set_game_mode(Netgame.gamemode, join_as_obs);
 
