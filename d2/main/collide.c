@@ -2239,6 +2239,8 @@ void apply_damage_to_player(object *playerobj, object *killer, fix damage, ubyte
 		PALETTE_FLASH_ADD(f2i(damage)*4,-f2i(damage/2),-f2i(damage/2));	//flash red
 
 		if (Players[Player_num].shields < 0)	{
+			// Don't auto select when you're dead.
+			reset_auto_select();
 
   			Players[Player_num].killer_objnum = killer-Objects;
 
