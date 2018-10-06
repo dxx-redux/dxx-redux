@@ -530,6 +530,10 @@ int do_powerup(object *obj)
 			} else {
 				Players[Player_num].invulnerable_time = GameTime64;
 				Players[Player_num].flags |= PLAYER_FLAGS_INVULNERABLE;
+				#ifdef NETWORK
+				if (Game_mode & GM_MULTI)
+					multi_send_invuln();
+				#endif
 				powerup_basic(7, 14, 21, INVULNERABILITY_SCORE, "%s!",TXT_INVULNERABILITY);
 				used = 1;
 

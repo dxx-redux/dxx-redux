@@ -2262,6 +2262,18 @@ multi_do_decloak(const ubyte *buf)
 
 }
 
+multi_do_invuln(const ubyte *buf)
+{
+	int pnum;
+
+	pnum = buf[1];
+
+	Assert(pnum < N_players);
+
+	Players[pnum].flags |= PLAYER_FLAGS_INVULNERABLE;
+	Players[pnum].invulnerable_time = GameTime64;
+}
+
 void
 multi_do_door_open(const ubyte *buf)
 {
@@ -3400,6 +3412,21 @@ multi_send_decloak(void)
 	multibuf[1] = (char)Player_num;
 
 	if(Netgame.RetroProtocol) {
+		multi_send_data(multibuf, 2, 1);
+	}
+	multi_send_data(multibuf, 2, 2);
+}
+
+void
+multi_send_invuln(void)
+{
+	// Broadcast a change in our pflags (made to support invuln)
+	if (Game_mode & GM_OBSERVER || Netgame.max_numobservers == 0) { return; }
+
+	multibuf[0] = MULTI_INVULN;
+	multibuf[1] = (char)Player_num;
+
+	if (Netgame.RetroProtocol) {
 		multi_send_data(multibuf, 2, 1);
 	}
 	multi_send_data(multibuf, 2, 2);
@@ -6320,6 +6347,8 @@ multi_process_data(const ubyte *buf, int len)
 			if (!Endlevel_sequence) multi_do_cloak(buf); break;
 		case MULTI_DECLOAK:
 			if (!Endlevel_sequence) multi_do_decloak(buf); break;
+		case MULTI_INVULN:
+			if (!Endlevel_sequence) multi_do_invuln(buf); break;
 		case MULTI_DOOR_OPEN:
 			if (!Endlevel_sequence) multi_do_door_open(buf); break;
 		case MULTI_CREATE_EXPLOSION:

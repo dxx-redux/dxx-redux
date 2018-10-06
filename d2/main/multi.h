@@ -83,11 +83,13 @@ extern int multi_protocol; // set and determinate used protocol
 	VALUE(MULTI_ROBOT_CLAIM          , 5)	\
 	VALUE(MULTI_END_SYNC             , 4)	\
 	VALUE(MULTI_CLOAK                , 2)	\
+	VALUE(MULTI_INVULN               , 2)	\
 	VALUE(MULTI_ENDLEVEL_START       , 3)	\
 	VALUE(MULTI_CREATE_EXPLOSION     , 2)	\
 	VALUE(MULTI_CONTROLCEN_FIRE      , 16)	\
 	VALUE(MULTI_CREATE_POWERUP       , 19)	\
 	VALUE(MULTI_DECLOAK              , 2)	\
+	VALUE(MULTI_DEINVULN             , 2)	\
 	VALUE(MULTI_MENU_CHOICE          , 2)	\
 	VALUE(MULTI_ROBOT_POSITION       , 5+sizeof(shortpos))	\
 	VALUE(MULTI_PLAYER_EXPLODE        , 97+9)	\
@@ -276,6 +278,7 @@ void multi_send_create_explosion(int player_num);
 void multi_send_controlcen_fire(vms_vector *to_target, int gun_num, int objnum);
 void multi_send_cloak(void);
 void multi_send_decloak(void);
+void multi_send_invuln(void);
 void multi_send_create_powerup(int powerup_type, int segnum, int objnum, vms_vector *pos);
 void multi_send_play_sound(int sound_num, fix volume);
 void multi_send_audio_taunt(int taunt_num);
