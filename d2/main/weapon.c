@@ -305,6 +305,10 @@ void CycleSecondary ()
 //if message flag set, print message saying selected
 void select_weapon(int weapon_num, int secondary_flag, int print_message, int wait_for_rearm)
 {
+	// Don't select a weapon if you're dead.
+	if (Objects[Players[Player_num].objnum].type == OBJ_GHOST)
+		return;
+
 	char	*weapon_name;
 
 	if (Newdemo_state==ND_STATE_RECORDING )
@@ -1395,6 +1399,12 @@ void do_seismic_stuff(void)
 		}
 	}
 
+}
+
+void reset_auto_select()
+{
+	delayed_primary_autoselect_weapon_index = -1;
+	delayed_secondary_autoselect_weapon_index = -1;
 }
 
 /*

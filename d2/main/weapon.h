@@ -226,6 +226,8 @@ extern void rock_the_mine_frame(void);
 extern void smega_rock_stuff(void);
 extern void init_smega_detonates(void);
 
+extern void reset_auto_select();
+
 /*
  * reads n weapon_info structs from a PHYSFS_file
  */
