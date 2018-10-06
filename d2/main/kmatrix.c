@@ -331,9 +331,10 @@ int kmatrix_handler(window *wind, d_event *event, kmatrix_screen *km)
 
 			// Check if all connected players are also looking at this screen ...
 			for (i = 0; i < MAX_PLAYERS; i++)
-				if (Players[i].connected)
-					if (Players[i].connected != CONNECT_END_MENU && Players[i].connected != CONNECT_DIED_IN_MINE)
-						km->playing = 1;
+				if (!(Game_mode & GM_OBSERVER) || i != OBSERVER_PLAYER_ID)
+					if (Players[i].connected)
+						if (Players[i].connected != CONNECT_END_MENU && Players[i].connected != CONNECT_DIED_IN_MINE)
+							km->playing = 1;
 			
 			// ... and let the reactor blow sky high!
 			if (!km->playing)
