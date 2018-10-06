@@ -1964,7 +1964,7 @@ void multi_do_controlcen_destroy(const ubyte *buf)
 
 void multi_obs_check_all_escaped()
 {
-	for (int i = 0; i < MAX_PLAYERS, i++)
+	for (int i = 0; i < MAX_PLAYERS; i++)
 	{
 		if (Players[i].connected == CONNECT_PLAYING)
 			return;
