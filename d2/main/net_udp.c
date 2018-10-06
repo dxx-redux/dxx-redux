@@ -3549,7 +3549,7 @@ void net_udp_read_endlevel_packet( ubyte *data, int data_len, struct _sockaddr s
 		len += 4; 
 
 		tmpvar = data[len];							len++;
-		if ((Network_status != NETSTAT_PLAYING) && (tmpvar < Countdown_seconds_left))
+		if (Game_mode & GM_OBSERVER || (Network_status != NETSTAT_PLAYING) && (tmpvar < Countdown_seconds_left))
 			Countdown_seconds_left = tmpvar;
 
 		for (i = 0; i < MAX_PLAYERS; i++)
@@ -3562,10 +3562,6 @@ void net_udp_read_endlevel_packet( ubyte *data, int data_len, struct _sockaddr s
 
 			if ((int)data[len] == CONNECT_DISCONNECTED)
 				multi_disconnect_player(i);
-
-			if (Current_obs_player == i) {
-				reset_obs();
-			}
 
 			Players[i].connected = data[len];				len++;
 			Players[i].net_kills_total = GET_INTEL_SHORT(&(data[len]));	len += 2;
