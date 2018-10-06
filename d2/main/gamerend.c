@@ -895,7 +895,7 @@ void toggle_cockpit()
 }
 
 int last_drawn_cockpit = -1;
-extern void ogl_loadbmtexture(grs_bitmap *bm);
+extern void ogl_loadbmtexture(grs_bitmap *bm, int filter_blueship_wing);
 
 // This actually renders the new cockpit onto the screen.
 void update_cockpits()
