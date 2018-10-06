@@ -5467,7 +5467,7 @@ void multi_do_request_status()
 
 	if (Netgame.max_numobservers == 0) { return; }
 
-	multi_send_repair(0, Player[Player_num]->shields, 0);
+	multi_send_repair(0, Players[Player_num]->shields, 0);
 	multi_send_ship_status();
 }
 
