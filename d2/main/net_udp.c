@@ -1120,7 +1120,7 @@ static int manual_join_game_handler(newmenu *menu, d_event *event, direct_join *
 				multi_new_game();
 				net_udp_reset_connection_statuses();
 				N_players = 0;
-				change_playernum_to(0);
+				change_playernum_to(1);
 				dj->start_time = timer_query();
 				dj->last_time = 0;
 				
@@ -1303,7 +1303,7 @@ int net_udp_list_join_poll( newmenu *menu, d_event *event, direct_join *dj )
 				multi_new_game();
 				net_udp_reset_connection_statuses();
 				N_players = 0;
-				change_playernum_to(0);
+				change_playernum_to(1);
 				dj->start_time = timer_query();
 				dj->last_time = 0;
 				memcpy((struct _sockaddr *)&dj->host_addr, (struct _sockaddr *)&Active_udp_games[(citem+(NLPage*UDP_NETGAMES_PPAGE))-4].game_addr, sizeof(struct _sockaddr));
@@ -1460,7 +1460,7 @@ void net_udp_list_join_game()
 	udp_dns_filladdr(UDP_MCASTv6_ADDR, UDP_PORT_DEFAULT, &GMcast_v6);
 #endif
 
-	change_playernum_to(0);
+	change_playernum_to(1);
 	N_players = 0;
 	Network_send_objects = 0;
 	Network_sending_extras=0;
@@ -5094,7 +5094,7 @@ int net_udp_do_join_game(ubyte join_as_obs)
 
 	// Choice is valid, prepare to join in
 	Difficulty_level = Netgame.difficulty;
-	if(! join_as_obs) { change_playernum_to(0); }
+	if(! join_as_obs) { change_playernum_to(1); }
 
 	net_udp_set_game_mode(Netgame.gamemode, join_as_obs);
 
