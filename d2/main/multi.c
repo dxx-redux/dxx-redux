@@ -2262,6 +2262,7 @@ multi_do_decloak(const ubyte *buf)
 
 }
 
+void
 multi_do_invuln(const ubyte *buf)
 {
 	int pnum;
