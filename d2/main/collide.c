@@ -2576,15 +2576,12 @@ void collide_player_and_powerup( object * playerobj, object * powerup, vms_vecto
 		switch (powerup->id) {
 			case POW_KEY_BLUE:
 				Players[playerobj->id].flags |= PLAYER_FLAGS_BLUE_KEY;
-				multi_send_ship_status();
 				break;
 			case POW_KEY_RED:
 				Players[playerobj->id].flags |= PLAYER_FLAGS_RED_KEY;
-				multi_send_ship_status();
 				break;
 			case POW_KEY_GOLD:
 				Players[playerobj->id].flags |= PLAYER_FLAGS_GOLD_KEY;
-				multi_send_ship_status();
 				break;
 			default:
 				break;

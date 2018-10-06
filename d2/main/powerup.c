@@ -518,6 +518,9 @@ int do_powerup(object *obj)
 				powerup_basic(-10,-10,-10, CLOAK_SCORE, "%s!",TXT_CLOAKING_DEVICE);
 				used = 1;
 
+				if (Game_mode & GM_MULTI)
+					multi_send_ship_status();
+
 				break;
 			}
 		case	POW_INVULNERABILITY:
