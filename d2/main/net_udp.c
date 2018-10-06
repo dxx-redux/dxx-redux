@@ -1697,15 +1697,13 @@ int net_udp_endlevel(int *secret)
 
 	Network_status = NETSTAT_ENDLEVEL; // We are between levels
 	net_udp_listen();
-	net_udp_send_endlevel_packet();
+	if (!(Game_mode & GM_OBSERVER))
+		net_udp_send_endlevel_packet();
 
 	for (i=0; i<N_players; i++) 
 	{
 		Netgame.players[i].LastPacketTime = timer_query();
 	}
-   
-	net_udp_send_endlevel_packet();
-	net_udp_send_endlevel_packet();
 
 	net_udp_update_netgame();
 
@@ -4952,8 +4950,6 @@ int net_udp_wait_for_requests(void)
 
 	m[0].type=NM_TYPE_TEXT; m[0].text = TXT_NET_LEAVE;
 
-
-	Network_status = NETSTAT_WAITING;
 	net_udp_flush();
 
 	Players[Player_num].connected = CONNECT_PLAYING;

@@ -1962,8 +1962,18 @@ void multi_do_controlcen_destroy(const ubyte *buf)
 	}
 }
 
-void
-multi_do_escape(const ubyte *buf)
+void multi_obs_check_all_escaped()
+{
+	for (int i = 0; i < MAX_PLAYERS, i++)
+	{
+		if (Players[i].connected == CONNECT_PLAYING)
+			return;
+	}
+
+	PlayerFinishedLevel(0);
+}
+
+void multi_do_escape(const ubyte *buf)
 {
 	int objnum;
 
@@ -2002,6 +2012,10 @@ multi_do_escape(const ubyte *buf)
 	}
 	create_player_appearance_effect(&Objects[objnum]);
 	multi_make_player_ghost(buf[1]);
+
+	if (Game_mode & GM_OBSERVER) {
+		multi_obs_check_all_escaped();
+	}
 }
 
 #define MAX_PACKETS 200 // Memory's cheap ;)
@@ -2195,11 +2209,15 @@ void multi_disconnect_player(int pnum)
 		return;
 	}
 
-	for (i = 0; i < N_players; i++)
-		if (Players[i].connected) n++;
-	if (n == 1)
-	{
-		HUD_init_message_literal(HM_MULTI, "You are the only person remaining in this netgame");
+	if (Game_mode & GM_OBSERVER) {
+		multi_obs_check_all_escaped();
+	} else {
+		for (i = 0; i < N_players; i++)
+			if (Players[i].connected) n++;
+		if (n == 1)
+		{
+			HUD_init_message_literal(HM_MULTI, "You are the only person remaining in this netgame");
+		}
 	}
 }
 
@@ -2797,6 +2815,10 @@ multi_send_endlevel_start(int secret)
 			default:
 				Error("Protocol handling missing in multi_send_endlevel_start\n");
 				break;
+		}
+
+		if (Game_mode & GM_OBSERVER) {
+			multi_obs_check_all_escaped();
 		}
 	}
 }
