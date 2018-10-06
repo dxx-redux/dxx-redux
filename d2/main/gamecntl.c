@@ -1900,7 +1900,7 @@ int ReadControls(d_event *event)
 				Real_orient = Objects[Players[Current_obs_player].objnum].orient;
 				Last_real_update = 0;
 
-				// If we're obsserving at a distance, move the camera accordingly.achieved_state
+				// If we're observing at a distance, move the camera accordingly.achieved_state
 				if (Obs_at_distance == 1) {
 					vms_vector move = ZERO_VECTOR;
 					vm_vec_copy_scale(&move, &Real_orient.fvec, F1_0 * -20);
