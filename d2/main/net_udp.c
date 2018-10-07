@@ -1727,7 +1727,7 @@ net_udp_can_join_netgame(netgame_info *game, ubyte join_as_obs)
 	int i, num_players;
 
 	if (game->game_status == NETSTAT_STARTING)
-		return join_as_obs ? 2 : 1;
+		return 1;
 
 	if (game->game_status != NETSTAT_PLAYING)
 	{
@@ -2534,6 +2534,10 @@ char * net_udp_get_player_name( int objnum )
 void net_udp_add_player(UDP_sequence_packet *p)
 {
 	int i;
+
+	if (p->player.observer) {
+		return;
+	}
 
 	for (i=0; i<N_players; i++ )
 	{
@@ -5109,9 +5113,6 @@ int net_udp_do_join_game(ubyte join_as_obs)
 				nm_messagebox(TXT_SORRY, 1, TXT_OK, TXT_GAME_FULL);
 			else
 				nm_messagebox(TXT_SORRY, 1, TXT_OK, TXT_IN_PROGRESS);
-			return 0;
-		case 2:
-			nm_messagebox(TXT_SORRY, 1, TXT_OK, "You cannot observe a game\nthat hasn't started yet!");
 			return 0;
 	}
 
