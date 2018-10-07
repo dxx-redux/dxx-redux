@@ -52,10 +52,10 @@ void con_printf(int priority, const char *fmt, ...)
 	va_list arglist;
 	char buffer[CON_LINE_LENGTH];
 
-	memset(buffer,'\0',CON_LINE_LENGTH);
-
 	if (priority <= ((int)GameArg.DbgVerbose))
 	{
+		memset(buffer, '\0', CON_LINE_LENGTH);
+
 		char *p1, *p2;
 
 		va_start (arglist, fmt);

@@ -418,7 +418,10 @@ void calc_frame_time()
 
 	if (FrameTime < 0)				//if bogus frametime...
 		FrameTime = (last_frametime==0?1:last_frametime);		//...then use time from last frame
+}
 
+void calc_game_time()
+{
 	GameTime64 += FrameTime;
 
 	// CED -- Something's busted with the D2 code.  Here's D1.
@@ -1157,9 +1160,11 @@ int game_handler(window *wind, d_event *event, void *data)
 			return ReadControls(event);
 
 		case EVENT_WINDOW_DRAW:
+			calc_frame_time();
+
 			if (!time_paused)
 			{
-				calc_frame_time();
+				calc_game_time();
 				GameProcessFrame();
 			}
 
