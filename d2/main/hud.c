@@ -94,7 +94,11 @@ void HUD_render_message_frame()
 			HUD_color = BM_XRGB(0,28,0);
 
 		gr_set_curfont( GAME_FONT );
-		y = FSPACY(1);
+
+		if (PlayerCfg.CockpitMode[1] == CM_OBSERVATORY)
+			y = FSPACY(14);
+		else
+			y = FSPACY(1);
 
 		if (Guided_missile[Player_num] && Guided_missile[Player_num]->type==OBJ_WEAPON && Guided_missile[Player_num]->id==GUIDEDMISS_ID &&
 		Guided_missile[Player_num]->signature==Guided_missile_sig[Player_num] && PlayerCfg.GuidedInBigWindow)

@@ -21,6 +21,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include <string.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <math.h>
 
 #include "hudmsg.h"
 #include "inferno.h"
@@ -2762,6 +2763,413 @@ void hud_show_kill_list()
 		y += LINE_SPACING;
 	}
 }
+
+int time_diff(kill_event *ev) {
+	return f2i(GameTime64 - ev->timestamp);
+}
+
+void observer_show_kill_list()
+{
+	int i,n_players,player_list[MAX_PLAYERS];
+	bool is_teams = (Show_kill_list == 3); // TODO: Fix for teams.  Right now this will only show team data if you cycle through the F7 list appropriately.
+	int player_num;
+	char name[9], score[10], major_event[23], run[23], time[10];
+	int old_time, new_time;
+	char *t;
+	int sw,sh,aw;
+	bool left;
+	int x, y, diff, diff2;
+	int gridminx, gridminx2, gridmaxx, gridminy, gridmaxy;
+	int old_x, old_y;
+	int minscore = 0;
+	int maxscore = 0;
+	int maxtime = 0;
+	int timescale = 0;
+	int scorescale = 0;
+	int color;
+	kill_event *ev;
+	kill_event *opp_ev;
+	kill_event *last_ev;
+	kill_event *last_opp_ev;
+
+	gr_set_curfont( GAME_FONT );
+
+	n_players = multi_get_kill_list(player_list);
+
+	if (is_teams)
+		n_players = 2;
+
+    if(Netgame.BlackAndWhitePyros) 
+		selected_player_rgb = player_rgb_alt; 
+	else
+		selected_player_rgb = player_rgb;
+
+	for (i=0;i<n_players;i++) {
+		strcpy(major_event, "");
+		strcpy(run, "");
+		left = (i % 2) == 0;
+		y = 5 + (i / 2) * 100;
+
+		if (is_teams)
+			player_num = i;
+		else
+			player_num = player_list[i];
+
+		if (Players[player_num].connected != CONNECT_PLAYING) {
+			gr_set_fontcolor(BM_XRGB(12, 12, 12), -1);
+		} else if (Game_mode & GM_TEAM) {
+			color = get_color_for_team(player_num, 0);
+			gr_set_fontcolor(BM_XRGB(selected_player_rgb[color].r,selected_player_rgb[color].g,selected_player_rgb[color].b),-1 );
+		} else {
+			color = get_color_for_player(player_num, 0);
+			gr_set_fontcolor(BM_XRGB(selected_player_rgb[color].r,selected_player_rgb[color].g,selected_player_rgb[color].b),-1 );
+		}
+
+		if (is_teams)
+			strcpy(name, Netgame.team_name[i]);
+		else if (Game_mode & GM_BOUNTY && player_num == Bounty_target && GameTime64&0x10000)
+			strcpy(name,"[TARGET]");
+		else
+			strcpy(name,Players[player_num].callsign);	// Note link to above if!!
+
+		gr_set_curfont( GAME_FONT );
+
+		gr_get_string_size(name,&sw,&sh,&aw);
+		
+		if (left)
+			gr_printf(5, y, "%s", name);
+		else
+			gr_printf(grd_curcanv->cv_bitmap.bm_w - 5 - sw, y, "%s", name);
+
+		y += FSPACY(7);
+
+		if (Players[player_num].connected == CONNECT_PLAYING) {
+			if (Game_mode & GM_TEAM) {
+				color = get_color_for_team(player_num, 1);
+				gr_set_fontcolor(BM_XRGB(selected_player_rgb[color].r,selected_player_rgb[color].g,selected_player_rgb[color].b),-1 );
+			} else {
+				color = get_color_for_player(player_num, 1);
+				gr_set_fontcolor(BM_XRGB(selected_player_rgb[color].r,selected_player_rgb[color].g,selected_player_rgb[color].b),-1 );
+			}
+		}
+
+		if (is_teams) {
+			sprintf(score, "%d", team_kills[i]);
+		} else if ((Game_mode & GM_MULTI_COOP) || (Game_mode & GM_MULTI_ROBOTS) )
+			sprintf(score, "%d", Players[player_num].score);
+		else {
+			sprintf(score, "%d", Players[player_num].net_kills_total);
+		}
+		
+		gr_set_curfont( MEDIUM1_FONT );
+		
+		gr_get_string_size(score, &sw, &sh, &aw);
+
+		if (left)
+			gr_printf(5, y, "%s", score);
+		else
+			gr_printf(grd_curcanv->cv_bitmap.bm_w - 5 - sw, y, "%s", score);
+
+		x = sw;
+		
+		gr_set_curfont( GAME_FONT );
+		
+		// Determine last major event for player.
+		if (kill_streak[player_num] >= 3) {
+			sprintf(major_event, "Kill Streak: %i", kill_streak[player_num]);
+		} else if (last_kill[player_num] != NULL && ((diff = time_diff(last_kill[player_num])) >= 60)) {
+			if (diff >= 3600)
+				sprintf(major_event, "Last Kill: %i:%02i:%02i", diff / 3600, (diff / 60) % 60, diff % 60);
+			else
+				sprintf(major_event, "Last Kill: %02i:%02i", (diff / 60) % 60, diff % 60);
+		} else if (n_players > 2 && last_death[player_num] != NULL && ((diff = time_diff(last_death[player_num])) >= 60)) {
+			if (diff >= 3600)
+				sprintf(major_event, "Last Death: %i:%02i:%02i", diff / 3600, (diff / 60) % 60, diff % 60);
+			else
+				sprintf(major_event, "Last Death: %02i:%02i", (diff / 60) % 60, diff % 60);
+		}
+		
+		if (strlen(major_event) > 0) {
+			while ((t=strchr(major_event,'1')) != NULL)
+				*t = '\x84';	//convert to wide '1'
+			
+			gr_get_string_size(major_event, &sw, &sh, &aw);
+			
+			if (left)
+				gr_printf(10 + x, y, "%s", major_event);
+			else
+				gr_printf(grd_curcanv->cv_bitmap.bm_w - 10 - sw - x, y, "%s", major_event);
+				
+			y += FSPACY(7);
+		}
+		
+		// Determine if there is a run.
+		if (!is_teams && n_players == 2 && (Game_mode & GM_MULTI) != 0 && (Game_mode & GM_MULTI_COOP) == 0 && (Game_mode & GM_MULTI_ROBOTS) == 0) {
+			int initial_score = Players[player_num].net_kills_total;
+			int initial_opp_score = Players[player_list[1 - i]].net_kills_total;
+			if (initial_score >= 5) {
+				ev = last_event[player_num];
+				opp_ev = last_event[player_list[1 - i]];
+				last_ev = ev;
+				last_opp_ev = opp_ev;
+				while (true) {
+					if (ev->score != last_ev->score) {
+						last_ev = ev;
+						if (opp_ev->score != last_opp_ev->score)
+							last_opp_ev = opp_ev;
+					}
+					if (opp_ev->score > last_opp_ev->score) {
+						last_opp_ev = opp_ev;
+					}
+					
+					if (ev->prev == NULL && opp_ev->prev == NULL) {
+						// Neither player has a previous event, we're done calculating the run.
+						break;
+					}
+					
+					if (ev->prev != NULL && opp_ev->prev != NULL) {
+						// Both players have a previous event, figure out whose is later.
+						if (ev->prev->timestamp > opp_ev->prev->timestamp) {
+							ev = ev->prev;
+						} else {
+							opp_ev = opp_ev->prev;
+						}
+					} else if (ev->prev == NULL) {
+						// Only the opponent has a previous event.
+						opp_ev = opp_ev->prev;
+					} else if (opp_ev->prev == NULL) {
+						// Only the player has a previous event.
+						ev = ev->prev;
+					}
+					
+					if (initial_opp_score - opp_ev->score <= 0 || (initial_score - ev->score < 5 && initial_opp_score - opp_ev->score < 5))
+						continue;
+					
+					if (initial_score - ev->score <= 0)
+						break;
+					
+					if (((float)(initial_score - ev->score)) / ((float)(initial_opp_score - opp_ev->score)) < 2)
+						break;
+				}
+				
+				if ((last_ev->score > 0 || last_opp_ev->score > 0) && initial_score - last_ev->score >= 5) {
+					diff = time_diff(last_opp_ev);
+					diff2 = time_diff(last_ev);
+					if (diff2 > diff)
+						diff = diff2;
+
+					if (diff >= 3600)
+						sprintf(run, "Run: %i-%i in %i:%02i:%02i", initial_score - last_ev->score, initial_opp_score - last_opp_ev->score, diff / 3600, (diff / 60) % 60, diff % 60);
+					else
+						sprintf(run, "Run: %i-%i in %02i:%02i", initial_score - last_ev->score, initial_opp_score - last_opp_ev->score, (diff / 60) % 60, diff % 60);
+				}
+			}
+		}
+
+		if (strlen(run) > 0) {
+			while ((t=strchr(run,'1')) != NULL)
+				*t = '\x84';	//convert to wide '1'
+
+			gr_get_string_size(run, &sw, &sh, &aw);
+			
+			if (left)
+				gr_printf(10 + x, y, "%s", run);
+			else
+				gr_printf(grd_curcanv->cv_bitmap.bm_w - 10 - sw - x, y, "%s", run);
+				
+			y += FSPACY(7);
+		}
+	}
+
+	// Show graph
+	if (!is_teams && Players[Player_num].hours_total * 3600 + f2i(Players[Player_num].time_total) < show_graph_until) {
+		for (i=0; i < n_players; i++) {
+			player_num = player_list[i];
+	
+			if ((ev = first_event[player_num]) != NULL) {
+				while(ev != NULL) {
+					if (ev->score < minscore)
+						minscore = ev->score;
+					if (ev->score > maxscore)
+						maxscore = ev->score;
+					ev = ev->next;
+				}
+			}
+		}
+		
+		if (minscore != maxscore) {
+			x = (grd_curcanv->cv_bitmap.bm_w - 1000) / 2;
+			y = grd_curcanv->cv_bitmap.bm_h - 205;
+			gr_settransblend(14, GR_BLEND_NORMAL);
+			gr_setcolor( BM_XRGB(0,0,0) );
+			gr_rect(x,y - FSPACY(4),x+1000 + FSPACX(7),y+200);
+			gr_settransblend(GR_FADE_OFF, GR_BLEND_NORMAL);
+			
+			gr_set_curfont( GAME_FONT );
+			gr_set_fontcolor(BM_XRGB(255, 255, 255), -1);
+			
+			// Determine the numbers to use on the axis.  We want a maximum of 6 vertically (including 0) and 12 horizontally (not including 0).
+			scorescale = 1;
+			while (trunc((float)maxscore / (float)scorescale) - trunc((float)minscore / (float)scorescale) > 5) {
+				switch (scorescale) {
+					case 1:
+						scorescale = 2;
+						break;
+					case 2:
+						scorescale = 5;
+						break;
+					case 5:
+						scorescale = 10;
+						break;
+					case 10:
+						scorescale = 20;
+						break;
+					case 20:
+						scorescale = 25;
+						break;
+					case 25:
+						scorescale = 50;
+						break;
+					case 50:
+						scorescale = 100;
+						break;
+					case 100:
+						scorescale = 200;
+						break;
+					case 200:
+						scorescale = 250;
+						break;
+					case 250:
+						scorescale = 500;
+						break;
+					case 500:
+						scorescale = 1000;
+						break;
+					case 1000:
+						scorescale = 2000;
+						break;
+					case 2000:
+						scorescale = 2500;
+						break;
+					case 2500:
+						scorescale = 5000;
+						break;
+					case 5000:
+						scorescale = 10000;
+						break;
+				}
+			}
+			
+			timescale = 1;
+			maxtime = Players[Player_num].hours_total * 3600 + f2i(Players[Player_num].time_total);
+			while ((maxtime / 60) / timescale > 12) {
+				switch (timescale) {
+					case 1:
+						timescale = 2;
+						break;
+					case 2:
+						timescale = 5;
+						break;
+					case 5:
+						timescale = 10;
+						break;
+					case 10:
+						timescale = 15;
+						break;
+					case 15:
+						timescale = 20;
+						break;
+					case 20:
+						timescale = 30;
+						break;
+					case 30:
+						timescale = 60;
+						break;
+					case 60:
+						timescale = 120;
+						break;
+				}
+			}
+			gridminy = grd_curcanv->cv_bitmap.bm_h - 10 - FSPACY(6);
+			gridmaxy = grd_curcanv->cv_bitmap.bm_h - 200;
+	
+			sprintf(score, "%i", minscore);
+			gr_get_string_size(score, &sw, &sh, &aw);
+			gridminx = (grd_curcanv->cv_bitmap.bm_w - 1000) / 2 + 5 + sw;
+	
+			sprintf(score, "%i", maxscore);
+			gr_get_string_size(score, &sw, &sh, &aw);
+			gridminx2 = (grd_curcanv->cv_bitmap.bm_w - 1000) / 2 + 5 + sw;
+			
+			if (gridminx2 > gridminx) {
+				gridminx = gridminx2;
+			}
+			
+			gridmaxx = (grd_curcanv->cv_bitmap.bm_w - 1000) / 2 + 995;
+	
+			for (i = trunc((float)minscore / (float)scorescale); i <= maxscore; i += scorescale) {
+				y = gridminy - (int)((float)(gridminy - gridmaxy) * (((float)(i - minscore)) / (float)(maxscore - minscore)));
+				sprintf(score, "%i", i);
+				gr_get_string_size(score, &sw, &sh, &aw);
+				gr_set_fontcolor(BM_XRGB(255, 255, 255), -1);
+				gr_printf(gridminx - sw, y - sh / 2, "%s", score);
+				gr_setcolor(BM_XRGB(12, 12, 12));
+				gr_line(gridminx * F1_0, y * F1_0, gridmaxx * F1_0, y * F1_0);
+			}
+			
+			for (i = 0; i < maxtime; i += timescale * 60) {
+				x = gridminx + (int)((float)(gridmaxx - gridminx) * (((float)i) / (float)maxtime));
+				if (i > 0) {
+					sprintf(time, "%i", i / 60);
+					gr_get_string_size(time, &sw, &sh, &aw);
+					gr_set_fontcolor(BM_XRGB(255, 255, 255), -1);
+					gr_printf(x - sw / 2, gridminy + 1, "%s", time);
+				}
+				gr_setcolor(BM_XRGB(12, 12, 12));
+				gr_line(x * F1_0, gridminy * F1_0, x * F1_0, gridmaxy * F1_0);
+			}
+			
+			for (i = n_players; i >= 0; i--) {
+				player_num = player_list[i];
+
+				if ((ev = first_event[player_num]) != NULL) {
+					if (Game_mode & GM_TEAM) {
+						color = get_color_for_team(player_num, 0);
+						gr_setcolor(BM_XRGB(selected_player_rgb[color].r,selected_player_rgb[color].g,selected_player_rgb[color].b));
+					} else {
+						color = get_color_for_player(player_num, 0);
+						gr_setcolor(BM_XRGB(selected_player_rgb[color].r,selected_player_rgb[color].g,selected_player_rgb[color].b));
+					}
+					
+					last_ev = ev;
+					while (ev->next != NULL) {
+						ev = ev->next;
+						if (ev->score != last_ev->score) {
+							old_time = f2i(last_ev->timestamp);
+							new_time = f2i(ev->timestamp);
+
+							old_x = gridminx + (int)((float)(gridmaxx - gridminx) * (((float)old_time) / (float)maxtime));
+							old_y = gridminy - (int)((float)(gridminy - gridmaxy) * (((float)(last_ev->score - minscore)) / (float)(maxscore - minscore)));
+							x = gridminx + (int)((float)(gridmaxx - gridminx) * (((float)new_time) / (float)maxtime));
+							y = gridminy - (int)((float)(gridminy - gridmaxy) * (((float)(ev->score - minscore)) / (float)(maxscore - minscore)));
+							
+							gr_line(old_x * F1_0, old_y * F1_0, x * F1_0, old_y * F1_0);
+							gr_line(x * F1_0, old_y * F1_0, x * F1_0, y * F1_0);
+
+							last_ev = ev;
+						}
+					}
+
+					old_time = f2i(last_ev->timestamp);
+					old_x = gridminx + (int)((float)(gridmaxx - gridminx) * (((float)old_time) / (float)maxtime));
+					old_y = gridminy - (int)((float)(gridminy - gridmaxy) * (((float)(last_ev->score - minscore)) / (float)(maxscore - minscore)));
+
+					gr_line(old_x * F1_0, old_y * F1_0, gridmaxx * F1_0, old_y * F1_0);
+				}
+			}
+		}
+	}
+}
 #endif
 
 //returns true if viewer can see object
@@ -2934,6 +3342,41 @@ void draw_hud()
 			newdemo_record_primary_ammo(Omega_charge);
 		newdemo_record_secondary_ammo(Players[Player_num].secondary_ammo[Players[Player_num].secondary_weapon]);
 	}
+
+	if (PlayerCfg.CockpitMode[1] == CM_OBSERVATORY) {
+		int x, y, w, h, aw;
+
+		// Show HUD names
+		show_HUD_names();
+		
+		// Show time
+		char time_str[8];
+		if (GameTime64 < 3600 * F1_0)
+			sprintf(time_str, "%02i:%02i", (int)(f2i(GameTime64) / 60 % 60), (int)(f2i(GameTime64) % 60));
+		else
+			sprintf(time_str, "%i:%02i:%02i", (int)(f2i(GameTime64) / 3600), (int)(f2i(GameTime64) / 60 % 60), (int)(f2i(GameTime64) % 60));
+
+		gr_set_curfont( MEDIUM3_FONT );
+		gr_get_string_size( time_str, &w, &h, &aw );
+		x = (grd_curcanv->cv_bitmap.bm_w - w ) / 2; 
+		y = 5;
+	
+		gr_settransblend(14, GR_BLEND_NORMAL);
+		gr_setcolor( BM_XRGB(0,0,0) );
+		gr_rect( x - 10, y - 5, x + w + 10, y + h);
+		gr_settransblend(GR_FADE_OFF, GR_BLEND_NORMAL);
+	
+		gr_string(0x8000, y, time_str );
+
+		// Show kill list
+		observer_show_kill_list();
+		
+		// Show game messages
+		HUD_render_message_frame();
+
+		return;
+	}
+
 	if (PlayerCfg.HudMode==3) // no hud, "immersion mode"
 		return;
 

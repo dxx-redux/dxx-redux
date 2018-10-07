@@ -217,6 +217,37 @@ char *multi_allow_powerup_text[MULTI_ALLOW_POWERUP_MAX] =
 	for_each_netflag_value(define_netflag_string)
 };
 
+// The Observatory stat tracking
+kill_event *first_event[MAX_PLAYERS] = {NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
+kill_event *last_event[MAX_PLAYERS] = {NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
+kill_event *last_kill[MAX_PLAYERS] = {NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
+kill_event *last_death[MAX_PLAYERS] = {NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
+int kill_streak[MAX_PLAYERS] = {0,0,0,0,0,0,0,0};
+int next_graph = 5;
+fix64 show_graph_until = -1;
+
+void add_observatory_stat(int player_num, int event_type) {
+	kill_event *ev = (kill_event *)d_malloc(sizeof(kill_event));
+	ev->timestamp = GameTime64;
+	ev->obs_event = event_type;
+	ev->score = ((Game_mode & GM_MULTI_COOP) || (Game_mode & GM_MULTI_ROBOTS)) ? Players[player_num].score : Players[player_num].net_kills_total;
+	ev->next = NULL;
+	ev->prev = last_event[player_num];
+	if (ev->prev != NULL)
+		ev->prev->next = ev;
+	last_event[player_num] = ev;
+	if (first_event[player_num] == NULL)
+		first_event[player_num] = ev;
+	if ((event_type & OBSEV_KILL) != 0) {
+		last_kill[player_num] = ev;
+		kill_streak[player_num] += 1;
+	}
+	if ((event_type & OBSEV_DEATH) != 0) {
+		last_death[player_num] = ev;
+		kill_streak[player_num] = 0;
+	}
+}
+
 int GetMyNetRanking()
 {
 	int rank, eff;
@@ -494,6 +525,28 @@ multi_new_game(void)
 	multi_quit_game = 0;
 	Show_kill_list = 1;
 	game_disable_cheats();
+
+	// The observatory stats reset
+	kill_event *ev = NULL;
+	for (i = 0; i < MAX_PLAYERS; i++) {
+		last_kill[i] = NULL;
+		last_death[i] = NULL;
+		kill_streak[i] = 0;
+		next_graph = 5;
+		show_graph_until = -1;
+		while ((ev = last_event[i]) != NULL) {
+			if (ev->prev != NULL) {
+				ev->prev->next = NULL;
+				last_event[i] = ev->prev;
+			} else {
+				last_event[i] = NULL;
+				first_event[i] = NULL;
+			}
+			d_free(ev);
+			ev = NULL;
+		}
+		add_observatory_stat(i, OBSEV_NONE);
+	}
 }
 
 void
@@ -675,6 +728,9 @@ void multi_compute_kill(int killer, int killed)
 		}
 		else
 			HUD_init_message(HM_MULTI, "%s %s %s.", killed_name, TXT_WAS, TXT_KILLED_BY_NONPLAY );
+
+		add_observatory_stat(killed_pnum, OBSEV_DEATH | OBSEV_REACTOR);
+
 		return;
 	}
 
@@ -700,6 +756,9 @@ void multi_compute_kill(int killer, int killed)
 				HUD_init_message(HM_MULTI, "%s %s %s.", killed_name, TXT_WAS, TXT_KILLED_BY_ROBOT );
 		}
 		Players[killed_pnum].net_killed_total++;
+
+		add_observatory_stat(killed_pnum, OBSEV_DEATH | OBSEV_ROBOT);
+
 		return;
 	}
 
@@ -760,6 +819,8 @@ void multi_compute_kill(int killer, int killed)
 			/* Select new target  - it will be sent later when we're done with this function */
 			multi_new_bounty_target( n );
 		}
+
+		add_observatory_stat(killed_pnum, OBSEV_DEATH | OBSEV_SELF);
 	}
 
 	else
@@ -812,6 +873,12 @@ void multi_compute_kill(int killer, int killed)
 
 		kill_matrix[killer_pnum][killed_pnum] += 1;
 		Players[killed_pnum].net_killed_total += 1;
+
+		if (Players[killer_pnum].net_kills_total >= next_graph) {
+			next_graph += (next_graph < 20 || N_players > 2 ? 5 : 1);
+			show_graph_until = GameTime64 + 15 * F1_0;
+		}
+
 		if (killer_pnum == Player_num) {
 			HUD_init_message(HM_MULTI, "%s %s %s!", TXT_YOU, TXT_KILLED, killed_name);
 			multi_add_lifetime_kills();
@@ -835,6 +902,9 @@ void multi_compute_kill(int killer, int killed)
 		}
 		else
 			HUD_init_message(HM_MULTI, "%s %s %s!", killer_name, TXT_KILLED, killed_name);
+
+		add_observatory_stat(killed_pnum, OBSEV_DEATH | OBSEV_PLAYER);
+		add_observatory_stat(killer_pnum, OBSEV_KILL | OBSEV_PLAYER);
 	}
 
 	TheGoal=Netgame.KillGoal*10;
@@ -2451,6 +2521,8 @@ multi_do_score(const ubyte *buf)
 		score = GET_INTEL_INT(buf + 2);
 		newdemo_record_multi_score(pnum, score);
 	}
+
+	add_observatory_stat(pnum, OBSEV_NONE);
 
 	Players[pnum].score = GET_INTEL_INT(buf + 2);
 

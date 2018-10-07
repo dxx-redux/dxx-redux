@@ -166,6 +166,7 @@ extern void save_screen_shot(int automap_flag);
 #define CM_STATUS_BAR       2   // small status bar, w/ reticle
 #define CM_FULL_SCREEN      3   // full screen, no cockpit (w/ reticle)
 #define CM_LETTERBOX        4   // half-height window (for cutscenes)
+#define CM_OBSERVATORY      5   // Interface from The Observatory
 
 extern int Game_window_w,       // width and height of player's game window
            Game_window_h;

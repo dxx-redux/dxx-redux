@@ -1483,7 +1483,10 @@ void dead_player_end(void)
 	Player_exploded = 0;
 	obj_delete(Dead_player_camera-Objects);
 	//Dead_player_camera = NULL;
-	select_cockpit(PlayerCfg.CockpitMode[0]);
+	if (Game_mode & GM_OBSERVER)
+		select_cockpit(PlayerCfg.CockpitMode[0]);
+	else
+		select_cockpit(PlayerCfg.CockpitMode[0] == CM_OBSERVATORY ? CM_FULL_SCREEN : PlayerCfg.CockpitMode[0]);
 	Viewer = Viewer_save;
 	ConsoleObject->type = OBJ_PLAYER;
 	ConsoleObject->flags = Player_flags_save;

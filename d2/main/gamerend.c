@@ -127,6 +127,9 @@ void show_framerate()
 }
 
 void show_observers() {
+	if (PlayerCfg.CockpitMode[1] == CM_OBSERVATORY)
+		return;
+
 	if(Netgame.max_numobservers == 0) {
 		return;
 	}
@@ -526,7 +529,7 @@ void game_draw_hud_stuff()
 
 	render_countdown_gauge();
 
-	if (GameCfg.FPSIndicator && PlayerCfg.CockpitMode[1] != CM_REAR_VIEW)
+	if (GameCfg.FPSIndicator && PlayerCfg.CockpitMode[1] != CM_REAR_VIEW && PlayerCfg.CockpitMode[1] != CM_OBSERVATORY)
 		show_framerate();
 
 	if ( (Game_mode & GM_MULTI) && (PlayerCfg.ObsShowObs)) {
@@ -881,11 +884,17 @@ void toggle_cockpit()
 			new_mode = CM_FULL_SCREEN;
 			break;
 		case CM_FULL_SCREEN:
-			new_mode = CM_FULL_COCKPIT;
-			if(PlayerCfg.DisableCockpit) {
-				new_mode = CM_STATUS_BAR; 
-			}
+			if (Game_mode & GM_OBSERVER)
+				new_mode = CM_OBSERVATORY;
+			else
+				new_mode = CM_FULL_COCKPIT;
 			break;
+		case CM_OBSERVATORY:
+			new_mode = CM_FULL_COCKPIT;
+
+			if (new_mode == CM_STATUS_BAR && PlayerCfg.DisableCockpit) {
+				new_mode = CM_STATUS_BAR;
+			}
 	}
 
 	select_cockpit(new_mode);
@@ -924,6 +933,7 @@ void update_cockpits()
 			break;
 	
 		case CM_FULL_SCREEN:
+		case CM_OBSERVATORY:
 			break;
 	
 		case CM_STATUS_BAR:
