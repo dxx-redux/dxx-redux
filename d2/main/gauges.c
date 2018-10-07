@@ -2195,9 +2195,11 @@ void sb_draw_energy_bar(int energy)
 	hud_bitblt(HUD_SCALE_X(SB_ENERGY_GAUGE_X), HUD_SCALE_Y(SB_ENERGY_GAUGE_Y), &GameBitmaps[GET_GAUGE_INDEX(SB_GAUGE_ENERGY)]);
 
 	erase_height = HUD_SCALE_Y((100 - energy) * SB_ENERGY_GAUGE_H / 100);
-	gr_setcolor( 0 );
-	for (i=0;i<erase_height;i++)
-		gr_uline( i2f(HUD_SCALE_X(SB_ENERGY_GAUGE_X-1)), i2f(HUD_SCALE_Y(SB_ENERGY_GAUGE_Y)+i), i2f(HUD_SCALE_X(SB_ENERGY_GAUGE_X+(SB_ENERGY_GAUGE_W))), i2f(HUD_SCALE_Y(SB_ENERGY_GAUGE_Y)+i) );
+
+	if (erase_height > 0) {
+		gr_setcolor(0);
+		gr_urect(HUD_SCALE_X(SB_ENERGY_GAUGE_X), HUD_SCALE_Y(SB_ENERGY_GAUGE_Y), HUD_SCALE_X(SB_ENERGY_GAUGE_X) + HUD_SCALE_X(SB_ENERGY_GAUGE_W) - 1, HUD_SCALE_Y(SB_ENERGY_GAUGE_Y) + erase_height - 1);
+	}
 
 	//draw numbers
 	gr_set_fontcolor(BM_XRGB(25,18,6),-1 );
