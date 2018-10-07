@@ -5741,23 +5741,20 @@ void net_udp_process_mdata (ubyte *data, int data_len, struct _sockaddr sender_a
 		return;
 
 	// Check if it came from valid IP
-	if(Netgame.RetroProtocol) {
-	} else {
-		if (multi_i_am_master())
+	if (multi_i_am_master())
+	{
+		if (! is_player_ip(sender_addr, pnum))
 		{
-			if (! is_player_ip(sender_addr, pnum))
-			{
-				drop_rx_packet(data, "not received from player ip"); 
-				return;
-			}
+			drop_rx_packet(data, "not received from player ip"); 
+			return;
 		}
-		else
+	}
+	else
+	{
+		if (! is_master_ip(sender_addr))
 		{
-			if (! is_master_ip(sender_addr))
-			{
-				drop_rx_packet(data, "not received from master ip"); 
-				return;
-			}
+			drop_rx_packet(data, "not received from master ip"); 
+			return;
 		}
 	}
 
