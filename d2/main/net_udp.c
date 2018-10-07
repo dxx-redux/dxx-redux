@@ -793,6 +793,15 @@ int is_player_ip(struct _sockaddr addr, int pnum) {
 	return ! memcmp(&Netgame.players[pnum].protocol.udp.addr, &addr, sizeof(struct _sockaddr)); 
 }
 
+int is_observer_ip(struct _sockaddr addr) {
+	for (int i = 0; i < Netgame.numobservers; i++) {
+		if (!memcmp(&Netgame.observers[i].protocol.udp.addr, &addr, sizeof(struct _sockaddr))) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
 int is_any_player_ip(struct _sockaddr addr) {
 	for(int i = 0; i < MAX_PLAYERS; i++) {
 		if(Players[i].connected == CONNECT_DISCONNECTED) continue;
@@ -3322,6 +3331,11 @@ void net_udp_process_packet(ubyte *data, struct _sockaddr sender_addr, int lengt
 
 	if(! pass_security_check(data, sender_addr, length, ! is_proxy)) {
 		con_printf(CON_URGENT, "Dropped pid %s: failed security checks.\n", msg_name(data[0])); 
+		return;
+	}
+
+	if (is_observer_ip(sender_addr) && (!multi_i_am_master() || data[0] != UPID_P2P_PING)) {
+		con_printf(CON_URGENT, "Dropped pid %s: observer sent disallowed packet.\n", msg_name(data[0]));
 		return;
 	}
 
@@ -6445,7 +6459,7 @@ void net_udp_process_p2p_ping(ubyte *data, struct _sockaddr sender_addr, int dat
 
 	// This is an observer heartbeat
 
-	if(Netgame.max_numobservers > 0 && from_player == 7 && multi_i_am_master()) {
+	if(Netgame.max_numobservers > 0 && from_player == OBSERVER_PLAYER_ID && multi_i_am_master()) {
 		for(int i = 0; i < Netgame.numobservers; i++) {
 			if(! memcmp(&Netgame.observers[i].protocol.udp.addr, &sender_addr, sizeof(struct _sockaddr))) {
 				Netgame.observers[i].LastPacketTime = timer_query();
