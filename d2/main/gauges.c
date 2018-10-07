@@ -1405,20 +1405,21 @@ void hud_show_cloak_invuln(void)
 		}
 	}
 
-	if (Players[pnum].flags & PLAYER_FLAGS_INVULNERABLE) {
-		int	y = grd_curcanv->cv_bitmap.bm_h;
+	if (Players[pnum].invulnerable_time + INVULNERABLE_TIME_MAX - GameTime64 > 0) {
+		if (Players[pnum].flags & PLAYER_FLAGS_INVULNERABLE) {
+			int	y = grd_curcanv->cv_bitmap.bm_h;
 
-		if (Game_mode & GM_MULTI)
-			y -= LINE_SPACING*9;
-		else
-			y -= LINE_SPACING*5;
+			if (Game_mode & GM_MULTI)
+				y -= LINE_SPACING*9;
+			else
+				y -= LINE_SPACING*5;
 
-		if (Players[pnum].invulnerable_time+INVULNERABLE_TIME_MAX-GameTime64 > F1_0*4 || GameTime64 & 0x8000)
-		{
-			gr_printf(FSPACX(1), y, "%s", TXT_INVULNERABLE);
+			if (Players[pnum].invulnerable_time+INVULNERABLE_TIME_MAX-GameTime64 > F1_0*4 || GameTime64 & 0x8000)
+			{
+				gr_printf(FSPACX(1), y, "%s", TXT_INVULNERABLE);
+			}
 		}
 	}
-
 }
 
 void hud_show_shield(void)
@@ -2280,7 +2281,7 @@ void draw_invulnerable_ship()
 
 	gr_set_current_canvas(NULL);
 
-	if (Players[pnum].invulnerable_time+INVULNERABLE_TIME_MAX-GameTime64 > F1_0*4 || GameTime64 & 0x8000)
+	if (Players[pnum].invulnerable_time+INVULNERABLE_TIME_MAX-GameTime64 > 0 && (Players[pnum].invulnerable_time + INVULNERABLE_TIME_MAX - GameTime64 > F1_0*4 || GameTime64 & 0x8000))
 	{
 
 		if (PlayerCfg.CockpitMode[1] == CM_STATUS_BAR)	{
