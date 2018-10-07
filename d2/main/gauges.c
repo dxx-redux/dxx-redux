@@ -2774,7 +2774,6 @@ void observer_show_kill_list()
 	bool is_teams = (Show_kill_list == 3); // TODO: Fix for teams.  Right now this will only show team data if you cycle through the F7 list appropriately.
 	int player_num;
 	char name[9], score[10], major_event[23], run[23], time[10];
-	int old_time, new_time;
 	char *t;
 	int sw,sh,aw;
 	bool left;
@@ -2784,7 +2783,6 @@ void observer_show_kill_list()
 	int old_x, old_y;
 	int minscore = 0;
 	int maxscore = 0;
-	int maxtime = 0;
 	int timescale = 0;
 	int scorescale = 0;
 	int color;
@@ -3062,8 +3060,7 @@ void observer_show_kill_list()
 			}
 			
 			timescale = 1;
-			maxtime = Players[Player_num].hours_total * 3600 + f2i(Players[Player_num].time_total);
-			while ((maxtime / 60) / timescale > 12) {
+			while ((GameTime64 / 60) / i2f(timescale) > 12) {
 				switch (timescale) {
 					case 1:
 						timescale = 2;
@@ -3118,8 +3115,8 @@ void observer_show_kill_list()
 				gr_line(gridminx * F1_0, y * F1_0, gridmaxx * F1_0, y * F1_0);
 			}
 			
-			for (i = 0; i < maxtime; i += timescale * 60) {
-				x = gridminx + (int)((float)(gridmaxx - gridminx) * (((float)i) / (float)maxtime));
+			for (i = 0; i2f(i) < GameTime64; i += timescale * 60) {
+				x = gridminx + (int)((float)(gridmaxx - gridminx) * (((float)i2f(i)) / (float)(GameTime64)));
 				if (i > 0) {
 					sprintf(time, "%i", i / 60);
 					gr_get_string_size(time, &sw, &sh, &aw);
@@ -3129,8 +3126,8 @@ void observer_show_kill_list()
 				gr_setcolor(BM_XRGB(12, 12, 12));
 				gr_line(x * F1_0, gridminy * F1_0, x * F1_0, gridmaxy * F1_0);
 			}
-			
-			for (i = n_players; i >= 0; i--) {
+
+			for (i = n_players - 1; i >= 0; i--) {
 				player_num = player_list[i];
 
 				if ((ev = first_event[player_num]) != NULL) {
@@ -3146,12 +3143,9 @@ void observer_show_kill_list()
 					while (ev->next != NULL) {
 						ev = ev->next;
 						if (ev->score != last_ev->score) {
-							old_time = f2i(last_ev->timestamp);
-							new_time = f2i(ev->timestamp);
-
-							old_x = gridminx + (int)((float)(gridmaxx - gridminx) * (((float)old_time) / (float)maxtime));
+							old_x = gridminx + (int)((float)(gridmaxx - gridminx) * (((float)last_ev->timestamp) / (float)GameTime64));
 							old_y = gridminy - (int)((float)(gridminy - gridmaxy) * (((float)(last_ev->score - minscore)) / (float)(maxscore - minscore)));
-							x = gridminx + (int)((float)(gridmaxx - gridminx) * (((float)new_time) / (float)maxtime));
+							x = gridminx + (int)((float)(gridmaxx - gridminx) * (((float)ev->timestamp) / (float)GameTime64));
 							y = gridminy - (int)((float)(gridminy - gridmaxy) * (((float)(ev->score - minscore)) / (float)(maxscore - minscore)));
 							
 							gr_line(old_x * F1_0, old_y * F1_0, x * F1_0, old_y * F1_0);
@@ -3161,8 +3155,7 @@ void observer_show_kill_list()
 						}
 					}
 
-					old_time = f2i(last_ev->timestamp);
-					old_x = gridminx + (int)((float)(gridmaxx - gridminx) * (((float)old_time) / (float)maxtime));
+					old_x = gridminx + (int)((float)(gridmaxx - gridminx) * (((float)last_ev->timestamp) / (float)GameTime64));
 					old_y = gridminy - (int)((float)(gridminy - gridmaxy) * (((float)(last_ev->score - minscore)) / (float)(maxscore - minscore)));
 
 					gr_line(old_x * F1_0, old_y * F1_0, gridmaxx * F1_0, old_y * F1_0);
