@@ -2725,6 +2725,11 @@ void net_udp_send_endlevel_packet(void)
 {
 	int i = 0, j = 0, len = 0;
 
+	if (Game_mode & GM_OBSERVER) {
+		// Don't send this packet as observer.
+		return;
+	}
+
 	if (multi_i_am_master())
 	{
 		ubyte buf[UPID_MAX_SIZE];
