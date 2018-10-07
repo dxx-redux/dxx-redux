@@ -2018,6 +2018,7 @@ multi_do_kill(const ubyte *buf)
 		multi_send_bounty();
 
 	if (Control_center_destroyed) {
+		reset_obs();
 		Players[pnum].connected = CONNECT_DIED_IN_MINE;
 
 		if (Game_mode & GM_OBSERVER) {
