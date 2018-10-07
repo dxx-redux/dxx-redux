@@ -3845,6 +3845,8 @@ void multi_prep_level(void)
 	int i;
 	int     cloak_count, inv_count;
 
+	show_graph_until = -1;
+
 	Assert(Game_mode & GM_MULTI);
 
 	Assert(NumNetPlayerPositions > 0);

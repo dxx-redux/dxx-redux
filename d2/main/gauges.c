@@ -2188,7 +2188,7 @@ void draw_weapon_boxes()
 
 void sb_draw_energy_bar(int energy)
 {
-	int erase_height,i;
+	int erase_height;
 	int ew, eh, eaw;
 
 	PAGE_IN_GAUGE( SB_GAUGE_ENERGY );
@@ -2768,10 +2768,6 @@ void hud_show_kill_list()
 	}
 }
 
-int time_diff(kill_event *ev) {
-	return f2i(GameTime64 - ev->timestamp);
-}
-
 void observer_show_kill_list()
 {
 	int i,n_players,player_list[MAX_PLAYERS];
@@ -2782,7 +2778,8 @@ void observer_show_kill_list()
 	char *t;
 	int sw,sh,aw;
 	bool left;
-	int x, y, diff, diff2;
+	int x, y;
+	fix64 diff, diff2;
 	int gridminx, gridminx2, gridmaxx, gridminy, gridmaxy;
 	int old_x, old_y;
 	int minscore = 0;
@@ -2881,16 +2878,16 @@ void observer_show_kill_list()
 		// Determine last major event for player.
 		if (kill_streak[player_num] >= 3) {
 			sprintf(major_event, "Kill Streak: %i", kill_streak[player_num]);
-		} else if (last_kill[player_num] != NULL && ((diff = time_diff(last_kill[player_num])) >= 60)) {
-			if (diff >= 3600)
-				sprintf(major_event, "Last Kill: %i:%02i:%02i", diff / 3600, (diff / 60) % 60, diff % 60);
+		} else if (last_kill[player_num] != NULL && ((diff = GameTime64 - last_kill[player_num]->timestamp) >= i2f(60))) {
+			if (diff >= i2f(3600))
+				sprintf(major_event, "Last Kill: %i:%02i:%02i", (int)(diff / i2f(3600)), (int)(diff / i2f(60)) % 60, (int)(diff / i2f(1)) % 60);
 			else
-				sprintf(major_event, "Last Kill: %02i:%02i", (diff / 60) % 60, diff % 60);
-		} else if (n_players > 2 && last_death[player_num] != NULL && ((diff = time_diff(last_death[player_num])) >= 60)) {
+				sprintf(major_event, "Last Kill: %02i:%02i", (int)(diff / i2f(60)) % 60, (int)(diff / i2f(1)) % 60);
+		} else if (n_players > 2 && last_death[player_num] != NULL && ((diff = GameTime64 - last_death[player_num]->timestamp) >= i2f(60))) {
 			if (diff >= 3600)
-				sprintf(major_event, "Last Death: %i:%02i:%02i", diff / 3600, (diff / 60) % 60, diff % 60);
+				sprintf(major_event, "Last Death: %i:%02i:%02i", (int)(diff / i2f(3600)), (int)(diff / i2f(60)) % 60, (int)(diff / i2f(1)) % 60);
 			else
-				sprintf(major_event, "Last Death: %02i:%02i", (diff / 60) % 60, diff % 60);
+				sprintf(major_event, "Last Death: %02i:%02i", (int)(diff / i2f(60)) % 60, (int)(diff / i2f(1)) % 60);
 		}
 		
 		if (strlen(major_event) > 0) {
@@ -2957,15 +2954,15 @@ void observer_show_kill_list()
 				}
 				
 				if ((last_ev->score > 0 || last_opp_ev->score > 0) && initial_score - last_ev->score >= 5) {
-					diff = time_diff(last_opp_ev);
-					diff2 = time_diff(last_ev);
+					diff = GameTime64 - last_opp_ev->timestamp;
+					diff2 = GameTime64 - last_ev->timestamp;
 					if (diff2 > diff)
 						diff = diff2;
 
 					if (diff >= 3600)
-						sprintf(run, "Run: %i-%i in %i:%02i:%02i", initial_score - last_ev->score, initial_opp_score - last_opp_ev->score, diff / 3600, (diff / 60) % 60, diff % 60);
+						sprintf(run, "Run: %i-%i in %i:%02i:%02i", initial_score - last_ev->score, initial_opp_score - last_opp_ev->score, (int)(diff / i2f(3600)), (int)(diff / i2f(60)) % 60, (int)(diff / i2f(1)) % 60);
 					else
-						sprintf(run, "Run: %i-%i in %02i:%02i", initial_score - last_ev->score, initial_opp_score - last_opp_ev->score, (diff / 60) % 60, diff % 60);
+						sprintf(run, "Run: %i-%i in %02i:%02i", initial_score - last_ev->score, initial_opp_score - last_opp_ev->score, (int)(diff / i2f(60)) % 60, (int)(diff / i2f(1)) % 60);
 				}
 			}
 		}
@@ -2986,7 +2983,7 @@ void observer_show_kill_list()
 	}
 
 	// Show graph
-	if (!is_teams && Players[Player_num].hours_total * 3600 + f2i(Players[Player_num].time_total) < show_graph_until) {
+	if (!is_teams && GameTime64 < show_graph_until) {
 		for (i=0; i < n_players; i++) {
 			player_num = player_list[i];
 	

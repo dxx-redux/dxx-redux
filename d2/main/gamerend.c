@@ -792,6 +792,10 @@ void update_cockpits();
 //render a frame for the game
 void game_render_frame_mono(int flip)
 {
+	if (!(Game_mode & GM_OBSERVER) && PlayerCfg.CockpitMode[1] == CM_OBSERVATORY) {
+		PlayerCfg.CockpitMode[1] == CM_FULL_COCKPIT
+	}
+
 	int no_draw_hud=0;
 
 	gr_set_current_canvas(&Screen_3d_window);
@@ -855,6 +859,7 @@ void game_render_frame_mono(int flip)
 		Game_mode = GM_NORMAL | (Game_mode & GM_OBSERVER);
 
 	gr_set_current_canvas(&Screen_3d_window);
+
 	if (!no_draw_hud)
 		game_draw_hud_stuff();
 
@@ -886,15 +891,17 @@ void toggle_cockpit()
 		case CM_FULL_SCREEN:
 			if (Game_mode & GM_OBSERVER)
 				new_mode = CM_OBSERVATORY;
+			else if (PlayerCfg.DisableCockpit)
+				new_mode = CM_STATUS_BAR;
 			else
 				new_mode = CM_FULL_COCKPIT;
 			break;
 		case CM_OBSERVATORY:
-			new_mode = CM_FULL_COCKPIT;
-
-			if (new_mode == CM_STATUS_BAR && PlayerCfg.DisableCockpit) {
+			if (PlayerCfg.DisableCockpit)
 				new_mode = CM_STATUS_BAR;
-			}
+			else
+				new_mode = CM_FULL_COCKPIT;
+			break;
 	}
 
 	select_cockpit(new_mode);
