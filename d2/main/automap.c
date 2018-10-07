@@ -831,7 +831,7 @@ int automap_handler(window *wind, d_event *event, automap *am)
 	return 1;
 }
 
-void do_automap( int key_code )
+void do_automap()
 {
 	int pcx_error;
 	ubyte pal[256*3];
@@ -876,8 +876,6 @@ void do_automap( int key_code )
 	am->viewDist = 0;
 
 	init_automap_colors(am);
-
-	key_code = key_code;	// disable warning...
 
 	if ((Game_mode & GM_MULTI) && (!Endlevel_sequence))
 		am->pause_game = 0;

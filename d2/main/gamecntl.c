@@ -2033,7 +2033,7 @@ int ReadControls(d_event *event)
 			Controls.automap_count = 0;
 			if (!((Game_mode & GM_MULTI) && Control_center_destroyed && (Countdown_seconds_left < 10)))
 			{
-				do_automap(0);
+				do_automap();
 				return 1;
 			}
 		}
