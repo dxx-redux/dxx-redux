@@ -293,7 +293,7 @@ void multi_send_damage(fix damage, fix shields, ubyte killer_type, ubyte killer_
 void multi_do_damage( const ubyte *buf );
 void multi_send_repair(fix repair, fix shields, ubyte sourcetype);
 void multi_do_repair(const ubyte *buf);
-void multi_send_ship_status(int reason);
+void multi_send_ship_status();
 void multi_do_ship_status( const ubyte *buf );
 void multi_send_bounty( void );
 

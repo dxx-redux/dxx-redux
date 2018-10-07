@@ -5692,7 +5692,7 @@ void multi_do_repair(const ubyte *buf)
 	}
 }
 
-void multi_send_ship_status(int reason)
+void multi_send_ship_status()
 {
 	if (Game_mode & GM_OBSERVER) { return; }
 
