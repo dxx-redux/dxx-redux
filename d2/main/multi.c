@@ -547,6 +547,9 @@ multi_new_game(void)
 		}
 		add_observatory_stat(i, OBSEV_NONE);
 	}
+
+	Send_ship_status = 0;
+	Next_ship_status_time = 0;
 }
 
 void
@@ -5609,14 +5612,8 @@ void multi_send_damage(fix damage, fix shields, ubyte killer_type, ubyte killer_
 	// Setup damage packet.
 	multibuf[0] = MULTI_DAMAGE;
 	multibuf[1] = Player_num;
-	multibuf[2] = (damage >> 24) & 0xFF;
-	multibuf[3] = (damage >> 16) & 0xFF;
-	multibuf[4] = (damage >> 8) & 0xFF;
-	multibuf[5] = damage & 0xFF;
-	multibuf[6] = (shields >> 24) & 0xFF;
-	multibuf[7] = (shields >> 16) & 0xFF;
-	multibuf[8] = (shields >> 8) & 0xFF;
-	multibuf[9] = shields & 0xFF;
+	PUT_INTEL_INT(multibuf + 2, damage);
+	PUT_INTEL_INT(multibuf + 6, shields);
 	multibuf[10] = killer_type;
 	multibuf[11] = killer_id;
 	multibuf[12] = damage_type;
@@ -5648,11 +5645,11 @@ void multi_do_damage( const ubyte *buf )
 {
 	if (Game_mode & GM_OBSERVER)
 	{
-		Players[buf[1]].shields = ((fix)buf[6] << 24) + ((fix)buf[7] << 16) + ((fix)buf[8] << 8) + (fix)buf[9];
+		Players[buf[1]].shields = GET_INTEL_INT(buf + 6);
 		if (Players[Player_num].hours_total - Players[buf[1]].shields_time_hours > 1 || Players[Player_num].hours_total - Players[buf[1]].shields_time_hours == 1 && i2f(3600) + Players[Player_num].time_total - Players[buf[1]].shields_time > i2f(2) || Players[Player_num].time_total - Players[buf[1]].shields_time > i2f(2)) {
 			Players[buf[1]].shields_delta = 0;
 		}
-		Players[buf[1]].shields_delta -= ((fix)buf[2] << 24) + ((fix)buf[3] << 16) + ((fix)buf[4] << 8) + (fix)buf[5];
+		Players[buf[1]].shields_delta -= GET_INTEL_INT(buf + 2);
 		Players[buf[1]].shields_time = Players[Player_num].time_total;
 		Players[buf[1]].shields_time_hours = Players[Player_num].hours_total;
 	}
@@ -5674,14 +5671,8 @@ void multi_send_repair(fix repair, fix shields, ubyte sourcetype)
 	// Setup repair packet.
 	multibuf[0] = MULTI_REPAIR;
 	multibuf[1] = Player_num;
-	multibuf[2] = (repair >> 24) & 0xFF;
-	multibuf[3] = (repair >> 16) & 0xFF;
-	multibuf[4] = (repair >> 8) & 0xFF;
-	multibuf[5] = repair & 0xFF;
-	multibuf[6] = (shields >> 24) & 0xFF;
-	multibuf[7] = (shields >> 16) & 0xFF;
-	multibuf[8] = (shields >> 8) & 0xFF;
-	multibuf[9] = shields & 0xFF;
+	PUT_INTEL_INT(multibuf + 2, repair);
+	PUT_INTEL_INT(multibuf + 6, shields);
 	multibuf[10] = sourcetype;
 
 	multi_send_data_direct( multibuf, 11, multi_who_is_master(), 2);
@@ -5691,17 +5682,17 @@ void multi_do_repair(const ubyte *buf)
 {
 	if (Game_mode & GM_OBSERVER)
 	{
-		Players[buf[1]].shields = ((fix)buf[6] << 24) + ((fix)buf[7] << 16) + ((fix)buf[8] << 8) + (fix)buf[9];
+		Players[buf[1]].shields = GET_INTEL_INT(buf + 6);
 		if (Players[Player_num].hours_total - Players[buf[1]].shields_time_hours > 1 || Players[Player_num].hours_total - Players[buf[1]].shields_time_hours == 1 && i2f(3600) + Players[Player_num].time_total - Players[buf[1]].shields_time > i2f(2) || Players[Player_num].time_total - Players[buf[1]].shields_time > i2f(2)) {
 			Players[buf[1]].shields_delta = 0;
 		}
-		Players[buf[1]].shields_delta += ((fix)buf[2] << 24) + ((fix)buf[3] << 16) + ((fix)buf[4] << 8) + (fix)buf[5];
+		Players[buf[1]].shields_delta += GET_INTEL_INT(buf + 2);
 		Players[buf[1]].shields_time = Players[Player_num].time_total;
 		Players[buf[1]].shields_time_hours = Players[Player_num].hours_total;
 	}
 }
 
-void multi_send_ship_status()
+void multi_send_ship_status(int reason)
 {
 	if (Game_mode & GM_OBSERVER) { return; }
 
@@ -5717,32 +5708,19 @@ void multi_send_ship_status_for_frame()
 	multibuf[0] = MULTI_SHIP_STATUS;
 	multibuf[1] = Player_num;
 	multibuf[2] = Players[Player_num].laser_level;
-	multibuf[3] = (Players[Player_num].flags >> 8) & 0xFF;
-	multibuf[4] = Players[Player_num].flags & 0xFF;
-	multibuf[5] = (Players[Player_num].primary_ammo[1] >> 8) & 0xFF;
-	multibuf[6] = Players[Player_num].primary_ammo[1] & 0xFF;
+	PUT_INTEL_SHORT(multibuf + 3, Players[Player_num].flags);
+	PUT_INTEL_SHORT(multibuf + 5, Players[Player_num].primary_ammo[1]);
 	multibuf[7] = Players[Player_num].primary_weapon_flags;
 	multibuf[8] = (ubyte)Players[Player_num].primary_weapon;
-	multibuf[9] = (Players[Player_num].secondary_ammo[0] >> 8) & 0xFF;
-	multibuf[10] = Players[Player_num].secondary_ammo[0] & 0xFF;
-	multibuf[11] = (Players[Player_num].secondary_ammo[1] >> 8) & 0xFF;
-	multibuf[12] = Players[Player_num].secondary_ammo[1] & 0xFF;
-	multibuf[13] = (Players[Player_num].secondary_ammo[2] >> 8) & 0xFF;
-	multibuf[14] = Players[Player_num].secondary_ammo[2] & 0xFF;
-	multibuf[15] = (Players[Player_num].secondary_ammo[3] >> 8) & 0xFF;
-	multibuf[16] = Players[Player_num].secondary_ammo[3] & 0xFF;
-	multibuf[17] = (Players[Player_num].secondary_ammo[4] >> 8) & 0xFF;
-	multibuf[18] = Players[Player_num].secondary_ammo[4] & 0xFF;
+	PUT_INTEL_SHORT(multibuf + 9, Players[Player_num].secondary_ammo[0]);
+	PUT_INTEL_SHORT(multibuf + 11, Players[Player_num].secondary_ammo[1]);
+	PUT_INTEL_SHORT(multibuf + 13, Players[Player_num].secondary_ammo[2]);
+	PUT_INTEL_SHORT(multibuf + 15, Players[Player_num].secondary_ammo[3]);
+	PUT_INTEL_SHORT(multibuf + 17, Players[Player_num].secondary_ammo[4]);
 	multibuf[19] = Players[Player_num].secondary_weapon_flags;
 	multibuf[20] = (ubyte)Players[Player_num].secondary_weapon;
-	multibuf[21] = (Players[Player_num].energy >> 24) & 0xFF;
-	multibuf[22] = (Players[Player_num].energy >> 16) & 0xFF;
-	multibuf[23] = (Players[Player_num].energy >> 8) & 0xFF;
-	multibuf[24] = Players[Player_num].energy & 0xFF;
-	multibuf[25] = (Players[Player_num].homing_object_dist >> 24) & 0xFF;
-	multibuf[26] = (Players[Player_num].homing_object_dist >> 16) & 0xFF;
-	multibuf[27] = (Players[Player_num].homing_object_dist >> 8) & 0xFF;
-	multibuf[28] = Players[Player_num].homing_object_dist & 0xFF;
+	PUT_INTEL_INT(multibuf + 21, Players[Player_num].energy);
+	PUT_INTEL_INT(multibuf + 25, Players[Player_num].homing_object_dist);
 
 	multi_send_data_direct( multibuf, 29, multi_who_is_master(), 2);
 }
@@ -5752,19 +5730,19 @@ void multi_do_ship_status( const ubyte *buf )
 	if (Game_mode & GM_OBSERVER)
 	{
 		Players[buf[1]].laser_level = buf[2];
-		Players[buf[1]].flags = ((ushort)buf[3] << 8) + (ushort)buf[4];
-		Players[buf[1]].primary_ammo[1] = ((ushort)buf[5] << 8) + (ushort)buf[6];
+		Players[buf[1]].flags = GET_INTEL_SHORT(buf + 3);
+		Players[buf[1]].primary_ammo[1] = GET_INTEL_SHORT(buf + 5);
 		Players[buf[1]].primary_weapon_flags = buf[7];
 		Players[buf[1]].primary_weapon = (sbyte)buf[8];
-		Players[buf[1]].secondary_ammo[0] = ((ushort)buf[9] << 8) + (ushort)buf[10];
-		Players[buf[1]].secondary_ammo[1] = ((ushort)buf[11] << 8) + (ushort)buf[12];
-		Players[buf[1]].secondary_ammo[2] = ((ushort)buf[13] << 8) + (ushort)buf[14];
-		Players[buf[1]].secondary_ammo[3] = ((ushort)buf[15] << 8) + (ushort)buf[16];
-		Players[buf[1]].secondary_ammo[4] = ((ushort)buf[17] << 8) + (ushort)buf[18];
+		Players[buf[1]].secondary_ammo[0] = GET_INTEL_SHORT(buf + 9);
+		Players[buf[1]].secondary_ammo[1] = GET_INTEL_SHORT(buf + 11);
+		Players[buf[1]].secondary_ammo[2] = GET_INTEL_SHORT(buf + 13);
+		Players[buf[1]].secondary_ammo[3] = GET_INTEL_SHORT(buf + 15);
+		Players[buf[1]].secondary_ammo[4] = GET_INTEL_SHORT(buf + 17);
 		Players[buf[1]].secondary_weapon_flags = buf[19];
 		Players[buf[1]].secondary_weapon = (sbyte)buf[20];
-		Players[buf[1]].energy = ((fix)buf[21] << 24) + ((fix)buf[22] << 16) + ((fix)buf[23] << 8) + (fix)buf[24];
-		Players[buf[1]].homing_object_dist = ((fix)buf[25] << 24) + ((fix)buf[26] << 16) + ((fix)buf[27] << 8) + (fix)buf[28];
+		Players[buf[1]].energy = GET_INTEL_INT(buf + 21);
+		Players[buf[1]].homing_object_dist = GET_INTEL_INT(buf + 25);
 	}
 }
 

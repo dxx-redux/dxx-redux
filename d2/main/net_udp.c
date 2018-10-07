@@ -6011,7 +6011,7 @@ void net_udp_send_pdata()
 		multi_send_ship_status_for_frame();
 
 		// Send at most 6 ship statuses per second.
-		Next_ship_status_time += F1_0 / 6;
+		Next_ship_status_time = GameTime64 + F1_0 / 6;
 		Send_ship_status = 0;
 	}
 }
