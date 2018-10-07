@@ -1001,8 +1001,6 @@ int valid_netgame_status(ubyte *data, int data_len, struct _sockaddr sender_addr
 }
 
 int pass_security_check(ubyte *data, struct _sockaddr sender_addr, int data_len, int check_ip) {
-	//return 1; // TODO!  Make this functional in obs mode
-
 	return ((! check_ip) || valid_ip(data, data_len, sender_addr)) &&
 	       valid_size(data, data_len, sender_addr) &&
 	       valid_token(data, data_len, sender_addr) &&
@@ -3028,6 +3026,10 @@ void net_udp_send_game_info(struct _sockaddr sender_addr, ubyte info_upid, ubyte
 			PUT_INTEL_INT(buf + len, netgame_token); len += 4; 
 		}
 
+		if (info_upid == UPID_GAME_INFO) {
+			PUT_INTEL_INT(buf + len, netgame_token); len += 4;
+		}
+
 		if (send_to_observers != 2)
 			dxx_sendto (UDP_Socket[0], buf, len, 0, (struct sockaddr *)&sender_addr, sizeof(struct _sockaddr));
 
@@ -3265,7 +3267,8 @@ int net_udp_process_game_info(ubyte *data, int data_len, struct _sockaddr game_a
 		if(is_sync && ! multi_i_am_master()) {
 			uint my_token = GET_INTEL_INT(data + len);  len += 4;
 			if(my_token == my_player_token || Game_mode & GM_OBSERVER) {
-				netgame_token = GET_INTEL_INT(data + len); 
+				netgame_token = GET_INTEL_INT(data + len); len += 4;
+				con_printf(CON_DEBUG, "Set token %d in net_udp_process_game_info\n", netgame_token);
 			} else {
 				char err_mess[200];
 				snprintf(err_mess, 200, "player token incorrect; received %u, expected %u",  my_token, my_player_token);
@@ -3273,6 +3276,11 @@ int net_udp_process_game_info(ubyte *data, int data_len, struct _sockaddr game_a
 				return 0; 
 				
 			} len += 4;
+		}
+
+		if (data[0] == UPID_GAME_INFO) {
+			netgame_token = my_player_token = GET_INTEL_INT(data + len); len += 4;
+			con_printf(CON_DEBUG, "Set token %d for UPID_GAME_INFO in net_udp_process_game_info\n", netgame_token);
 		}
 
 		Netgame.protocol.udp.valid = 1; // This game is valid! YAY!
@@ -4265,7 +4273,6 @@ int net_udp_setup_game()
 
 	net_udp_init();
 
-	multi_new_game();
 	net_udp_reset_connection_statuses();
 
 	change_playernum_to(0);
@@ -4413,7 +4420,7 @@ void net_udp_reset_connection_statuses() {
 	}
 
 	netgame_token = my_player_token = generate_token(); 
-	con_printf(CON_DEBUG, "Generated token %d\n", netgame_token); 
+	con_printf(CON_DEBUG, "Generated token %d in net_udp_reset_connection_statuses\n", netgame_token); 
 }
 
 
@@ -4892,7 +4899,8 @@ int net_udp_start_game(void)
 
 	Netgame.players[0].protocol.udp.isyou = 1; // I am Host. I need to know that y'know? For syncing later.
 	
-	netgame_token = generate_token(); 
+	netgame_token = generate_token();
+	con_printf(CON_DEBUG, "Generated token %d in net_udp_start_game\n", netgame_token);
 
 	if(net_udp_select_players())
 	{

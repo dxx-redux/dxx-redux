@@ -3862,8 +3862,6 @@ void multi_prep_level(void)
 	{
 		PKilledFlags[i]=1;
 		multi_sending_message[i] = 0;
-		if (imulti_new_game)
-			init_player_stats_new_ship(i);
 	}
 
 	for (i = 0; i < NumNetPlayerPositions; i++)
@@ -5656,11 +5654,14 @@ void multi_do_damage( const ubyte *buf )
 {
 	if (Game_mode & GM_OBSERVER)
 	{
-		Players[buf[1]].shields = GET_INTEL_INT(buf + 6);
+		fix new_shields = GET_INTEL_INT(buf + 6);
+		fix shields_delta = GET_INTEL_INT(buf + 2);
+		Players[buf[1]].shields_certain = (Players[buf[1]].shields - shields_delta == new_shields) ? 1 : 0;
+		Players[buf[1]].shields = (new_shields > 0) ? new_shields : 0;
 		if (Players[Player_num].hours_total - Players[buf[1]].shields_time_hours > 1 || Players[Player_num].hours_total - Players[buf[1]].shields_time_hours == 1 && i2f(3600) + Players[Player_num].time_total - Players[buf[1]].shields_time > i2f(2) || Players[Player_num].time_total - Players[buf[1]].shields_time > i2f(2)) {
 			Players[buf[1]].shields_delta = 0;
 		}
-		Players[buf[1]].shields_delta -= GET_INTEL_INT(buf + 2);
+		Players[buf[1]].shields_delta -= shields_delta;
 
 		if (GET_INTEL_INT(buf + 2) != 0) {
 			Players[buf[1]].shields_time = Players[Player_num].time_total;
@@ -5696,13 +5697,19 @@ void multi_do_repair(const ubyte *buf)
 {
 	if (Game_mode & GM_OBSERVER)
 	{
-		Players[buf[1]].shields = GET_INTEL_INT(buf + 6);
-		if (Players[Player_num].hours_total - Players[buf[1]].shields_time_hours > 1 || Players[Player_num].hours_total - Players[buf[1]].shields_time_hours == 1 && i2f(3600) + Players[Player_num].time_total - Players[buf[1]].shields_time > i2f(2) || Players[Player_num].time_total - Players[buf[1]].shields_time > i2f(2)) {
-			Players[buf[1]].shields_delta = 0;
-		}
-		Players[buf[1]].shields_delta += GET_INTEL_INT(buf + 2);
+		fix new_shields = GET_INTEL_INT(buf + 6);
+		fix shields_delta = GET_INTEL_INT(buf + 2);
+		Players[buf[1]].shields_certain = (Players[buf[1]].shields + shields_delta == new_shields) ? 1 : 0;
+		Players[buf[1]].shields = (new_shields > 0) ? new_shields : 0;
 
-		if (GET_INTEL_INT(buf + 2) != 0) {
+		if (shields_delta == 0) {
+			Players[buf[1]].shields_certain = 1;
+		} else {
+			if (Players[Player_num].hours_total - Players[buf[1]].shields_time_hours > 1 || Players[Player_num].hours_total - Players[buf[1]].shields_time_hours == 1 && i2f(3600) + Players[Player_num].time_total - Players[buf[1]].shields_time > i2f(2) || Players[Player_num].time_total - Players[buf[1]].shields_time > i2f(2)) {
+				Players[buf[1]].shields_delta = 0;
+			}
+
+			Players[buf[1]].shields_delta += shields_delta;
 			Players[buf[1]].shields_time = Players[Player_num].time_total;
 			Players[buf[1]].shields_time_hours = Players[Player_num].hours_total;
 		}
@@ -5828,7 +5835,7 @@ void multi_send_obs_update(ubyte event, ubyte event_data) {
 
 	multi_send_data( multibuf, 4 + 8*MAX_OBSERVERS, 2 );
 
-	if (!(Game_mode & GM_OBSERVER))
+	if (event == 0 && !(Game_mode & GM_OBSERVER))
 	{
 		multi_do_request_status();
 	}
@@ -5837,10 +5844,10 @@ void multi_send_obs_update(ubyte event, ubyte event_data) {
 void multi_do_obs_update(const ubyte *buf) {
 	if(multi_i_am_master()) { return; }
 
+	Netgame.numobservers = buf[3];
 	if(Netgame.max_numobservers < Netgame.numobservers) {
 		Netgame.max_numobservers = Netgame.numobservers;
 	}
-	Netgame.numobservers = buf[3];
 	for(int i = 0; i < Netgame.numobservers; i++) {
 		memcpy(&Netgame.observers[i].callsign, &buf[4+i*8], 8); 
 	}

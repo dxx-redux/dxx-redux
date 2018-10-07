@@ -90,6 +90,7 @@ typedef struct player {
 	fix     shields_delta;          // recent change to shields
 	fix     shields_time;           // the time the shields recently changed
 	sbyte   shields_time_hours;     // the time the shields recently changed (hours)
+	ubyte   shields_certain;        // Whether or not the observer is certain about the player's shield value.
 	ubyte   lives;                  // Lives remaining, 0 = game over.
 	sbyte   level;                  // Current level player is playing. (must be signed for secret levels)
 	ubyte   laser_level;            // Current level of the laser.

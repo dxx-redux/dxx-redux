@@ -1538,6 +1538,14 @@ void StartNewLevelSub(int level_num, int page_in_textures, int secret_flag)
 	{
 		if(multi_level_sync()) // After calling this, Player_num is set
 		{
+			if (imulti_new_game)
+			{
+				for (int i = 0; i<MAX_PLAYERS; i++)
+				{
+					init_player_stats_new_ship(i);
+				}
+			}
+
 			songs_play_song( SONG_TITLE, 1 ); // level song already plays but we fail to start level...
 			return;
 		}

@@ -3251,7 +3251,7 @@ void show_HUD_names()
 					else if (show_name)
 					{
 						if (Game_mode & GM_OBSERVER)
-							snprintf( s, sizeof(s), "%s (%0.1f)", Players[pnum].callsign, f2db(Players[pnum].shields) );
+							snprintf( s, sizeof(s), "%s (%0.1f%s)", Players[pnum].callsign, f2db(Players[pnum].shields), Players[pnum].shields_certain ? "" : "?" );
 						else
 							snprintf( s, sizeof(s), "%s", Players[pnum].callsign );
 					}

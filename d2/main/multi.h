@@ -243,6 +243,7 @@ extern const char GMNamesShrt[MULTI_GAME_TYPE_COUNT][8];
 
 int Current_obs_player; // Current player being observed.
 bool Obs_at_distance; // True if you're viewing the player from a cube back.
+int imulti_new_game; // True if we're starting a new game.
 
 // Exported functions
 
