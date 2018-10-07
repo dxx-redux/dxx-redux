@@ -3339,6 +3339,19 @@ void net_udp_process_packet(ubyte *data, struct _sockaddr sender_addr, int lengt
 		return;
 	}
 
+	if (multi_i_am_master() && is_observer_ip(sender_addr)) {
+		switch (data[0]) {
+			case UPID_P2P_PING:
+			case UPID_REQUEST:
+			case UPID_MDATA_ACK:
+			case UPID_MDATA_PNEEDACK:
+				break;
+			default:
+				con_printf(CON_URGENT, "Dropped pid %s: observer sent disallowed packet.\n", msg_name(data[0])); 
+				return;
+		}
+	}
+
 	switch (data[0])
 	{
 		case UPID_PDATA:
