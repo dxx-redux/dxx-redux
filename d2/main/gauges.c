@@ -2882,7 +2882,7 @@ void observer_show_kill_list()
 			else
 				sprintf(major_event, "Last Kill: %02i:%02i", (int)(diff / i2f(60)) % 60, (int)(diff / i2f(1)) % 60);
 		} else if (n_players > 2 && last_death[player_num] != NULL && ((diff = GameTime64 - last_death[player_num]->timestamp) >= i2f(60))) {
-			if (diff >= 3600)
+			if (diff >= i2f(3600))
 				sprintf(major_event, "Last Death: %i:%02i:%02i", (int)(diff / i2f(3600)), (int)(diff / i2f(60)) % 60, (int)(diff / i2f(1)) % 60);
 			else
 				sprintf(major_event, "Last Death: %02i:%02i", (int)(diff / i2f(60)) % 60, (int)(diff / i2f(1)) % 60);
@@ -2957,7 +2957,7 @@ void observer_show_kill_list()
 					if (diff2 > diff)
 						diff = diff2;
 
-					if (diff >= 3600)
+					if (diff >= i2f(3600))
 						sprintf(run, "Run: %i-%i in %i:%02i:%02i", initial_score - last_ev->score, initial_opp_score - last_opp_ev->score, (int)(diff / i2f(3600)), (int)(diff / i2f(60)) % 60, (int)(diff / i2f(1)) % 60);
 					else
 						sprintf(run, "Run: %i-%i in %02i:%02i", initial_score - last_ev->score, initial_opp_score - last_opp_ev->score, (int)(diff / i2f(60)) % 60, (int)(diff / i2f(1)) % 60);
@@ -3203,7 +3203,7 @@ void show_HUD_names()
 
 	for (pnum=0;pnum<N_players;pnum++)
 	{
-		if (pnum == my_pnum || Players[pnum].connected != CONNECT_PLAYING)
+		if ((pnum == my_pnum && !(Game_mode & GM_OBSERVER)) || Players[pnum].connected != CONNECT_PLAYING)
 			continue;
 		// ridiculusly complex to check if we want to show something... but this is readable at least.
 		is_friend = (Game_mode & GM_MULTI_COOP || (Game_mode & GM_TEAM && get_team(pnum) == get_team(my_pnum)));
