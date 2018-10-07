@@ -5660,6 +5660,7 @@ void multi_do_damage( const ubyte *buf )
 		Players[buf[1]].shields = (new_shields > 0) ? new_shields : 0;
 		if (Players[Player_num].hours_total - Players[buf[1]].shields_time_hours > 1 || Players[Player_num].hours_total - Players[buf[1]].shields_time_hours == 1 && i2f(3600) + Players[Player_num].time_total - Players[buf[1]].shields_time > i2f(2) || Players[Player_num].time_total - Players[buf[1]].shields_time > i2f(2)) {
 			Players[buf[1]].shields_delta = 0;
+			Players[buf[1]].shields_certain = 1;
 		}
 		Players[buf[1]].shields_delta -= shields_delta;
 
