@@ -1957,6 +1957,17 @@ multi_do_player_explode(const ubyte *buf)
 	}
 }
 
+void multi_obs_check_all_escaped()
+{
+	for (int i = 0; i < MAX_PLAYERS; i++)
+	{
+		if (Players[i].connected == CONNECT_PLAYING)
+			return;
+	}
+
+	PlayerFinishedLevel(0);
+}
+
 /*
  * Process can compute a kill. If I am a Client this might be my own one (see multi_send_kill()) but with more specific data so I can compute my kill correctly.
  */
@@ -2005,6 +2016,14 @@ multi_do_kill(const ubyte *buf)
 
 	if (Game_mode & GM_BOUNTY && multi_i_am_master()) // update in case if needed... we could attach this to this packet but... meh...
 		multi_send_bounty();
+
+	if (Endlevel_sequence) {
+		Players[pnum].connected = CONNECT_DIED_IN_MINE;
+
+		if (Game_mode & GM_OBSERVER) {
+			multi_obs_check_all_escaped();
+		}
+	}
 }
 
 
@@ -2033,17 +2052,6 @@ void multi_do_controlcen_destroy(const ubyte *buf)
 		else
 			net_destroy_controlcen(NULL);
 	}
-}
-
-void multi_obs_check_all_escaped()
-{
-	for (int i = 0; i < MAX_PLAYERS; i++)
-	{
-		if (Players[i].connected == CONNECT_PLAYING)
-			return;
-	}
-
-	PlayerFinishedLevel(0);
 }
 
 void multi_do_escape(const ubyte *buf)
