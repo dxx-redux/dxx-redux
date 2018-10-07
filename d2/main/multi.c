@@ -2017,7 +2017,7 @@ multi_do_kill(const ubyte *buf)
 	if (Game_mode & GM_BOUNTY && multi_i_am_master()) // update in case if needed... we could attach this to this packet but... meh...
 		multi_send_bounty();
 
-	if (Endlevel_sequence) {
+	if (Control_center_destroyed) {
 		Players[pnum].connected = CONNECT_DIED_IN_MINE;
 
 		if (Game_mode & GM_OBSERVER) {
