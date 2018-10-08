@@ -532,8 +532,6 @@ multi_new_game(void)
 		last_kill[i] = NULL;
 		last_death[i] = NULL;
 		kill_streak[i] = 0;
-		next_graph = 5;
-		show_graph_until = -1;
 		while ((ev = last_event[i]) != NULL) {
 			if (ev->prev != NULL) {
 				ev->prev->next = NULL;
@@ -547,6 +545,8 @@ multi_new_game(void)
 		}
 		add_observatory_stat(i, OBSEV_NONE);
 	}
+	next_graph = 5;
+	show_graph_until = -1;
 
 	Send_ship_status = 0;
 	Next_ship_status_time = 0;
