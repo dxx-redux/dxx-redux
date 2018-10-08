@@ -847,8 +847,13 @@ multi_do_robot_explode(const ubyte *buf)
 	}
 
 	rval = multi_explode_robot_sub(botnum, killer,thief);
+	if (!rval)
+		return;
 
-	if (rval && (killer == Players[Player_num].objnum))
+	// Needs to be counted as a kill for player 0 so matcens don't break
+	Players[0].num_kills_level++;
+	Players[0].num_kills_total++;
+	if (killer == Players[Player_num].objnum)
 		add_points_to_score(Robot_info[Objects[botnum].id].score_value);
 
 	if(multi_i_am_master() && (Game_mode & GM_MULTI_ROBOTS)) {
