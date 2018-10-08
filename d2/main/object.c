@@ -1065,7 +1065,9 @@ void obj_link(int objnum,int segnum)
 
 	obj->segnum = segnum;
 	
-	obj->next = Segments[segnum].objects;
+	if (Segments[segnum].objects != objnum)
+		obj->next = Segments[segnum].objects;
+
 	obj->prev = -1;
 
 	Segments[segnum].objects = objnum;
