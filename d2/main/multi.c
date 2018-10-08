@@ -218,13 +218,13 @@ char *multi_allow_powerup_text[MULTI_ALLOW_POWERUP_MAX] =
 };
 
 // The Observatory stat tracking
-kill_event *first_event[MAX_PLAYERS] = {NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
-kill_event *last_event[MAX_PLAYERS] = {NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
-kill_event *last_kill[MAX_PLAYERS] = {NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
-kill_event *last_death[MAX_PLAYERS] = {NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
-int kill_streak[MAX_PLAYERS] = {0,0,0,0,0,0,0,0};
-int next_graph = 5;
-fix64 show_graph_until = -1;
+kill_event *First_event[MAX_PLAYERS] = {NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
+kill_event *Last_event[MAX_PLAYERS] = {NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
+kill_event *Last_kill[MAX_PLAYERS] = {NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
+kill_event *Last_death[MAX_PLAYERS] = {NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
+int Kill_streak[MAX_PLAYERS] = {0,0,0,0,0,0,0,0};
+int Next_graph = 5;
+fix64 Show_graph_until = -1;
 
 void add_observatory_stat(int player_num, int event_type) {
 	kill_event *ev = (kill_event *)d_malloc(sizeof(kill_event));
@@ -232,19 +232,19 @@ void add_observatory_stat(int player_num, int event_type) {
 	ev->obs_event = event_type;
 	ev->score = ((Game_mode & GM_MULTI_COOP) || (Game_mode & GM_MULTI_ROBOTS)) ? Players[player_num].score : Players[player_num].net_kills_total;
 	ev->next = NULL;
-	ev->prev = last_event[player_num];
+	ev->prev = Last_event[player_num];
 	if (ev->prev != NULL)
 		ev->prev->next = ev;
-	last_event[player_num] = ev;
-	if (first_event[player_num] == NULL)
-		first_event[player_num] = ev;
+	Last_event[player_num] = ev;
+	if (First_event[player_num] == NULL)
+		First_event[player_num] = ev;
 	if ((event_type & OBSEV_KILL) != 0) {
-		last_kill[player_num] = ev;
-		kill_streak[player_num] += 1;
+		Last_kill[player_num] = ev;
+		Kill_streak[player_num] += 1;
 	}
 	if ((event_type & OBSEV_DEATH) != 0) {
-		last_death[player_num] = ev;
-		kill_streak[player_num] = 0;
+		Last_death[player_num] = ev;
+		Kill_streak[player_num] = 0;
 	}
 }
 
@@ -529,24 +529,24 @@ multi_new_game(void)
 	// The observatory stats reset
 	kill_event *ev = NULL;
 	for (i = 0; i < MAX_PLAYERS; i++) {
-		last_kill[i] = NULL;
-		last_death[i] = NULL;
-		kill_streak[i] = 0;
-		while ((ev = last_event[i]) != NULL) {
+		Last_kill[i] = NULL;
+		Last_death[i] = NULL;
+		Kill_streak[i] = 0;
+		while ((ev = Last_event[i]) != NULL) {
 			if (ev->prev != NULL) {
 				ev->prev->next = NULL;
-				last_event[i] = ev->prev;
+				Last_event[i] = ev->prev;
 			} else {
-				last_event[i] = NULL;
-				first_event[i] = NULL;
+				Last_event[i] = NULL;
+				First_event[i] = NULL;
 			}
 			d_free(ev);
 			ev = NULL;
 		}
 		add_observatory_stat(i, OBSEV_NONE);
 	}
-	next_graph = 5;
-	show_graph_until = -1;
+	Next_graph = 5;
+	Show_graph_until = -1;
 
 	Send_ship_status = 0;
 	Next_ship_status_time = 0;
@@ -877,9 +877,9 @@ void multi_compute_kill(int killer, int killed)
 		kill_matrix[killer_pnum][killed_pnum] += 1;
 		Players[killed_pnum].net_killed_total += 1;
 
-		if (Players[killer_pnum].net_kills_total >= next_graph) {
-			next_graph += (next_graph < 20 || N_players > 2 ? 5 : 1);
-			show_graph_until = GameTime64 + 15 * F1_0;
+		if (Players[killer_pnum].net_kills_total >= Next_graph) {
+			Next_graph += (Next_graph < 20 || N_players > 2 ? 5 : 1);
+			Show_graph_until = GameTime64 + 15 * F1_0;
 		}
 
 		if (killer_pnum == Player_num) {
@@ -3845,7 +3845,7 @@ void multi_prep_level(void)
 	int i;
 	int     cloak_count, inv_count;
 
-	show_graph_until = -1;
+	Show_graph_until = -1;
 
 	Assert(Game_mode & GM_MULTI);
 

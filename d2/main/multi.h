@@ -588,11 +588,11 @@ typedef struct kill_event {
 	struct kill_event* prev;
 } __pack__ kill_event;
 
-kill_event *first_event[MAX_PLAYERS];
-kill_event *last_event[MAX_PLAYERS];
-kill_event *last_kill[MAX_PLAYERS];
-kill_event *last_death[MAX_PLAYERS];
-int kill_streak[MAX_PLAYERS];
-fix64 show_graph_until;
+kill_event *First_event[MAX_PLAYERS];
+kill_event *Last_event[MAX_PLAYERS];
+kill_event *Last_kill[MAX_PLAYERS];
+kill_event *Last_death[MAX_PLAYERS];
+int Kill_streak[MAX_PLAYERS];
+fix64 Show_graph_until;
 
 #endif /* _MULTI_H */

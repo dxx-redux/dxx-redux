@@ -2874,14 +2874,14 @@ void observer_show_kill_list()
 		gr_set_curfont( GAME_FONT );
 		
 		// Determine last major event for player.
-		if (kill_streak[player_num] >= 3) {
-			sprintf(major_event, "Kill Streak: %i", kill_streak[player_num]);
-		} else if (last_kill[player_num] != NULL && ((diff = GameTime64 - last_kill[player_num]->timestamp) >= i2f(60))) {
+		if (Kill_streak[player_num] >= 3) {
+			sprintf(major_event, "Kill Streak: %i", Kill_streak[player_num]);
+		} else if (Last_kill[player_num] != NULL && ((diff = GameTime64 - Last_kill[player_num]->timestamp) >= i2f(60))) {
 			if (diff >= i2f(3600))
 				sprintf(major_event, "Last Kill: %i:%02i:%02i", (int)(diff / i2f(3600)), (int)(diff / i2f(60)) % 60, (int)(diff / i2f(1)) % 60);
 			else
 				sprintf(major_event, "Last Kill: %02i:%02i", (int)(diff / i2f(60)) % 60, (int)(diff / i2f(1)) % 60);
-		} else if (n_players > 2 && last_death[player_num] != NULL && ((diff = GameTime64 - last_death[player_num]->timestamp) >= i2f(60))) {
+		} else if (n_players > 2 && Last_death[player_num] != NULL && ((diff = GameTime64 - Last_death[player_num]->timestamp) >= i2f(60))) {
 			if (diff >= i2f(3600))
 				sprintf(major_event, "Last Death: %i:%02i:%02i", (int)(diff / i2f(3600)), (int)(diff / i2f(60)) % 60, (int)(diff / i2f(1)) % 60);
 			else
@@ -2907,8 +2907,8 @@ void observer_show_kill_list()
 			int initial_score = Players[player_num].net_kills_total;
 			int initial_opp_score = Players[player_list[1 - i]].net_kills_total;
 			if (initial_score >= 5) {
-				ev = last_event[player_num];
-				opp_ev = last_event[player_list[1 - i]];
+				ev = Last_event[player_num];
+				opp_ev = Last_event[player_list[1 - i]];
 				last_ev = ev;
 				last_opp_ev = opp_ev;
 				while (true) {
@@ -2981,11 +2981,11 @@ void observer_show_kill_list()
 	}
 
 	// Show graph
-	if (!is_teams && GameTime64 < show_graph_until) {
+	if (!is_teams && GameTime64 < Show_graph_until) {
 		for (i=0; i < n_players; i++) {
 			player_num = player_list[i];
 	
-			if ((ev = first_event[player_num]) != NULL) {
+			if ((ev = First_event[player_num]) != NULL) {
 				while(ev != NULL) {
 					if (ev->score < minscore)
 						minscore = ev->score;
@@ -3130,7 +3130,7 @@ void observer_show_kill_list()
 			for (i = n_players - 1; i >= 0; i--) {
 				player_num = player_list[i];
 
-				if ((ev = first_event[player_num]) != NULL) {
+				if ((ev = First_event[player_num]) != NULL) {
 					if (Game_mode & GM_TEAM) {
 						color = get_color_for_team(player_num, 0);
 						gr_setcolor(BM_XRGB(selected_player_rgb[color].r,selected_player_rgb[color].g,selected_player_rgb[color].b));
