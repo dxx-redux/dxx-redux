@@ -320,7 +320,7 @@ void collide_player_and_wall( object * player, fix hitspeed, short hitseg, short
 				{
 			  		con_printf(CON_NORMAL, "You took %0.1f damage from hitting a wall!\n", (double)(damage) / (double)(F1_0)); 
 
-					multi_send_damage(damage, Players[Player_num].shields, NULL, NULL, DAMAGE_WALL, NULL);
+					multi_send_damage(damage, Players[Player_num].shields, OBJ_WALL, 0, DAMAGE_WALL, NULL);
 				}
 			  	#endif
 			  	apply_damage_to_player( player, player, damage, 0 );			  	
@@ -354,7 +354,7 @@ void scrape_player_on_wall(object *obj, short hitseg, short hitside, vms_vector 
 			{
 				con_printf(CON_NORMAL, "You took %0.1f damage from lava!\n", (double)(damage) / (double)(F1_0)); 
 
-				multi_send_damage(damage, Players[Player_num].shields, NULL, NULL, DAMAGE_LAVA, NULL);
+				multi_send_damage(damage, Players[Player_num].shields, OBJ_WALL, 0, DAMAGE_LAVA, NULL);
 			}
 			#endif
 			  	
@@ -1490,7 +1490,7 @@ void collide_player_and_weapon( object * player, object * weapon, vms_vector *co
 					con_printf(CON_NORMAL, "You took %0.1f damage from %s's %s!\n", 
 						(double)(damage)/(double)(F1_0), killer_name, weapon_name); 
 
-					multi_send_damage(damage, Players[Player_num].shields, killer->type, killer->id, DAMAGE_WEAPON, NULL);
+					multi_send_damage(damage, Players[Player_num].shields, killer->type, killer->id, DAMAGE_WEAPON, weapon);
 				}
 				#endif
 			}
@@ -1526,7 +1526,7 @@ void collide_player_and_nasty_robot( object * player, object * robot, vms_vector
 		{
 			con_printf(CON_NORMAL, "You took %0.1f damage from bumping a robot!\n", (double)(damage) / (double)(F1_0)); 
 
-			multi_send_damage(damage, Players[Player_num].shields, OBJ_ROBOT, NULL, DAMAGE_COLLISION, NULL);
+			multi_send_damage(damage, Players[Player_num].shields, OBJ_ROBOT, 0, DAMAGE_COLLISION, NULL);
 		}
 	#endif
 	apply_damage_to_player( player, robot, damage, 0);
