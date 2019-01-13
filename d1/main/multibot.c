@@ -847,6 +847,12 @@ multi_do_robot_explode(const ubyte *buf)
 	}
 
 	rval = multi_explode_robot_sub(botnum, killer,thief);
+	if (!rval) {
+		return;
+	}
+
+	Players[0].num_kills_level++;
+	Players[0].num_kills_total++;
 
 	if (rval && (killer == Players[Player_num].objnum))
 		add_points_to_score(Robot_info[Objects[botnum].id].score_value);
