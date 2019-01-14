@@ -1800,8 +1800,10 @@ void multi_send_message_end()
 			HUD_init_message(HM_MULTI, "Only %s can disconnect observers!",Players[multi_who_is_master()].callsign);
 		else
 		{			
-			for(int i = 0; i < Netgame.numobservers; i++) {
-				net_udp_dump_player(Netgame.observers[i].protocol.udp.addr, 0, DUMP_KICKED);
+			for(int i = 0; i < Netgame.max_numobservers; i++) {
+				if (Netgame.observers[i].connected == 1) {
+					net_udp_dump_player(Netgame.observers[i].protocol.udp.addr, 0, DUMP_KICKED);
+				}
 			}
 			Netgame.numobservers = 0; 
 			HUD_init_message(HM_MULTI, "All observers disconnected.");
@@ -4643,8 +4645,12 @@ void multi_send_obs_update(ubyte event, ubyte event_data) {
 	multibuf[2] = event_data;
 	multibuf[3] = Netgame.numobservers;
 
-	for(int i = 0; i < Netgame.numobservers; i++) {
-		memcpy(&multibuf[4 + i*8], &Netgame.observers[i].callsign, 8);
+	for(int i = 0; i < Netgame.max_numobservers; i++) {
+		if (Netgame.observers[i].connected == 1) {
+			memcpy(&multibuf[4 + i*8], &Netgame.observers[i].callsign, 8);
+		} else {
+			memset(&multibuf[4 + i*8], 0, 8);
+		}
 	}
 
 	multi_send_data( multibuf, 4 + 8*MAX_OBSERVERS, 2 );
@@ -4662,7 +4668,7 @@ void multi_do_obs_update(const ubyte *buf) {
 	if(Netgame.max_numobservers < Netgame.numobservers) {
 		Netgame.max_numobservers = Netgame.numobservers;
 	}
-	for(int i = 0; i < Netgame.numobservers; i++) {
+	for(int i = 0; i < Netgame.max_numobservers; i++) {
 		memcpy(&Netgame.observers[i].callsign, &buf[4+i*8], 8); 
 	}
 

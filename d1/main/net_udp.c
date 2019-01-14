@@ -756,7 +756,7 @@ int is_player_ip(struct _sockaddr addr, int pnum) {
 }
 
 int is_observer_ip(struct _sockaddr addr) {
-	for(int i = 0; i < Netgame.numobservers; i++) {
+	for(int i = 0; i < Netgame.max_numobservers; i++) {
 		if (!memcmp(&Netgame.observers[i].protocol.udp.addr, &addr, sizeof(struct _sockaddr))) {
 			return 1;
 		}
@@ -1869,7 +1869,13 @@ void net_udp_welcome_player(UDP_sequence_packet *their)
 	Network_player_added = 0;
 
 	if(their->player.observer) {
-		int obsnum = Netgame.numobservers++;
+		Netgame.numobservers++;
+
+		int obsnum = 0;
+
+		while (Netgame.observers[obsnum].connected == 1) {
+			obsnum++;
+		}
 
 		UDP_sync_player = *their;
 		UDP_sync_player.player.connected = 1;
@@ -5781,7 +5787,7 @@ void check_obs_buffer(fix64 now) {
 
 void forward_to_observers_nodelay(ubyte *data, int data_len) {
 	if (multi_i_am_master()) {		
-		for (int i = 0; i < Netgame.numobservers; i++) {
+		for (int i = 0; i < Netgame.max_numobservers; i++) {
 			if (Netgame.observers[i].connected) {
 				dxx_sendto (UDP_Socket[0], data, data_len, 0, (struct sockaddr *)&Netgame.observers[i].protocol.udp.addr, sizeof(struct _sockaddr));
 			}
@@ -5976,15 +5982,14 @@ void check_observers(fix64 now) {
 	if(! multi_i_am_master() ) { return; }
 
 	int changed_something = 0; 
-	for(int i = 0; i < Netgame.numobservers; i++) {
-		if(now - Netgame.observers[i].LastPacketTime > F1_0*10) {
-			for(int j = i+1; j < Netgame.numobservers; j++) {
-				Netgame.observers[j-1] = Netgame.observers[j]; 
-			}
+	for(int i = 0; i < Netgame.max_numobservers; i++) {
+		if (Netgame.observers[i].connected == 1) {
+			if(now - Netgame.observers[i].LastPacketTime > F1_0*10) {
+				memset(&Netgame.observers[i], 0, sizeof(netplayer_info));
+				Netgame.numobservers--;
 
-			i--;
-			Netgame.numobservers--;
-			changed_something = 1; 
+				changed_something = 1; 
+			}
 		}
 	}
 
@@ -6302,13 +6307,15 @@ void net_udp_process_p2p_ping(ubyte *data, struct _sockaddr sender_addr, int dat
 	// This is an observer heartbeat	
 
 	if(Netgame.max_numobservers > 0 && from_player == OBSERVER_PLAYER_ID && multi_i_am_master()) {
-		for(int i = 0; i < Netgame.numobservers; i++) {
-		    if(! memcmp(&Netgame.observers[i].protocol.udp.addr, &sender_addr, sizeof(struct _sockaddr))) {
-		    	Netgame.observers[i].LastPacketTime = timer_query();
-		    	if(i == 0 && multi_i_am_master()) {
-		    		multi_send_obs_update(1, 0); 
-		    	}
-		    	return;
+		for(int i = 0; i < Netgame.max_numobservers; i++) {
+			if (Netgame.observers[i].connected == 1) {
+				if(! memcmp(&Netgame.observers[i].protocol.udp.addr, &sender_addr, sizeof(struct _sockaddr))) {
+					Netgame.observers[i].LastPacketTime = timer_query();
+					if(i == 0 && multi_i_am_master()) {
+						multi_send_obs_update(1, 0); 
+					}
+					return;
+				}
 			}
 		}
 		return;
