@@ -2944,6 +2944,7 @@ void net_udp_send_game_info(struct _sockaddr sender_addr, ubyte info_upid, ubyte
 		buf[len] = Netgame.DarkSmartBlobs;					len++; 
 		buf[len] = Netgame.LowVulcan;					len++;
 		buf[len] = Netgame.AllowPreferredColors;        len++; 
+		buf[len] = Netgame.obs_min; len++;
 
 		if(info_upid == UPID_SYNC) {
 			PUT_INTEL_INT(buf + len, player_tokens[to_player]); len += 4; 
@@ -3168,6 +3169,7 @@ int net_udp_process_game_info(ubyte *data, int data_len, struct _sockaddr game_a
 		Netgame.DarkSmartBlobs = data[len];                    len++; 
 		Netgame.LowVulcan = data[len];                    len++; 
 		Netgame.AllowPreferredColors = data[len];         len++; 
+		Netgame.obs_min = data[len]; len++;
 
 
 		if(is_sync && ! multi_i_am_master()) {
@@ -3956,7 +3958,7 @@ int net_udp_more_options_handler( newmenu *menu, d_event *event, void *userdata 
 typedef struct param_opt
 {
 	int start_game, name, level, mode, mode_end, moreopts;
-	int closed, refuse, maxnet, maxobs, obsdelay, anarchy, team_anarchy, robot_anarchy, coop, bounty;
+	int closed, refuse, maxnet, maxobs, obsdelay, obsmin, anarchy, team_anarchy, robot_anarchy, coop, bounty;
 } param_opt;
 
 int net_udp_start_game(void);
@@ -4129,7 +4131,7 @@ int net_udp_setup_game()
 	int i;
 	int optnum;
 	param_opt opt;
-	newmenu_item m[23];
+	newmenu_item m[24];
 	char slevel[5];
 	char level_text[32];
 	char srmaxnet[50];
@@ -4239,11 +4241,15 @@ int net_udp_setup_game()
 	sprintf( srbdelay, "Broadcast delay %d seconds", OBSERVER_DELAY);
 	m[optnum].type = NM_TYPE_CHECK; m[optnum].text = srbdelay; m[optnum].value = Netgame.obs_delay;
 	optnum++;
+
+	opt.obsmin = optnum;
+	m[optnum].type = NM_TYPE_CHECK; m[optnum].text = "Minimal Observer Info"; m[optnum].value = FALSE;
+	optnum++;
 	
-	opt.moreopts=optnum;
+	opt.moreopts = optnum;
 	m[optnum].type = NM_TYPE_MENU;  m[optnum].text = "Advanced options"; optnum++;
 
-	Assert(optnum <= 20);
+	Assert(optnum <= 21);
 
 	i = newmenu_do1( NULL, TXT_NETGAME_SETUP, optnum, m, (int (*)( newmenu *, d_event *, void * ))net_udp_game_param_handler, &opt, opt.start_game );
 
@@ -4251,6 +4257,7 @@ int net_udp_setup_game()
 		net_udp_close();
 
 	Netgame.obs_delay = m[opt.obsdelay].value;
+	Netgame.obs_min = m[opt.obsmin].value;
 
 	write_netgame_profile(&Netgame);
 

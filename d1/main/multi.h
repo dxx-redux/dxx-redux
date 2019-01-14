@@ -449,6 +449,7 @@ typedef struct netgame_info
 	ubyte   					max_numplayers;
 	ubyte                       max_numobservers;
 	ubyte                       obs_delay;
+	ubyte						obs_min;
 	ubyte   					numconnected;
 	ubyte   					game_flags;
 	ubyte   					team_vector;
