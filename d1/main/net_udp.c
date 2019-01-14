@@ -87,8 +87,10 @@ void net_udp_read_pdata_packet(UDP_frame_info *pd);
 void net_udp_timeout_check(fix64 time);
 int net_udp_get_new_player_num (UDP_sequence_packet *their);
 void net_udp_noloss_add_queue_pkt(uint32_t pkt_num, fix64 time, ubyte *data, ushort data_size, ubyte pnum, ubyte player_ack[MAX_PLAYERS]);
+void net_udp_noloss_obs_add_queue_pkt(uint32_t pkt_num, fix64 time, ubyte *data, ushort data_size, ubyte pnum, ubyte observer_ack[MAX_OBSERVERS]);
 int net_udp_noloss_validate_mdata(uint32_t pkt_num, ubyte sender_pnum, struct _sockaddr sender_addr);
-void net_udp_noloss_got_ack(ubyte *data, int data_len);
+void net_udp_noloss_got_ack(ubyte *data, int data_len, struct _sockaddr sender_addr);
+void net_udp_noloss_got_obs_ack(ubyte *data, int data_len);
 void net_udp_noloss_init_mdata_queue(void);
 void net_udp_noloss_clear_mdata_got(ubyte player_num);
 void net_udp_noloss_process_queue(fix64 time);
@@ -107,11 +109,11 @@ void net_udp_send_p2p_reattempt_direct (int to_player, int connect_to_player);
 void net_udp_process_p2p_reattempt_direct (ubyte *data, struct _sockaddr sender_addr, int data_len);
 void drop_rx_packet(ubyte  *data, char* reason); 
 
-void forward_to_observers(ubyte *data, int data_len);
+void forward_to_observers(ubyte *data, int data_len, int needack);
 void check_observers(fix64 now);
-void add_message_to_obs_buffer(ubyte *data, int data_len);
+void add_message_to_obs_buffer(ubyte *data, int data_len, int needack);
 void check_obs_buffer(fix64 now);
-void forward_to_observers_nodelay(ubyte *data, int data_len);
+void forward_to_observers_nodelay(ubyte *data, int data_len, int needack);
 
 void net_udp_reset_connection_statuses(); 
 
@@ -125,6 +127,7 @@ ubyte* observer_data_buffer;
 fix64 observer_message_timestamps[MAX_OBS_MESSAGES];
 int   observer_message_offsets[MAX_OBS_MESSAGES];
 int   observer_message_lengths[MAX_OBS_MESSAGES];
+int   observer_message_needack[MAX_OBS_MESSAGES];
 int   cur_obs_msg = 0; 
 int   next_obs_msg_to_send = 0; 
 
@@ -133,6 +136,7 @@ int UDP_num_sendto = 0, UDP_len_sendto = 0, UDP_num_recvfrom = 0, UDP_len_recvfr
 UDP_mdata_info		UDP_MData;
 UDP_sequence_packet UDP_Seq;
 UDP_mdata_store UDP_mdata_queue[UDP_MDATA_STOR_QUEUE_SIZE];
+UDP_mdata_obs_store UDP_mdata_obs_queue[UDP_MDATA_STOR_QUEUE_SIZE];
 UDP_mdata_recv UDP_mdata_got[MAX_PLAYERS];
 UDP_sequence_packet UDP_sync_player; // For rejoin object syncing
 UDP_netgame_info_lite Active_udp_games[UDP_MAX_NETGAMES];
@@ -2696,7 +2700,7 @@ void net_udp_send_endlevel_packet(void)
 			if (Players[i].connected != CONNECT_DISCONNECTED)
 				dxx_sendto (UDP_Socket[0], buf, len, 0, (struct sockaddr *)&Netgame.players[i].protocol.udp.addr, sizeof(struct _sockaddr));
 		
-		forward_to_observers(buf, len);
+		forward_to_observers(buf, len, 1);
 	}
 	else
 	{
@@ -2965,7 +2969,7 @@ void net_udp_send_game_info(struct _sockaddr sender_addr, ubyte info_upid, ubyte
 			dxx_sendto (UDP_Socket[0], buf, len, 0, (struct sockaddr *)&sender_addr, sizeof(struct _sockaddr));
 
 		if (send_to_observers != 0)
-			forward_to_observers(buf, len);
+			forward_to_observers(buf, len, 0);
 	}
 }
 
@@ -3282,32 +3286,13 @@ void net_udp_process_packet(ubyte *data, struct _sockaddr sender_addr, int lengt
 	{
 		case UPID_PDATA:
 		case UPID_MDATA_PNORM:
-		case UPID_MDATA_PNEEDACK:
-			forward_to_observers(data, length); 
+			forward_to_observers(data, length, 0); 
 			break; 
 
-		case UPID_REQUEST:
-		case UPID_VERSION_DENY:
-		case UPID_SYNC:
-		case UPID_QUIT_JOINING:
-		case UPID_TRACKER_VERIFY:
-		case UPID_TRACKER_INCGAME:		
-		case UPID_DUMP:
-		case UPID_ADDPLAYER:
-		case UPID_GAME_INFO_REQ:		
-		case UPID_GAME_INFO:
-		case UPID_GAME_INFO_LITE_REQ:		
-		case UPID_GAME_INFO_LITE:
-		case UPID_OBJECT_DATA:
-		case UPID_PING:
-		case UPID_PONG:
-		case UPID_ENDLEVEL_H:
-		case UPID_ENDLEVEL_C:
-		case UPID_MDATA_ACK:
-		case UPID_P2P_PING:
-		case UPID_P2P_PONG:
-		case UPID_PROXY:
-		case UPID_REATTEMPT_DIRECT:		
+		case UPID_MDATA_PNEEDACK:
+			forward_to_observers(data, length, 1); 
+			break; 
+
 		default: 
 			break;			
 	}
@@ -3416,7 +3401,7 @@ void net_udp_process_packet(ubyte *data, struct _sockaddr sender_addr, int lengt
 			break;
 
 		case UPID_MDATA_ACK:
-			net_udp_noloss_got_ack(data, length);
+			net_udp_noloss_got_ack(data, length, sender_addr);
 			break;
 
 #ifdef USE_TRACKER
@@ -5315,6 +5300,67 @@ void net_udp_noloss_add_queue_pkt(uint32_t pkt_num, fix64 time, ubyte *data, ush
 	UDP_mdata_queue[found].data_size = data_size;
 }
 
+void net_udp_noloss_obs_add_queue_pkt(uint32_t pkt_num, fix64 time, ubyte *data, ushort data_size, ubyte pnum, ubyte observer_ack[MAX_OBSERVERS])
+{
+	int i, found = 0;
+
+	if (!(Game_mode&GM_NETWORK) || UDP_Socket[0] == -1)
+		return;
+
+	if (!Netgame.PacketLossPrevention)
+		return;
+
+	for (i = 0; i < UDP_MDATA_STOR_QUEUE_SIZE; i++) // look for unused or oldest slot
+	{
+		if (UDP_mdata_obs_queue[i].used)
+		{
+			if (UDP_mdata_obs_queue[i].pkt_initial_timestamp > UDP_mdata_obs_queue[found].pkt_initial_timestamp)
+				found = i;
+		}
+		else
+		{
+			found = i;
+			break;
+		}
+	}
+
+	if (UDP_mdata_obs_queue[found].used) // seems the slot we found is used (list is full) so screw  those who still need ack's.
+	{
+		con_printf(CON_VERBOSE, "P#%i: MData store list is full!\n", Player_num);
+		if (multi_i_am_master())
+		{
+			for ( i=1; i<Netgame.max_numobservers; i++ )
+				if (UDP_mdata_obs_queue[found].observer_ack[i] == 0)
+					net_udp_dump_player(Netgame.observers[i].protocol.udp.addr, 0, DUMP_PKTTIMEOUT);
+		}
+		else
+		{
+			Netgame.PacketLossPrevention = 0; // Disable PLP - otherwise we get stuck in an infinite loop here. NOTE: We could as well clean the whole queue to continue protect our disconnect signal bit it's not that important - we just wanna leave.
+			if (Network_status==NETSTAT_PLAYING)
+				multi_leave_game();
+			if (Game_wind)
+				window_set_visible(Game_wind, 0);
+			nm_messagebox(NULL, 1, TXT_OK, "You left the game. You failed\nsending important packets (queue full).\nSorry.");
+			if (Game_wind)
+				window_set_visible(Game_wind, 1);
+			multi_quit_game = 1;
+			game_leave_menus();
+			multi_reset_stuff();
+		}
+	}
+
+	con_printf(CON_VERBOSE, "Observer: Adding MData pkt_num %i, type %i from P#%i to MData store list\n", pkt_num, data[0], pnum);
+	UDP_mdata_obs_queue[found].used = 1;
+	UDP_mdata_obs_queue[found].pkt_initial_timestamp = time;
+	for (i = 0; i < MAX_PLAYERS; i++)
+		UDP_mdata_obs_queue[found].pkt_timestamp[i] = time;
+	UDP_mdata_obs_queue[found].pkt_num = pkt_num;
+	UDP_mdata_obs_queue[found].Player_num = pnum;
+	memcpy( &UDP_mdata_obs_queue[found].observer_ack, observer_ack, sizeof(ubyte)*MAX_OBSERVERS); 
+	memcpy( &UDP_mdata_obs_queue[found].data, data, sizeof(char)*data_size );
+	UDP_mdata_obs_queue[found].data_size = data_size;
+}
+
 /*
  * We have received a MDATA packet. Send ACK response to sender!
  * Also check in our UDP_mdata_got list, if we got this packet already. If yes, return 0 so do not process it!
@@ -5359,7 +5405,7 @@ int net_udp_noloss_validate_mdata(uint32_t pkt_num, ubyte sender_pnum, struct _s
 }
 
 /* We got an ACK by a player. Set this player slot to positive! */
-void net_udp_noloss_got_ack(ubyte *data, int data_len)
+void net_udp_noloss_got_ack(ubyte *data, int data_len, struct _sockaddr sender_addr)
 {
 	int i = 0, len = 0;
 	uint32_t pkt_num = 0;
@@ -5372,14 +5418,36 @@ void net_udp_noloss_got_ack(ubyte *data, int data_len)
 	sender_pnum = data[len];													len++;
 	dest_pnum = data[len];														len++;
 	pkt_num = GET_INTEL_INT(&data[len]);										len += 4;
-
-	for (i = 0; i < UDP_MDATA_STOR_QUEUE_SIZE; i++)
-	{
-		if ((pkt_num == UDP_mdata_queue[i].pkt_num) && (dest_pnum == UDP_mdata_queue[i].Player_num))
+	if (Netgame.max_numobservers > 0 && sender_pnum == OBSERVER_PLAYER_ID) {
+		for (i = 0; i < UDP_MDATA_STOR_QUEUE_SIZE; i++)
 		{
-			con_printf(CON_VERBOSE, "P#%i: Got MData ACK for pkt_num %i from pnum %i for pnum %i\n",Player_num, pkt_num, sender_pnum, dest_pnum);
-			UDP_mdata_queue[i].player_ack[sender_pnum] = 1;
-			break;
+			if ((pkt_num == UDP_mdata_obs_queue[i].pkt_num) && (dest_pnum == UDP_mdata_obs_queue[i].Player_num))
+			{
+				int obsnum = -1;
+				for(int j = 0; j < Netgame.max_numobservers; j++) {
+					if(! memcmp(&Netgame.observers[j].protocol.udp.addr, &sender_addr, sizeof(struct _sockaddr))) {
+						obsnum = j;
+						break;
+					}
+				}
+				if (obsnum == -1) {
+					return;
+				}
+				
+				con_printf(CON_VERBOSE, "P#%i: Got MData ACK for pkt_num %i from observer %i for pnum %i\n",Player_num, pkt_num, obsnum, dest_pnum);
+				UDP_mdata_obs_queue[i].observer_ack[obsnum] = 1;
+				break;
+			}
+		}
+	} else {
+		for (i = 0; i < UDP_MDATA_STOR_QUEUE_SIZE; i++)
+		{
+			if ((pkt_num == UDP_mdata_queue[i].pkt_num) && (dest_pnum == UDP_mdata_queue[i].Player_num))
+			{
+				con_printf(CON_VERBOSE, "P#%i: Got MData ACK for pkt_num %i from pnum %i for pnum %i\n",Player_num, pkt_num, sender_pnum, dest_pnum);
+				UDP_mdata_queue[i].player_ack[sender_pnum] = 1;
+				break;
+			}
 		}
 	}
 }
@@ -5389,6 +5457,7 @@ void net_udp_noloss_init_mdata_queue(void)
 {
 	con_printf(CON_VERBOSE, "P#%i: Clearing MData store/GOT list\n",Player_num);
 	memset(&UDP_mdata_queue,0,sizeof(UDP_mdata_store)*UDP_MDATA_STOR_QUEUE_SIZE);
+	memset(&UDP_mdata_obs_queue,0,sizeof(UDP_mdata_obs_store)*UDP_MDATA_STOR_QUEUE_SIZE);
 	memset(&UDP_mdata_got,0,sizeof(UDP_mdata_recv)*MAX_PLAYERS);
 }
 
@@ -5489,6 +5558,82 @@ void net_udp_noloss_process_queue(fix64 time)
 		if (total_len >= (UPID_MAX_SIZE/2))
 			break;
 	}
+
+	for (queuec = 0; queuec < UDP_MDATA_STOR_QUEUE_SIZE; queuec++)
+	{
+		int needack = 0;
+		
+		if (!UDP_mdata_obs_queue[queuec].used)
+			continue;
+
+		// Check if at least one connected observer has not ACK'd the packet
+		for (plc = 0; plc < Netgame.max_numobservers; plc++)
+		{
+			// If observer is not connected anymore, we can remove him from list.
+			if (Netgame.observers[plc].connected == 0)
+				UDP_mdata_obs_queue[queuec].observer_ack[plc] = 1;
+
+			if (!UDP_mdata_obs_queue[queuec].observer_ack[plc])
+			{
+				// Resend if enough time has passed.
+				if (UDP_mdata_obs_queue[queuec].pkt_timestamp[plc] + (F1_0/3) <= time)
+				{
+					ubyte buf[sizeof(UDP_mdata_info)];
+					int len = 0;
+					
+					con_printf(CON_VERBOSE, "P#%i: Resending pkt_num %i from pnum %i to observer %i\n", Player_num, UDP_mdata_queue[queuec].pkt_num, UDP_mdata_queue[queuec].Player_num, plc);
+					
+					UDP_mdata_obs_queue[queuec].pkt_timestamp[plc] = time;
+					memset(&buf, 0, sizeof(UDP_mdata_info));
+					
+					// Prepare the packet and send it
+					buf[len] = UPID_MDATA_PNEEDACK;													len++;
+					PUT_INTEL_INT(buf + len, netgame_token); 	len += 4; 
+					buf[len] = UDP_mdata_obs_queue[queuec].Player_num;								len++;
+					PUT_INTEL_INT(buf + len, UDP_mdata_obs_queue[queuec].pkt_num);					len += 4;
+					memcpy(&buf[len], UDP_mdata_obs_queue[queuec].data, sizeof(char)*UDP_mdata_obs_queue[queuec].data_size);
+																								len += UDP_mdata_obs_queue[queuec].data_size;
+					dxx_sendto (UDP_Socket[0], buf, len, 0, (struct sockaddr *)&Netgame.observers[plc].protocol.udp.addr, sizeof(struct _sockaddr));
+					total_len += len;
+				}
+				needack++;
+			}
+		}
+
+		// Check if we can remove that packet due to to it had no resend's or Timeout
+		if (needack==0 || (UDP_mdata_obs_queue[queuec].pkt_initial_timestamp + UDP_TIMEOUT <= time))
+		{
+			if (needack) // packet timed out but still not all have ack'd. SCREW THEM NOW!
+			{
+				if (multi_i_am_master())
+				{
+					for ( plc=0; plc < Netgame.max_numobservers; plc++ )
+						if (UDP_mdata_obs_queue[queuec].observer_ack[plc] == 0)
+							net_udp_dump_player(Netgame.observers[plc].protocol.udp.addr, 0, DUMP_PKTTIMEOUT);
+				}
+				else
+				{
+					Netgame.PacketLossPrevention = 0; // Disable PLP - otherwise we get stuck in an infinite loop here. NOTE: We could as well clean the whole queue to continue protect our disconnect signal bit it's not that important - we just wanna leave.
+					if (Network_status==NETSTAT_PLAYING)
+						multi_leave_game();
+					if (Game_wind)
+						window_set_visible(Game_wind, 0);
+					nm_messagebox(NULL, 1, TXT_OK, "You left the game. You failed\nsending important packets (no ack).\nSorry.");
+					if (Game_wind)
+						window_set_visible(Game_wind, 1);
+					multi_quit_game = 1;
+					game_leave_menus();
+					multi_reset_stuff();
+				}
+			}
+			con_printf(CON_VERBOSE, "P#%i: Removing stored pkt_num %i - missing ACKs: %i\n",Player_num, UDP_mdata_obs_queue[queuec].pkt_num, needack);
+			memset(&UDP_mdata_obs_queue[queuec],0,sizeof(UDP_mdata_obs_store));
+		}
+
+		// Send up to half our max packet size
+		if (total_len >= (UPID_MAX_SIZE/2))
+			break;
+	}
 }
 /* CODE FOR PACKET LOSS PREVENTION - END */
 
@@ -5535,7 +5680,7 @@ void net_udp_send_mdata_direct(ubyte *data, int data_len, int pnum, int needack)
 	memcpy(&buf[len], data, sizeof(char)*data_len);								len += data_len;
 
 	if (pnum == Player_num && multi_i_am_master())
-		forward_to_observers(buf, len); 
+		forward_to_observers(buf, len, needack); 
 	else
 		dxx_sendto (UDP_Socket[0], buf, len, 0, (struct sockaddr *)&Netgame.players[pnum].protocol.udp.addr, sizeof(struct _sockaddr));
 
@@ -5588,7 +5733,7 @@ void net_udp_send_mdata(int needack, fix64 time)
 		}
 
 		if(multi_i_am_master()) {
-			forward_to_observers(buf, len); 
+			forward_to_observers(buf, len, needack); 
 		}
 	} else {
 		if (multi_i_am_master())
@@ -5603,7 +5748,7 @@ void net_udp_send_mdata(int needack, fix64 time)
 			}
 
 			if(Netgame.RetroProtocol) {
-				forward_to_observers(buf, len); 
+				forward_to_observers(buf, len, needack); 
 			}
 		}
 		else
@@ -5707,17 +5852,17 @@ void net_udp_process_mdata (ubyte *data, int data_len, struct _sockaddr sender_a
 // things in one packet, or building an mdata_nodelay packet which needs to snuggle in with the needack infrastructure
 // For now, I'm accepting the glitch that observer info is outdated for observers by broadcast_delay
 // It isn't outdated for players, which is the main thing.
-void forward_to_observers(ubyte *data, int data_len) {
+void forward_to_observers(ubyte *data, int data_len, int needack) {
 	if(Netgame.max_numobservers == 0) { return; }
 
 	if(Netgame.obs_delay) {
-		add_message_to_obs_buffer(data, data_len);
+		add_message_to_obs_buffer(data, data_len, needack);
 	} else {
-		forward_to_observers_nodelay(data, data_len); 
+		forward_to_observers_nodelay(data, data_len, needack); 
 	}
 }
 
-void add_message_to_obs_buffer(ubyte *data, int data_len) {
+void add_message_to_obs_buffer(ubyte *data, int data_len, int needack) {
 	//con_printf(CON_NORMAL, "Queueing obs message; next: %d, cur: %d, max: %d\n", next_obs_msg_to_send, cur_obs_msg, MAX_OBS_MESSAGES); 
 	if(observer_data_buffer == 0) {
 		observer_data_buffer = d_malloc(MAX_OBS_MESSAGES*MAX_MESSAGE_SIZE); 
@@ -5758,6 +5903,7 @@ void add_message_to_obs_buffer(ubyte *data, int data_len) {
 	memcpy(observer_data_buffer + bufslot, data, data_len);
 	observer_message_offsets[cur_obs_msg] = bufslot;
 	observer_message_lengths[cur_obs_msg] = data_len;
+	observer_message_needack[cur_obs_msg] = needack;
 	observer_message_timestamps[cur_obs_msg] = timer_query();
 
 	//con_printf(CON_NORMAL, "Put message length %d in slot %d, buffer offset %d\n", data_len, cur_obs_msg, bufslot); 
@@ -5772,7 +5918,7 @@ void check_obs_buffer(fix64 now) {
 		   (observer_message_timestamps[next_obs_msg_to_send] < now - OBSERVER_DELAY*F1_0)) {
 
 		forward_to_observers_nodelay(observer_data_buffer + observer_message_offsets[next_obs_msg_to_send], 
-			observer_message_lengths[next_obs_msg_to_send]);
+			observer_message_lengths[next_obs_msg_to_send], observer_message_needack[next_obs_msg_to_send]);
 
 	    next_obs_msg_to_send++;
 
@@ -5785,11 +5931,13 @@ void check_obs_buffer(fix64 now) {
 	}
 }
 
-void forward_to_observers_nodelay(ubyte *data, int data_len) {
-	if (multi_i_am_master()) {		
+void forward_to_observers_nodelay(ubyte *data, int data_len, int needack) {
+	if (multi_i_am_master()) {
+		ubyte pack[MAX_OBSERVERS];
 		for (int i = 0; i < Netgame.max_numobservers; i++) {
 			if (Netgame.observers[i].connected) {
 				dxx_sendto (UDP_Socket[0], data, data_len, 0, (struct sockaddr *)&Netgame.observers[i].protocol.udp.addr, sizeof(struct _sockaddr));
+				pack[i] = 1;
 			}
 		}
 	}
@@ -5883,7 +6031,7 @@ void net_udp_send_pdata()
 		}
 
 		if(multi_i_am_master()) {
-			forward_to_observers(buf, len); 
+			forward_to_observers(buf, len, 0); 
 		}
 	} else {
 		if (multi_i_am_master())
