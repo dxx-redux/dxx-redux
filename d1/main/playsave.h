@@ -83,6 +83,7 @@ typedef struct player_config
 	int HudMode;
 	int PersistentDebris;
 	int PRShot;
+	int DemoRecordingIndicator;
 	ubyte NoRedundancy;
 	ubyte MultiMessages;
 	ubyte NoRankings;

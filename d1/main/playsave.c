@@ -95,6 +95,7 @@ int new_player_config()
 	PlayerCfg.HudMode = 0;
 	PlayerCfg.PersistentDebris = 0;
 	PlayerCfg.PRShot = 0;
+	PlayerCfg.DemoRecordingIndicator = 0;
 	PlayerCfg.NoRedundancy = 0;
 	PlayerCfg.MultiMessages = 0;
 	PlayerCfg.NoRankings = 0;
@@ -382,6 +383,8 @@ int read_player_d1x(char *filename)
 					PlayerCfg.PersistentDebris = atoi(line);
 				if(!strcmp(word,"PRSHOT"))
 					PlayerCfg.PRShot = atoi(line);
+				if(!strcmp(word,"DEMORECORDINGINDICATOR"))
+					PlayerCfg.DemoRecordingIndicator = atoi(line);
 				if(!strcmp(word,"NOREDUNDANCY"))
 					PlayerCfg.NoRedundancy = atoi(line);
 				if(!strcmp(word,"MULTIMESSAGES"))
@@ -771,6 +774,7 @@ int write_player_d1x(char *filename)
 		PHYSFSX_printf(fout,"[toggles]\n");
 		PHYSFSX_printf(fout,"persistentdebris=%i\n",PlayerCfg.PersistentDebris);
 		PHYSFSX_printf(fout,"prshot=%i\n",PlayerCfg.PRShot);
+		PHYSFSX_printf(fout,"demorecordingindicator=%i\n",PlayerCfg.DemoRecordingIndicator);
 		PHYSFSX_printf(fout,"noredundancy=%i\n",PlayerCfg.NoRedundancy);
 		PHYSFSX_printf(fout,"multimessages=%i\n",PlayerCfg.MultiMessages);
 		PHYSFSX_printf(fout,"norankings=%i\n",PlayerCfg.NoRankings);
