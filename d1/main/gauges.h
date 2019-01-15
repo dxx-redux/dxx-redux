@@ -92,3 +92,4 @@ extern span weapon_window_left[],weapon_window_left_hires[],weapon_window_right[
 
 #endif
  
+int Observer_message_y_start;

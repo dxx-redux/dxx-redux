@@ -781,6 +781,7 @@ int HandleGameKey(int key)
 				if (Obs_at_distance == 1 && Current_obs_player != OBSERVER_PLAYER_ID) {
 					HUD_init_message_literal(HM_MULTI, "Observing first person.");
 					Obs_at_distance = 0;
+					init_cockpit();
 				}
 			break;
 		case KEY_CTRLED + KEY_EQUAL:
@@ -788,6 +789,7 @@ int HandleGameKey(int key)
 				if (Obs_at_distance == 0 && Current_obs_player != OBSERVER_PLAYER_ID) {
 					HUD_init_message_literal(HM_MULTI, "Observing third person.");
 					Obs_at_distance = 1;
+					init_cockpit();
 				}
 			break;
 #endif

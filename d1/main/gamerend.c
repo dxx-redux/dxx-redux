@@ -113,9 +113,6 @@ void show_framerate()
 }
 
 void show_observers() {
-	if (PlayerCfg.CockpitMode[1] == CM_OBSERVATORY)
-		return;
-
 	if(Netgame.max_numobservers == 0) {
 		return;
 	}
@@ -125,7 +122,7 @@ void show_observers() {
 	gr_set_curfont(GAME_FONT);
 	gr_set_fontcolor(BM_XRGB(8,8,32),-1);
 
-	if (PlayerCfg.CockpitMode[1] == CM_FULL_SCREEN) {
+	if (PlayerCfg.CockpitMode[1] == CM_FULL_SCREEN || (Game_mode & GM_OBSERVER && (Current_obs_player == OBSERVER_PLAYER_ID || Obs_at_distance || !PlayerCfg.ObsShowCockpit))) {
 		if ((Game_mode & GM_MULTI) || (Newdemo_state == ND_STATE_PLAYBACK && Newdemo_game_mode & GM_MULTI))
 			y -= LINE_SPACING * 10;
 		else
@@ -458,7 +455,7 @@ void game_draw_hud_stuff()
 
 		y = GHEIGHT-(LINE_SPACING*2);
 
-		if (PlayerCfg.CockpitMode[1] == CM_FULL_COCKPIT)
+		if (Current_obs_player != OBSERVER_PLAYER_ID && !Obs_at_distance && PlayerCfg.ObsShowCockpit && PlayerCfg.CockpitMode[1] == CM_FULL_COCKPIT)
 			y = grd_curcanv->cv_bitmap.bm_h / 1.2 ;
 
 		if (PlayerCfg.CockpitMode[1] != CM_REAR_VIEW) {
@@ -473,7 +470,7 @@ void game_draw_hud_stuff()
 
 	render_countdown_gauge();
 
-	if (GameCfg.FPSIndicator && PlayerCfg.CockpitMode[1] != CM_REAR_VIEW && PlayerCfg.CockpitMode[1] != CM_OBSERVATORY)
+	if (!(Game_mode & GM_OBSERVER) && GameCfg.FPSIndicator && PlayerCfg.CockpitMode[1] != CM_REAR_VIEW)
 		show_framerate();
 
 	if ( (Game_mode & GM_MULTI) && (PlayerCfg.ObsShowObs)) {
@@ -500,13 +497,6 @@ void update_cockpits();
 //render a frame for the game
 void game_render_frame_mono(int flip)
 {
-	if (!(Game_mode & GM_OBSERVER) && PlayerCfg.CockpitMode[1] == CM_OBSERVATORY) {
-		if (PlayerCfg.DisableCockpit)
-			PlayerCfg.CockpitMode[1] = CM_STATUS_BAR;
-		else
-			PlayerCfg.CockpitMode[1] = CM_FULL_COCKPIT;
-	}
-
 	gr_set_current_canvas(&Screen_3d_window);
 	
 	render_frame(0);
@@ -516,8 +506,12 @@ void game_render_frame_mono(int flip)
 	if (Newdemo_state == ND_STATE_PLAYBACK)
 		Game_mode = Newdemo_game_mode;
 
-	if (PlayerCfg.CockpitMode[1]==CM_FULL_COCKPIT || PlayerCfg.CockpitMode[1]==CM_STATUS_BAR)
-		render_gauges();
+	if (Game_mode & GM_OBSERVER && (Current_obs_player == OBSERVER_PLAYER_ID || Obs_at_distance || !PlayerCfg.ObsShowCockpit)) {
+		// Do not render gauges.
+	} else {
+		if (PlayerCfg.CockpitMode[1]==CM_FULL_COCKPIT || PlayerCfg.CockpitMode[1]==CM_STATUS_BAR)
+			render_gauges();
+	}
 
 	if (Newdemo_state == ND_STATE_PLAYBACK)
 		Game_mode = GM_NORMAL | (Game_mode & GM_OBSERVER);
@@ -548,14 +542,6 @@ void toggle_cockpit()
 			new_mode = CM_FULL_SCREEN;
 			break;
 		case CM_FULL_SCREEN:
-			if (Game_mode & GM_OBSERVER)
-				new_mode = CM_OBSERVATORY;
-			else if (PlayerCfg.DisableCockpit)
-				new_mode = CM_STATUS_BAR;
-			else
-				new_mode = CM_FULL_COCKPIT;
-			break;
-		case CM_OBSERVATORY:
 			if (PlayerCfg.DisableCockpit)
 				new_mode = CM_STATUS_BAR;
 			else
@@ -575,41 +561,45 @@ extern void ogl_loadbmtexture(grs_bitmap *bm, int filter_blueship_wing);
 // This actually renders the new cockpit onto the screen.
 void update_cockpits()
 {
-	grs_bitmap *bm;
-	PIGGY_PAGE_IN(cockpit_bitmap[PlayerCfg.CockpitMode[1]]);
-	bm = &GameBitmaps[cockpit_bitmap[PlayerCfg.CockpitMode[1]].index];
+	if (Game_mode & GM_OBSERVER && (Current_obs_player == OBSERVER_PLAYER_ID || Obs_at_distance || !PlayerCfg.ObsShowCockpit)) {
+		// Do not draw cockpit.
+	} else {
+		grs_bitmap *bm;
+		PIGGY_PAGE_IN(cockpit_bitmap[PlayerCfg.CockpitMode[1]]);
+		bm = &GameBitmaps[cockpit_bitmap[PlayerCfg.CockpitMode[1]].index];
 
-	switch( PlayerCfg.CockpitMode[1] )	{
-		case CM_FULL_COCKPIT:
-			gr_set_current_canvas(NULL);
-#ifdef OGL
-			ogl_ubitmapm_cs (0, 0, -1, grd_curcanv->cv_bitmap.bm_h, bm,255, F1_0);
-#else
-			gr_ubitmapm(0,0, bm);
-#endif
-			break;
-		case CM_REAR_VIEW:
-			gr_set_current_canvas(NULL);
-#ifdef OGL
-			ogl_ubitmapm_cs (0, 0, -1, grd_curcanv->cv_bitmap.bm_h, bm,255, F1_0);
-#else
-			gr_ubitmapm(0,0, bm);
-#endif
-			break;
-		case CM_FULL_SCREEN:
-		case CM_OBSERVATORY:
-			break;
-		case CM_STATUS_BAR:
-			gr_set_current_canvas(NULL);
-#ifdef OGL
-			ogl_ubitmapm_cs (0, (HIRESMODE?(SHEIGHT*2)/2.6:(SHEIGHT*2)/2.72), -1, ((int) ((double) (bm->bm_h) * (HIRESMODE?(double)SHEIGHT/480:(double)SHEIGHT/200) + 0.5)), bm,255, F1_0);
-#else
-			gr_ubitmapm(0,SHEIGHT-bm->bm_h,bm);
-#endif
-			break;
-		case CM_LETTERBOX:
-			gr_set_current_canvas(NULL);
-			break;
+		switch( PlayerCfg.CockpitMode[1] )	{
+			case CM_FULL_COCKPIT:
+				gr_set_current_canvas(NULL);
+	#ifdef OGL
+				ogl_ubitmapm_cs (0, 0, -1, grd_curcanv->cv_bitmap.bm_h, bm,255, F1_0);
+	#else
+				gr_ubitmapm(0,0, bm);
+	#endif
+				break;
+			case CM_REAR_VIEW:
+				gr_set_current_canvas(NULL);
+	#ifdef OGL
+				ogl_ubitmapm_cs (0, 0, -1, grd_curcanv->cv_bitmap.bm_h, bm,255, F1_0);
+	#else
+				gr_ubitmapm(0,0, bm);
+	#endif
+				break;
+			case CM_FULL_SCREEN:
+				// Do not draw cockpit.
+				break;
+			case CM_STATUS_BAR:
+				gr_set_current_canvas(NULL);
+	#ifdef OGL
+				ogl_ubitmapm_cs (0, (HIRESMODE?(SHEIGHT*2)/2.6:(SHEIGHT*2)/2.72), -1, ((int) ((double) (bm->bm_h) * (HIRESMODE?(double)SHEIGHT/480:(double)SHEIGHT/200) + 0.5)), bm,255, F1_0);
+	#else
+				gr_ubitmapm(0,SHEIGHT-bm->bm_h,bm);
+	#endif
+				break;
+			case CM_LETTERBOX:
+				gr_set_current_canvas(NULL);
+				break;
+		}
 	}
 
 	gr_set_current_canvas(NULL);
@@ -618,6 +608,10 @@ void update_cockpits()
 		last_drawn_cockpit = PlayerCfg.CockpitMode[1];
 	else
 		return;
+
+	if (Game_mode & GM_OBSERVER && (Current_obs_player == OBSERVER_PLAYER_ID || Obs_at_distance || !PlayerCfg.ObsShowCockpit)) {
+		return;
+	}
 
 	if (PlayerCfg.CockpitMode[1]==CM_FULL_COCKPIT || PlayerCfg.CockpitMode[1]==CM_STATUS_BAR)
 		init_gauges();

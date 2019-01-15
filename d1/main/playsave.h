@@ -105,8 +105,22 @@ typedef struct player_config
 	int ShipColor; 
 	int MissileColor; 
 	ubyte ObsTurbo;
+	ubyte ObsShowCockpit;
+	ubyte ObsShowScoreboardShieldText;
+	ubyte ObsShowScoreboardShieldBar;
+	ubyte ObsShowAmmoBars;
+	ubyte ObsShowPrimary;
+	ubyte ObsShowSecondary;
 	ubyte ObsShowNames;
-	ubyte ObsShowObs; 
+	ubyte ObsShowDamage;
+	ubyte ObsShowShieldText;
+	ubyte ObsShowShieldBar;
+	ubyte ObsShowKillFeed;
+	ubyte ObsShowDeathSummary;
+	ubyte ObsShowStreaks;
+	ubyte ObsShowKillGraph;
+	ubyte ObsShowBreakdown;
+	ubyte ObsShowObs;
 } __pack__ player_config;
 
 extern struct player_config PlayerCfg;

@@ -344,6 +344,8 @@ extern fix ThisLevelTime;
 extern fix Cruise_speed;
 extern int linedotscale;
 
+int Observer_message_y_start = 0;
+
 typedef struct gauge_box {
 	int left,top;
 	int right,bot;		//maximal box
@@ -2556,13 +2558,13 @@ void observer_show_time() {
 }
 
 #define OBS_PLAYER_CARD_WIDTH 212
-#define OBS_PLAYER_CARD_HEIGHT (Netgame.obs_min ? 51 : 152)
 #define OBS_TIME_WIDTH 224
 
-void observer_draw_player_card(int pnum, int color, int x, int y) {
+int observer_draw_player_card(int pnum, int color, int x, int y) {
 	glLineWidth(1);
 
 	int sw, sh, saw;
+	int starty = y;
 
 	y += 5;
 
@@ -2603,159 +2605,172 @@ void observer_draw_player_card(int pnum, int color, int x, int y) {
 	}
 
 	if (!Netgame.obs_min) {
-		// Shields
-		char shields[7];
+		if (PlayerCfg.ObsShowScoreboardShieldText) {
+			// Shields
+			char shields[7];
 
-		sprintf(shields, "%0.1f%s", f2db(Players[pnum].shields), Players[pnum].shields_certain ? "" : "?" );
+			sprintf(shields, "%0.1f%s", f2db(Players[pnum].shields), Players[pnum].shields_certain ? "" : "?" );
 
-		gr_set_curfont( GAME_FONT );
-		gr_set_fontcolor(color, -1);
+			gr_set_curfont( GAME_FONT );
+			gr_set_fontcolor(color, -1);
 
-		gr_get_string_size(shields, &sw, &sh, &saw);
+			gr_get_string_size(shields, &sw, &sh, &saw);
 
-		if ((Game_mode & GM_MULTI_COOP) || (Game_mode & GM_MULTI_ROBOTS)) {
-			gr_printf(x + OBS_PLAYER_CARD_WIDTH / 2 - sw / 2, y, "%s", shields);
-		} else {
-			gr_printf(x + 3, y, "%s", shields);
-		}
-
-		y += 27;
-
-		// Shield display
-		double shield_count = f2db(Players[pnum].shields);
-		double delta = f2db(Players[pnum].shields_delta);
-		fix pulse = GameTime64 & 0x1ffff;
-		double pulse_strength = 0;
-
-		if (pulse > 0x10000) {
-			pulse_strength = 1;
-		} else {
-			pulse_strength = 0;
-		}
-
-		// Fill bar with color
-		if (shield_count > 0) {
-			gr_setcolor(color);
-			gr_urect(x + 2, y, x + OBS_PLAYER_CARD_WIDTH - 2, y + 9);
-		}
-
-		// Replace empty with dark grey, or pulsing red if under 30 shields.
-		if (shield_count < 100.0) {
-			int grey_color = (shield_count > 0 && shield_count < 30 ? BM_XRGB(6 + (int)(10 * pulse_strength), 6, 6) : BM_XRGB(6, 6, 6));
-			gr_setcolor(grey_color);
-			gr_urect(x + 2 + (int)(shield_count * ((double)OBS_PLAYER_CARD_WIDTH - 4.0) / 100.0), y, x + OBS_PLAYER_CARD_WIDTH - 2, y + 9);
-		}
-
-		if (Players[pnum].shields_delta != 0 && (Players[Player_num].hours_total - Players[pnum].shields_time_hours == 1 && i2f(3600) + Players[Player_num].time_total - Players[pnum].shields_time < i2f(2) || Players[Player_num].time_total - Players[pnum].shields_time < i2f(2))) {
-			if (shield_count > 0 && shield_count < 100 && delta < 0) {
-				// Replace recent damage with red, unless at 0.
-				gr_setcolor(BM_XRGB(31, 6, 6));
-				gr_urect(x + 2 + (int)(shield_count * ((double)OBS_PLAYER_CARD_WIDTH - 4.0) / 100.0), y, min(x + 2 + (int)((shield_count - delta) * ((double)OBS_PLAYER_CARD_WIDTH - 4.0) / 100.0), x + OBS_PLAYER_CARD_WIDTH - 2), y + 9);
-			} else if (shield_count < 100 - delta && delta > 0) {
-				// Replace recent healing with green.
-				gr_setcolor(BM_XRGB(6, 6, 31));
-				gr_urect(x + 2 + (int)((shield_count - delta) * ((double)OBS_PLAYER_CARD_WIDTH - 4.0) / 100.0), y, min(x + 2 + (int)(shield_count * ((double)OBS_PLAYER_CARD_WIDTH - 4.0) / 100.0), x + OBS_PLAYER_CARD_WIDTH - 2), y + 9);
+			if ((Game_mode & GM_MULTI_COOP) || (Game_mode & GM_MULTI_ROBOTS)) {
+				gr_printf(x + OBS_PLAYER_CARD_WIDTH / 2 - sw / 2, y, "%s", shields);
+			} else {
+				gr_printf(x + 3, y, "%s", shields);
 			}
+
+			y += 27;
 		}
 
-		// Divide bar into segments
-		for (int seg = 1; seg < 10; seg++) {
-			gr_setcolor(BM_XRGB(0, 0, 0));
-			gr_uline(i2f(x + 1 + 21 * seg), i2f(y), i2f(x + 1 + 21 * seg), i2f(y + 10));
+		if (PlayerCfg.ObsShowScoreboardShieldBar) {
+			// Shield display
+			double shield_count = f2db(Players[pnum].shields);
+			double delta = f2db(Players[pnum].shields_delta);
+			fix pulse = GameTime64 & 0x1ffff;
+			double pulse_strength = 0;
+
+			if (pulse > 0x10000) {
+				pulse_strength = 1;
+			} else {
+				pulse_strength = 0;
+			}
+
+			// Fill bar with color
+			if (shield_count > 0) {
+				gr_setcolor(color);
+				gr_urect(x + 2, y, x + OBS_PLAYER_CARD_WIDTH - 2, y + 9);
+			}
+
+			// Replace empty with dark grey, or pulsing red if under 30 shields.
+			if (shield_count < 100.0) {
+				int grey_color = (shield_count > 0 && shield_count < 30 ? BM_XRGB(6 + (int)(10 * pulse_strength), 6, 6) : BM_XRGB(6, 6, 6));
+				gr_setcolor(grey_color);
+				gr_urect(x + 2 + (int)(shield_count * ((double)OBS_PLAYER_CARD_WIDTH - 4.0) / 100.0), y, x + OBS_PLAYER_CARD_WIDTH - 2, y + 9);
+			}
+
+			if (Players[pnum].shields_delta != 0 && (Players[Player_num].hours_total - Players[pnum].shields_time_hours == 1 && i2f(3600) + Players[Player_num].time_total - Players[pnum].shields_time < i2f(2) || Players[Player_num].time_total - Players[pnum].shields_time < i2f(2))) {
+				if (shield_count > 0 && shield_count < 100 && delta < 0) {
+					// Replace recent damage with red, unless at 0.
+					gr_setcolor(BM_XRGB(31, 6, 6));
+					gr_urect(x + 2 + (int)(shield_count * ((double)OBS_PLAYER_CARD_WIDTH - 4.0) / 100.0), y, min(x + 2 + (int)((shield_count - delta) * ((double)OBS_PLAYER_CARD_WIDTH - 4.0) / 100.0), x + OBS_PLAYER_CARD_WIDTH - 2), y + 9);
+				} else if (shield_count < 100 - delta && delta > 0) {
+					// Replace recent healing with green.
+					gr_setcolor(BM_XRGB(6, 6, 31));
+					gr_urect(x + 2 + (int)((shield_count - delta) * ((double)OBS_PLAYER_CARD_WIDTH - 4.0) / 100.0), y, min(x + 2 + (int)(shield_count * ((double)OBS_PLAYER_CARD_WIDTH - 4.0) / 100.0), x + OBS_PLAYER_CARD_WIDTH - 2), y + 9);
+				}
+			}
+
+			// Divide bar into segments
+			for (int seg = 1; seg < 10; seg++) {
+				gr_setcolor(BM_XRGB(0, 0, 0));
+				gr_uline(i2f(x + 1 + 21 * seg), i2f(y), i2f(x + 1 + 21 * seg), i2f(y + 10));
+			}
+
+			y += 11;
 		}
 
-		y += 11;
-
-		// Energy display
 		double energy = f2db(Players[pnum].energy);
-		if (energy > 0) {
-			gr_setcolor(BM_XRGB(25, 18, 6));
-			gr_urect(x + 2, y, min(x + 2 + (int)(energy * ((double)OBS_PLAYER_CARD_WIDTH - 4.0) / 100.0), x + OBS_PLAYER_CARD_WIDTH - 2), y + 3);
-		}
-
-		y += 5;
-
-		// Ammo display
 		double ammo = f2db(Players[pnum].primary_ammo[1] * VULCAN_AMMO_SCALE);
-		if (ammo > 0) {
-			gr_setcolor(BM_XRGB(25, 25, 25));
-			gr_urect(x + 2, y, min(x + 2 + (int)(ammo * ((double)OBS_PLAYER_CARD_WIDTH - 4.0) / 10000.0), x + OBS_PLAYER_CARD_WIDTH - 2), y + 2);
+
+		if (PlayerCfg.ObsShowAmmoBars) {
+			// Energy display
+			if (energy > 0) {
+				gr_setcolor(BM_XRGB(25, 18, 6));
+				gr_urect(x + 2, y, min(x + 2 + (int)(energy * ((double)OBS_PLAYER_CARD_WIDTH - 4.0) / 100.0), x + OBS_PLAYER_CARD_WIDTH - 2), y + 3);
+			}
+
+			y += 5;
+
+			// Ammo display
+			if (ammo > 0) {
+				gr_setcolor(BM_XRGB(25, 25, 25));
+				gr_urect(x + 2, y, min(x + 2 + (int)(ammo * ((double)OBS_PLAYER_CARD_WIDTH - 4.0) / 10000.0), x + OBS_PLAYER_CARD_WIDTH - 2), y + 2);
+			}
+
+			y += 4;
 		}
 
-		y += 4;
+		if (PlayerCfg.ObsShowPrimary) {
+			// Selected primary
+			char primary[7];
+			switch (Players[pnum].primary_weapon) {
+				case 0:
+					sprintf(primary, "%s %i", (Players[pnum].flags & PLAYER_FLAGS_QUAD_LASERS) ? "QUAD" : "LASER", Players[pnum].laser_level + 1);
+					break;
+				case 1:
+					sprintf(primary, "VUL");
+					break;
+				case 2:
+					sprintf(primary, "SPREAD");
+					break;
+				case 3:
+					sprintf(primary, "PLASMA");
+					break;
+				case 4:
+					sprintf(primary, "FUSION");
+					break;
+			}
 
-		// Selected primary
-		char primary[7];
-		switch (Players[pnum].primary_weapon) {
-			case 0:
-				sprintf(primary, "%s %i", (Players[pnum].flags & PLAYER_FLAGS_QUAD_LASERS) ? "QUAD" : "LASER", Players[pnum].laser_level + 1);
-				break;
-			case 1:
-				sprintf(primary, "VUL");
-				break;
-			case 2:
-				sprintf(primary, "SPREAD");
-				break;
-			case 3:
-				sprintf(primary, "PLASMA");
-				break;
-			case 4:
-				sprintf(primary, "FUSION");
-				break;
+			// Primary ammo
+			char primary_ammo[7];
+			gr_set_fontcolor(color, -1);
+			gr_printf(x + 3, y, "%s", primary);
+
+			if (Players[pnum].primary_weapon == 1) {
+				gr_set_fontcolor(BM_XRGB(25, 25, 25), -1);
+				int_to_string((int)ammo, primary_ammo);
+			} else {
+				gr_set_fontcolor(BM_XRGB(25, 18, 6), -1);
+				sprintf(primary_ammo, "%i", (int)energy);
+			}
+
+			gr_get_string_size(primary_ammo, &sw, &sh, &saw);
+			gr_printf(x + OBS_PLAYER_CARD_WIDTH - 1 - sw, y, primary_ammo);
+
+			y += 27;
 		}
 
-		// Primary ammo
-		char primary_ammo[7];
-		gr_set_fontcolor(color, -1);
-		gr_printf(x + 3, y, "%s", primary);
+		if (PlayerCfg.ObsShowSecondary) {
+			// Selected secondary
+			char secondary[7];
+			switch (Players[pnum].secondary_weapon) {
+				case 0:
+					sprintf(secondary, "CONC");
+					break;
+				case 1:
+					sprintf(secondary, "HOMING");
+					break;
+				case 2:
+					sprintf(secondary, "PROX");
+					break;
+				case 3:
+					sprintf(secondary, "SMART");
+					break;
+				case 4:
+					sprintf(secondary, "MEGA");
+					break;
+			}
 
-		if (Players[pnum].primary_weapon == 1) {
-			gr_set_fontcolor(BM_XRGB(25, 25, 25), -1);
-			int_to_string((int)ammo, primary_ammo);
-		} else {
-			gr_set_fontcolor(BM_XRGB(25, 18, 6), -1);
-			sprintf(primary_ammo, "%i", (int)energy);
+			gr_set_fontcolor(color, -1);
+			gr_printf(x + 3, y, "%s", secondary);
+
+			// Secondary ammo
+			char secondary_ammo[3];
+			sprintf(secondary_ammo, "%i", Players[pnum].secondary_ammo[Players[pnum].secondary_weapon]);
+			
+			gr_get_string_size(secondary_ammo, &sw, &sh, &saw);
+			gr_printf(x + OBS_PLAYER_CARD_WIDTH - 1 - sw, y, secondary_ammo);
+
+			y += 27;
 		}
-
-		gr_get_string_size(primary_ammo, &sw, &sh, &saw);
-		gr_printf(x + OBS_PLAYER_CARD_WIDTH - 1 - sw, y, primary_ammo);
-
-		y += 27;
-
-		// Selected secondary
-		char secondary[7];
-		switch (Players[pnum].secondary_weapon) {
-			case 0:
-				sprintf(secondary, "CONC");
-				break;
-			case 1:
-				sprintf(secondary, "HOMING");
-				break;
-			case 2:
-				sprintf(secondary, "PROX");
-				break;
-			case 3:
-				sprintf(secondary, "SMART");
-				break;
-			case 4:
-				sprintf(secondary, "MEGA");
-				break;
-		}
-
-		gr_set_fontcolor(color, -1);
-		gr_printf(x + 3, y, "%s", secondary);
-
-		// Secondary ammo
-		char secondary_ammo[3];
-		sprintf(secondary_ammo, "%i", Players[pnum].secondary_ammo[Players[pnum].secondary_weapon]);
-		
-		gr_get_string_size(secondary_ammo, &sw, &sh, &saw);
-		gr_printf(x + OBS_PLAYER_CARD_WIDTH - 1 - sw, y, secondary_ammo);
-
-		y += 27;
 	}
 
 	glLineWidth(linedotscale);
+
+	return y - starty;
 }
 
 int observer_show_player_cards() {
@@ -2771,6 +2786,7 @@ int observer_show_player_cards() {
 		int pnum;
 		int color;
 		int x, y = 0;
+		int obs_player_card_height = 0;
 
 		// Show players in order of score.
 		for (int i = 0; i < n_players; i++) {
@@ -2787,16 +2803,16 @@ int observer_show_player_cards() {
 
 			if (grd_curcanv->cv_bitmap.bm_w < 2 * OBS_PLAYER_CARD_WIDTH + OBS_TIME_WIDTH) {
 				x = grd_curcanv->cv_bitmap.bm_w / 2 - OBS_PLAYER_CARD_WIDTH + OBS_PLAYER_CARD_WIDTH * (position % 2);
-				y = 53 + OBS_PLAYER_CARD_HEIGHT * (position / 2);
+				y = 53 + obs_player_card_height * (position / 2);
 			} else if (grd_curcanv->cv_bitmap.bm_w < 4 * OBS_PLAYER_CARD_WIDTH + OBS_TIME_WIDTH) {
 				x = grd_curcanv->cv_bitmap.bm_w / 2 - OBS_TIME_WIDTH / 2 - OBS_PLAYER_CARD_WIDTH + (OBS_PLAYER_CARD_WIDTH + OBS_TIME_WIDTH) * (position % 2);
-				y = 0 + OBS_PLAYER_CARD_HEIGHT * (position / 2);
+				y = 0 + obs_player_card_height * (position / 2);
 			} else if (grd_curcanv->cv_bitmap.bm_w < 6 * OBS_PLAYER_CARD_WIDTH + OBS_TIME_WIDTH) {
 				if (n_players < 3) {
 					position += 1;
 				}
 				x = grd_curcanv->cv_bitmap.bm_w / 2 - OBS_TIME_WIDTH / 2 - 2 * OBS_PLAYER_CARD_WIDTH + OBS_PLAYER_CARD_WIDTH * (position % 4) + OBS_TIME_WIDTH * ((position % 4) / 2);
-				y = 0 + OBS_PLAYER_CARD_HEIGHT * (position / 4);
+				y = 0 + obs_player_card_height * (position / 4);
 			} else if (grd_curcanv->cv_bitmap.bm_w < 8 * OBS_PLAYER_CARD_WIDTH + OBS_TIME_WIDTH) {
 				if (n_players < 3) {
 					position += 2;
@@ -2804,7 +2820,7 @@ int observer_show_player_cards() {
 					position += 1;
 				}
 				x = grd_curcanv->cv_bitmap.bm_w / 2 - OBS_TIME_WIDTH / 2 - 3 * OBS_PLAYER_CARD_WIDTH + OBS_PLAYER_CARD_WIDTH * (position % 6) + OBS_TIME_WIDTH * ((position % 6) / 3);
-				y = 0 + OBS_PLAYER_CARD_HEIGHT * (position / 6);
+				y = 0 + obs_player_card_height * (position / 6);
 			} else {
 				if (n_players < 3) {
 					position += 3;
@@ -2814,13 +2830,13 @@ int observer_show_player_cards() {
 					position += 1;
 				}
 				x = grd_curcanv->cv_bitmap.bm_w / 2 - OBS_TIME_WIDTH / 2 - 4 * OBS_PLAYER_CARD_WIDTH + OBS_PLAYER_CARD_WIDTH * (position % 8) + OBS_TIME_WIDTH * ((position % 8) / 4);
-				y = 0 + OBS_PLAYER_CARD_HEIGHT * (position / 8);
+				y = 0 + obs_player_card_height * (position / 8);
 			}
 
-			observer_draw_player_card(pnum, color, x, y);
+			obs_player_card_height = observer_draw_player_card(pnum, color, x, y);
 		}
 
-		return y + OBS_PLAYER_CARD_HEIGHT;
+		return y + obs_player_card_height;
 	}
 
 	return 0;
@@ -3395,19 +3411,25 @@ void observer_show_kill_list()
 	observer_show_time();
 
 	// Show each player's score and ship status.
-	int y = observer_show_player_cards();
+	Observer_message_y_start = observer_show_player_cards();
 
 	// Show the team's score.
 	observer_maybe_show_team_score();
 
 	// Show the kill graph, which is a line graph of kills over time for each pilot.
-	observer_maybe_show_kill_graph();
+	if (PlayerCfg.ObsShowKillGraph) {
+		observer_maybe_show_kill_graph();
+	}
 
 	// Show streaks, such as last kill, last death in non-1v1, kill streak, and runs in 1v1.
-	observer_maybe_show_streaks();
+	if (PlayerCfg.ObsShowStreaks) {
+		observer_maybe_show_streaks();
+	}
 
 	// Show a death log, including who killed who and with what.
-	observer_maybe_show_death_log(y);
+	if (PlayerCfg.ObsShowKillFeed) {
+		observer_maybe_show_death_log(Observer_message_y_start);
+	}
 
 	// Show death summaries, including the killing blow and a line graph of shields over time.
 	observer_maybe_show_death_summaries();
@@ -3439,7 +3461,7 @@ int see_object(int objnum)
 
 void show_HUD_names()
 {
-	int is_friend = 0, show_friend_name = 0, show_enemy_name = 0, show_name = 0, show_typing = 0, show_indi = 0, pnum = 0, objnum = 0;
+	int is_friend = 0, show_friend_name = 0, show_enemy_name = 0, show_name = 0, show_shields = 0, show_typing = 0, show_indi = 0, pnum = 0, objnum = 0;
 
 	int my_pnum = get_pnum_for_hud();
 
@@ -3456,7 +3478,8 @@ void show_HUD_names()
 		is_friend = (Game_mode & GM_MULTI_COOP || (Game_mode & GM_TEAM && get_team(pnum) == get_team(my_pnum)));
 		show_friend_name = Show_reticle_name;
 		show_enemy_name = Show_reticle_name && Netgame.ShowEnemyNames && !(Players[pnum].flags & PLAYER_FLAGS_CLOAKED);
-		show_name = ((is_friend && show_friend_name) || (!is_friend && show_enemy_name)) || ((Game_mode & GM_OBSERVER) && (PlayerCfg.ObsShowNames)) ;
+		show_name = ((is_friend && show_friend_name) || (!is_friend && show_enemy_name)) || ((Game_mode & GM_OBSERVER) && PlayerCfg.ObsShowNames);
+		show_shields = ((Game_mode & GM_OBSERVER) && PlayerCfg.ObsShowShieldText);
 		show_typing = is_friend || !(Players[pnum].flags & PLAYER_FLAGS_CLOAKED);
 		show_indi = ((/*(Game_mode & ( GM_CAPTURE | GM_HOARD ) && Players[pnum].flags & PLAYER_FLAGS_FLAG) || */(Game_mode & GM_BOUNTY &&  pnum == Bounty_target)) && (is_friend || !(Players[pnum].flags & PLAYER_FLAGS_CLOAKED)));
 
@@ -3471,7 +3494,7 @@ void show_HUD_names()
 		else
 			objnum = Players[pnum].objnum;
 
-		if ((show_name || show_typing || show_indi) && (see_object(objnum) || (Game_mode & GM_OBSERVER)))
+		if ((show_name || show_typing || show_indi || show_shields) && (see_object(objnum) || (Game_mode & GM_OBSERVER)))
 		{
 			g3s_point player_point;
 			g3_rotate_point(&player_point,&Objects[objnum].pos);
@@ -3497,10 +3520,15 @@ void show_HUD_names()
 						strncpy( s, "Target", 6 );
 					else if (show_name)
 					{
-						if (!Netgame.obs_min && Game_mode & GM_OBSERVER)
+						if (!Netgame.obs_min && Game_mode & GM_OBSERVER && show_shields)
 							snprintf( s, sizeof(s), "%s (%0.1f%s)", Players[pnum].callsign, f2db(Players[pnum].shields), Players[pnum].shields_certain ? "" : "?" );
 						else
 							snprintf( s, sizeof(s), "%s", Players[pnum].callsign );
+					}
+					else if (show_shields) {
+						if (!Netgame.obs_min) {
+							snprintf( s, sizeof(s), "(%0.1f%s)", f2db(Players[pnum].shields), Players[pnum].shields_certain ? "" : "?" );
+						}
 					}
 					if (show_typing && multi_sending_message[pnum])
 					{
@@ -3518,7 +3546,7 @@ void show_HUD_names()
 						gr_string (x1, y1, s);
 					}
 
-					if (!Netgame.obs_min && Game_mode & GM_OBSERVER)
+					if (!Netgame.obs_min && Game_mode & GM_OBSERVER && PlayerCfg.ObsShowDamage)
 					{
 						if (Players[pnum].shields_delta != 0 && (Players[Player_num].hours_total - Players[pnum].shields_time_hours == 1 && i2f(3600) + Players[Player_num].time_total - Players[pnum].shields_time < i2f(2) || Players[Player_num].time_total - Players[pnum].shields_time < i2f(2)))
 						{
@@ -3576,7 +3604,7 @@ void draw_hud()
 {
 	n_players = multi_get_kill_list(player_list);
 
-	if (PlayerCfg.CockpitMode[1] == CM_OBSERVATORY) {
+	if (Game_mode & GM_OBSERVER) {
 		// Show HUD names
 		show_HUD_names();
 
@@ -3585,6 +3613,31 @@ void draw_hud()
 
 		// Show game messages
 		HUD_render_message_frame();
+
+		if (Current_obs_player != OBSERVER_PLAYER_ID && PlayerCfg.ObsShowCockpit && Obs_at_distance == 0) {
+			if (PlayerCfg.CockpitMode[1]==CM_STATUS_BAR || PlayerCfg.CockpitMode[1]==CM_FULL_SCREEN)
+				hud_show_homing_warning();
+
+			if (PlayerCfg.CockpitMode[1]==CM_FULL_SCREEN) {
+				hud_show_energy();
+				hud_show_shield();
+				hud_show_weapons();
+				if (!PCSharePig)
+					hud_show_keys();
+				hud_show_cloak_invuln();
+
+				if (Newdemo_state==ND_STATE_RECORDING)
+				{
+					int pnum = get_pnum_for_hud();
+					newdemo_record_player_flags(Players[pnum].flags);
+				}
+			}
+
+			if (PlayerCfg.CockpitMode[1] != CM_LETTERBOX)
+				show_reticle(PlayerCfg.ReticleType, 1);
+			if (PlayerCfg.CockpitMode[1] != CM_LETTERBOX && Newdemo_state != ND_STATE_PLAYBACK && (PlayerCfg.MouseControlStyle == MOUSE_CONTROL_FLIGHT_SIM) && PlayerCfg.MouseFSIndicator) /* Old School Mouse */
+				show_mousefs_indicator(Controls.raw_mouse_axis[0], Controls.raw_mouse_axis[1], Controls.raw_mouse_axis[2], GWIDTH/2, GHEIGHT/2, GHEIGHT/4);
+		}
 
 		return;
 	}
