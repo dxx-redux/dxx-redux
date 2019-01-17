@@ -3545,6 +3545,62 @@ void show_HUD_names()
 						y1 = f2i(y-dy)+FSPACY(1);
 						gr_string (x1, y1, s);
 					}
+					if ((Game_mode & GM_OBSERVER) && PlayerCfg.ObsShowShieldBar) {
+						glLineWidth(1);
+
+						int x2 = f2i(x) - 199/2;
+						int y2;
+						if (s[0]) {
+							y2 = f2i(y - dy) + FSPACY(6);
+						} else {
+							y2 = f2i(y - dy) + FSPACY(1);
+						}
+
+						// Shield display
+						double shield_count = f2db(Players[pnum].shields);
+						double delta = f2db(Players[pnum].shields_delta);
+						fix pulse = GameTime64 & 0x1ffff;
+						double pulse_strength = 0;
+
+						if (pulse > 0x10000) {
+							pulse_strength = 1;
+						} else {
+							pulse_strength = 0;
+						}
+
+						// Fill bar with color
+						if (shield_count > 0) {
+							gr_setcolor(BM_XRGB(selected_player_rgb[color_num].r,selected_player_rgb[color_num].g,selected_player_rgb[color_num].b));
+							gr_urect(x2, y2, x2 + 198, y2 + 8);
+						}
+
+						// Replace empty with dark grey, or pulsing red if under 30 shields.
+						if (shield_count < 100.0) {
+							int grey_color = (shield_count > 0 && shield_count < 30 ? BM_XRGB(6 + (int)(10 * pulse_strength), 6, 6) : BM_XRGB(6, 6, 6));
+							gr_setcolor(grey_color);
+							gr_urect(x2 + (int)(shield_count * 198 / 100.0), y2, x2 + 198, y2 + 8);
+						}
+
+						if (Players[pnum].shields_delta != 0 && (Players[Player_num].hours_total - Players[pnum].shields_time_hours == 1 && i2f(3600) + Players[Player_num].time_total - Players[pnum].shields_time < i2f(2) || Players[Player_num].time_total - Players[pnum].shields_time < i2f(2))) {
+							if (shield_count > 0 && shield_count < 100 && delta < 0) {
+								// Replace recent damage with red, unless at 0.
+								gr_setcolor(BM_XRGB(31, 6, 6));
+								gr_urect(x2 + (int)(shield_count * 198 / 100.0), y2, min(x2 + (int)((shield_count - delta) * 198 / 100.0), x2 + 198), y2 + 8);
+							} else if (shield_count < 100 - delta && delta > 0) {
+								// Replace recent healing with green.
+								gr_setcolor(BM_XRGB(6, 6, 31));
+								gr_urect(x2 + (int)((shield_count - delta) * 198 / 100.0), y2, min(x2 + (int)(shield_count * 198 / 100.0), x2 + 198), y2 + 8);
+							}
+						}
+
+						// Divide bar into segments
+						for (int seg = 1; seg < 10; seg++) {
+							gr_setcolor(BM_XRGB(0, 0, 0));
+							gr_uline(i2f(x2 - 1 + 20 * seg), i2f(y2), i2f(x2 - 1 + 20 * seg), i2f(y2 + 9));
+						}
+
+						glLineWidth(linedotscale);
+					}
 
 					if (!Netgame.obs_min && Game_mode & GM_OBSERVER && PlayerCfg.ObsShowDamage)
 					{
