@@ -1476,7 +1476,7 @@ void build_segment_list(int start_seg_num)
 
 				ch=seg->children[c];
 
-				if (!visited[ch] && ((wid & WID_RENDPAST_FLAG) || observer)) {
+				if ((wid & WID_RENDPAST_FLAG) || observer) {
 					if (!observer) {
 						sbyte *sv = Side_to_verts[c];
 						ubyte codes_and=0xff;
@@ -1507,7 +1507,7 @@ void build_segment_list(int start_seg_num)
 
 				siden = child_list[c];
 				ch=seg->children[siden];
-				//if (!visited[ch] && WALL_IS_DOORWAY(seg, c)) {
+				//if (WALL_IS_DOORWAY(seg, c)) {
 				{
 					int i;
 					ubyte codes_and_3d,codes_and_2d;
