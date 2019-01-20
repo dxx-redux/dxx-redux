@@ -650,7 +650,7 @@ void render_object(object *obj)
 		return;
 	
 	// Don't draw a player if we are observing them in first person.
-	if (is_observer() && Obs_at_distance == 0 && obj->type == OBJ_PLAYER && Current_obs_player != OBSERVER_PLAYER_ID && Players[Current_obs_player].objnum == obj - Objects) {
+	if (is_observer() && !Obs_at_distance && obj->type == OBJ_PLAYER && is_observing_player() && Players[Current_obs_player].objnum == obj - Objects) {
 		return;
 	}
 
