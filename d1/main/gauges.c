@@ -711,7 +711,7 @@ static inline void hud_bitblt (int x, int y, grs_bitmap *bm)
 
 int get_pnum_for_hud()
 {
-	if (Game_mode & GM_OBSERVER && Current_obs_player != OBSERVER_PLAYER_ID)
+	if (is_observer() && Current_obs_player != OBSERVER_PLAYER_ID)
 		return Current_obs_player;
 	else
 		return Player_num;
@@ -2434,7 +2434,7 @@ void hud_show_kill_list()
 		}
 
 
-		if((Show_network_stats && !(Game_mode & GM_OBSERVER)) && player_num != Player_num && Players[player_num].connected && Show_kill_list != 3) {
+		if((Show_network_stats && !is_observer()) && player_num != Player_num && Players[player_num].connected && Show_kill_list != 3) {
 			int lag = -1;
 
 			if(Netgame.RetroProtocol) {
@@ -3472,14 +3472,14 @@ void show_HUD_names()
 
 	for (pnum=0;pnum<N_players;pnum++)
 	{
-		if ((pnum == my_pnum && !(Game_mode & GM_OBSERVER)) || Players[pnum].connected != CONNECT_PLAYING)
+		if ((pnum == my_pnum && !is_observer()) || Players[pnum].connected != CONNECT_PLAYING)
 			continue;
 		// ridiculusly complex to check if we want to show something... but this is readable at least.
 		is_friend = (Game_mode & GM_MULTI_COOP || (Game_mode & GM_TEAM && get_team(pnum) == get_team(my_pnum)));
 		show_friend_name = Show_reticle_name;
 		show_enemy_name = Show_reticle_name && Netgame.ShowEnemyNames && !(Players[pnum].flags & PLAYER_FLAGS_CLOAKED);
-		show_name = ((is_friend && show_friend_name) || (!is_friend && show_enemy_name)) || ((Game_mode & GM_OBSERVER) && PlayerCfg.ObsShowNames);
-		show_shields = ((Game_mode & GM_OBSERVER) && PlayerCfg.ObsShowShieldText);
+		show_name = ((is_friend && show_friend_name) || (!is_friend && show_enemy_name)) || (is_observer() && PlayerCfg.ObsShowNames);
+		show_shields = (is_observer() && PlayerCfg.ObsShowShieldText);
 		show_typing = is_friend || !(Players[pnum].flags & PLAYER_FLAGS_CLOAKED);
 		show_indi = ((/*(Game_mode & ( GM_CAPTURE | GM_HOARD ) && Players[pnum].flags & PLAYER_FLAGS_FLAG) || */(Game_mode & GM_BOUNTY &&  pnum == Bounty_target)) && (is_friend || !(Players[pnum].flags & PLAYER_FLAGS_CLOAKED)));
 
@@ -3494,7 +3494,7 @@ void show_HUD_names()
 		else
 			objnum = Players[pnum].objnum;
 
-		if ((show_name || show_typing || show_indi || show_shields) && (see_object(objnum) || (Game_mode & GM_OBSERVER)))
+		if ((show_name || show_typing || show_indi || show_shields) && (see_object(objnum) || is_observer()))
 		{
 			g3s_point player_point;
 			g3_rotate_point(&player_point,&Objects[objnum].pos);
@@ -3520,7 +3520,7 @@ void show_HUD_names()
 						strncpy( s, "Target", 6 );
 					else if (show_name)
 					{
-						if (!Netgame.obs_min && Game_mode & GM_OBSERVER && show_shields)
+						if (!Netgame.obs_min && is_observer() && show_shields)
 							snprintf( s, sizeof(s), "%s (%0.1f%s)", Players[pnum].callsign, f2db(Players[pnum].shields), Players[pnum].shields_certain ? "" : "?" );
 						else
 							snprintf( s, sizeof(s), "%s", Players[pnum].callsign );
@@ -3545,7 +3545,7 @@ void show_HUD_names()
 						y1 = f2i(y-dy)+FSPACY(1);
 						gr_string (x1, y1, s);
 					}
-					if ((Game_mode & GM_OBSERVER) && PlayerCfg.ObsShowShieldBar) {
+					if (is_observer() && PlayerCfg.ObsShowShieldBar) {
 						glLineWidth(1);
 
 						int x2 = f2i(x) - 199/2;
@@ -3602,7 +3602,7 @@ void show_HUD_names()
 						glLineWidth(linedotscale);
 					}
 
-					if (!Netgame.obs_min && Game_mode & GM_OBSERVER && PlayerCfg.ObsShowDamage)
+					if (!Netgame.obs_min && is_observer() && PlayerCfg.ObsShowDamage)
 					{
 						if (Players[pnum].shields_delta != 0 && (Players[Player_num].hours_total - Players[pnum].shields_time_hours == 1 && i2f(3600) + Players[Player_num].time_total - Players[pnum].shields_time < i2f(2) || Players[Player_num].time_total - Players[pnum].shields_time < i2f(2)))
 						{
@@ -3660,7 +3660,7 @@ void draw_hud()
 {
 	n_players = multi_get_kill_list(player_list);
 
-	if (Game_mode & GM_OBSERVER) {
+	if (is_observer()) {
 		// Show HUD names
 		show_HUD_names();
 

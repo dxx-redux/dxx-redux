@@ -1222,14 +1222,12 @@ int is_key_rotate_event(d_event *event) {
 
 void kconfig_read_controls(d_event *event, int automap_flag)
 {
-    bool observer = (Game_mode & GM_OBSERVER) != 0;
-
 	// Don't read from the controls if we are locked into observing a specific player.
-	if (observer && Current_obs_player != OBSERVER_PLAYER_ID) {
+	if (is_observer() && Current_obs_player != OBSERVER_PLAYER_ID) {
 		return;
 	}
 
-	int i = 0, j = 0, speed_factor = (cheats.turbo || (observer && PlayerCfg.ObsTurbo))?2:1;
+	int i = 0, j = 0, speed_factor = (cheats.turbo || (is_observer() && PlayerCfg.ObsTurbo))?2:1;
 	static fix64 mouse_delta_time = 0;
     int overruns = 0;
 

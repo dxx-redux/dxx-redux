@@ -403,8 +403,6 @@ void fix_illegal_wall_intersection(object *obj, vms_vector *origin)
 //Simulate a physics object for this frame
 void do_physics_sim(object *obj)
 {
-	bool observer = (Game_mode & GM_OBSERVER) != 0;
-	 
 	int ignore_obj_list[MAX_IGNORE_OBJS],n_ignore_objs;
 	int iseg;
 	int try_again;
@@ -602,7 +600,7 @@ void do_physics_sim(object *obj)
 		// The rest of this function is collision stuff
 		// Observers just fly free
 		
-		if(Game_mode & GM_OBSERVER && 
+		if(is_observer() && 
 			((obj->id == Player_num) ||
 			((Game_mode & GM_MULTI_COOP) && (obj - Objects == 7))) ) {
 			obj->pos = new_pos;
@@ -914,7 +912,7 @@ void do_physics_sim(object *obj)
 		do_physics_align_object( obj );
 
 	//hack to keep player from going through closed doors
-	if (obj->type==OBJ_PLAYER && obj->segnum!=orig_segnum && (!cheats.ghostphysics) && (! (Game_mode & GM_OBSERVER)) ) {
+	if (obj->type==OBJ_PLAYER && obj->segnum!=orig_segnum && (!cheats.ghostphysics) && !is_observer()) {
 		int sidenum;
 
 		sidenum = find_connect_side(&Segments[obj->segnum],&Segments[orig_segnum]);
@@ -970,7 +968,7 @@ void do_physics_sim(object *obj)
 			}
 			else {
 				// Don't center the player object if they are in observer mode, because they are allowed to be outside the level.
-				if (!(observer && obj == ConsoleObject)) {
+				if (!(is_observer() && obj == ConsoleObject)) {
 					compute_segment_center(&obj->pos,&Segments[obj->segnum]);
 					obj->pos.x += objnum;
 				}

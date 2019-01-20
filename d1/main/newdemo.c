@@ -3228,7 +3228,7 @@ void newdemo_stop_recording()
 
 		char p2[16];
 
-		if(Game_mode & GM_OBSERVER) {
+		if(is_observer()) {
 			sprintf(p2, "OBS");
 		} else if(Game_mode & GM_MULTI_COOP) {
 			sprintf(p2, "COOP");

@@ -189,7 +189,7 @@ void init_cockpit()
 
 	gr_set_current_canvas(NULL);
 
-	if (Game_mode & GM_OBSERVER && (Current_obs_player == OBSERVER_PLAYER_ID || Obs_at_distance || !PlayerCfg.ObsShowCockpit)) {
+	if (is_observer() && (Current_obs_player == OBSERVER_PLAYER_ID || Obs_at_distance || !PlayerCfg.ObsShowCockpit)) {
 		game_init_render_sub_buffers(0, 0, SWIDTH, SHEIGHT);
 	} else {
 		switch( PlayerCfg.CockpitMode[1] ) {
@@ -626,7 +626,7 @@ int allowed_to_fire_laser(void)
 		return 0;
 	}
 
-	if(Game_mode & GM_OBSERVER) {
+	if(is_observer()) {
 		return 0; 
 	}
 
@@ -642,7 +642,7 @@ int allowed_to_fire_flare(void)
 	if (Next_flare_fire_time > GameTime64)
 		return 0;
 
-	if(Game_mode & GM_OBSERVER) {
+	if(is_observer()) {
 		return 0; 
 	}
 
@@ -657,7 +657,7 @@ int allowed_to_fire_missile(void)
 	if (Next_missile_fire_time > GameTime64)
 		return 0;
 
-	if(Game_mode & GM_OBSERVER) {
+	if(is_observer()) {
 		return 0; 
 	}
 
@@ -743,7 +743,7 @@ void show_netgame_help()
 		return;
 
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "F1\t  THIS SCREEN";
-	if (!(Game_mode & GM_OBSERVER)) {
+	if (!is_observer()) {
 #if !(defined(__APPLE__) || defined(macintosh))
 		m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "Alt-F2/F3\t  SAVE/LOAD COOP GAME";
 #else
@@ -753,7 +753,7 @@ void show_netgame_help()
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "ALT-F4\t  SHOW PLAYER NAMES ON HUD";
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "F6\t  TOGGLE CONNECTION STATS";
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "F7\t  TOGGLE KILL LIST";
-	if (!(Game_mode & GM_OBSERVER)) {
+	if (!is_observer()) {
 		m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "F8\t  SEND MESSAGE";
 		m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "(SHIFT-)F9 to F12\t  (DEFINE)SEND MACRO";
 	}
@@ -763,7 +763,7 @@ void show_netgame_help()
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "";
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "(Use \x85-# for F#. e.g. \x85-1 for F1)";
 #endif
-	if (Game_mode & GM_OBSERVER) {
+	if (is_observer()) {
 		m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "";
 		m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "OBSERVERS:";
 		m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "CTRL+1 to CTRL+7\t  OBSERVE SPECIFIC PLAYER";
@@ -1448,3 +1448,7 @@ void show_free_objects(void)
 }
 
 #endif
+
+bool is_observer() {
+	return (Game_mode & GM_OBSERVER) != 0;
+}

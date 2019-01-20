@@ -2102,7 +2102,7 @@ void do_ai_frame(object *obj)
 	}
 
 	// Robots do nothing for observers; those controlling them handle their actions
-	if(Game_mode & GM_OBSERVER) {
+	if(is_observer()) {
 		return;
 	}
 
@@ -2929,7 +2929,7 @@ int add_awareness_event(object *objp, int type)
 // The object (probably player or weapon) which created the awareness is objp.
 void create_awareness_event(object *objp, int type)
 {
-	if( (Game_mode & GM_OBSERVER) && objp->id == Player_num) {
+	if(is_observer() && objp->id == Player_num) {
 		return;
 	}
 

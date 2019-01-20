@@ -1582,7 +1582,7 @@ multi_message_feedback(void)
 void multi_send_macro(int key)
 {
 
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 	if (! (Game_mode & GM_MULTI) )
 		return;
@@ -1620,7 +1620,7 @@ void
 multi_send_message_start()
 {
 
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 	if (Game_mode&GM_MULTI) {
 		multi_sending_message[Player_num] = 1;
@@ -1636,7 +1636,7 @@ extern fix StartingShields;
 void multi_send_message_end()
 {
 
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 	char *mytempbuf;
 	int i,t;
@@ -2254,7 +2254,7 @@ multi_do_kill(const ubyte *buf)
 		reset_obs();
 		Players[pnum].connected = CONNECT_DIED_IN_MINE;
 
-		if (Game_mode & GM_OBSERVER) {
+		if (is_observer()) {
 			multi_obs_check_all_escaped();
 		}
 	}
@@ -2330,7 +2330,7 @@ void multi_do_escape(const ubyte *buf)
 	create_player_appearance_effect(&Objects[objnum]);
 	multi_make_player_ghost(buf[1]);
 
-	if (Game_mode & GM_OBSERVER) {
+	if (is_observer()) {
 		multi_obs_check_all_escaped();
 	}
 }
@@ -2514,7 +2514,7 @@ void multi_disconnect_player(int pnum)
 		return;
 	}
 
-	if (Game_mode & GM_OBSERVER) {
+	if (is_observer()) {
 		multi_obs_check_all_escaped();
 	} else {
 		for (i = 0; i < N_players; i++)
@@ -2900,7 +2900,7 @@ int get_color_for_player(int player, int missile) {
 		return(color); 
 	}
 
-	if(Game_mode & GM_MULTI && Netgame.FairColors && ! (Game_mode & GM_OBSERVER)) {
+	if(Game_mode & GM_MULTI && Netgame.FairColors && !is_observer()) {
 		return 0;
 	}
 
@@ -2997,7 +2997,7 @@ multi_process_bigdata(const ubyte *buf, unsigned len)
 
 void multi_send_fire(int laser_gun, int laser_level, int laser_flags, int laser_fired, short laser_track)
 {
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 	multi_do_protocol_frame(1, 0); // provoke positional update if possible
 
@@ -3023,7 +3023,7 @@ void multi_send_fire(int laser_gun, int laser_level, int laser_flags, int laser_
 void
 multi_send_destroy_controlcen(int objnum, int player)
 {
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 	if (player == Player_num)
 		HUD_init_message_literal(HM_MULTI, TXT_YOU_DEST_CONTROL);
@@ -3041,7 +3041,7 @@ multi_send_destroy_controlcen(int objnum, int player)
 void 
 multi_send_endlevel_start(int secret)
 {
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 	multibuf[0] = (char)MULTI_ENDLEVEL_START;
 	multibuf[1] = Player_num;
@@ -3069,7 +3069,7 @@ multi_send_endlevel_start(int secret)
 				break;
 		}
 
-		if (Game_mode & GM_OBSERVER) {
+		if (is_observer()) {
 			multi_obs_check_all_escaped();
 		}
 	}
@@ -3078,7 +3078,7 @@ multi_send_endlevel_start(int secret)
 void
 multi_send_player_explode(char type)
 {
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 	int count = 0;
 	int i;
@@ -3317,7 +3317,7 @@ multi_send_message(void)
 void
 multi_send_reappear()
 {
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 	multi_send_position(Players[Player_num].objnum);
 	
@@ -3332,7 +3332,7 @@ multi_send_reappear()
 void
 multi_send_position(int objnum)
 {
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 #ifdef WORDS_BIGENDIAN
 	shortpos sp;
@@ -3366,7 +3366,7 @@ multi_send_position(int objnum)
 void
 multi_send_kill(int objnum)
 {
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 	// I died, tell the world.
 
@@ -3420,7 +3420,7 @@ void
 multi_send_remobj(int objnum)
 {
 	// Tell the other guy to remove an object from his list
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 	sbyte obj_owner;
 	short remote_objnum;
@@ -3482,7 +3482,7 @@ void
 multi_send_quit(int why)
 {
 	// I am quitting the game, tell the other guy the bad news.
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 	Assert (why == MULTI_QUIT);
 
@@ -3495,7 +3495,7 @@ void
 multi_send_cloak(void)
 {
 	// Broadcast a change in our pflags (made to support cloaking)
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 	multibuf[0] = MULTI_CLOAK;
 	multibuf[1] = (char)Player_num;
@@ -3513,7 +3513,7 @@ void
 multi_send_decloak(void)
 {
 	// Broadcast a change in our pflags (made to support cloaking)
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 	multibuf[0] = MULTI_DECLOAK;
 	multibuf[1] = (char)Player_num;
@@ -3528,7 +3528,7 @@ void
 multi_send_invuln(void)
 {
 	// Broadcast a change in our pflags (made to support invuln)
-	if(Game_mode & GM_OBSERVER || Netgame.max_numobservers == 0) { return; }
+	if(is_observer() || Netgame.max_numobservers == 0) { return; }
 
 	multibuf[0] = MULTI_INVULN;
 	multibuf[1] = (char)Player_num;
@@ -3541,7 +3541,7 @@ multi_send_invuln(void)
 
 void multi_send_door_open(int segnum, int side, ubyte flag)
 {
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 	(void)flag;
 	multibuf[0] = MULTI_DOOR_OPEN;
@@ -3564,7 +3564,7 @@ void
 multi_send_create_explosion(int pnum)
 {
 	// Send all data needed to create a remote explosion
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 	int count = 0;
 
@@ -3579,7 +3579,7 @@ multi_send_create_explosion(int pnum)
 void
 multi_send_controlcen_fire(vms_vector *to_goal, int best_gun_num, int objnum)
 {
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 #ifdef WORDS_BIGENDIAN
 	vms_vector swapped_vec;
@@ -3605,7 +3605,7 @@ multi_send_controlcen_fire(vms_vector *to_goal, int best_gun_num, int objnum)
 void
 multi_send_create_powerup(int powerup_type, int segnum, int objnum, vms_vector *pos)
 {
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 	// Create a powerup on a remote machine, used for remote
 	// placement of used powerups like missiles and cloaking
@@ -3655,7 +3655,7 @@ multi_send_create_powerup(int powerup_type, int segnum, int objnum, vms_vector *
 void
 multi_send_play_sound(int sound_num, fix volume)
 {
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 	int count = 0;
 
@@ -3693,7 +3693,7 @@ multi_send_audio_taunt(int taunt_num)
 void
 multi_send_score(void)
 {
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 	// Send my current score to all other players so it will remain
 	// synced.
@@ -3712,7 +3712,7 @@ void
 multi_send_trigger(int triggernum)
 {
 	// Send an event to trigger something in the mine
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 	int count = 0;
 
@@ -3729,7 +3729,7 @@ multi_send_hostage_door_status(int wallnum)
 	// Tell the other player what the hit point status of a hostage door
 	// should be
 
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 	int count = 0;
 
@@ -4434,7 +4434,7 @@ int multi_maybe_disable_friendly_fire(object *killer)
 
 void multi_do_request_status()
 {
-	if (Game_mode & GM_OBSERVER) { return; }
+	if (is_observer()) { return; }
 
 	if (Netgame.max_numobservers == 0) { return; }
 
@@ -4444,7 +4444,7 @@ void multi_do_request_status()
 
 void multi_send_damage(fix damage, fix shields, ubyte killer_type, ubyte killer_id, ubyte damage_type, object* source)
 {
-	if (Game_mode & GM_OBSERVER) { return; }
+	if (is_observer()) { return; }
 
 	// Sending damage to the host isn't interesting if there cannot be any observers.
 	if (Netgame.max_numobservers == 0) { return; }
@@ -4481,7 +4481,7 @@ void multi_send_damage(fix damage, fix shields, ubyte killer_type, ubyte killer_
 
 void multi_do_damage( const ubyte *buf )
 {
-	if (Game_mode & GM_OBSERVER)
+	if (is_observer())
 	{
 		fix old_shields = Players[buf[1]].shields;
 		fix new_shields = GET_INTEL_INT(buf + 6);
@@ -4507,7 +4507,7 @@ void multi_do_damage( const ubyte *buf )
 
 void multi_send_repair(fix repair, fix shields, ubyte sourcetype)
 {
-	if (Game_mode & GM_OBSERVER) { return; }
+	if (is_observer()) { return; }
 
 	// Sending repairs to the host isn't interesting if there cannot be any observers.
 	if (Netgame.max_numobservers == 0) { return; }
@@ -4530,7 +4530,7 @@ void multi_send_repair(fix repair, fix shields, ubyte sourcetype)
 
 void multi_do_repair( const ubyte *buf )
 {
-	if (Game_mode & GM_OBSERVER)
+	if (is_observer())
 	{
 		fix old_shields = Players[buf[1]].shields;
 		fix new_shields = GET_INTEL_INT(buf + 6);
@@ -4558,7 +4558,7 @@ void multi_do_repair( const ubyte *buf )
 
 void multi_send_ship_status()
 {
-	if (Game_mode & GM_OBSERVER) { return; }
+	if (is_observer()) { return; }
 
 	// Sending ship status to the host isn't interesting if there cannot be any observers.
 	if (Netgame.max_numobservers == 0) { return; }
@@ -4591,7 +4591,7 @@ void multi_send_ship_status_for_frame()
 
 void multi_do_ship_status( const ubyte *buf )
 {
-	if (Game_mode & GM_OBSERVER)
+	if (is_observer())
 	{
 		Players[buf[1]].laser_level = buf[2];
 		Players[buf[1]].flags = GET_INTEL_SHORT(buf + 3);
@@ -4613,7 +4613,7 @@ void multi_do_ship_status( const ubyte *buf )
 /* Bounty packer sender and handler */
 void multi_send_bounty( void )
 {
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 	/* Test game mode */
 	if( !( Game_mode & GM_BOUNTY ) )
@@ -4655,7 +4655,7 @@ void multi_send_obs_update(ubyte event, ubyte event_data) {
 
 	multi_send_data( multibuf, 4 + 8*MAX_OBSERVERS, 2 );
 
-	if (event == 0 && !(Game_mode & GM_OBSERVER))
+	if (event == 0 && !is_observer())
 	{
 		multi_do_request_status();
 	}
@@ -4678,7 +4678,7 @@ void multi_do_obs_update(const ubyte *buf) {
 		strncpy(who_joined, (char*) &buf[4 + buf[2]*8], 8); 
 		HUD_init_message(HM_MULTI, "%s is now observing.", who_joined);
 
-		if (!(Game_mode & GM_OBSERVER))
+		if (!is_observer())
 		{
 			multi_do_request_status();
 		}
@@ -4739,7 +4739,7 @@ void multi_do_restore_game(const ubyte *buf)
 
 void multi_send_save_game(ubyte slot, uint id, char * desc)
 {
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 	int count = 0;
 	
@@ -4914,7 +4914,7 @@ void multi_do_msgsend_state(const ubyte *buf)
 
 void multi_send_msgsend_state(int state)
 {
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 	multibuf[0] = (char)MULTI_TYPING_STATE;
 	multibuf[1] = Player_num;

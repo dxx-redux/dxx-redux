@@ -186,6 +186,8 @@ void game_init_render_buffers (int render_max_w, int render_max_h);
 void game_render_frame_mono(int flip);
 void game_leave_menus(void);
 
+bool is_observer();
+
 //Cheats
 typedef struct game_cheats
 {
