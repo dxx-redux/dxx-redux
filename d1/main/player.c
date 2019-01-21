@@ -67,7 +67,7 @@ void reset_obs() {
 	if (!is_observing_player())
 		return;
 	
-	Current_obs_player = OBSERVER_PLAYER_ID;
+	Current_obs_player = Player_num;
 	init_cockpit();
 
 	Objects[Players[Current_obs_player].objnum].pos = Last_pos;
@@ -78,6 +78,11 @@ void reset_obs() {
 }
 
 void set_obs(int pnum) {
+	if (Netgame.host_is_obs && pnum == 0) {
+		reset_obs();
+		return;
+	}
+
 	if (!is_observing_player()) {
 		Last_pos = Objects[Players[Player_num].objnum].pos;
 		Last_orient = Objects[Players[Player_num].objnum].orient;

@@ -158,7 +158,7 @@ uint netgame_token = 0;
 uint my_player_token = 0; 
 uint player_tokens[MAX_MULTI_PLAYERS]; 
 
-const struct connection_status CONNECTION_NONE = {NONE, 0, 0};
+const struct connection_status CONNECTION_NONE = {CONNT_NONE, 0, 0};
 const char MAX_CONNECTIONS = 8; 
 const ubyte MAX_HOLEPUNCH_ATTEMPTS = 30; 
 
@@ -226,13 +226,13 @@ char* msg_name(int type)
 		case UPID_P2P_PING:
 			return "UPID_P2P_PING"; 		
 		case UPID_P2P_PONG:	
-			return "UPID_P2P_PONG"; 
+			return "UPID_P2P_PONG";
 
 		case UPID_PROXY:
-			return "UPID_PROXY"; 		
+			return "UPID_PROXY";
 
 		case UPID_REATTEMPT_DIRECT:
-			return "UPID_REATTEMPT_DIRECT"; 					
+			return "UPID_REATTEMPT_DIRECT";
 
 		default:
 			return "UNKNOWN";
@@ -866,7 +866,7 @@ int valid_size(ubyte *data, int data_len, struct _sockaddr sender_addr) {
 		// Special cases
 		case UPID_GAME_INFO:     		rv = 1; break; // Don't check, it varies
 		case UPID_SYNC: 	    		rv = 1; break; 
-		case UPID_ADDPLAYER:   			rv = 1; break; 
+		case UPID_ADDPLAYER:   			rv = 1; break;
 
 		default: rv = 1; 
 	}
@@ -886,7 +886,7 @@ int valid_token(ubyte *data, int data_len, struct _sockaddr sender_addr) {
 	int rv; 
 
 	switch(pid) {
-		case UPID_ADDPLAYER: 
+		case UPID_ADDPLAYER:
 		case UPID_ENDLEVEL_H:
 		case UPID_ENDLEVEL_C:
 		case UPID_PDATA:	
@@ -1783,10 +1783,10 @@ net_udp_new_player(UDP_sequence_packet *their)
 	update_address_for_player(pnum, their->player.protocol.udp.addr);
 
 	if(multi_i_am_master()) {
-		connection_statuses[pnum].type = DIRECT;
+		connection_statuses[pnum].type = CONNT_DIRECT;
 		Netgame.players[pnum].ping = 0; 
 	} else {
-		connection_statuses[pnum].type = PROXY;
+		connection_statuses[pnum].type = CONNT_PROXY;
 		connection_statuses[pnum].proxy_through = 0; // host
 		connection_statuses[pnum].holepunch_attempts = 0;
 	}
@@ -2955,6 +2955,7 @@ void net_udp_send_game_info(struct _sockaddr sender_addr, ubyte info_upid, ubyte
 		buf[len] = Netgame.LowVulcan;					len++;
 		buf[len] = Netgame.AllowPreferredColors;        len++; 
 		buf[len] = Netgame.obs_min; len++;
+		buf[len] = Netgame.host_is_obs; len++;
 
 		if(info_upid == UPID_SYNC) {
 			PUT_INTEL_INT(buf + len, player_tokens[to_player]); len += 4; 
@@ -3180,7 +3181,11 @@ int net_udp_process_game_info(ubyte *data, int data_len, struct _sockaddr game_a
 		Netgame.LowVulcan = data[len];                    len++; 
 		Netgame.AllowPreferredColors = data[len];         len++; 
 		Netgame.obs_min = data[len]; len++;
+		Netgame.host_is_obs = data[len]; len++;
 
+		if (Netgame.host_is_obs) {
+			multi_make_player_ghost(0);
+		}
 
 		if(is_sync && ! multi_i_am_master()) {
 			uint my_token = GET_INTEL_INT(data + len);  len += 4;
@@ -3253,6 +3258,7 @@ void net_udp_process_request(UDP_sequence_packet *their)
 		{
 			Players[i].connected = CONNECT_PLAYING;
 			Netgame.players[i].LastPacketTime = timer_query();
+
 			break;
 		}
 }
@@ -3333,7 +3339,7 @@ void net_udp_process_packet(ubyte *data, struct _sockaddr sender_addr, int lengt
 			net_udp_receive_sequence_packet(data, &their, sender_addr);
 			net_udp_new_player(&their);
 			break;
-
+		
 		case UPID_REQUEST:
 			net_udp_receive_sequence_packet(data, &their, sender_addr);
 			if (Network_status == NETSTAT_STARTING) 
@@ -3572,10 +3578,6 @@ int net_udp_start_poll( newmenu *menu, d_event *event, void *userdata )
 	userdata = userdata;
 	
 	Assert(Network_status == NETSTAT_STARTING);
-
-	if (!menus[0].value) {
-			menus[0].value = 1;
-	}
 
 	for (i=1; i<nitems; i++ ) {
 		if ( (i>= N_players) && (menus[i].value) ) {
@@ -4378,11 +4380,11 @@ void net_udp_read_sync_packet( ubyte * data, int data_len, struct _sockaddr send
 
 		if(! Netgame.players[i].protocol.udp.isyou) {
 			if(multi_i_am_master()) {
-				connection_statuses[i].type = DIRECT; 			
+				connection_statuses[i].type = CONNT_DIRECT; 			
 			} else if (i == multi_who_is_master()) {
-				connection_statuses[i].type = DIRECT; 							
+				connection_statuses[i].type = CONNT_DIRECT; 							
 			} else {
-				connection_statuses[i].type = PROXY;
+				connection_statuses[i].type = CONNT_PROXY;
 				connection_statuses[i].proxy_through = 0; 	
 				connection_statuses[i].holepunch_attempts = 0;		
 				connection_statuses[i].last_direct_pong = 0; 			
@@ -4429,7 +4431,11 @@ void net_udp_read_sync_packet( ubyte * data, int data_len, struct _sockaddr send
 
 		Objects[Players[Player_num].objnum].type = OBJ_PLAYER;
 	} else {
-		Player_num = OBSERVER_PLAYER_ID; // Kluge to prevent crashes
+		if (Netgame.host_is_obs) {
+			Player_num = 0;
+		} else {
+			Player_num = OBSERVER_PLAYER_ID; // Kluge to prevent crashes
+		}
 	}
 
 	Network_status = NETSTAT_PLAYING;
@@ -4499,10 +4505,11 @@ int net_udp_send_sync(void)
 			continue;
 
 		net_udp_send_game_info(Netgame.players[i].protocol.udp.addr, UPID_SYNC, 0);
-		connection_statuses[i].type = DIRECT; 
+		connection_statuses[i].type = CONNT_DIRECT; 
 	}
 
 	net_udp_read_sync_packet(NULL, 0, Netgame.players[0].protocol.udp.addr); // Read it myself, as if I had sent it
+
 	return 0;
 }
 
@@ -4708,7 +4715,13 @@ abort:
 		}
 		else
 		{
-			net_udp_dump_player(Netgame.players[i].protocol.udp.addr, player_tokens[i], DUMP_DORK);
+			if (i == 0) {
+				Netgame.host_is_obs = 1;
+				Game_mode |= GM_OBSERVER;
+				Current_obs_player = 0;
+			} else {
+				net_udp_dump_player(Netgame.players[i].protocol.udp.addr, player_tokens[i], DUMP_DORK);
+			}
 		}
 	}
 
@@ -5088,7 +5101,7 @@ void net_udp_send_data(const ubyte * ptr, int len, int priority )
 
 void net_udp_timeout_check(fix64 time)
 {
-	if(is_observer()) { return; }
+	if(!multi_i_am_master() && is_observer()) { return; }
 
 	int i = 0;
 	static fix64 last_timeout_time = 0;
@@ -5111,8 +5124,8 @@ void net_udp_timeout_check(fix64 time)
 					} else if ((time - Netgame.players[i].LastPacketTime) > UDP_TIMEOUT*2) {
 						multi_disconnect_player(i);
 					} else {
-						if(connection_statuses[i].type == DIRECT) {
-							connection_statuses[i].type = PROXY;
+						if(connection_statuses[i].type == CONNT_DIRECT) {
+							connection_statuses[i].type = CONNT_PROXY;
 							connection_statuses[i].proxy_through = 0;  // Start looking for efficient proxy?
 						}
 					}
@@ -6402,7 +6415,7 @@ void net_udp_send_p2p_ping (int to_player, int force_direct, fix64 time) {
 
 	if((! multi_i_am_master()) &&
 		(! to_player == multi_who_is_master()) && 
-		(connection_statuses[to_player].type == DIRECT) &&
+		(connection_statuses[to_player].type == CONNT_DIRECT) &&
 	   (timer_query() - connection_statuses[to_player].last_direct_pong < F1_0 * 20) && 
 	   (timer_query() - connection_statuses[to_player].last_direct_pong > F1_0 * 5)
 	  ) {
@@ -6410,7 +6423,7 @@ void net_udp_send_p2p_ping (int to_player, int force_direct, fix64 time) {
 		resetProxy(to_player); 
 	}
 
-	if(connection_statuses[to_player].type == DIRECT) {
+	if(connection_statuses[to_player].type == CONNT_DIRECT) {
 		force_direct = 1; 
 	}
 
@@ -6469,6 +6482,11 @@ void net_udp_process_p2p_ping(ubyte *data, struct _sockaddr sender_addr, int dat
 		return;
 	}
 
+	// Since the host doesn't send packets as an observer, ensure that clients don't disconnect thinking the host is dead.
+	if (from_player == 0 && Netgame.host_is_obs) {
+		Netgame.players[0].LastPacketTime = timer_query();
+	}
+	
 	// If I can hear a direct ping, I can probably reply
 	if(direct_ping) {
 		// Don't update master, non-existent player, or me
@@ -6485,7 +6503,7 @@ void net_udp_process_p2p_ping(ubyte *data, struct _sockaddr sender_addr, int dat
 		}
 
 		// Restablish direct attempt, if we aren't already doing that
-		if(connection_statuses[from_player].type == PROXY) {
+		if(connection_statuses[from_player].type == CONNT_PROXY) {
 			char comment[100];
 			sprintf(comment, "Received direct ping from proxy player %d connection status %d", from_player, Netgame.players[from_player].connected); 
 			net_log_comment(comment); 
@@ -6545,12 +6563,12 @@ void net_udp_process_p2p_pong(ubyte *data, struct _sockaddr sender_addr, int dat
 
 	// If this was direct, update the address!	
 	if(direct_pong) {
-		if(connection_statuses[from_player].type != DIRECT) {
+		if(connection_statuses[from_player].type != CONNT_DIRECT) {
 			net_log_comment("Received direct pong, connection upgraded to direct.");
 		}
 
 		connection_statuses[from_player].last_direct_pong = timer_query(); 
-		connection_statuses[from_player].type = DIRECT; 		
+		connection_statuses[from_player].type = CONNT_DIRECT; 		
 
 	    if(memcmp(&Netgame.players[from_player].protocol.udp.addr, &sender_addr, sizeof(struct _sockaddr))) {
 			update_address_for_player(from_player, sender_addr);
@@ -6560,7 +6578,7 @@ void net_udp_process_p2p_pong(ubyte *data, struct _sockaddr sender_addr, int dat
 
 
 void update_address_for_player(int pnum, struct _sockaddr new_addr) {
-	if(is_observer()) { return; }
+	if(!multi_i_am_master() && is_observer()) { return; }
 
 	char logcomment[200]; 
 	snprintf(logcomment, 200, "Requested update to address for player %d to %s:%u\n", pnum, 
@@ -6589,7 +6607,7 @@ void resetProxy(int pnum) {
 	if(pnum == multi_who_is_master()) return;
 	if(multi_i_am_master()) return;
 
-	connection_statuses[pnum].type = PROXY;
+	connection_statuses[pnum].type = CONNT_PROXY;
 	connection_statuses[pnum].proxy_through = 0;
 
 }
@@ -6610,9 +6628,9 @@ void reattemptDirect(int pnum) {
 }
 
 void net_udp_send_to_player(ubyte* data, int len, int to_player) {
-	if(connection_statuses[to_player].type == DIRECT) {
+	if(connection_statuses[to_player].type == CONNT_DIRECT) {
 		net_udp_send_to_player_direct(data, len, to_player); 
-	} else if (connection_statuses[to_player].type == PROXY) {
+	} else if (connection_statuses[to_player].type == CONNT_PROXY) {
 		net_udp_send_to_player_proxy(data, len, to_player, connection_statuses[to_player].proxy_through); 
 	} else {
 		// Shouldn't happen, default to host
@@ -6626,7 +6644,7 @@ void net_udp_send_to_player_direct(ubyte* data, int len, int to_player) {
 
 void net_udp_send_to_player_proxy(ubyte* data, int data_len, int to_player, int through_player) {
 	// Only proxy through direct connections; drop the packet if we try something else
-	if(connection_statuses[through_player].type != DIRECT) { return; }
+	if(connection_statuses[through_player].type != CONNT_DIRECT) { return; }
 
 	ubyte buf[data_len + UPID_PROXY_HEADER_SIZE]; 
 	int len = 0;
@@ -6669,7 +6687,7 @@ void net_udp_process_proxy(ubyte* data, struct _sockaddr sender_addr, int data_l
 	} else {
 		// Oh, we're forwarding.  
 		// Ok, but it must be to a player I have a direct connection to
-		if(connection_statuses[to_player].type != DIRECT) {
+		if(connection_statuses[to_player].type != CONNT_DIRECT) {
 			drop_rx_packet(data, "proxy to non-direct player"); 
 			return; // just drop the packet.  He'll figure it out.
 		}
@@ -6701,7 +6719,7 @@ void net_udp_p2p_ping_frame(fix64 time)
 		if(i == Player_num) continue; 
 		if(! Players[i].connected) continue; 
 
-		if(is_observer() && i > 0) { return; }
+		if(is_observer() && !multi_i_am_master() && i > 0) { return; }
 
 		int sentping = 0; 
 
@@ -6728,8 +6746,6 @@ void net_udp_p2p_ping_frame(fix64 time)
 	}
 
 }
-
-
 
 // Send the ping list in regular intervals
 void net_udp_ping_frame(fix64 time)
@@ -6774,6 +6790,11 @@ void net_udp_process_ping(ubyte *data, int data_len, struct _sockaddr sender_add
 	for (i = 1; i < MAX_PLAYERS; i++)
 	{
 		Netgame.players[i].ping = GET_INTEL_INT(&(data[len]));		len += 4;
+	}
+
+	// Since the host doesn't send packets as an observer, ensure that clients don't disconnect thinking the host is dead.
+	if (Netgame.host_is_obs) {
+		Netgame.players[0].LastPacketTime = timer_query();
 	}
 	
 	buf[0] = UPID_PONG;

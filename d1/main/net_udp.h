@@ -173,7 +173,7 @@ typedef struct UDP_mdata_recv
 } __pack__ UDP_mdata_recv;
 	
 
-typedef enum {NONE, DIRECT, PROXY} connection_type;
+typedef enum {CONNT_NONE, CONNT_DIRECT, CONNT_PROXY} connection_type;
 typedef struct connection_status {
 	connection_type type;
 	ubyte proxy_through;
