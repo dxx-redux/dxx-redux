@@ -3281,6 +3281,37 @@ void newdemo_stop_recording()
 		}
 	}
 
+	// Remove invalid characters, because map names can include invalid characters.
+	char* fc = filename;
+
+	while (*fc) {
+		const char *p = demoname_allowed_chars;
+
+		bool good = FALSE;
+		while (*p) {
+			Assert(p[1]);
+
+			if (fc[0]>=p[0] && fc[0]<=p[1]) {
+				good = TRUE;
+				break;
+			}
+
+			p += 2;
+		}
+
+		if (!good) {
+			char* fc2 = fc;
+
+			while (*fc2) {
+				fc2[0] = fc2[1];
+
+				fc2++;
+			}
+		}
+
+		fc++;
+	}
+
 try_again:
 	;
 
