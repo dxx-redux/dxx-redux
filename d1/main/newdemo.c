@@ -3287,12 +3287,12 @@ void newdemo_stop_recording()
 	while (*fc) {
 		const char *p = demoname_allowed_chars;
 
-		bool good = FALSE;
+		bool good = 0;
 		while (*p) {
 			Assert(p[1]);
 
 			if (fc[0]>=p[0] && fc[0]<=p[1]) {
-				good = TRUE;
+				good = 1;
 				break;
 			}
 
