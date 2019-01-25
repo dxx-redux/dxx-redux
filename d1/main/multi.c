@@ -3528,7 +3528,7 @@ void
 multi_send_invuln(void)
 {
 	// Broadcast a change in our pflags (made to support invuln)
-	if(is_observer() || Netgame.max_numobservers == 0) { return; }
+	if(is_observer() || (Netgame.max_numobservers == 0 && !Netgame.host_is_obs)) { return; }
 
 	multibuf[0] = MULTI_INVULN;
 	multibuf[1] = (char)Player_num;
@@ -4436,7 +4436,7 @@ void multi_do_request_status()
 {
 	if (is_observer()) { return; }
 
-	if (Netgame.max_numobservers == 0) { return; }
+	if (Netgame.max_numobservers == 0 && !Netgame.host_is_obs) { return; }
 
 	multi_send_repair(0, Players[Player_num].shields, 0);
 	multi_send_ship_status();
@@ -4447,7 +4447,7 @@ void multi_send_damage(fix damage, fix shields, ubyte killer_type, ubyte killer_
 	if (is_observer()) { return; }
 
 	// Sending damage to the host isn't interesting if there cannot be any observers.
-	if (Netgame.max_numobservers == 0) { return; }
+	if (Netgame.max_numobservers == 0 && !Netgame.host_is_obs) { return; }
 
 	// Calculate new shields amount.
 	if (shields < damage)
@@ -4510,7 +4510,7 @@ void multi_send_repair(fix repair, fix shields, ubyte sourcetype)
 	if (is_observer()) { return; }
 
 	// Sending repairs to the host isn't interesting if there cannot be any observers.
-	if (Netgame.max_numobservers == 0) { return; }
+	if (Netgame.max_numobservers == 0 && !Netgame.host_is_obs) { return; }
 
 	// Calculate new shields amount.
 	if (shields + repair > MAX_SHIELDS)
@@ -4561,7 +4561,7 @@ void multi_send_ship_status()
 	if (is_observer()) { return; }
 
 	// Sending ship status to the host isn't interesting if there cannot be any observers.
-	if (Netgame.max_numobservers == 0) { return; }
+	if (Netgame.max_numobservers == 0 && !Netgame.host_is_obs) { return; }
 
 	Send_ship_status = 1;
 }

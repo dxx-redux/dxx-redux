@@ -113,7 +113,7 @@ void show_framerate()
 }
 
 void show_observers() {
-	if(Netgame.max_numobservers == 0) {
+	if(Netgame.max_numobservers == 0 && !Netgame.host_is_obs) {
 		return;
 	}
 

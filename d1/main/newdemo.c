@@ -3252,7 +3252,7 @@ void newdemo_stop_recording()
 			sprintf(testpath, "%s%s_%d%s", DEMO_DIR, basename, attemptnum++, DEMO_EXT); 
 		}
 
-		con_printf(CON_NORMAL, "%s does not exist!", testpath); 
+		con_printf(CON_NORMAL, "%s does not exist!\n", testpath); 
 
 		if(attemptnum > 2) {
 			sprintf(filename, "%s_%d", basename, attemptnum - 1); 
