@@ -3162,7 +3162,7 @@ void observer_maybe_show_streaks() {
 			add_player_status(pnum, status);
 			remove_player_status(pnum, GST_KILL_STREAK);
 			remove_player_status(pnum, GST_LAST_DEATH);
-		} else if (n_players > 2 && Last_death[pnum] != NULL && ((diff = GameTime64 - Last_death[pnum]->timestamp) >= i2f(60))) {
+		} else if (n_players > 2 + (Netgame.host_is_obs ? 1 : 0) && Last_death[pnum] != NULL && ((diff = GameTime64 - Last_death[pnum]->timestamp) >= i2f(60))) {
 			status.type = GST_LAST_DEATH;
 			if (diff >= i2f(3600)) {
 				sprintf(status.text, "Last Death: %i:%02i:%02i", (int)(diff / i2f(3600)), (int)(diff / i2f(60)) % 60, (int)(diff / i2f(1)) % 60);
@@ -3179,7 +3179,7 @@ void observer_maybe_show_streaks() {
 		}
 
 		// Determine if there is a run.
-		if (is_anarchy && n_players == 2) {
+		if (is_anarchy && n_players == 2 + (Netgame.host_is_obs ? 1 : 0)) {
 			int initial_score = Players[pnum].net_kills_total;
 			int initial_opp_score = Players[player_list[1 - i]].net_kills_total;
 			if (initial_score >= 5) {
@@ -3275,6 +3275,11 @@ void observer_maybe_show_streaks() {
 		p_status = p_status->next;
 	}
 
+	int w;
+	int h;
+	int aw;
+	int x;
+
 	if (y > 0) {
 		y = grd_curcanv->cv_bitmap.bm_h - y - 5;
 
@@ -3288,7 +3293,10 @@ void observer_maybe_show_streaks() {
 			color = get_color_for_player(pnum, 0);
 			gr_set_fontcolor(BM_XRGB(selected_player_rgb[color].r,selected_player_rgb[color].g,selected_player_rgb[color].b), -1);
 
-			gr_printf(5, y, "%s", Players[pnum].callsign);
+			gr_get_string_size(Players[pnum].callsign, &w, &h, &aw);
+			x = grd_curcanv->cv_bitmap.bm_w - w - 5;
+
+			gr_printf(x, y, "%s", Players[pnum].callsign);
 			y += 27;
 
 			color = get_color_for_player(pnum, 1);
@@ -3297,7 +3305,10 @@ void observer_maybe_show_streaks() {
 			g_status = p_status->statuses;
 
 			while (g_status != NULL) {
-				gr_printf(5, y, "%s", g_status->text);
+				gr_get_string_size(g_status->text, &w, &h, &aw);
+				x = grd_curcanv->cv_bitmap.bm_w - w - 5;
+
+				gr_printf(x, y, "%s", g_status->text);
 				y += 27;
 
 				g_status = g_status->next;
