@@ -575,7 +575,7 @@ int choose_drop_segment()
 
 		pnum = (d_rand() * N_players) >> 15;
 		count = 0;
-		while ((count < N_players) && ((Players[pnum].connected == CONNECT_DISCONNECTED) || (pnum==Player_num))) {
+		while ((count < N_players) && ((Players[pnum].connected == CONNECT_DISCONNECTED) || (pnum==Player_num) || (Netgame.host_is_obs && pnum == 0))) {
 			pnum = (pnum+1)%N_players;
 			count++;
 		}

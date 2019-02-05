@@ -400,7 +400,7 @@ void draw_automap(automap *am)
 	// Draw player(s)...
 #ifdef NETWORK
 	if ( (Game_mode & (GM_TEAM | GM_MULTI_COOP)) || (Netgame.game_flags & NETGAME_FLAG_SHOW_MAP) )	{
-		for (i=0; i<N_players; i++)		{
+		for (i=(Netgame.host_is_obs ? 1 : 0); i<N_players; i++)		{
 			if ( (i != Player_num) && ((Game_mode & GM_MULTI_COOP) || (get_team(Player_num) == get_team(i)) || (Netgame.game_flags & NETGAME_FLAG_SHOW_MAP)) )	{
 				if ( Objects[Players[i].objnum].type == OBJ_PLAYER )	{
 					if (Game_mode & GM_TEAM)

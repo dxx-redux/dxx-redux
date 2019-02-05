@@ -238,7 +238,7 @@ void gameseq_remove_unused_players()
 	{
 		for (i=0; i < NumNetPlayerPositions; i++)
 		{
-			if ((!Players[i].connected) || (i >= N_players))
+			if ((i == 0 && Netgame.host_is_obs) || (!Players[i].connected) || (i >= N_players))
 			{
 				multi_make_player_ghost(i);
 			}

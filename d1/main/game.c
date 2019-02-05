@@ -489,7 +489,7 @@ void do_cloak_stuff(void)
 {
 	int i;
 
-	for (i = 0; i < N_players; i++)
+	for (i = (Netgame.host_is_obs ? 1 : 0); i < N_players; i++)
 		if (Players[i].flags & PLAYER_FLAGS_CLOAKED) {
 			if (GameTime64 > Players[i].cloak_time+CLOAK_TIME_MAX)
 			{

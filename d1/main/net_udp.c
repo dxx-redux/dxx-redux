@@ -1483,7 +1483,7 @@ void net_udp_list_join_game()
 }
 
 int color_used(int wingcolor, int missilecolor, int ignore) {
-	for(int i = 0; i < N_players; i++) {
+	for(int i = (Netgame.host_is_obs ? 1 : 0); i < N_players; i++) {
 		if(i == ignore) continue;
 
 		if(Netgame.players[i].color == wingcolor &&
@@ -4717,6 +4717,7 @@ abort:
 		{
 			if (i == 0) {
 				Netgame.host_is_obs = 1;
+				N_players++;
 				Game_mode |= GM_OBSERVER;
 				Current_obs_player = 0;
 			} else {
@@ -5790,23 +5791,33 @@ void net_udp_process_mdata (ubyte *data, int data_len, struct _sockaddr sender_a
 		return;
 
 	// Check if it came from valid IP
-	if (multi_i_am_master())
-	{
-		if (! is_player_ip(sender_addr, pnum))
-		{
-			if (Netgame.max_numobservers == 0 || pnum != OBSERVER_PLAYER_ID || ! is_observer_ip(sender_addr))
-			{
-				drop_rx_packet(data, "not received from player ip"); 
+	if (Netgame.RetroProtocol) {
+		// For Retro Protocol, all we care about is that the sender's IP is from any player.
+		if (!is_any_player_ip(sender_addr)) {
+			if (!multi_i_am_master() || Netgame.max_numobservers == 0 || pnum != OBSERVER_PLAYER_ID || !is_observer_ip(sender_addr)) {
+				drop_rx_packet(data, "not received from any player ip"); 
 				return;
 			}
 		}
-	}
-	else
-	{
-		if (! is_master_ip(sender_addr))
+	} else {
+		if (multi_i_am_master())
 		{
-			drop_rx_packet(data, "not received from master ip"); 
-			return;
+			if (! is_player_ip(sender_addr, pnum))
+			{
+				if (Netgame.max_numobservers == 0 || pnum != OBSERVER_PLAYER_ID || ! is_observer_ip(sender_addr))
+				{
+					drop_rx_packet(data, "not received from player ip"); 
+					return;
+				}
+			}
+		}
+		else
+		{
+			if (! is_master_ip(sender_addr))
+			{
+				drop_rx_packet(data, "not received from master ip"); 
+				return;
+			}
 		}
 	}
 
