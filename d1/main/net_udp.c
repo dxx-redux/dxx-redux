@@ -80,7 +80,9 @@ void net_udp_process_pong(ubyte *data, int data_len, struct _sockaddr sender_add
 int  net_udp_process_game_info(ubyte *data, int data_len, struct _sockaddr game_addr, int lite_info, ubyte is_sync);
 void net_udp_read_endlevel_packet( ubyte *data, int data_len, struct _sockaddr sender_addr );
 void net_udp_send_mdata(int needack, fix64 time);
+void net_udp_send_obs_mdata(fix64 time);
 void net_udp_process_mdata (ubyte *data, int data_len, struct _sockaddr sender_addr, int needack);
+void net_udp_process_obs_data (ubyte *data, int data_len, struct _sockaddr sender_addr);
 void net_udp_send_pdata();
 void net_udp_process_pdata ( ubyte *data, int data_len, struct _sockaddr sender_addr );
 void net_udp_read_pdata_packet(UDP_frame_info *pd);
@@ -233,6 +235,8 @@ char* msg_name(int type)
 
 		case UPID_REATTEMPT_DIRECT:
 			return "UPID_REATTEMPT_DIRECT";
+        case UPID_OBSDATA:
+            return "UPID_OBSDATA";
 
 		default:
 			return "UNKNOWN";
@@ -891,6 +895,7 @@ int valid_token(ubyte *data, int data_len, struct _sockaddr sender_addr) {
 		case UPID_ENDLEVEL_C:
 		case UPID_PDATA:	
 		case UPID_MDATA_PNORM:
+        case UPID_OBSDATA:
 		case UPID_MDATA_PNEEDACK:
 		case UPID_P2P_PING: 
 		case UPID_P2P_PONG: 
@@ -3281,6 +3286,7 @@ void net_udp_process_packet(ubyte *data, struct _sockaddr sender_addr, int lengt
 			case UPID_REQUEST:
 			case UPID_MDATA_ACK:
 			case UPID_MDATA_PNEEDACK:
+            case UPID_OBSDATA:
 				break;
 			default:
 				con_printf(CON_URGENT, "Dropped pid %s: observer sent disallowed packet.\n", msg_name(data[0])); 
@@ -3293,6 +3299,10 @@ void net_udp_process_packet(ubyte *data, struct _sockaddr sender_addr, int lengt
 		case UPID_PDATA:
 		case UPID_MDATA_PNORM:
 			forward_to_observers(data, length, 0); 
+			break; 
+
+        case UPID_OBSDATA:
+			forward_to_observers_nodelay(data, length, 0); 
 			break; 
 
 		case UPID_MDATA_PNEEDACK:
@@ -3401,6 +3411,10 @@ void net_udp_process_packet(ubyte *data, struct _sockaddr sender_addr, int lengt
 		case UPID_MDATA_PNORM:
 			net_udp_process_mdata( data, length, sender_addr, 0 );
 			break;
+
+        case UPID_OBSDATA:
+            net_udp_process_obs_data( data, length, sender_addr );
+            break;
 
 		case UPID_MDATA_PNEEDACK:
 			net_udp_process_mdata( data, length, sender_addr, 1 );
@@ -5100,6 +5114,29 @@ void net_udp_send_data(const ubyte * ptr, int len, int priority )
 		net_udp_send_mdata((priority==2)?1:0, timer_query());
 }
 
+void net_udp_send_obs_data(const ubyte * ptr, int len)
+{
+	char check;
+
+	if (Endlevel_sequence)
+		return;
+
+	if ((UDP_MData.mbuf_size+len) > UPID_MDATA_BUF_SIZE )
+	{
+		check = ptr[0];
+		net_udp_send_obs_mdata(timer_query());
+		if (UDP_MData.mbuf_size != 0)
+			Int3();
+		Assert(check == ptr[0]);
+		(void)check;
+	}
+
+	Assert(UDP_MData.mbuf_size+len <= UPID_MDATA_BUF_SIZE);
+
+	memcpy( &UDP_MData.mbuf[UDP_MData.mbuf_size], ptr, len );
+	UDP_MData.mbuf_size += len;
+}
+
 void net_udp_timeout_check(fix64 time)
 {
 	if(!multi_i_am_master() && is_observer()) { return; }
@@ -5782,6 +5819,42 @@ void net_udp_send_mdata(int needack, fix64 time)
 	memset(&UDP_MData.mbuf, 0, sizeof(ubyte)*UPID_MDATA_BUF_SIZE);
 }
 
+void net_udp_send_obs_mdata(fix64 time)
+{
+    if (!Netgame.RetroProtocol) {
+        return;
+    }
+ 
+	ubyte buf[sizeof(UDP_mdata_info)];
+	int len = 0;
+	
+	if (!(Game_mode&GM_NETWORK) || UDP_Socket[0] == -1)
+		return;
+
+	if (!(UDP_MData.mbuf_size > 0))
+		return;
+
+	memset(&buf, 0, sizeof(UDP_mdata_info));
+
+    buf[len] = UPID_OBSDATA;
+																				len++;
+	PUT_INTEL_INT(buf + len, netgame_token);									len += 4; 																				
+	buf[len] = Player_num;														len++;
+	memcpy(buf + len, UDP_MData.mbuf, sizeof(char)*UDP_MData.mbuf_size);		len += UDP_MData.mbuf_size;
+
+    if(multi_i_am_master()) {
+        forward_to_observers(buf, len, 0); 
+    } else if (Players[0].connected == CONNECT_PLAYING) {
+        net_udp_send_to_player(buf, len, 0); 
+    }
+
+	// Clear UDP_MData except pkt_num. That one must not be deleted so we can clearly keep track of important packets.
+	UDP_MData.type = 0;
+	UDP_MData.Player_num = 0;
+	UDP_MData.mbuf_size = 0;
+	memset(&UDP_MData.mbuf, 0, sizeof(ubyte)*UPID_MDATA_BUF_SIZE);
+}
+
 void net_udp_process_mdata (ubyte *data, int data_len, struct _sockaddr sender_addr, int needack)
 {
 	int pnum = data[5], dataoffset = (needack?10:6);
@@ -5853,6 +5926,47 @@ void net_udp_process_mdata (ubyte *data, int data_len, struct _sockaddr sender_a
 			}
 		}
 	}
+
+	// Check if we are in correct state to process the packet
+	if (!((Network_status == NETSTAT_PLAYING)||(Network_status == NETSTAT_ENDLEVEL) || Network_status==NETSTAT_WAITING))
+		return;
+
+	// Process
+	if (Endlevel_sequence || (Network_status == NETSTAT_ENDLEVEL))
+	{
+		int old_Endlevel_sequence = Endlevel_sequence;
+		Endlevel_sequence = 1;
+		multi_process_bigdata(data+dataoffset, data_len-dataoffset);
+		Endlevel_sequence = old_Endlevel_sequence;
+		return;
+	}
+
+	multi_process_bigdata( data+dataoffset, data_len-dataoffset );
+}
+
+void net_udp_process_obs_data (ubyte *data, int data_len, struct _sockaddr sender_addr)
+{
+	if (!Netgame.RetroProtocol) {
+        return;
+    }
+
+	int pnum = data[5], dataoffset = 6;
+
+	// Check if packet might be bogus
+	if ((pnum < 0) || (data_len > sizeof(UDP_mdata_info)))
+		return;
+
+    // If we are a non-master player, this is a bad packet
+    if (!multi_i_am_master() && is_any_player_ip(sender_addr)) {
+        drop_rx_packet(data, "received by non-master player ip"); 
+        return;
+    }
+
+	// Check if it came from valid IP
+    if (!is_player_ip(sender_addr, 0) && !is_observer_ip(sender_addr)) {
+        drop_rx_packet(data, "not received from master or observer ip"); 
+        return;
+    }
 
 	// Check if we are in correct state to process the packet
 	if (!((Network_status == NETSTAT_PLAYING)||(Network_status == NETSTAT_ENDLEVEL) || Network_status==NETSTAT_WAITING))

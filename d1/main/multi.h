@@ -79,6 +79,7 @@ extern int multi_protocol; // set and determinate used protocol
 	VALUE(MULTI_KILL                 , 5)	\
 	VALUE(MULTI_REMOVE_OBJECT        , 5)	\
 	VALUE(MULTI_MESSAGE              , 37)	/* (MAX_MESSAGE_LENGTH = 40) */	\
+    VALUE(MULTI_OBS_MESSAGE          , 49)  \
 	VALUE(MULTI_QUIT                 , 2)	\
 	VALUE(MULTI_PLAY_SOUND           , 4)	\
 	VALUE(MULTI_CONTROLCEN           , 4)	\
@@ -226,6 +227,7 @@ void multi_send_destroy_controlcen(int objnum, int player);
 void multi_send_endlevel_start(int);
 void multi_send_player_explode(char type);
 void multi_send_message(void);
+void multi_send_obs_message(void);
 void multi_send_position(int objnum);
 void multi_send_reappear();
 void multi_send_kill(int objnum);
@@ -276,6 +278,7 @@ void multi_new_game(void);
 void multi_sort_kill_list(void);
 void multi_reset_stuff(void);
 void multi_send_data(unsigned char *buf, int len, int priority);
+void multi_send_obs_data(unsigned char *buf, int len);
 int get_team(int pnum);
 int multi_maybe_disable_friendly_fire(object *killer);
 void multi_initiate_save_game();
