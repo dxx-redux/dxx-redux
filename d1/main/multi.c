@@ -1647,6 +1647,10 @@ void multi_send_macro(int key)
 void
 multi_send_message_start()
 {
+    if (is_observer() && !PlayerCfg.ObsChat) {
+        return;
+    }
+
 	if (Game_mode&GM_MULTI) {
 		multi_sending_message[Player_num] = 1;
         if (!is_observer()) {
@@ -1662,7 +1666,9 @@ extern fix StartingShields;
 
 void multi_send_message_end()
 {
-
+    if (is_observer() && !PlayerCfg.ObsChat) {
+        return;
+    }
 
 	char *mytempbuf;
 	int i,t;
@@ -2020,6 +2026,12 @@ multi_do_fire(const ubyte *buf)
 void multi_do_message(const ubyte *cbuf)
 {
 	const char *buf = (const char*)cbuf;
+
+    if (is_observer() && !PlayerCfg.ObsPlayerChat) {
+		multi_sending_message[(int)buf[1]] = 0;
+        return;
+    }
+
 	char *colon,mesbuf[100];
 	int t;
 
@@ -2077,6 +2089,9 @@ void multi_do_message(const ubyte *cbuf)
 
 void multi_do_obs_message(const ubyte *cbuf)
 {
+    if (!PlayerCfg.ObsChat) {
+        return;
+    }
 	const char *buf = (const char*)cbuf;
 
     HUD_init_message(HM_MULTI, "%c%c%s", CC_COLOR, BM_XRGB(8, 8, 32), buf+2);
