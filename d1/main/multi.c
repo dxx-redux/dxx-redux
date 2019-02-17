@@ -1344,14 +1344,14 @@ void multi_send_obs_data(unsigned char *buf, int len)
 {
 	if (len != message_length[(int)buf[0]]) {
 		//Error("multi_send_data: Packet type %i length: %i, expected: %i\n", buf[0], len, message_length[(int)buf[0]]);
-		con_printf(CON_NORMAL, "multi_send_data: Packet type %i length: %i, expected: %i\n", buf[0], len, message_length[(int)buf[0]]);
+		con_printf(CON_NORMAL, "multi_send_obs_data: Packet type %i length: %i, expected: %i\n", buf[0], len, message_length[(int)buf[0]]);
 		for(int i = 0; i < len; i++) {
 			con_printf(CON_NORMAL, "    %d: %d\n", i, buf[i]); 
 		}
 		return;
 	}
 	if (buf[0] >= sizeof(message_length) / sizeof(message_length[0])) {
-		con_printf(CON_NORMAL, "multi_send_data: Illegal packet type %i\n", buf[0]);
+		con_printf(CON_NORMAL, "multi_send_obs_data: Illegal packet type %i\n", buf[0]);
 		return;
 	}
 
@@ -1361,7 +1361,7 @@ void multi_send_obs_data(unsigned char *buf, int len)
 		{
 #ifdef USE_UDP
 			case MULTI_PROTO_UDP:
-				net_udp_send_obs_data(buf, len);
+				net_udp_send_mdata_direct(buf, len, 0, 0);
 				break;
 #endif
 			default:
@@ -1649,7 +1649,7 @@ multi_send_message_start()
 {
 	if (Game_mode&GM_MULTI) {
 		multi_sending_message[Player_num] = 1;
-        if (is_observer()) {
+        if (!is_observer()) {
 		    multi_send_msgsend_state(1);
         }
 		multi_message_index = 0;
@@ -1663,19 +1663,21 @@ extern fix StartingShields;
 void multi_send_message_end()
 {
 
-	if(is_observer()) {
-        HUD_init_message(HM_MULTI, "%s%s%s '%s'", (char)CC_COLOR, (char)BM_XRGB(8, 8, 32), TXT_SENDING, Network_message);
-        multi_send_obs_message();
-        return;
-    }
 
 	char *mytempbuf;
 	int i,t;
 
-  multi_message_index = 0;
-  multi_sending_message[Player_num] = 0;
-  multi_send_msgsend_state(0);
-  key_toggle_repeat(0);
+    multi_message_index = 0;
+    multi_sending_message[Player_num] = 0;
+    multi_send_msgsend_state(0);
+    key_toggle_repeat(0);
+
+	if(is_observer()) {
+        multi_send_obs_message();
+        multi_message_feedback();
+        game_flush_inputs();
+        return;
+    }
 
 	if (!d_strnicmp (Network_message,"/Handicap: ",11))
 	{
@@ -2015,8 +2017,7 @@ multi_do_fire(const ubyte *buf)
 	}
 }
 
-void
-multi_do_message(const ubyte *cbuf)
+void multi_do_message(const ubyte *cbuf)
 {
 	const char *buf = (const char*)cbuf;
 	char *colon,mesbuf[100];
@@ -2072,6 +2073,13 @@ multi_do_message(const ubyte *cbuf)
 		HUD_init_message(HM_MULTI, "%s %s", mesbuf, colon+2);
 		multi_sending_message[(int)buf[1]] = 0;
 	}
+}
+
+void multi_do_obs_message(const ubyte *cbuf)
+{
+	const char *buf = (const char*)cbuf;
+
+    HUD_init_message(HM_MULTI, "%c%c%s", CC_COLOR, BM_XRGB(8, 8, 32), buf+2);
 }
 
 void
@@ -3351,14 +3359,16 @@ void multi_send_obs_message(void)
     multibuf[loc] = MULTI_OBS_MESSAGE; loc += 1;
     multibuf[loc] = OBSERVER_PLAYER_ID; loc += 1;
 
-    multibuf[loc] = CC_COLOR; loc += 1;
-    multibuf[loc] = BM_XRGB(8, 8, 32); loc += 1;
     strncpy((char*)multibuf+loc, Players[Player_num].callsign, strlen(Players[Player_num].callsign)); loc += strlen(Players[Player_num].callsign);
     multibuf[loc] = ':'; loc += 1;
     multibuf[loc] = ' '; loc += 1;
     strncpy((char*)multibuf+loc, Network_message, MAX_MESSAGE_LEN); loc += MAX_MESSAGE_LEN;
-    multibuf[14 + MAX_MESSAGE_LEN - 1] = '\0';
-    multi_send_obs_data(multibuf, 14 + MAX_MESSAGE_LEN);
+    multibuf[12 + MAX_MESSAGE_LEN - 1] = '\0';
+    multi_send_obs_data(multibuf, 12 + MAX_MESSAGE_LEN);
+
+    if (multi_i_am_master()) {
+        HUD_init_message(HM_MULTI, "%c%c%s: %s", (char)CC_COLOR, (char)BM_XRGB(8, 8, 32), Players[Player_num].callsign, Network_message);
+    }
 }
 
 void
@@ -5054,6 +5064,8 @@ multi_process_data(const ubyte *buf, int len)
 			if (!Endlevel_sequence) multi_do_player_explode(buf); break;
 		case MULTI_MESSAGE:
 			if (!Endlevel_sequence) multi_do_message(buf); break;
+        case MULTI_OBS_MESSAGE:
+			if (!Endlevel_sequence) multi_do_obs_message(buf); break;
 		case MULTI_QUIT:
 			if (!Endlevel_sequence) multi_do_quit(buf); break;
 		case MULTI_BEGIN_SYNC:

@@ -3280,7 +3280,7 @@ void net_udp_process_packet(ubyte *data, struct _sockaddr sender_addr, int lengt
 		return;
 	}
 
-	if (multi_i_am_master() && is_observer_ip(sender_addr)) {
+	if (multi_i_am_master() && !is_any_player_ip(sender_addr) && is_observer_ip(sender_addr)) {
 		switch (data[0]) {
 			case UPID_P2P_PING:
 			case UPID_REQUEST:
@@ -3294,24 +3294,26 @@ void net_udp_process_packet(ubyte *data, struct _sockaddr sender_addr, int lengt
 		}
 	}
 
-	switch (data[0])
-	{
-		case UPID_PDATA:
-		case UPID_MDATA_PNORM:
-			forward_to_observers(data, length, 0); 
-			break; 
+    if (multi_i_am_master()) {
+        switch (data[0])
+        {
+            case UPID_PDATA:
+            case UPID_MDATA_PNORM:
+                forward_to_observers(data, length, 0); 
+                break; 
 
-        case UPID_OBSDATA:
-			forward_to_observers_nodelay(data, length, 0); 
-			break; 
+            case UPID_OBSDATA:
+                forward_to_observers_nodelay(data, length, 0); 
+                break; 
 
-		case UPID_MDATA_PNEEDACK:
-			forward_to_observers(data, length, 1); 
-			break; 
+            case UPID_MDATA_PNEEDACK:
+                forward_to_observers(data, length, 1); 
+                break; 
 
-		default: 
-			break;			
-	}
+            default: 
+                break;			
+        }
+    }
 
 	int result;
 	switch (data[0])
@@ -4445,7 +4447,7 @@ void net_udp_read_sync_packet( ubyte * data, int data_len, struct _sockaddr send
 
 		Objects[Players[Player_num].objnum].type = OBJ_PLAYER;
 	} else {
-		if (Netgame.host_is_obs) {
+		if (Host_is_obs) {
 			Player_num = 0;
 		} else {
 			Player_num = OBSERVER_PLAYER_ID; // Kluge to prevent crashes
@@ -4714,6 +4716,7 @@ abort:
 
 	// Remove players that aren't marked.
 	N_players = 0;
+    Host_is_obs = 0;
 	for (i=0; i<save_nplayers; i++ )	{
 		if (m[i].value)
 		{
@@ -4731,6 +4734,7 @@ abort:
 		{
 			if (i == 0) {
 				Netgame.host_is_obs = 1;
+                Host_is_obs = 1;
 				N_players++;
 				Game_mode |= GM_OBSERVER;
 				Current_obs_player = 0;
@@ -5112,29 +5116,6 @@ void net_udp_send_data(const ubyte * ptr, int len, int priority )
 
 	if (priority)
 		net_udp_send_mdata((priority==2)?1:0, timer_query());
-}
-
-void net_udp_send_obs_data(const ubyte * ptr, int len)
-{
-	char check;
-
-	if (Endlevel_sequence)
-		return;
-
-	if ((UDP_MData.mbuf_size+len) > UPID_MDATA_BUF_SIZE )
-	{
-		check = ptr[0];
-		net_udp_send_obs_mdata(timer_query());
-		if (UDP_MData.mbuf_size != 0)
-			Int3();
-		Assert(check == ptr[0]);
-		(void)check;
-	}
-
-	Assert(UDP_MData.mbuf_size+len <= UPID_MDATA_BUF_SIZE);
-
-	memcpy( &UDP_MData.mbuf[UDP_MData.mbuf_size], ptr, len );
-	UDP_MData.mbuf_size += len;
 }
 
 void net_udp_timeout_check(fix64 time)
@@ -5714,7 +5695,9 @@ void net_udp_send_mdata_direct(ubyte *data, int data_len, int pnum, int needack)
 
 	if (needack)
 		buf[len] = UPID_MDATA_PNEEDACK;
-	else
+	else if (data[0] == MULTI_OBS_MESSAGE)
+		buf[len] = UPID_OBSDATA;
+    else
 		buf[len] = UPID_MDATA_PNORM;
 																				len++;
 
@@ -5811,42 +5794,6 @@ void net_udp_send_mdata(int needack, fix64 time)
 
 	if (needack)
 		net_udp_noloss_add_queue_pkt(UDP_MData.pkt_num, time, UDP_MData.mbuf, UDP_MData.mbuf_size, Player_num, pack);
-
-	// Clear UDP_MData except pkt_num. That one must not be deleted so we can clearly keep track of important packets.
-	UDP_MData.type = 0;
-	UDP_MData.Player_num = 0;
-	UDP_MData.mbuf_size = 0;
-	memset(&UDP_MData.mbuf, 0, sizeof(ubyte)*UPID_MDATA_BUF_SIZE);
-}
-
-void net_udp_send_obs_mdata(fix64 time)
-{
-    if (!Netgame.RetroProtocol) {
-        return;
-    }
- 
-	ubyte buf[sizeof(UDP_mdata_info)];
-	int len = 0;
-	
-	if (!(Game_mode&GM_NETWORK) || UDP_Socket[0] == -1)
-		return;
-
-	if (!(UDP_MData.mbuf_size > 0))
-		return;
-
-	memset(&buf, 0, sizeof(UDP_mdata_info));
-
-    buf[len] = UPID_OBSDATA;
-																				len++;
-	PUT_INTEL_INT(buf + len, netgame_token);									len += 4; 																				
-	buf[len] = Player_num;														len++;
-	memcpy(buf + len, UDP_MData.mbuf, sizeof(char)*UDP_MData.mbuf_size);		len += UDP_MData.mbuf_size;
-
-    if(multi_i_am_master()) {
-        forward_to_observers(buf, len, 0); 
-    } else if (Players[0].connected == CONNECT_PLAYING) {
-        net_udp_send_to_player(buf, len, 0); 
-    }
 
 	// Clear UDP_MData except pkt_num. That one must not be deleted so we can clearly keep track of important packets.
 	UDP_MData.type = 0;
@@ -5957,8 +5904,8 @@ void net_udp_process_obs_data (ubyte *data, int data_len, struct _sockaddr sende
 		return;
 
     // If we are a non-master player, this is a bad packet
-    if (!multi_i_am_master() && is_any_player_ip(sender_addr)) {
-        drop_rx_packet(data, "received by non-master player ip"); 
+    if (!is_observer()) {
+        drop_rx_packet(data, "received by non-observer"); 
         return;
     }
 
