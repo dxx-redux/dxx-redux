@@ -7,7 +7,7 @@
 //
 // Generated from the TEXTINCLUDE 2 resource.
 //
-#include "afxres.h"
+#include "windows.h"
 IDI_DXX_ICON            ICON                    "d1x-rebirth.ico"
 
 /////////////////////////////////////////////////////////////////////////////
@@ -32,7 +32,7 @@ END
 
 2 TEXTINCLUDE
 BEGIN
-    "#include ""afxres.h""\r\n"
+    "#include ""windows.h""\r\n"
 	"IDI_DXX_ICON            ICON                    ""d1x-rebirth.ico""\r\n"
     "\0"
 END

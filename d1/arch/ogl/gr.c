@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <string.h>
 #ifdef _MSC_VER
+#include <winsock2.h>
 #include <windows.h>
 #endif
 
@@ -28,7 +29,7 @@
 #endif
 
 #include <errno.h>
-#include <SDL/SDL.h>
+#include <SDL.h>
 #include "hudmsg.h"
 #include "game.h"
 #include "text.h"

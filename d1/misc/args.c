@@ -20,7 +20,7 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <SDL/SDL_stdinc.h>
+#include <SDL_stdinc.h>
 #include "u_mem.h"
 #include "physfsx.h"
 #include "strio.h"
