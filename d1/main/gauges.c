@@ -1617,10 +1617,6 @@ void draw_player_ship(int cloak_state,int x, int y)
 		bm = &GameBitmaps[Gauges[GAUGE_SHIPS+color].index];
 	}
 
-	//for(int i = 0; i < 8; i++) {
-	//	con_printf(CON_NORMAL, "Player ship %d %d\n", i, Gauges[GAUGE_SHIPS+i].index);
-	//}
-
 	if (cloak_state)
 	{
 		static int step = 0;
@@ -3505,8 +3501,102 @@ void observer_maybe_show_death_log(int y) {
 		}
 
 		kle = kle->next;
-		y += FSPACY(5);
+		y += FSPACY(6);
 	}
+    
+    if (PlayerCfg.ObsShowDeathSummary) {
+        kle = Kill_log;
+
+        damage_taken_totals* dtt;
+        char damage_for[32];
+        bool player_shown[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+        while (kle != NULL && GameTime64 - kle->timestamp < i2f(15)) {
+            if (player_shown[kle->killed_id] == 1) {
+                kle = kle->next;
+                continue;
+            }
+            player_shown[kle->killed_id] = 1;
+
+            y += 10;
+        
+            color = get_color_for_player(kle->killed_id, 0);
+            gr_set_fontcolor(BM_XRGB(selected_player_rgb[color].r,selected_player_rgb[color].g,selected_player_rgb[color].b), -1);
+
+            sprintf(damage_for, "Top damage for %s:", Players[kle->killed_id].callsign);
+
+            x = grd_curcanv->cv_bitmap.bm_w - 5;
+            gr_get_string_size(damage_for, &sw, &sh, &aw);
+            x -= sw;
+            gr_printf(x, y, damage_for);
+            y += FSPACY(6);
+
+            dtt = First_damage_taken_previous_totals[kle->killed_id];
+            int i = 0;
+
+            while (dtt != NULL && i < 3) {
+                switch (dtt->killer_type) {
+                    case OBJ_WALL:
+                        if (dtt->damage_type == DAMAGE_LAVA) {
+                            sprintf(killer, "Lava");
+                        } else {
+                            sprintf(killer, "Wall");
+                        }
+                        reason[0] = '\0';
+                        break;
+                    case OBJ_ROBOT:
+                        sprintf(killer, "Robot");
+                        reason[0] = '\0';
+                        break;
+                    case OBJ_PLAYER:
+                        sprintf(killer, "%s", Players[dtt->killer_id].callsign);
+
+                        switch (dtt->damage_type) {
+                            case DAMAGE_WEAPON:
+                            case DAMAGE_BLAST:
+                                if (dtt->source_id == SHIP_EXPLOSION_DAMAGE) {
+                                    sprintf(reason, "Explosion");
+                                } else {
+                                    sprintf(reason, "%s", weapon_id_to_name(dtt->source_id));
+                                }
+                                break;
+                            case DAMAGE_COLLISION:
+                                sprintf(reason, "Ramming");
+                                break;
+                            case DAMAGE_LAVA:
+                                sprintf(reason, "Lava");
+                                break;
+                            case DAMAGE_OVERCHARGE:
+                                sprintf(reason, "Overcharge");
+                                break;
+                        }
+                        break;
+                    case OBJ_CNTRLCEN:
+                        sprintf(killer, "Reactor");
+                        reason[0] = '\0';
+                        break;
+                }
+
+                if (killer[0] == '\0') {
+                    sprintf(damage_for, "%s %0.1f", reason, f2fl(dtt->total_damage));
+                } else if (reason[0] == '\0') {
+                    sprintf(damage_for, "%s %0.1f", killer, f2fl(dtt->total_damage));
+                } else {
+                    sprintf(damage_for, "%s's %s %0.1f", killer, reason, f2fl(dtt->total_damage));
+                }
+
+                x = grd_curcanv->cv_bitmap.bm_w - 5;
+                gr_get_string_size(damage_for, &sw, &sh, &aw);
+                x -= sw;
+                gr_printf(x, y, damage_for);
+                y += FSPACY(6);
+
+                dtt = dtt->next;
+                i++;
+            }
+
+            kle = kle->next;
+        }
+    }
 }
 
 void observer_maybe_show_death_summaries() {

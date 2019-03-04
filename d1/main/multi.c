@@ -261,6 +261,14 @@ void add_observatory_stat(int player_num, ubyte event_type) {
 }
 
 void add_observatory_damage_stat(int player_num, fix shields_delta, fix new_shields, fix old_shields, ubyte killer_type, ubyte killer_id, ubyte damage_type, ubyte source_id) {
+    bool death = 0;
+
+    // Set shields delta to old_shields if there was a kill.
+	if (new_shields <= 0 && shields_delta > old_shields) {
+        shields_delta = old_shields;
+        death = 1;
+    }
+
 	// Set source_id for ship explosions and collisions.
 	if (killer_type == OBJ_PLAYER && damage_type == DAMAGE_BLAST && source_id == 0) {
 		source_id = SHIP_EXPLOSION_DAMAGE;
@@ -281,144 +289,149 @@ void add_observatory_damage_stat(int player_num, fix shields_delta, fix new_shie
 	}
 	Last_current_shield_status[player_num] = sta;
 
-	// Record player's overall damage taken total.
-	damage_taken_totals* dtt = First_damage_taken_totals[player_num];
-	while (dtt != NULL && dtt->killer_type != killer_type && dtt->killer_id != killer_id && dtt->damage_type != damage_type && dtt->source_id != source_id) {
-		dtt = dtt->next;
-	}
+    // Do not process further for shield pickups.
+    if (damage_type == DAMAGE_SHIELD) {
+        return;
+    }
 
-	if (dtt == NULL) {
-		dtt = (damage_taken_totals*)d_malloc(sizeof(damage_taken_totals));
-		dtt->total_damage = -(shields_delta);
-		dtt->killer_type = killer_type;
-		dtt->killer_id = killer_id;
-		dtt->damage_type = damage_type;
-		dtt->source_id = source_id;
-		dtt->next = First_damage_taken_totals[player_num];
-		dtt->prev = NULL;
-		if (First_damage_taken_totals[player_num] != NULL) {
-			First_damage_taken_totals[player_num]->prev = dtt;
-		}
-		First_damage_taken_totals[player_num] = dtt;
-	} else {
-		dtt->total_damage -= shields_delta;
-	}
-	
-	// Record player's damage taken total for this point.
-	dtt = First_damage_taken_current_totals[player_num];
-	while (dtt != NULL && dtt->killer_type != killer_type && dtt->killer_id != killer_id && dtt->damage_type != damage_type && dtt->source_id != source_id) {
-		dtt = dtt->next;
-	}
+    // Record player's overall damage taken total.
+    damage_taken_totals* dtt = First_damage_taken_totals[player_num];
+    while (dtt != NULL && (dtt->killer_type != killer_type || dtt->killer_id != killer_id || dtt->damage_type != damage_type || dtt->source_id != source_id)) {
+        dtt = dtt->next;
+    }
 
-	if (dtt == NULL) {
-		dtt = (damage_taken_totals*)d_malloc(sizeof(damage_taken_totals));
-		dtt->total_damage = -(shields_delta);
-		dtt->killer_type = killer_type;
-		dtt->killer_id = killer_id;
-		dtt->damage_type = damage_type;
-		dtt->source_id = source_id;
-		dtt->next = First_damage_taken_current_totals[player_num];
-		dtt->prev = NULL;
-		if (First_damage_taken_current_totals[player_num] != NULL) {
-			First_damage_taken_current_totals[player_num]->prev = dtt;
-		}
-		First_damage_taken_current_totals[player_num] = dtt;
-	} else {
-		dtt->total_damage -= shields_delta;
-	}
+    if (dtt == NULL) {
+        dtt = (damage_taken_totals*)d_malloc(sizeof(damage_taken_totals));
+        dtt->total_damage = shields_delta;
+        dtt->killer_type = killer_type;
+        dtt->killer_id = killer_id;
+        dtt->damage_type = damage_type;
+        dtt->source_id = source_id;
+        dtt->next = First_damage_taken_totals[player_num];
+        dtt->prev = NULL;
+        if (First_damage_taken_totals[player_num] != NULL) {
+            First_damage_taken_totals[player_num]->prev = dtt;
+        }
+        First_damage_taken_totals[player_num] = dtt;
+    } else {
+        dtt->total_damage += shields_delta;
+    }
+    
+    // Record player's damage taken total for this point.
+    dtt = First_damage_taken_current_totals[player_num];
+    while (dtt != NULL && (dtt->killer_type != killer_type || dtt->killer_id != killer_id || dtt->damage_type != damage_type || dtt->source_id != source_id)) {
+        dtt = dtt->next;
+    }
 
-	// Record player's damage dealt total.
-	damage_done_totals* ddt = NULL;
-	if (killer_type == OBJ_PLAYER) {
-		ddt = First_damage_done_totals[killer_id];
-		while (ddt != NULL && ddt->source_id != source_id) {
-			ddt = ddt->next;
-		}
+    if (dtt == NULL) {
+        dtt = (damage_taken_totals*)d_malloc(sizeof(damage_taken_totals));
+        dtt->total_damage = shields_delta;
+        dtt->killer_type = killer_type;
+        dtt->killer_id = killer_id;
+        dtt->damage_type = damage_type;
+        dtt->source_id = source_id;
+        dtt->next = First_damage_taken_current_totals[player_num];
+        dtt->prev = NULL;
+        if (First_damage_taken_current_totals[player_num] != NULL) {
+            First_damage_taken_current_totals[player_num]->prev = dtt;
+        }
+        First_damage_taken_current_totals[player_num] = dtt;
+    } else {
+        dtt->total_damage += shields_delta;
+    }
 
-		if (ddt == NULL) {
-			ddt = (damage_done_totals*)d_malloc(sizeof(damage_done_totals));
-			ddt->total_damage = -(shields_delta);
-			ddt->source_id = source_id;
-			ddt->next = First_damage_done_totals[killer_id];
-			ddt->prev = NULL;
-			if (First_damage_done_totals[killer_id] != NULL) {
-				First_damage_done_totals[killer_id]->prev = ddt;
-			}
-			First_damage_done_totals[killer_id] = ddt;
-		} else {
-			ddt->total_damage -= shields_delta;
-		}
-	}
+    // Record player's damage dealt total.
+    damage_done_totals* ddt = NULL;
+    if (killer_type == OBJ_PLAYER) {
+        ddt = First_damage_done_totals[killer_id];
+        while (ddt != NULL && ddt->source_id != source_id) {
+            ddt = ddt->next;
+        }
 
-	// Record death.
-	if (new_shields <= 0 && shields_delta > old_shields) {
-		Last_previous_shield_status[player_num] = NULL;
-		while ((sta = First_previous_shield_status[player_num]) != NULL) {
-			First_previous_shield_status[player_num] = sta->next;
-			d_free(sta);
-		}
+        if (ddt == NULL) {
+            ddt = (damage_done_totals*)d_malloc(sizeof(damage_done_totals));
+            ddt->total_damage = shields_delta;
+            ddt->source_id = source_id;
+            ddt->next = First_damage_done_totals[killer_id];
+            ddt->prev = NULL;
+            if (First_damage_done_totals[killer_id] != NULL) {
+                First_damage_done_totals[killer_id]->prev = ddt;
+            }
+            First_damage_done_totals[killer_id] = ddt;
+        } else {
+            ddt->total_damage += shields_delta;
+        }
+    }
 
-		First_previous_shield_status[player_num] = First_current_shield_status[player_num];
-		Last_previous_shield_status[player_num] = Last_current_shield_status[player_num];
+    // Record death.
+    if (death == 1) {
+        Last_previous_shield_status[player_num] = NULL;
+        while ((sta = First_previous_shield_status[player_num]) != NULL) {
+            First_previous_shield_status[player_num] = sta->next;
+            d_free(sta);
+        }
 
-		First_current_shield_status[player_num] = NULL;
-		Last_current_shield_status[player_num] = NULL;
+        First_previous_shield_status[player_num] = First_current_shield_status[player_num];
+        Last_previous_shield_status[player_num] = Last_current_shield_status[player_num];
 
-		while ((dtt = First_damage_taken_previous_totals[player_num]) != NULL) {
-			First_damage_taken_previous_totals[player_num] = dtt->next;
-			d_free(dtt);
-		}
+        First_current_shield_status[player_num] = NULL;
+        Last_current_shield_status[player_num] = NULL;
 
-		First_damage_taken_previous_totals[player_num] = First_damage_taken_current_totals[player_num];
+        while ((dtt = First_damage_taken_previous_totals[player_num]) != NULL) {
+            First_damage_taken_previous_totals[player_num] = dtt->next;
+            d_free(dtt);
+        }
 
-		First_damage_taken_current_totals[player_num] = NULL;
+        First_damage_taken_previous_totals[player_num] = First_damage_taken_current_totals[player_num];
 
-		// Sort damage taken previous totals by total damage.
-		dtt = First_damage_taken_previous_totals[player_num];
-		damage_taken_totals* next_dtt = NULL;
-		damage_taken_totals* a = NULL;
-		damage_taken_totals* b = NULL;
-		while (dtt != NULL) {
-			next_dtt = dtt->next;
+        First_damage_taken_current_totals[player_num] = NULL;
 
-			if (dtt->prev != NULL) {
-				while (dtt != NULL && dtt->prev != NULL && dtt->total_damage > dtt->prev->total_damage) {
-					a = dtt->prev;
-					b = dtt;
+        // Sort damage taken previous totals by total damage.
+        dtt = First_damage_taken_previous_totals[player_num];
+        damage_taken_totals* next_dtt = NULL;
+        damage_taken_totals* a = NULL;
+        damage_taken_totals* b = NULL;
+        while (dtt != NULL) {
+            next_dtt = dtt->next;
 
-					a->next = b->next;
-					b->prev = a->prev;
+            if (dtt->prev != NULL) {
+                while (dtt != NULL && dtt->prev != NULL && dtt->total_damage > dtt->prev->total_damage) {
+                    a = dtt->prev;
+                    b = dtt;
 
-					if (a->next != NULL) {
-						a->next->prev = a;
-					}
+                    a->next = b->next;
+                    b->prev = a->prev;
 
-					if (b->prev != NULL) {
-						b->prev->next = b;
-					}
+                    if (a->next != NULL) {
+                        a->next->prev = a;
+                    }
 
-					b->next = a;
-					a->prev = b;
-				}
-			}
+                    if (b->prev != NULL) {
+                        b->prev->next = b;
+                    }
 
-			dtt = next_dtt;
-		}
+                    b->next = a;
+                    a->prev = b;
+                }
+            }
 
-		// Add to the kill log.
-		kill_log_event* kle = (kill_log_event*)d_malloc(sizeof(kill_log_event));
-		kle->timestamp = GameTime64;
-		kle->killed_id = player_num;
-		kle->killer_type = killer_type;
-		kle->killer_id = killer_id;
-		kle->damage_type = damage_type;
-		kle->source_id = source_id;
-		kle->next = Kill_log;
-		Kill_log = kle;
+            dtt = next_dtt;
+        }
 
-		// Show the player's most recent death until the time listed.
-		Show_death_until[player_num] = GameTime64 + i2f(15);
-	}
+        // Add to the kill log.
+        kill_log_event* kle = (kill_log_event*)d_malloc(sizeof(kill_log_event));
+        kle->timestamp = GameTime64;
+        kle->killed_id = player_num;
+        kle->killer_type = killer_type;
+        kle->killer_id = killer_id;
+        kle->damage_type = damage_type;
+        kle->source_id = source_id;
+        kle->next = Kill_log;
+        Kill_log = kle;
+
+        // Show the player's most recent death until the time listed.
+        Show_death_until[player_num] = GameTime64 + i2f(15);
+    }
 }
 
 
