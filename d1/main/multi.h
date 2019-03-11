@@ -604,6 +604,7 @@ shield_status* Last_previous_shield_status[MAX_PLAYERS];
 // When to show the death summary until.
 fix64 Show_death_until[MAX_PLAYERS];
 
+#define SHIP_COLLISION_DAMAGE 254
 #define SHIP_EXPLOSION_DAMAGE 255
 
 // Defines damage taken totals for a single source.  Doubly linked list.
