@@ -462,7 +462,9 @@ void init_player_stats_new_ship(ubyte pnum)
 
 #ifdef NETWORK
 	if(Game_mode & GM_MULTI && Netgame.BornWithBurner) {
-		Players[pnum].flags |= PLAYER_FLAGS_AFTERBURNER; 
+		Players[pnum].flags |= PLAYER_FLAGS_AFTERBURNER;
+		if (pnum == Player_num)
+			Afterburner_charge = f1_0;
 	}
 #endif
 	digi_kill_sound_linked_to_object(Players[pnum].objnum);
@@ -1538,16 +1540,16 @@ void StartNewLevelSub(int level_num, int page_in_textures, int secret_flag)
 	{
 		if(multi_level_sync()) // After calling this, Player_num is set
 		{
-			if (imulti_new_game)
-			{
-				for (int i = 0; i<MAX_PLAYERS; i++)
-				{
-					init_player_stats_new_ship(i);
-				}
-			}
-
 			songs_play_song( SONG_TITLE, 1 ); // level song already plays but we fail to start level...
 			return;
+		}
+
+		if (imulti_new_game)
+		{
+			for (int i = 0; i < MAX_PLAYERS; i++)
+			{
+				init_player_stats_new_ship(i);
+			}
 		}
 	}
 #endif
