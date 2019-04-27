@@ -2826,7 +2826,7 @@ void observer_show_time() {
 }
 
 #define OBS_PLAYER_CARD_WIDTH 212
-#define OBS_PLAYER_CARD_HEIGHT 152
+#define OBS_PLAYER_CARD_HEIGHT (Netgame.obs_min ? 51 : 152)
 #define OBS_TIME_WIDTH 224
 
 void observer_draw_player_card(int pnum, int color, int x, int y) {
@@ -2874,160 +2874,162 @@ void observer_draw_player_card(int pnum, int color, int x, int y) {
 		y += 17;
 	}
 
-	// Shields
-	char shields[7];
+	if (!Netgame.obs_min) {
+		// Shields
+		char shields[7];
 
-	sprintf(shields, "%0.1f%s", f2db(Players[pnum].shields), Players[pnum].shields_certain ? "" : "?");
+		sprintf(shields, "%0.1f%s", f2db(Players[pnum].shields), Players[pnum].shields_certain ? "" : "?");
 
-	gr_set_curfont(GAME_FONT);
-	gr_set_fontcolor(color, -1);
+		gr_set_curfont(GAME_FONT);
+		gr_set_fontcolor(color, -1);
 
-	gr_get_string_size(shields, &sw, &sh, &saw);
+		gr_get_string_size(shields, &sw, &sh, &saw);
 
-	if ((Game_mode & GM_MULTI_COOP) || (Game_mode & GM_MULTI_ROBOTS)) {
-		gr_printf(x + OBS_PLAYER_CARD_WIDTH / 2 - sw / 2, y, "%s", shields);
-	}
-	else {
-		gr_printf(x + 3, y, "%s", shields);
-	}
-
-	y += 27;
-
-	// Shield display
-	double shield_count = f2db(Players[pnum].shields);
-	double delta = f2db(Players[pnum].shields_delta);
-	fix pulse = GameTime64 & 0x1ffff;
-	double pulse_strength = 0;
-
-	if (pulse > 0x10000) {
-		pulse_strength = 1;
-	}
-	else {
-		pulse_strength = 0;
-	}
-
-	// Fill bar with color
-	if (shield_count > 0) {
-		gr_setcolor(color);
-		gr_urect(x + 2, y, x + OBS_PLAYER_CARD_WIDTH - 2, y + 9);
-	}
-
-	// Replace empty with dark grey, or pulsing red if under 30 shields.
-	if (shield_count < 100.0) {
-		int grey_color = (shield_count > 0 && shield_count < 30 ? BM_XRGB(6 + (int)(10 * pulse_strength), 6, 6) : BM_XRGB(6, 6, 6));
-		gr_setcolor(grey_color);
-		gr_urect(x + 2 + (int)(shield_count * ((double)OBS_PLAYER_CARD_WIDTH - 4.0) / 100.0), y, x + OBS_PLAYER_CARD_WIDTH - 2, y + 9);
-	}
-
-	if (Players[pnum].shields_delta != 0 && (Players[Player_num].hours_total - Players[pnum].shields_time_hours == 1 && i2f(3600) + Players[Player_num].time_total - Players[pnum].shields_time < i2f(2) || Players[Player_num].time_total - Players[pnum].shields_time < i2f(2))) {
-		if (shield_count > 0 && shield_count < 100 && delta < 0) {
-			// Replace recent damage with red, unless at 0.
-			gr_setcolor(BM_XRGB(31, 6, 6));
-			gr_urect(x + 2 + (int)(shield_count * ((double)OBS_PLAYER_CARD_WIDTH - 4.0) / 100.0), y, min(x + 2 + (int)((shield_count - delta) * ((double)OBS_PLAYER_CARD_WIDTH - 4.0) / 100.0), x + OBS_PLAYER_CARD_WIDTH - 2), y + 9);
+		if ((Game_mode & GM_MULTI_COOP) || (Game_mode & GM_MULTI_ROBOTS)) {
+			gr_printf(x + OBS_PLAYER_CARD_WIDTH / 2 - sw / 2, y, "%s", shields);
 		}
-		else if (shield_count < 100 - delta && delta > 0) {
-			// Replace recent healing with green.
-			gr_setcolor(BM_XRGB(6, 6, 31));
-			gr_urect(x + 2 + (int)((shield_count - delta) * ((double)OBS_PLAYER_CARD_WIDTH - 4.0) / 100.0), y, min(x + 2 + (int)(shield_count * ((double)OBS_PLAYER_CARD_WIDTH - 4.0) / 100.0), x + OBS_PLAYER_CARD_WIDTH - 2), y + 9);
+		else {
+			gr_printf(x + 3, y, "%s", shields);
 		}
+
+		y += 27;
+
+		// Shield display
+		double shield_count = f2db(Players[pnum].shields);
+		double delta = f2db(Players[pnum].shields_delta);
+		fix pulse = GameTime64 & 0x1ffff;
+		double pulse_strength = 0;
+
+		if (pulse > 0x10000) {
+			pulse_strength = 1;
+		}
+		else {
+			pulse_strength = 0;
+		}
+
+		// Fill bar with color
+		if (shield_count > 0) {
+			gr_setcolor(color);
+			gr_urect(x + 2, y, x + OBS_PLAYER_CARD_WIDTH - 2, y + 9);
+		}
+
+		// Replace empty with dark grey, or pulsing red if under 30 shields.
+		if (shield_count < 100.0) {
+			int grey_color = (shield_count > 0 && shield_count < 30 ? BM_XRGB(6 + (int)(10 * pulse_strength), 6, 6) : BM_XRGB(6, 6, 6));
+			gr_setcolor(grey_color);
+			gr_urect(x + 2 + (int)(shield_count * ((double)OBS_PLAYER_CARD_WIDTH - 4.0) / 100.0), y, x + OBS_PLAYER_CARD_WIDTH - 2, y + 9);
+		}
+
+		if (Players[pnum].shields_delta != 0 && (Players[Player_num].hours_total - Players[pnum].shields_time_hours == 1 && i2f(3600) + Players[Player_num].time_total - Players[pnum].shields_time < i2f(2) || Players[Player_num].time_total - Players[pnum].shields_time < i2f(2))) {
+			if (shield_count > 0 && shield_count < 100 && delta < 0) {
+				// Replace recent damage with red, unless at 0.
+				gr_setcolor(BM_XRGB(31, 6, 6));
+				gr_urect(x + 2 + (int)(shield_count * ((double)OBS_PLAYER_CARD_WIDTH - 4.0) / 100.0), y, min(x + 2 + (int)((shield_count - delta) * ((double)OBS_PLAYER_CARD_WIDTH - 4.0) / 100.0), x + OBS_PLAYER_CARD_WIDTH - 2), y + 9);
+			}
+			else if (shield_count < 100 - delta && delta > 0) {
+				// Replace recent healing with green.
+				gr_setcolor(BM_XRGB(6, 6, 31));
+				gr_urect(x + 2 + (int)((shield_count - delta) * ((double)OBS_PLAYER_CARD_WIDTH - 4.0) / 100.0), y, min(x + 2 + (int)(shield_count * ((double)OBS_PLAYER_CARD_WIDTH - 4.0) / 100.0), x + OBS_PLAYER_CARD_WIDTH - 2), y + 9);
+			}
+		}
+
+		// Divide bar into segments
+		for (int seg = 1; seg < 10; seg++) {
+			gr_setcolor(BM_XRGB(0, 0, 0));
+			gr_uline(i2f(x + 1 + 21 * seg), i2f(y), i2f(x + 1 + 21 * seg), i2f(y + 10));
+		}
+
+		y += 11;
+
+		// Energy display
+		double energy = f2db(Players[pnum].energy);
+		if (energy > 0) {
+			gr_setcolor(BM_XRGB(25, 18, 6));
+			gr_urect(x + 2, y, min(x + 2 + (int)(energy * ((double)OBS_PLAYER_CARD_WIDTH - 4.0) / 100.0), x + OBS_PLAYER_CARD_WIDTH - 2), y + 3);
+		}
+
+		y += 5;
+
+		// Ammo display
+		double ammo = f2db(Players[pnum].primary_ammo[1] * VULCAN_AMMO_SCALE);
+		if (ammo > 0) {
+			gr_setcolor(BM_XRGB(25, 25, 25));
+			gr_urect(x + 2, y, min(x + 2 + (int)(ammo * ((double)OBS_PLAYER_CARD_WIDTH - 4.0) / 10000.0), x + OBS_PLAYER_CARD_WIDTH - 2), y + 2);
+		}
+
+		y += 4;
+
+		// Selected primary
+		char primary[7];
+		switch (Players[pnum].primary_weapon) {
+		case 0:
+			sprintf(primary, "%s %i", (Players[pnum].flags & PLAYER_FLAGS_QUAD_LASERS) ? "QUAD" : "LASER", Players[pnum].laser_level + 1);
+			break;
+		case 1:
+			sprintf(primary, "VUL");
+			break;
+		case 2:
+			sprintf(primary, "SPREAD");
+			break;
+		case 3:
+			sprintf(primary, "PLASMA");
+			break;
+		case 4:
+			sprintf(primary, "FUSION");
+			break;
+		}
+
+		// Primary ammo
+		char primary_ammo[7];
+		gr_set_fontcolor(color, -1);
+		gr_printf(x + 3, y, "%s", primary);
+
+		if (Players[pnum].primary_weapon == 1) {
+			gr_set_fontcolor(BM_XRGB(25, 25, 25), -1);
+			int_to_string((int)ammo, primary_ammo);
+		}
+		else {
+			gr_set_fontcolor(BM_XRGB(25, 18, 6), -1);
+			sprintf(primary_ammo, "%i", (int)energy);
+		}
+
+		gr_get_string_size(primary_ammo, &sw, &sh, &saw);
+		gr_printf(x + OBS_PLAYER_CARD_WIDTH - 1 - sw, y, primary_ammo);
+
+		y += 27;
+
+		// Selected secondary
+		char secondary[7];
+		switch (Players[pnum].secondary_weapon) {
+		case 0:
+			sprintf(secondary, "CONC");
+			break;
+		case 1:
+			sprintf(secondary, "HOMING");
+			break;
+		case 2:
+			sprintf(secondary, "PROX");
+			break;
+		case 3:
+			sprintf(secondary, "SMART");
+			break;
+		case 4:
+			sprintf(secondary, "MEGA");
+			break;
+		}
+
+		gr_set_fontcolor(color, -1);
+		gr_printf(x + 3, y, "%s", secondary);
+
+		// Secondary ammo
+		char secondary_ammo[3];
+		sprintf(secondary_ammo, "%i", Players[pnum].secondary_ammo[Players[pnum].secondary_weapon]);
+
+		gr_get_string_size(secondary_ammo, &sw, &sh, &saw);
+		gr_printf(x + OBS_PLAYER_CARD_WIDTH - 1 - sw, y, secondary_ammo);
+
+		y += 27;
 	}
-
-	// Divide bar into segments
-	for (int seg = 1; seg < 10; seg++) {
-		gr_setcolor(BM_XRGB(0, 0, 0));
-		gr_uline(i2f(x + 1 + 21 * seg), i2f(y), i2f(x + 1 + 21 * seg), i2f(y + 10));
-	}
-
-	y += 11;
-
-	// Energy display
-	double energy = f2db(Players[pnum].energy);
-	if (energy > 0) {
-		gr_setcolor(BM_XRGB(25, 18, 6));
-		gr_urect(x + 2, y, min(x + 2 + (int)(energy * ((double)OBS_PLAYER_CARD_WIDTH - 4.0) / 100.0), x + OBS_PLAYER_CARD_WIDTH - 2), y + 3);
-	}
-
-	y += 5;
-
-	// Ammo display
-	double ammo = f2db(Players[pnum].primary_ammo[1] * VULCAN_AMMO_SCALE);
-	if (ammo > 0) {
-		gr_setcolor(BM_XRGB(25, 25, 25));
-		gr_urect(x + 2, y, min(x + 2 + (int)(ammo * ((double)OBS_PLAYER_CARD_WIDTH - 4.0) / 10000.0), x + OBS_PLAYER_CARD_WIDTH - 2), y + 2);
-	}
-
-	y += 4;
-
-	// Selected primary
-	char primary[7];
-	switch (Players[pnum].primary_weapon) {
-	case 0:
-		sprintf(primary, "%s %i", (Players[pnum].flags & PLAYER_FLAGS_QUAD_LASERS) ? "QUAD" : "LASER", Players[pnum].laser_level + 1);
-		break;
-	case 1:
-		sprintf(primary, "VUL");
-		break;
-	case 2:
-		sprintf(primary, "SPREAD");
-		break;
-	case 3:
-		sprintf(primary, "PLASMA");
-		break;
-	case 4:
-		sprintf(primary, "FUSION");
-		break;
-	}
-
-	// Primary ammo
-	char primary_ammo[7];
-	gr_set_fontcolor(color, -1);
-	gr_printf(x + 3, y, "%s", primary);
-
-	if (Players[pnum].primary_weapon == 1) {
-		gr_set_fontcolor(BM_XRGB(25, 25, 25), -1);
-		int_to_string((int)ammo, primary_ammo);
-	}
-	else {
-		gr_set_fontcolor(BM_XRGB(25, 18, 6), -1);
-		sprintf(primary_ammo, "%i", (int)energy);
-	}
-
-	gr_get_string_size(primary_ammo, &sw, &sh, &saw);
-	gr_printf(x + OBS_PLAYER_CARD_WIDTH - 1 - sw, y, primary_ammo);
-
-	y += 27;
-
-	// Selected secondary
-	char secondary[7];
-	switch (Players[pnum].secondary_weapon) {
-	case 0:
-		sprintf(secondary, "CONC");
-		break;
-	case 1:
-		sprintf(secondary, "HOMING");
-		break;
-	case 2:
-		sprintf(secondary, "PROX");
-		break;
-	case 3:
-		sprintf(secondary, "SMART");
-		break;
-	case 4:
-		sprintf(secondary, "MEGA");
-		break;
-	}
-
-	gr_set_fontcolor(color, -1);
-	gr_printf(x + 3, y, "%s", secondary);
-
-	// Secondary ammo
-	char secondary_ammo[3];
-	sprintf(secondary_ammo, "%i", Players[pnum].secondary_ammo[Players[pnum].secondary_weapon]);
-
-	gr_get_string_size(secondary_ammo, &sw, &sh, &saw);
-	gr_printf(x + OBS_PLAYER_CARD_WIDTH - 1 - sw, y, secondary_ammo);
-
-	y += 27;
 
 	glLineWidth(linedotscale);
 }
@@ -3585,6 +3587,8 @@ void observer_maybe_show_death_log(int y) {
 
 	y += 5;
 
+	gr_set_curfont(GAME_FONT);
+
 	while (kle != NULL && GameTime64 - kle->timestamp < i2f(5)) {
 		sprintf(killed, "%s", Players[kle->killed_id].callsign);
 
@@ -3815,7 +3819,7 @@ void show_HUD_names()
 						gr_string (x1, y1, s);
 					}
 
-					if (Game_mode & GM_OBSERVER)
+					if (!Netgame.obs_min && Game_mode & GM_OBSERVER)
 					{
 						if (Players[pnum].shields_delta != 0 && (Players[Player_num].hours_total - Players[pnum].shields_time_hours == 1 && i2f(3600) + Players[Player_num].time_total - Players[pnum].shields_time < i2f(2) || Players[Player_num].time_total - Players[pnum].shields_time < i2f(2)))
 						{

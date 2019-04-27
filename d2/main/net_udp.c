@@ -3019,6 +3019,7 @@ void net_udp_send_game_info(struct _sockaddr sender_addr, ubyte info_upid, ubyte
 		buf[len] = Netgame.BornWithBurner;						len++; 
 		buf[len] = Netgame.GaussAmmoStyle;						len++; 
 		buf[len] = Netgame.OriginalD1Weapons;                   len++;
+		buf[len] = Netgame.obs_min; len++;
 
 
 		if(info_upid == UPID_SYNC) {
@@ -3263,6 +3264,7 @@ int net_udp_process_game_info(ubyte *data, int data_len, struct _sockaddr game_a
 		Netgame.BornWithBurner = data[len];                len++; 		
 		Netgame.GaussAmmoStyle = GAUSS_STYLE_STEADY_RECHARGING;    len++; 
 		Netgame.OriginalD1Weapons = data[len];             len++; 
+		Netgame.obs_min = data[len]; len++;
 
 		if(is_sync && ! multi_i_am_master()) {
 			uint my_token = GET_INTEL_INT(data + len);  len += 4;
@@ -4097,7 +4099,7 @@ int net_udp_more_options_handler( newmenu *menu, d_event *event, void *userdata 
 typedef struct param_opt
 {
 	int start_game, name, level, mode, mode_end, moreopts;
-	int closed, refuse, maxnet, maxobs, obsdelay, anarchy, team_anarchy, robot_anarchy, coop, capture, hoard, team_hoard, bounty;
+	int closed, refuse, maxnet, maxobs, obsdelay, obsmin, anarchy, team_anarchy, robot_anarchy, coop, capture, hoard, team_hoard, bounty;
 } param_opt;
 
 int net_udp_start_game(void);
@@ -4383,11 +4385,15 @@ int net_udp_setup_game()
 	sprintf( srbdelay, "Broadcast delay %d seconds", OBSERVER_DELAY);
 	m[optnum].type = NM_TYPE_CHECK; m[optnum].text = srbdelay; m[optnum].value = Netgame.obs_delay;
 	optnum++;
+
+	opt.obsmin = optnum;
+	m[optnum].type = NM_TYPE_CHECK; m[optnum].text = "Minimal Observer Info"; m[optnum].value = FALSE;
+	optnum++;
 	
-	opt.moreopts=optnum;
+	opt.moreopts = optnum;
 	m[optnum].type = NM_TYPE_MENU;  m[optnum].text = "Advanced Options"; optnum++;
 
-	Assert(optnum <= 20);
+	Assert(optnum <= 21);
 
 	i = newmenu_do1( NULL, TXT_NETGAME_SETUP, optnum, m, (int (*)( newmenu *, d_event *, void * ))net_udp_game_param_handler, &opt, opt.start_game );
 
@@ -4395,6 +4401,7 @@ int net_udp_setup_game()
 		net_udp_close();
 
 	Netgame.obs_delay = m[opt.obsdelay].value;
+	Netgame.obs_min = m[opt.obsmin].value;
 
 	write_netgame_profile(&Netgame);
 
