@@ -158,9 +158,11 @@ void show_observers() {
 
 	y -= LINE_SPACING*2;
 
-	for(int i = 0; i < Netgame.numobservers; i++) {
-		gr_printf(SWIDTH-FSPACX(strlen(Netgame.observers[i].callsign)*5 + 5),y,"%s",Netgame.observers[i].callsign);
-		y -= LINE_SPACING; 
+	for (int i = 0; i < Netgame.max_numobservers; i++) {
+		if (Netgame.observers[i].callsign != 0) {
+			gr_printf(SWIDTH - FSPACX(strlen(Netgame.observers[i].callsign) * 5 + 5), y, "%s", Netgame.observers[i].callsign);
+			y -= LINE_SPACING;
+		}
 	}
 
 	gr_set_fontcolor(BM_XRGB(8,8,32),-1);
