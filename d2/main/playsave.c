@@ -139,7 +139,21 @@ int new_player_config()
 	PlayerCfg.ShipColor = 8;
 	PlayerCfg.MissileColor = 8;
 	PlayerCfg.ObsTurbo = 0;
+	PlayerCfg.ObsShowCockpit = 1;
+	PlayerCfg.ObsShowScoreboardShieldText = 1;
+	PlayerCfg.ObsShowScoreboardShieldBar = 1;
+	PlayerCfg.ObsShowAmmoBars = 1;
+	PlayerCfg.ObsShowPrimary = 1;
+	PlayerCfg.ObsShowSecondary = 1;
 	PlayerCfg.ObsShowNames = 0;
+	PlayerCfg.ObsShowDamage = 1;
+	PlayerCfg.ObsShowShieldText = 0;
+	PlayerCfg.ObsShowShieldBar = 1;
+	PlayerCfg.ObsShowKillFeed = 1;
+	PlayerCfg.ObsShowDeathSummary = 0;
+	PlayerCfg.ObsShowStreaks = 0;
+	PlayerCfg.ObsShowKillGraph = 0;
+	PlayerCfg.ObsShowBreakdown = 0;
 	PlayerCfg.ObsShowObs = 1;
 
 	// Default taunt macros
@@ -388,13 +402,41 @@ int read_player_d2x(char *filename)
 					PlayerCfg.ShipColor = atoi(line);	
 				if(!strcmp(word,"MISSILECOLOR"))
 					PlayerCfg.MissileColor = atoi(line);
-
 				if(!strcmp(word,"OBSTURBO"))
 					PlayerCfg.ObsTurbo = atoi(line);
+				if (!strcmp(word, "OBSSHOWCOCKPIT"))
+					PlayerCfg.ObsShowCockpit = atoi(line);
+				if (!strcmp(word, "OBSSHOWSCOREBOARDSHIELDTEXT"))
+					PlayerCfg.ObsShowScoreboardShieldText = atoi(line);
+				if (!strcmp(word, "OBSSHOWSCOREBOARDSHIELDBAR"))
+					PlayerCfg.ObsShowScoreboardShieldBar = atoi(line);
+				if (!strcmp(word, "OBSSHOWAMMOBARS"))
+					PlayerCfg.ObsShowAmmoBars = atoi(line);
+				if (!strcmp(word, "OBSSHOWPRIMARY"))
+					PlayerCfg.ObsShowPrimary = atoi(line);
+				if (!strcmp(word, "OBSSHOWSECONDARY"))
+					PlayerCfg.ObsShowSecondary = atoi(line);
 				if(!strcmp(word,"OBSSHOWNAMES"))
 					PlayerCfg.ObsShowNames = atoi(line);
+				if (!strcmp(word, "OBSSHOWDAMAGE"))
+					PlayerCfg.ObsShowDamage = atoi(line);
+				if (!strcmp(word, "OBSSHOWSHIELDTEXT"))
+					PlayerCfg.ObsShowShieldText = atoi(line);
+				if (!strcmp(word, "OBSSHOWSHIELDBAR"))
+					PlayerCfg.ObsShowShieldBar = atoi(line);
+				if (!strcmp(word, "OBSSHOWKILLFEED"))
+					PlayerCfg.ObsShowKillFeed = atoi(line);
+				if (!strcmp(word, "OBSSHOWDEATHSUMMARY"))
+					PlayerCfg.ObsShowDeathSummary = atoi(line);
+				if (!strcmp(word, "OBSSHOWSTREAKS"))
+					PlayerCfg.ObsShowStreaks = atoi(line);
+				if (!strcmp(word, "OBSSHOWKILLGRAPH"))
+					PlayerCfg.ObsShowKillGraph = atoi(line);
+				if (!strcmp(word, "OBSSHOWBREAKDOWN"))
+					PlayerCfg.ObsShowBreakdown = atoi(line);
 				if(!strcmp(word,"OBSSHOWOBS"))
 					PlayerCfg.ObsShowObs = atoi(line);
+
 				//if(!strcmp(word,"QUIETPLASMA"))
 				//	PlayerCfg.QuietPlasma = atoi(line);							
 				if(!strcmp(word,"MAXFPS")) {
@@ -579,7 +621,21 @@ int write_player_d2x(char *filename)
 		PHYSFSX_printf(fout,"shipcolor=%i\n",PlayerCfg.ShipColor);	
 		PHYSFSX_printf(fout,"missilecolor=%i\n",PlayerCfg.MissileColor);
 		PHYSFSX_printf(fout,"obsturbo=%i\n",PlayerCfg.ObsTurbo);
+		PHYSFSX_printf(fout,"obsshowcockpit=%i\n",PlayerCfg.ObsShowCockpit);
+		PHYSFSX_printf(fout,"obsshowscoreboardshieldtext=%i\n",PlayerCfg.ObsShowScoreboardShieldText);
+		PHYSFSX_printf(fout,"obsshowscoreboardshieldbar=%i\n",PlayerCfg.ObsShowScoreboardShieldBar);
+		PHYSFSX_printf(fout,"obsshowammobars=%i\n",PlayerCfg.ObsShowAmmoBars);
+		PHYSFSX_printf(fout,"obsshowprimary=%i\n",PlayerCfg.ObsShowPrimary);
+		PHYSFSX_printf(fout,"obsshowsecondary=%i\n",PlayerCfg.ObsShowSecondary);
 		PHYSFSX_printf(fout,"obsshownames=%i\n",PlayerCfg.ObsShowNames);
+		PHYSFSX_printf(fout,"obsshowdamage=%i\n",PlayerCfg.ObsShowDamage);
+		PHYSFSX_printf(fout,"obsshowshieldtext=%i\n",PlayerCfg.ObsShowShieldText);
+		PHYSFSX_printf(fout,"obsshowshieldbar=%i\n",PlayerCfg.ObsShowShieldBar);
+		PHYSFSX_printf(fout,"obsshowkillfeed=%i\n",PlayerCfg.ObsShowKillFeed);
+		PHYSFSX_printf(fout,"obsshowdeathsummary=%i\n",PlayerCfg.ObsShowDeathSummary);
+		PHYSFSX_printf(fout,"obsshowstreaks=%i\n",PlayerCfg.ObsShowStreaks);
+		PHYSFSX_printf(fout,"obsshowkillgraph=%i\n",PlayerCfg.ObsShowKillGraph);
+		PHYSFSX_printf(fout,"obsshowbreakdown=%i\n",PlayerCfg.ObsShowBreakdown);
 		PHYSFSX_printf(fout,"obsshowobs=%i\n",PlayerCfg.ObsShowObs);
 		//PHYSFSX_printf(fout,"quietplasma=%i\n",PlayerCfg.QuietPlasma);	
 		PHYSFSX_printf(fout,"maxfps=%i\n",PlayerCfg.maxFps);	

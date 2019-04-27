@@ -77,6 +77,8 @@ void reset_obs() {
 		return;
 	
 	Current_obs_player = OBSERVER_PLAYER_ID;
+	init_cockpit();
+
 	Objects[Players[OBSERVER_PLAYER_ID].objnum].pos = Last_pos;
 	Objects[Players[OBSERVER_PLAYER_ID].objnum].orient = Last_orient;
 	ConsoleObject->pos = Last_pos;
@@ -95,6 +97,7 @@ void set_obs(int pnum) {
 			HUD_init_message(HM_DEFAULT, "Observing %s!", Players[pnum].callsign);
 		}
 		Current_obs_player = pnum;
+		init_cockpit();
 	} else {
 		reset_obs();
 	}

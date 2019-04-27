@@ -111,4 +111,6 @@ extern span weapon_window_left[],weapon_window_left_hires[],weapon_window_right[
 #define RET_COLOR_DEFAULT_B     0
 #define RET_COLOR_DEFAULT_A     0
 
+int Observer_message_y_start;
+
 #endif /* _GAUGES_H */
