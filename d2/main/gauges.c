@@ -2850,7 +2850,7 @@ void observer_draw_player_card(int pnum, int color, int x, int y) {
 	char score[12];
 
 	if ((Game_mode & GM_MULTI_COOP) || (Game_mode & GM_MULTI_ROBOTS)) {
-		sprintf(score, "%'d", Players[pnum].score);
+		int_to_string(Players[pnum].score, score);
 
 		gr_set_curfont(GAME_FONT);
 
