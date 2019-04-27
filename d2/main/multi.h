@@ -141,7 +141,7 @@ extern int multi_protocol; // set and determinate used protocol
 	VALUE(MULTI_PLAY_BY_PLAY         , 4)	\
 	VALUE(MULTI_RESPAWN_ROBOT        , 60)	\
 	VALUE(MULTI_OBS_UPDATE           , 4 + 8*MAX_OBSERVERS)	\
-	VALUE(MULTI_DAMAGE               , 15)  \
+	VALUE(MULTI_DAMAGE               , 14)  \
 	VALUE(MULTI_REPAIR               , 11)  \
 	VALUE(MULTI_SHIP_STATUS          , 29)  \
 	AFTER
@@ -560,18 +560,7 @@ typedef struct netgame_info
 #endif
 } __pack__ netgame_info;
 
-enum damage_type
-{
-	DAMAGE_WEAPON = 0,
-	DAMAGE_BLAST = 1,
-	DAMAGE_COLLISION = 2,
-	DAMAGE_WALL = 3,
-	DAMAGE_LAVA = 4,
-	DAMAGE_OVERCHARGE = 5,
-	DAMAGE_UNKNOWN = 255
-};
-
-// Events for The Observatory
+// Events for observatory UI.
 #define OBSEV_NONE 0
 #define OBSEV_KILL 1
 #define OBSEV_DEATH 2
@@ -581,18 +570,146 @@ enum damage_type
 #define OBSEV_PLAYER 32
 
 typedef struct kill_event {
-	fix64 timestamp;
-	int obs_event;
-	int score;
+	fix64 timestamp; // The time the event occurred.
+	ubyte obs_event; // The OBSEV event.  Can be added bitwise.
+	int score; // The player's score as a result of the event.
 	struct kill_event* next;
 	struct kill_event* prev;
 } __pack__ kill_event;
 
-kill_event *First_event[MAX_PLAYERS];
-kill_event *Last_event[MAX_PLAYERS];
-kill_event *Last_kill[MAX_PLAYERS];
-kill_event *Last_death[MAX_PLAYERS];
+// The first event for each player.
+kill_event* First_event[MAX_PLAYERS];
+
+// The last event for each player.  Used to append the next event.
+kill_event* Last_event[MAX_PLAYERS];
+
+// The last kill event for each player.  Used for last kill and run game statuses.
+kill_event* Last_kill[MAX_PLAYERS];
+
+// The last death event for each player.  Used for last kill and run game statuses.
+kill_event* Last_death[MAX_PLAYERS];
+
+// The current kill streak for each player.  Used for kill streak game status.
 int Kill_streak[MAX_PLAYERS];
+
+// When to show the score graph until.
 fix64 Show_graph_until;
+
+// Game statuses for observatory UI.
+enum game_status_type
+{
+	GST_KILL_STREAK = 1,
+	GST_LAST_KILL = 2,
+	GST_LAST_DEATH = 3,
+	GST_RUN = 4
+};
+
+// Defines a single game status.  Singly linked list.
+typedef struct game_status {
+	ubyte type; // The game_status_type.
+	char text[50]; // The text to be displayed.
+	struct game_status* next;
+} __pack__ game_status;
+
+// Defines all game statuses for a single player.  Singly linked list.
+typedef struct player_status {
+	ubyte pnum; // The player num.
+	struct game_status* statuses; // The beginning of the list of game statuses for the player.
+	struct player_status* next;
+} __pack__ player_status;
+
+// The first player status to display.
+player_status* First_status;
+
+// Adds a player status.
+void add_player_status(ubyte pnum, game_status status);
+
+// Removes a player status.
+void remove_player_status(ubyte pnum, ubyte type);
+
+// Types of damage for observatory UI.
+enum damage_type
+{
+	DAMAGE_WEAPON = 0,
+	DAMAGE_BLAST = 1,
+	DAMAGE_COLLISION = 2,
+	DAMAGE_WALL = 3,
+	DAMAGE_LAVA = 4,
+	DAMAGE_OVERCHARGE = 5,
+	DAMAGE_SHIELD = 6,
+	DAMAGE_UNKNOWN = 255
+};
+
+// Defines a shield status for a single source.  Singly linked list.
+typedef struct shield_status {
+	fix64 timestamp; // The time the status occurred.
+	fix shields; // The shield count.
+	struct shield_status* next;
+} __pack__ shield_status;
+
+// The first shield status for the current point.
+shield_status* First_current_shield_status[MAX_PLAYERS];
+
+// The last shield status for the current point.  Used to append the next status.
+shield_status* Last_current_shield_status[MAX_PLAYERS];
+
+// The first shield status for the previous point.
+shield_status* First_previous_shield_status[MAX_PLAYERS];
+
+// The last shield status for the current point.  Used to display the killing blow.
+shield_status* Last_previous_shield_status[MAX_PLAYERS];
+
+// When to show the death summary until.
+fix64 Show_death_until[MAX_PLAYERS];
+
+#define SHIP_EXPLOSION_DAMAGE 255
+
+// Defines damage taken totals for a single source.  Doubly linked list.
+typedef struct damage_taken_totals {
+	fix64 total_damage; // The total damage taken by this source.
+	ubyte killer_type; // The killer type, OBJ_WALL OBJ_ROBOT OBJ_PLAYER or OBJ_CNTRLCEN.
+	ubyte killer_id; // If killer type is a player, this is the player ID who did the damage.
+	ubyte damage_type; // The damage_type.
+	ubyte source_id; // If damage type is a weapon or a blast, this is the weapon ID.  Convert to name with weapon_id_to_name.
+	struct damage_taken_totals* next;
+	struct damage_taken_totals* prev;
+} __pack__ damage_taken_totals;
+
+// The first damage taken totals overall.
+damage_taken_totals* First_damage_taken_totals[MAX_PLAYERS];
+
+// The first damage taken totals for the current point.
+damage_taken_totals* First_damage_taken_current_totals[MAX_PLAYERS];
+
+// The first damage taken totals for the previous point.
+damage_taken_totals* First_damage_taken_previous_totals[MAX_PLAYERS];
+
+// Defines damage done totals for a single source.  Doubly linked list.
+typedef struct damage_done_totals {
+	fix64 total_damage; // The total damage done by this source.
+	ubyte source_id; // The weapon ID, or SHIP_EXPLOSION_DAMAGE, or SHIP_COLLISION_DAMAGE.
+	struct damage_done_totals* next;
+	struct damage_done_totals* prev;
+} __pack__ damage_done_totals;
+
+// The first damage done totals.
+damage_done_totals* First_damage_done_totals[MAX_PLAYERS];
+
+// Defines a kill for the kill log.  Singly linked list.
+typedef struct kill_log_event {
+	fix64 timestamp;
+	ubyte killed_id;
+	ubyte killer_type;
+	ubyte killer_id;
+	ubyte damage_type;
+	ubyte source_id;
+	struct kill_log_event* next;
+} __pack__ kill_log_event;
+
+// The kill log, with the first entry being the most recent.
+kill_log_event* Kill_log;
+
+// Adds a damage stat for observatory UI.
+void add_observatory_damage_stat(int player_num, fix shields_delta, fix new_shields, fix old_shields, ubyte killer_type, ubyte killer_id, ubyte damage_type, ubyte source_id);
 
 #endif /* _MULTI_H */

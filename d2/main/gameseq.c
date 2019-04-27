@@ -1830,9 +1830,10 @@ void InitPlayerPosition(int random_flag)
 	if (Game_mode & GM_OBSERVER) {
 		ConsoleObject->pos = Objects[Players[Current_obs_player].objnum].pos;
 		ConsoleObject->orient = Objects[Players[Current_obs_player].objnum].orient;
-	}
-#endif		
-	obj_relink(ConsoleObject-Objects,Player_init[NewPlayer].segnum);
+		obj_relink_all();
+	} else
+#endif
+		obj_relink(ConsoleObject-Objects,Player_init[NewPlayer].segnum);
 	reset_player_object();
 	reset_cruise();
 }
