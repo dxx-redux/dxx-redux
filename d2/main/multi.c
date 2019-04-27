@@ -1223,7 +1223,7 @@ void multi_compute_kill(int killer, int killed)
 			if ((Game_mode & GM_MULTI_COOP) && (Players[Player_num].score >= 1000))
 				add_points_to_score(-1000);
 
-			if (Game_mode & GM_MULTI_ROBOTS)
+			else if (Game_mode & GM_MULTI_ROBOTS)
 				add_points_to_score(10000);
 		}
 		else if (killed_pnum == Player_num)
