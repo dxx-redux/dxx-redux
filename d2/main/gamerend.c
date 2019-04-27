@@ -525,8 +525,16 @@ void game_draw_hud_stuff()
 
 		if (PlayerCfg.CockpitMode[1] == CM_FULL_COCKPIT)
 			y = grd_curcanv->cv_bitmap.bm_h / 1.2 ;
-		if (PlayerCfg.CockpitMode[1] != CM_REAR_VIEW)
-			gr_string(0x8000, y, message );
+
+		if (PlayerCfg.CockpitMode[1] != CM_REAR_VIEW) {
+			if (PlayerCfg.DemoRecordingIndicator == 0) {
+				gr_string(0x8000, y, message);
+			}
+			else if (PlayerCfg.DemoRecordingIndicator == 1) {
+				gr_setcolor(BM_XRGB(27, 0, 0));
+				gr_disk(i2f(grd_curcanv->cv_bitmap.bm_w / 2), i2f(y + 8), i2f(8));
+			}
+		}
 	}
 
 	render_countdown_gauge();

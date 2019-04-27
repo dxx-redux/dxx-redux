@@ -77,6 +77,7 @@ typedef struct player_config
 	int EscortHotKeys;
 	int PersistentDebris;
 	int PRShot;
+	int DemoRecordingIndicator;
 	ubyte NoRedundancy;
 	ubyte MultiMessages;
 	ubyte NoRankings;

@@ -1988,7 +1988,7 @@ void print_missile_color(char* color_string, int color_value) {
 
 void do_misc_menu()
 {
-	newmenu_item m[21];
+	newmenu_item m[25];
 	int i = 0;
 
 	do {
@@ -1999,35 +1999,54 @@ void do_misc_menu()
 		ADD_CHECK(4, "Escort robot hot keys",PlayerCfg.EscortHotKeys);
 		ADD_CHECK(5, "Persistent Debris",PlayerCfg.PersistentDebris);
 		ADD_CHECK(6, "Screenshots w/o HUD",PlayerCfg.PRShot);
-		ADD_CHECK(7, "Movie Subtitles",GameCfg.MovieSubtitles);
-		ADD_CHECK(8, "No redundant pickup messages",PlayerCfg.NoRedundancy);
-		ADD_CHECK(9, "Show Player chat only (Multi)",PlayerCfg.MultiMessages);
-		ADD_CHECK(10, "No Rankings (Multi)",PlayerCfg.NoRankings);
-		ADD_CHECK(11, "Free Flight controls in Automap",PlayerCfg.AutomapFreeFlight);
-		ADD_CHECK(12, "No Weapon Autoselect when firing",PlayerCfg.NoFireAutoselect);
-		ADD_CHECK(13, "Autoselect after firing",PlayerCfg.SelectAfterFire);
-		ADD_CHECK(14, "Only Cycle Autoselect Weapons",PlayerCfg.CycleAutoselectOnly);
-		ADD_CHECK(15, "Ammo Warnings",PlayerCfg.VulcanAmmoWarnings);
-		ADD_CHECK(16, "Shield Warnings",PlayerCfg.ShieldWarnings);
-		ADD_CHECK(17, "Automatically Start Demos", PlayerCfg.AutoDemo);
+
+		m[7].type = NM_TYPE_TEXT;
+		m[7].text = "Demo Recording Indicator:";
+
+		m[8].type = NM_TYPE_RADIO;
+		m[8].text = "Full Text";
+		m[8].group = 1;
+		m[8].value = (PlayerCfg.DemoRecordingIndicator == 0);
+
+		m[9].type = NM_TYPE_RADIO;
+		m[9].text = "Recording Icon";
+		m[9].group = 1;
+		m[9].value = (PlayerCfg.DemoRecordingIndicator == 1);
+
+		m[10].type = NM_TYPE_RADIO;
+		m[10].text = "None";
+		m[10].group = 1;
+		m[10].value = (PlayerCfg.DemoRecordingIndicator == 2);
+
+		ADD_CHECK(11, "Movie Subtitles",GameCfg.MovieSubtitles);
+		ADD_CHECK(12, "No redundant pickup messages",PlayerCfg.NoRedundancy);
+		ADD_CHECK(13, "Show Player chat only (Multi)",PlayerCfg.MultiMessages);
+		ADD_CHECK(14, "No Rankings (Multi)",PlayerCfg.NoRankings);
+		ADD_CHECK(15, "Free Flight controls in Automap",PlayerCfg.AutomapFreeFlight);
+		ADD_CHECK(16, "No Weapon Autoselect when firing",PlayerCfg.NoFireAutoselect);
+		ADD_CHECK(17, "Autoselect after firing",PlayerCfg.SelectAfterFire);
+		ADD_CHECK(18, "Only Cycle Autoselect Weapons",PlayerCfg.CycleAutoselectOnly);
+		ADD_CHECK(19, "Ammo Warnings",PlayerCfg.VulcanAmmoWarnings);
+		ADD_CHECK(20, "Shield Warnings",PlayerCfg.ShieldWarnings);
+		ADD_CHECK(21, "Automatically Start Demos", PlayerCfg.AutoDemo);
 
 		char preferred_color[30];
 		print_ship_color(preferred_color, PlayerCfg.ShipColor); 
-		m[18].type = NM_TYPE_SLIDER; 
-		m[18].value= PlayerCfg.ShipColor; 
-		m[18].text= preferred_color; 
-		m[18].min_value=0; 
-		m[18].max_value=8; 
+		m[22].type = NM_TYPE_SLIDER; 
+		m[22].value= PlayerCfg.ShipColor; 
+		m[22].text= preferred_color; 
+		m[22].min_value=0; 
+		m[22].max_value=8; 
 
 		char missile_color[30];
 		print_missile_color(missile_color, PlayerCfg.MissileColor); 
-		m[19].type = NM_TYPE_SLIDER; 
-		m[19].value= PlayerCfg.MissileColor; 
-		m[19].text= missile_color; 
-		m[19].min_value=0; 
-		m[19].max_value=8; 
+		m[23].type = NM_TYPE_SLIDER; 
+		m[23].value= PlayerCfg.MissileColor; 
+		m[23].text= missile_color; 
+		m[23].min_value=0; 
+		m[23].max_value=8; 
 
-		ADD_CHECK(20, "Show Custom Ship Colors", PlayerCfg.ShowCustomColors);
+		ADD_CHECK(24, "Show Custom Ship Colors", PlayerCfg.ShowCustomColors);
 
 		i = newmenu_do1( NULL, "Misc Options", sizeof(m)/sizeof(*m), m, menu_misc_options_handler, NULL, i );
 
@@ -2038,18 +2057,27 @@ void do_misc_menu()
 		PlayerCfg.EscortHotKeys			= m[4].value;
 		PlayerCfg.PersistentDebris		= m[5].value;
 		PlayerCfg.PRShot 			= m[6].value;
-		GameCfg.MovieSubtitles 			= m[7].value;
-		PlayerCfg.NoRedundancy 			= m[8].value;
-		PlayerCfg.MultiMessages 		= m[9].value;
-		PlayerCfg.NoRankings 			= m[10].value;
-		PlayerCfg.AutomapFreeFlight		= m[11].value;
-		PlayerCfg.NoFireAutoselect		= m[12].value;
-		PlayerCfg.SelectAfterFire		= m[13].value; if(PlayerCfg.SelectAfterFire) { PlayerCfg.NoFireAutoselect = 1; }
-		PlayerCfg.CycleAutoselectOnly		= m[14].value;
-		PlayerCfg.VulcanAmmoWarnings = m[15].value; 
-		PlayerCfg.ShieldWarnings = m[16].value;
-		PlayerCfg.AutoDemo = m[17].value;
-		PlayerCfg.ShowCustomColors = m[20].value;
+		if (m[8].value) {
+			PlayerCfg.DemoRecordingIndicator = 0;
+		}
+		else if (m[9].value) {
+			PlayerCfg.DemoRecordingIndicator = 1;
+		}
+		else if (m[10].value) {
+			PlayerCfg.DemoRecordingIndicator = 2;
+		}
+		GameCfg.MovieSubtitles 			= m[11].value;
+		PlayerCfg.NoRedundancy 			= m[12].value;
+		PlayerCfg.MultiMessages 		= m[13].value;
+		PlayerCfg.NoRankings 			= m[14].value;
+		PlayerCfg.AutomapFreeFlight		= m[15].value;
+		PlayerCfg.NoFireAutoselect		= m[16].value;
+		PlayerCfg.SelectAfterFire		= m[17].value; if(PlayerCfg.SelectAfterFire) { PlayerCfg.NoFireAutoselect = 1; }
+		PlayerCfg.CycleAutoselectOnly		= m[18].value;
+		PlayerCfg.VulcanAmmoWarnings = m[19].value; 
+		PlayerCfg.ShieldWarnings = m[20].value;
+		PlayerCfg.AutoDemo = m[21].value;
+		PlayerCfg.ShowCustomColors = m[24].value;
 
 	} while( i>-1 );
 
@@ -2062,13 +2090,13 @@ int menu_misc_options_handler ( newmenu *menu, d_event *event, void *userdata )
 	
 	if (event->type == EVENT_NEWMENU_CHANGED)
 	{
-		if (citem == 18) {
-			PlayerCfg.ShipColor = menus[18].value;
-			print_ship_color(menus[18].text, PlayerCfg.ShipColor);
+		if (citem == 22) {
+			PlayerCfg.ShipColor = menus[22].value;
+			print_ship_color(menus[22].text, PlayerCfg.ShipColor);
 			
-		} else if (citem == 19) {
-			PlayerCfg.MissileColor = menus[19].value;
-			print_missile_color(menus[19].text, PlayerCfg.MissileColor);
+		} else if (citem == 23) {
+			PlayerCfg.MissileColor = menus[23].value;
+			print_missile_color(menus[23].text, PlayerCfg.MissileColor);
 			
 		}
 
