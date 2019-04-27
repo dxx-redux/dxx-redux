@@ -323,6 +323,7 @@ int	Color_0_31_0 = -1;
 extern fix ThisLevelTime;
 extern fix Omega_charge;
 extern fix Cruise_speed;
+extern int linedotscale;
 
 typedef struct gauge_box {
 	int left,top;
