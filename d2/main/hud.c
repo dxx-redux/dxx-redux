@@ -95,7 +95,7 @@ void HUD_render_message_frame()
 
 		gr_set_curfont( GAME_FONT );
 
-		if (Game_mode & GM_OBSERVER)
+		if (is_observer())
 			y = Observer_message_y_start;
 		else
 			y = FSPACY(1);

@@ -1063,15 +1063,15 @@ int HandleGameKey(int key)
 		case KEY_CTRLED + KEY_5:
 		case KEY_CTRLED + KEY_6:
 		case KEY_CTRLED + KEY_7:
-			if (Game_mode & GM_OBSERVER)
+			if (is_observer())
 				set_obs(key - KEY_CTRLED - KEY_1);
 			return 1;
 		case KEY_CTRLED + KEY_8:
-			if (Game_mode & GM_OBSERVER)
+			if (is_observer())
 				reset_obs();
 			return 1;
 		case KEY_CTRLED + KEY_9:
-			if (Game_mode & GM_OBSERVER)
+			if (is_observer())
 				while (1) {
 					new_obs = (MAX_PLAYERS + new_obs - 1) % MAX_PLAYERS;
 					if (new_obs == OBSERVER_PLAYER_ID) {
@@ -1085,7 +1085,7 @@ int HandleGameKey(int key)
 				}
 			return 1;
 		case KEY_CTRLED + KEY_0:
-			if (Game_mode & GM_OBSERVER)
+			if (is_observer())
 				while (1) {
 					new_obs = (new_obs + 1) % MAX_PLAYERS;
 					if (new_obs == OBSERVER_PLAYER_ID) {
@@ -1099,7 +1099,7 @@ int HandleGameKey(int key)
 				}
 			return 1;
 		case KEY_CTRLED + KEY_MINUS:
-			if (Game_mode & GM_OBSERVER)
+			if (is_observer())
 				if (Obs_at_distance == 1 && Current_obs_player != OBSERVER_PLAYER_ID) {
 					HUD_init_message_literal(HM_MULTI, "Observing first person.");
 					Obs_at_distance = 0;
@@ -1107,7 +1107,7 @@ int HandleGameKey(int key)
 				}
 			return 1;
 		case KEY_CTRLED + KEY_EQUAL:
-			if (Game_mode & GM_OBSERVER)
+			if (is_observer())
 				if (Obs_at_distance == 0 && Current_obs_player != OBSERVER_PLAYER_ID) {
 					HUD_init_message_literal(HM_MULTI, "Observing third person.");
 					Obs_at_distance = 1;
@@ -1886,7 +1886,7 @@ int ReadControls(d_event *event)
 			}
 		}
 
-	if (Game_mode & GM_OBSERVER && Newdemo_state < ND_STATE_PLAYBACK) {
+	if (is_observer() && Newdemo_state < ND_STATE_PLAYBACK) {
 		// Force the observer to a certain camera based on whether they are freely observing or observing a specific player.
 		if (Current_obs_player == OBSERVER_PLAYER_ID) {
 			// If we're freely observing, just update position and orientation as normal.

@@ -317,7 +317,7 @@ void collide_player_and_wall( object * playerobj, fix hitspeed, short hitseg, sh
 	if (playerobj->id != Player_num) // Execute only for local player
 		return;
 
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 	tmap_num = Segments[hitseg].sides[hitwall].tmap_num;
 
@@ -653,7 +653,7 @@ void collide_weapon_and_wall( object * weapon, fix hitspeed, short hitseg, short
 	int playernum;
 	int	robot_escort;
 
-	fix volume = ((Game_mode & GM_OBSERVER) != 0 && Objects[weapon->ctype.laser_info.parent_num].type == OBJ_CNTRLCEN) ? F1_0 / 4 : F1_0;
+	fix volume = (is_observer() && Objects[weapon->ctype.laser_info.parent_num].type == OBJ_CNTRLCEN) ? F1_0 / 4 : F1_0;
 
 	if (weapon->id == OMEGA_ID)
 		if (!ok_to_do_omega_damage(weapon)) // see comment in laser.c
@@ -965,7 +965,7 @@ void collide_robot_and_player( object * robot, object * playerobj, vms_vector *c
 {
 	int	steal_attempt = 0;
 
-	if (playerobj->id == Player_num && Game_mode & GM_OBSERVER) {
+	if (playerobj->id == Player_num && is_observer()) {
 		return;
 	}
 
@@ -1100,7 +1100,7 @@ void apply_damage_to_controlcen(object *controlcen, fix damage, short who)
 
 void collide_player_and_controlcen( object * controlcen, object * playerobj, vms_vector *collision_point )
 {
-	if (playerobj->id == Player_num && Game_mode & GM_OBSERVER) {
+	if (playerobj->id == Player_num && is_observer()) {
 		return;
 	}
 
@@ -1725,7 +1725,7 @@ void collide_robot_and_weapon( object * robot, object * weapon, vms_vector *coll
 //##}
 
 void collide_hostage_and_player( object * hostage, object * player, vms_vector *collision_point ) {
-	if (player->id == Player_num && Game_mode & GM_OBSERVER) {
+	if (player->id == Player_num && is_observer()) {
 		return;
 	}
 
@@ -1786,7 +1786,7 @@ void collide_hostage_and_player( object * hostage, object * player, vms_vector *
 
 void collide_player_and_player( object * player1, object * player2, vms_vector *collision_point )
 {
-	if ((player1->id == Player_num || player2->id == Player_num) && Game_mode & GM_OBSERVER) {
+	if ((player1->id == Player_num || player2->id == Player_num) && is_observer()) {
 		return;
 	}
 
@@ -2224,7 +2224,7 @@ void apply_damage_to_player(object *playerobj, object *killer, fix damage, ubyte
 	if (Endlevel_sequence)
 		return;
 
-	if (playerobj->id == Player_num && Game_mode & GM_OBSERVER) {
+	if (playerobj->id == Player_num && is_observer()) {
 		return;
 	}
 
@@ -2305,7 +2305,7 @@ void collide_player_and_weapon( object * playerobj, object * weapon, vms_vector 
 	fix		damage = weapon->shields;
 	object * killer=NULL;
 
-	if (playerobj->id == Player_num && Game_mode & GM_OBSERVER) {
+	if (playerobj->id == Player_num && is_observer()) {
 		return;
 	}
 
@@ -2453,7 +2453,7 @@ void collide_player_and_weapon( object * playerobj, object * weapon, vms_vector 
 //	Nasty robots are the ones that attack you by running into you and doing lots of damage.
 void collide_player_and_nasty_robot( object * playerobj, object * robot, vms_vector *collision_point )
 {
-	if (playerobj->id == Player_num && Game_mode & GM_OBSERVER) {
+	if (playerobj->id == Player_num && is_observer()) {
 		return;
 	}
 
@@ -2481,7 +2481,7 @@ void collide_player_and_nasty_robot( object * playerobj, object * robot, vms_vec
 
 void collide_player_and_materialization_center(object *objp)
 {
-	if (Game_mode & GM_OBSERVER) {
+	if (is_observer()) {
 		return;
 	}
 
@@ -2554,7 +2554,7 @@ void collide_robot_and_materialization_center(object *objp)
 extern int Network_got_powerup; // HACK!!!
 
 void collide_player_and_powerup( object * playerobj, object * powerup, vms_vector *collision_point ) {
-	if (playerobj->id == Player_num && Game_mode & GM_OBSERVER) {
+	if (playerobj->id == Player_num && is_observer()) {
 		return;
 	}
 
@@ -2597,7 +2597,7 @@ void collide_player_and_powerup( object * playerobj, object * powerup, vms_vecto
 //##}
 
 void collide_player_and_clutter( object * playerobj, object * clutter, vms_vector *collision_point ) {
-	if (playerobj->id == Player_num && Game_mode & GM_OBSERVER) {
+	if (playerobj->id == Player_num && is_observer()) {
 		return;
 	}
 
@@ -2751,7 +2751,7 @@ void collide_two_objects( object * A, object * B, vms_vector *collision_point )
 {
 	int collision_type;
 
-	if ((A->id == Player_num || B->id == Player_num) && Game_mode & GM_OBSERVER) {
+	if ((A->id == Player_num || B->id == Player_num) && is_observer()) {
 		return;
 	}
 

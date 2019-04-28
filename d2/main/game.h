@@ -240,6 +240,8 @@ void flickering_light_write(flickering_light *fl, PHYSFS_file *fp);
 void game_render_frame_mono(int flip);
 void game_leave_menus(void);
 
+bool is_observer();
+
 //Cheats
 typedef struct game_cheats
 {

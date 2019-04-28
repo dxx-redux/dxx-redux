@@ -1696,7 +1696,6 @@ void update_rendered_data(int window_num, object *viewer, int rear_view_flag, in
 //fills in Render_list & N_render_segs
 void build_segment_list(int start_seg_num, int window_num)
 {
-	bool observer = (Game_mode & GM_OBSERVER) != 0;
 	int	lcnt,scnt,ecnt;
 	int	l,c;
 	int	ch;
@@ -1759,8 +1758,8 @@ void build_segment_list(int start_seg_num, int window_num)
 
 				ch=seg->children[c];
 
-				if ((wid & WID_RENDPAST_FLAG) || observer) {
-					if (!observer) {
+				if ((wid & WID_RENDPAST_FLAG) || is_observer()) {
+					if (!is_observer()) {
 						const sbyte *sv = Side_to_verts[c];
 						ubyte codes_and=0xff;
 						int i;
@@ -1833,11 +1832,11 @@ void build_segment_list(int start_seg_num, int window_num)
 
 					}
 
-					if (observer || no_proj_flag || (!codes_and_3d && !codes_and_2d)) {	//maybe add this segment
+					if (is_observer() || no_proj_flag || (!codes_and_3d && !codes_and_2d)) {	//maybe add this segment
 						int rp = render_pos[ch];
 						rect* new_w = &render_windows[lcnt];
 
-						if (observer || no_proj_flag) * new_w = *check_w;
+						if (is_observer() || no_proj_flag) * new_w = *check_w;
 						else {
 							new_w->left = max(check_w->left, min_x);
 							new_w->right = min(check_w->right, max_x);

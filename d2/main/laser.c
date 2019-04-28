@@ -753,7 +753,7 @@ int Laser_create_new( vms_vector * direction, vms_vector * position, int segnum,
 					volume = F1_0  * 3 / 4; 
 
 				if(Weapon_info[obj->id].flash_sound == 22) {  // Reactor ball
-					if ((Game_mode & GM_OBSERVER) != 0)
+					if (is_observer())
 						volume = F1_0  * 3 / 16;
 					else
 						volume = F1_0  * 3 / 4;

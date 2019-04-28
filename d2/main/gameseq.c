@@ -1779,7 +1779,7 @@ void InitPlayerPosition(int random_flag)
 {
 	int NewPlayer=0;
 
-	if (Game_mode & GM_OBSERVER)
+	if (is_observer())
 		NewPlayer = 0;
 	else if (! ((Game_mode & GM_MULTI) && !(Game_mode&GM_MULTI_COOP)) ) // If not deathmatch
 		NewPlayer = Player_num;
@@ -1827,7 +1827,7 @@ void InitPlayerPosition(int random_flag)
 		Dead_player_camera = NULL; 
 	}
 
-	if (Game_mode & GM_OBSERVER) {
+	if (is_observer()) {
 		ConsoleObject->pos = Objects[Players[Current_obs_player].objnum].pos;
 		ConsoleObject->orient = Objects[Players[Current_obs_player].objnum].orient;
 		obj_relink_all();

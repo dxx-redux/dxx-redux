@@ -1563,7 +1563,7 @@ void net_udp_send_sequence_packet(UDP_sequence_packet seq, struct _sockaddr recv
 	buf[len] = seq.player.rank;					len++;
 	buf[len] = seq.player.color;                len++;
 	buf[len] = seq.player.missilecolor;                len++;
-	buf[len] = Game_mode & GM_OBSERVER ? 1 : 0;     len++; 
+	buf[len] = is_observer() ? 1 : 0;     len++; 
 	memcpy(buf + len, &seq.player.protocol.udp.addr, sizeof(struct _sockaddr));  len += sizeof(struct _sockaddr); 
 	
 	dxx_sendto (UDP_Socket[0], buf, len, 0, (struct sockaddr *)&recv_addr, sizeof(struct _sockaddr));
@@ -1708,7 +1708,7 @@ int net_udp_endlevel(int *secret)
 
 	Network_status = NETSTAT_ENDLEVEL; // We are between levels
 	net_udp_listen();
-	if (!(Game_mode & GM_OBSERVER))
+	if (!is_observer())
 		net_udp_send_endlevel_packet();
 
 	for (i=0; i<N_players; i++) 
@@ -2375,7 +2375,7 @@ void net_udp_read_object_packet( ubyte *data )
 			init_objects();
 			Network_rejoined = 1;
 			my_pnum = obj_owner;
-			if(! (Game_mode & GM_OBSERVER)) { change_playernum_to(my_pnum); }
+			if(!is_observer()) { change_playernum_to(my_pnum); }
 			mode = 1;
 			object_count = 0;
 		}
@@ -2737,7 +2737,7 @@ void net_udp_send_endlevel_packet(void)
 {
 	int i = 0, j = 0, len = 0;
 
-	if (Game_mode & GM_OBSERVER) {
+	if (is_observer()) {
 		// Don't send this packet as observer.
 		return;
 	}
@@ -3278,7 +3278,7 @@ int net_udp_process_game_info(ubyte *data, int data_len, struct _sockaddr game_a
 
 		if(is_sync && ! multi_i_am_master()) {
 			uint my_token = GET_INTEL_INT(data + len);  len += 4;
-			if(my_token == my_player_token || Game_mode & GM_OBSERVER) {
+			if(my_token == my_player_token || is_observer()) {
 				netgame_token = GET_INTEL_INT(data + len); len += 4;
 				con_printf(CON_DEBUG, "Set token %d in net_udp_process_game_info\n", netgame_token);
 			} else {
@@ -3581,7 +3581,7 @@ void net_udp_read_endlevel_packet( ubyte *data, int data_len, struct _sockaddr s
 		len += 4; 
 
 		tmpvar = data[len];							len++;
-		if (Game_mode & GM_OBSERVER || (Network_status != NETSTAT_PLAYING) && (tmpvar < Countdown_seconds_left))
+		if (is_observer() || (Network_status != NETSTAT_PLAYING) && (tmpvar < Countdown_seconds_left))
 			Countdown_seconds_left = tmpvar;
 
 		for (i = 0; i < MAX_PLAYERS; i++)
@@ -4509,7 +4509,7 @@ void net_udp_read_sync_packet( ubyte * data, int data_len, struct _sockaddr send
 				Network_status = NETSTAT_MENU;
 				return; 
 			}
-			if(! (Game_mode & GM_OBSERVER)) {
+			if(!is_observer()) {
 				change_playernum_to(i);
 			}
 		}
@@ -4544,7 +4544,7 @@ void net_udp_read_sync_packet( ubyte * data, int data_len, struct _sockaddr send
 		}		
 	}
 
-	if ( Player_num < 0 && ! (Game_mode & GM_OBSERVER)) {
+	if ( Player_num < 0 && !is_observer()) {
 		Network_status = NETSTAT_MENU;
 		return;
 	}
@@ -4562,7 +4562,7 @@ void net_udp_read_sync_packet( ubyte * data, int data_len, struct _sockaddr send
 	team_kills[0] = Netgame.team_kills[0];
 	team_kills[1] = Netgame.team_kills[1];
 	
-	if(! (Game_mode & GM_OBSERVER)) {
+	if(!is_observer()) {
 		Players[Player_num].connected = CONNECT_PLAYING;
 		Netgame.players[Player_num].connected = CONNECT_PLAYING;
 		Netgame.players[Player_num].rank=GetMyNetRanking();
@@ -5253,7 +5253,7 @@ void net_udp_send_data(const ubyte * ptr, int len, int priority )
 
 void net_udp_timeout_check(fix64 time)
 {
-	if (Game_mode & GM_OBSERVER) { return; }
+	if (is_observer()) { return; }
 
 	int i = 0;
 	static fix64 last_timeout_time = 0;
@@ -6102,7 +6102,7 @@ void forward_to_observers_nodelay(ubyte* data, int data_len, int needack) {
 
 void net_udp_send_pdata()
 {
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 	ubyte buf[UPID_PDATA_U_SIZE];
 	int len = 0, i = 0;
@@ -6750,7 +6750,7 @@ void net_udp_process_p2p_pong(ubyte *data, struct _sockaddr sender_addr, int dat
 
 
 void update_address_for_player(int pnum, struct _sockaddr new_addr) {
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 	char logcomment[200]; 
 	snprintf(logcomment, 200, "Requested update to address for player %d to %s:%u\n", pnum, 
@@ -6893,7 +6893,7 @@ void net_udp_p2p_ping_frame(fix64 time)
 		if(i == Player_num) continue; 
 		if(! Players[i].connected) continue; 
 
-		if((Game_mode & GM_OBSERVER) && i > 0) { return; }
+		if(is_observer() && i > 0) { return; }
 
 		int sentping = 0; 
 

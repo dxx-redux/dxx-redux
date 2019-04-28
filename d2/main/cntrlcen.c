@@ -324,7 +324,7 @@ void do_controlcen_frame(object *obj)
 		return;
 	}
 
-	if(Game_mode & GM_OBSERVER) {
+	if(is_observer()) {
 		Control_center_player_been_seen = 0; 
 		return;
 	}
