@@ -6110,6 +6110,10 @@ void multi_do_ship_status( const ubyte *buf )
 	}
 }
 
+void is_observing_player() {
+	return Current_obs_player != OBSERVER_PLAYER_ID;
+}
+
 /* Bounty packer sender and handler */
 void multi_send_bounty( void )
 {

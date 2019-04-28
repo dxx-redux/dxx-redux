@@ -1262,7 +1262,7 @@ ubyte Last_angles_read = 0;
 void kconfig_read_controls(d_event *event, int automap_flag)
 {
 	// Don't read from the controls if we are locked into observing a specific player.
-	if (is_observer() && Current_obs_player != OBSERVER_PLAYER_ID) {
+	if (is_observer() && is_observing_player()) {
 		return;
 	}
 

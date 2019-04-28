@@ -1100,7 +1100,7 @@ int HandleGameKey(int key)
 			return 1;
 		case KEY_CTRLED + KEY_MINUS:
 			if (is_observer())
-				if (Obs_at_distance == 1 && Current_obs_player != OBSERVER_PLAYER_ID) {
+				if (Obs_at_distance && is_observing_player()) {
 					HUD_init_message_literal(HM_MULTI, "Observing first person.");
 					Obs_at_distance = 0;
 					init_cockpit();
@@ -1108,7 +1108,7 @@ int HandleGameKey(int key)
 			return 1;
 		case KEY_CTRLED + KEY_EQUAL:
 			if (is_observer())
-				if (Obs_at_distance == 0 && Current_obs_player != OBSERVER_PLAYER_ID) {
+				if (!Obs_at_distance && is_observing_player()) {
 					HUD_init_message_literal(HM_MULTI, "Observing third person.");
 					Obs_at_distance = 1;
 					init_cockpit();
@@ -1888,11 +1888,7 @@ int ReadControls(d_event *event)
 
 	if (is_observer() && Newdemo_state < ND_STATE_PLAYBACK) {
 		// Force the observer to a certain camera based on whether they are freely observing or observing a specific player.
-		if (Current_obs_player == OBSERVER_PLAYER_ID) {
-			// If we're freely observing, just update position and orientation as normal.
-			ConsoleObject->pos = Objects[Players[Current_obs_player].objnum].pos;
-			ConsoleObject->orient = Objects[Players[Current_obs_player].objnum].orient;
-		} else {
+		if (is_observing_player()) {
 			// We're observing a player directly, and need to interpolate the position and orientation.  Check to see if the real position has updated, and accumulate Last_real_update time.
 			if (vm_vec_equal(&Real_pos, &Objects[Players[Current_obs_player].objnum].pos) && vm_mat_equal(&Real_orient, &Objects[Players[Current_obs_player].objnum].orient)) {
 				Last_real_update += FrameTime;
@@ -1950,6 +1946,10 @@ int ReadControls(d_event *event)
 
 				vm_vec_add2(&ConsoleObject->pos, &vec_diff);
 			}
+		} else {
+			// If we're freely observing, just update position and orientation as normal.
+			ConsoleObject->pos = Objects[Players[Current_obs_player].objnum].pos;
+			ConsoleObject->orient = Objects[Players[Current_obs_player].objnum].orient;
 		}
 	}
 

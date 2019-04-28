@@ -136,7 +136,7 @@ void show_observers() {
 	gr_set_curfont(GAME_FONT);
 	gr_set_fontcolor(BM_XRGB(8,8,32),-1);
 
-	if (PlayerCfg.CockpitMode[1] == CM_FULL_SCREEN || (is_observer() && (Current_obs_player == OBSERVER_PLAYER_ID || Obs_at_distance || !PlayerCfg.ObsShowCockpit))) {
+	if (PlayerCfg.CockpitMode[1] == CM_FULL_SCREEN || (is_observer() && (!is_observing_player() || Obs_at_distance || !PlayerCfg.ObsShowCockpit))) {
 		if ((Game_mode & GM_MULTI) || (Newdemo_state == ND_STATE_PLAYBACK && Newdemo_game_mode & GM_MULTI))
 			y -= LINE_SPACING * 10;
 		else
@@ -520,7 +520,7 @@ void game_draw_hud_stuff()
 
 		y = GHEIGHT-(LINE_SPACING*2);
 
-		if (Current_obs_player != OBSERVER_PLAYER_ID && !Obs_at_distance && PlayerCfg.ObsShowCockpit && PlayerCfg.CockpitMode[1] == CM_FULL_COCKPIT)
+		if (is_observing_player() && !Obs_at_distance && PlayerCfg.ObsShowCockpit && PlayerCfg.CockpitMode[1] == CM_FULL_COCKPIT)
 			y = grd_curcanv->cv_bitmap.bm_h / 1.2 ;
 
 		if (PlayerCfg.CockpitMode[1] != CM_REAR_VIEW) {
@@ -855,7 +855,7 @@ void game_render_frame_mono(int flip)
 	if (Newdemo_state == ND_STATE_PLAYBACK)
 		Game_mode = Newdemo_game_mode;
 
-	if (is_observer() && (Current_obs_player == OBSERVER_PLAYER_ID || Obs_at_distance || !PlayerCfg.ObsShowCockpit)) {
+	if (is_observer() && (!is_observing_player || Obs_at_distance || !PlayerCfg.ObsShowCockpit)) {
 		// Do not render gauges.
 	} else {
 		if (PlayerCfg.CockpitMode[1] == CM_FULL_COCKPIT || PlayerCfg.CockpitMode[1] == CM_STATUS_BAR)
@@ -915,7 +915,7 @@ extern void ogl_loadbmtexture(grs_bitmap *bm, int filter_blueship_wing);
 // This actually renders the new cockpit onto the screen.
 void update_cockpits()
 {
-	if (is_observer() && (Current_obs_player == OBSERVER_PLAYER_ID || Obs_at_distance || !PlayerCfg.ObsShowCockpit)) {
+	if (is_observer() && (!is_observing_player() || Obs_at_distance || !PlayerCfg.ObsShowCockpit)) {
 		// Do not draw cockpit.
 	} else {
 		grs_bitmap *bm;
@@ -968,7 +968,7 @@ void update_cockpits()
 	else
 		return;
 
-	if (is_observer() && (Current_obs_player == OBSERVER_PLAYER_ID || Obs_at_distance || !PlayerCfg.ObsShowCockpit)) {
+	if (is_observer() && (!is_observing_player() || Obs_at_distance || !PlayerCfg.ObsShowCockpit)) {
 		return;
 	}
 

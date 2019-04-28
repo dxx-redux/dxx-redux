@@ -200,7 +200,7 @@ void init_cockpit()
 
 	gr_set_current_canvas(NULL);
 
-	if (is_observer() && (Current_obs_player == OBSERVER_PLAYER_ID || Obs_at_distance || !PlayerCfg.ObsShowCockpit)) {
+	if (is_observer() && (!is_observing_player() || Obs_at_distance || !PlayerCfg.ObsShowCockpit)) {
 		game_init_render_sub_buffers(0, 0, SWIDTH, SHEIGHT);
 	}
 	else {

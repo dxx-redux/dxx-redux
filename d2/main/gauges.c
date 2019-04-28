@@ -689,7 +689,7 @@ static inline void hud_bitblt (int x, int y, grs_bitmap *bm)
 
 int get_pnum_for_hud()
 {
-	if (is_observer() && Current_obs_player != OBSERVER_PLAYER_ID)
+	if (is_observer() && is_observing_player())
 		return Current_obs_player;
 	else
 		return Player_num;
@@ -3984,7 +3984,7 @@ void draw_hud()
 		// Show game messages
 		HUD_render_message_frame();
 
-		if (Current_obs_player != OBSERVER_PLAYER_ID && PlayerCfg.ObsShowCockpit && Obs_at_distance == 0) {
+		if (is_observing_player() && PlayerCfg.ObsShowCockpit && !Obs_at_distance) {
 			if (PlayerCfg.CockpitMode[1] == CM_STATUS_BAR || PlayerCfg.CockpitMode[1] == CM_FULL_SCREEN)
 				hud_show_homing_warning();
 

@@ -73,23 +73,23 @@ void player_ship_read(player_ship *ps, PHYSFS_file *fp)
 }
 
 void reset_obs() {
-	if (Current_obs_player == OBSERVER_PLAYER_ID)
+	if (!is_observing_player())
 		return;
 	
 	Current_obs_player = OBSERVER_PLAYER_ID;
 	init_cockpit();
 
-	Objects[Players[OBSERVER_PLAYER_ID].objnum].pos = Last_pos;
-	Objects[Players[OBSERVER_PLAYER_ID].objnum].orient = Last_orient;
+	Objects[Players[Current_obs_player].objnum].pos = Last_pos;
+	Objects[Players[Current_obs_player].objnum].orient = Last_orient;
 	ConsoleObject->pos = Last_pos;
 	ConsoleObject->orient = Last_orient;
 	HUD_init_message_literal(HM_MULTI, "Observing freely.");
 }
 
 void set_obs(int pnum) {
-	if (Current_obs_player == OBSERVER_PLAYER_ID) {
-		Last_pos = Objects[Players[OBSERVER_PLAYER_ID].objnum].pos;
-		Last_orient = Objects[Players[OBSERVER_PLAYER_ID].objnum].orient;
+	if (!is_observing_player()) {
+		Last_pos = Objects[Players[Player_num].objnum].pos;
+		Last_orient = Objects[Players[Player_num].objnum].orient;
 	}
 
 	if (Players[pnum].connected == CONNECT_PLAYING) {
