@@ -166,6 +166,7 @@ int get_centered_x(const char *s)
 			continue;//skip color codes.
 		}
 		get_char_width_f(s[0],s[1],&w2,&s2);
+		s2 = (int)s2;
 		w += s2;
 	}
 
