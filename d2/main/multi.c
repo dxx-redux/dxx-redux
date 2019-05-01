@@ -6111,7 +6111,7 @@ void multi_do_ship_status( const ubyte *buf )
 }
 
 bool is_observing_player() {
-	return Current_obs_player != OBSERVER_PLAYER_ID;
+	return is_observer() && (Current_obs_player != OBSERVER_PLAYER_ID && (!multi_i_am_master() || Current_obs_player != 0));
 }
 
 /* Bounty packer sender and handler */
