@@ -790,16 +790,16 @@ void drop_rx_packet(ubyte  *data, char* reason) {
 }
 
 int is_master_ip(struct _sockaddr addr) {
-	return ! memcmp(&Netgame.players[0].protocol.udp.addr, &addr, sizeof(struct _sockaddr)); 
+	return !memcmp(&Netgame.players[0].protocol.udp.addr.sin_addr, &addr.sin_addr, sizeof(struct in_addr));
 }
 
 int is_player_ip(struct _sockaddr addr, int pnum) {
-	return ! memcmp(&Netgame.players[pnum].protocol.udp.addr, &addr, sizeof(struct _sockaddr)); 
+	return !memcmp(&Netgame.players[pnum].protocol.udp.addr.sin_addr, &addr.sin_addr, sizeof(struct in_addr));
 }
 
 int is_observer_ip(struct _sockaddr addr) {
 	for (int i = 0; i < Netgame.max_numobservers; i++) {
-		if (!memcmp(&Netgame.observers[i].protocol.udp.addr, &addr, sizeof(struct _sockaddr))) {
+		if (!memcmp(&Netgame.observers[i].protocol.udp.addr.sin_addr, &addr.sin_addr, sizeof(struct in_addr))) {
 			return 1;
 		}
 	}
@@ -6851,18 +6851,15 @@ void net_udp_send_to_player_proxy(ubyte* data, int data_len, int to_player, int 
 }
 
 void net_udp_process_proxy(ubyte* data, struct _sockaddr sender_addr, int data_len) {
-	// First make sure the packet came from one of the players
-	int from_player = -1;
-	for(int i = 0; i < MAX_PLAYERS; i++) {
-		if(! memcmp(&Netgame.players[i].protocol.udp.addr, &sender_addr, sizeof(struct _sockaddr))) {
-			from_player = i;
-			break;
-		}
+	int from_player = data[6];
+	if (from_player < 0 || from_player > MAX_PLAYERS - 1) {
+		drop_rx_packet(data, "from invalid player");
+		return;
 	}
 
-	if(from_player == -1) {
-		drop_rx_packet(data, "from non-player ip"); 
-		return; 
+	if (!is_any_player_ip(sender_addr)) {
+		drop_rx_packet(data, "from non-player ip");
+		return;
 	}
 
 	int to_player = data[5];
@@ -6872,9 +6869,7 @@ void net_udp_process_proxy(ubyte* data, struct _sockaddr sender_addr, int data_l
 		// For me?? :)
 		ubyte* contents = data + UPID_PROXY_HEADER_SIZE; 
 
-		struct _sockaddr null_source;
-		memset(&null_source, 0, sizeof(struct _sockaddr)); 
-		net_udp_process_packet(contents, null_source, data_len - UPID_PROXY_HEADER_SIZE, 1 );
+		net_udp_process_packet(contents, sender_addr, data_len - UPID_PROXY_HEADER_SIZE, 1);
 
 	} else {
 		// Oh, we're forwarding.  
