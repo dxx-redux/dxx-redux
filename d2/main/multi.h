@@ -77,7 +77,7 @@ extern int multi_protocol; // set and determinate used protocol
 	VALUE(MULTI_KILL                  , 5)	\
 	VALUE(MULTI_REMOVE_OBJECT         , 5)	\
 	VALUE(MULTI_MESSAGE               , 37)	/* (MAX_MESSAGE_LENGTH = 40) */	\
-	VALUE(MULTI_OBS_MESSAGE           , 49)	\
+	VALUE(MULTI_OBS_MESSAGE           , 47)	\
 	VALUE(MULTI_QUIT                  , 2)	\
 	VALUE(MULTI_PLAY_SOUND            , 4)	\
 	VALUE(MULTI_CONTROLCEN           , 4)	\
@@ -565,6 +565,8 @@ typedef struct netgame_info
 	ubyte						Tracker;
 #endif
 } __pack__ netgame_info;
+
+int Host_is_obs; // Reminder for host only that they are an observer.  Do not set for other players or observers.
 
 // Events for observatory UI.
 #define OBSEV_NONE 0

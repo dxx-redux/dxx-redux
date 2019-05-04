@@ -3433,6 +3433,8 @@ int maybe_show_observers(int startY) {
 
 	y = startY - height;
 
+	gr_set_curfont(GAME_FONT);
+
 	gr_set_fontcolor(BM_XRGB(8, 8, 32), -1);
 
 	gr_get_string_size("Observers:", &w, &h, &aw);
@@ -3826,6 +3828,10 @@ void observer_show_kill_list()
 	// Show streaks, such as last kill, last death in non-1v1, kill streak, and runs in 1v1.
 	if (PlayerCfg.ObsShowStreaks) {
 		y = observer_maybe_show_streaks(y);
+	}
+
+	if (Observer_message_y_start < 49) {
+		Observer_message_y_start = 49;
 	}
 
 	// Show a death log, including who killed who and with what.
