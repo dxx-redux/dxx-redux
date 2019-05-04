@@ -281,6 +281,10 @@ void add_observatory_damage_stat(int player_num, fix shields_delta, fix new_shie
 		source_id = SHIP_EXPLOSION_DAMAGE;
 	}
 
+	if (killer_type == OBJ_PLAYER && damage_type == DAMAGE_COLLISION && source_id == 0) {
+		source_id = SHIP_COLLISION_DAMAGE;
+	}
+
 	// Record player's damage over time.
 	shield_status* sta = (shield_status*)d_malloc(sizeof(shield_status));
 	sta->timestamp = GameTime64;
@@ -373,6 +377,42 @@ void add_observatory_damage_stat(int player_num, fix shields_delta, fix new_shie
 		}
 	}
 
+	// Sort damage done totals by total damage.
+	ddt = First_damage_done_totals[killer_id];
+	damage_done_totals* next_ddt = NULL;
+	damage_done_totals* ddt_a = NULL;
+	damage_done_totals* ddt_b = NULL;
+	while (ddt != NULL) {
+		next_ddt = ddt->next;
+
+		if (ddt->prev != NULL) {
+			while (ddt != NULL && ddt->prev != NULL && ddt->total_damage > ddt->prev->total_damage) {
+				ddt_a = ddt->prev;
+				ddt_b = ddt;
+
+				ddt_a->next = ddt_b->next;
+				ddt_b->prev = ddt_a->prev;
+
+				if (ddt_a->next != NULL) {
+					ddt_a->next->prev = ddt_a;
+				}
+
+				if (ddt_b->prev != NULL) {
+					ddt_b->prev->next = ddt_b;
+				}
+
+				ddt_b->next = ddt_a;
+				ddt_a->prev = ddt_b;
+
+				if (ddt_a == First_damage_done_totals[killer_id]) {
+					First_damage_done_totals[killer_id] = ddt_b;
+				}
+			}
+		}
+
+		ddt = next_ddt;
+	}
+
 	// Record death.
 	if (death == 1) {
 		Last_previous_shield_status[player_num] = NULL;
@@ -399,29 +439,33 @@ void add_observatory_damage_stat(int player_num, fix shields_delta, fix new_shie
 		// Sort damage taken previous totals by total damage.
 		dtt = First_damage_taken_previous_totals[player_num];
 		damage_taken_totals* next_dtt = NULL;
-		damage_taken_totals* a = NULL;
-		damage_taken_totals* b = NULL;
+		damage_taken_totals* dtt_a = NULL;
+		damage_taken_totals* dtt_b = NULL;
 		while (dtt != NULL) {
 			next_dtt = dtt->next;
 
 			if (dtt->prev != NULL) {
 				while (dtt != NULL && dtt->prev != NULL && dtt->total_damage > dtt->prev->total_damage) {
-					a = dtt->prev;
-					b = dtt;
+					dtt_a = dtt->prev;
+					dtt_b = dtt;
 
-					a->next = b->next;
-					b->prev = a->prev;
+					dtt_a->next = dtt_b->next;
+					dtt_b->prev = dtt_a->prev;
 
-					if (a->next != NULL) {
-						a->next->prev = a;
+					if (dtt_a->next != NULL) {
+						dtt_a->next->prev = dtt_a;
 					}
 
-					if (b->prev != NULL) {
-						b->prev->next = b;
+					if (dtt_b->prev != NULL) {
+						dtt_b->prev->next = dtt_b;
 					}
 
-					b->next = a;
-					a->prev = b;
+					dtt_b->next = dtt_a;
+					dtt_a->prev = dtt_b;
+
+					if (dtt_a == First_damage_taken_previous_totals[player_num]) {
+						First_damage_taken_previous_totals[player_num] = dtt_b;
+					}
 				}
 			}
 

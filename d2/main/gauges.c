@@ -3153,23 +3153,23 @@ void observer_maybe_show_team_score() {
 }
 
 void observer_maybe_show_kill_graph() {
-	int pnum;
-	kill_event* ev;
-	int minscore = 0;
-	int maxscore = 0;
-	int x, y;
-	int scorescale = 0;
-	int timescale = 0;
-	int gridminy, gridmaxy;
-	char score[10];
-	int sw, sh, aw;
-	int gridminx, gridminx2, gridmaxx;
-	char time[10];
-	int color;
-	kill_event* last_ev;
-	int old_x, old_y;
+	if (PlayerCfg.ObsShowKillGraph && GameTime64 < Show_graph_until) {
+		int pnum;
+		kill_event* ev;
+		int minscore = 0;
+		int maxscore = 0;
+		int x, y;
+		int scorescale = 0;
+		int timescale = 0;
+		int gridminy, gridmaxy;
+		char score[10];
+		int sw, sh, aw;
+		int gridminx, gridminx2, gridmaxx;
+		char time[10];
+		int color;
+		kill_event* last_ev;
+		int old_x, old_y;
 
-	if (GameTime64 < Show_graph_until) {
 		glLineWidth(1);
 
 		for (int i = 0; i < n_players; i++) {
@@ -3409,6 +3409,135 @@ void observer_maybe_show_kill_graph() {
 		}
 
 		glLineWidth(linedotscale);
+	} else if (PlayerCfg.ObsShowBreakdown && GameTime64 < Show_graph_until + (PlayerCfg.ObsShowKillGraph ? i2f(15) : 0)) {
+		int drawn_players = n_players - (Netgame.host_is_obs ? 1 : 0);
+		int y = grd_curcanv->cv_bitmap.bm_h - 60;
+		int x;
+		int color;
+		int pnum;
+		char reason[20];
+
+		if (drawn_players <= 2) {
+			// Show top 3 damage done sources per pilot.
+			y -= (27 * 5);
+
+			gr_set_fontcolor(BM_XRGB(0, 31, 0), -1);
+			gr_string(0x8000, y, "Top Damaging Weapons");
+
+			y += 27;
+
+			x = grd_curcanv->cv_bitmap.bm_w / 2 - 400;
+
+			for (int i = 0; i < n_players; i++) {
+				int this_y = y;
+
+				pnum = player_list[i];
+
+				if (Netgame.host_is_obs && pnum == 0) {
+					continue;
+				}
+
+				if (Players[pnum].connected != CONNECT_PLAYING) {
+					color = BM_XRGB(12, 12, 12);
+				} else {
+					int color_for_player = get_color_for_player(pnum, 0);
+					color = BM_XRGB(selected_player_rgb[color_for_player].r, selected_player_rgb[color_for_player].g, selected_player_rgb[color_for_player].b);
+				}
+
+				gr_set_fontcolor(color, -1);
+				gr_printf(x, this_y, "%s", Players[pnum].callsign);
+
+				this_y += 27;
+
+				if (First_damage_done_totals[pnum] != NULL) {
+					int j = 0;
+					damage_done_totals* ddt = First_damage_done_totals[pnum];
+
+					while (j < 3 && ddt != NULL) {
+						switch (ddt->source_id) {
+							case SHIP_EXPLOSION_DAMAGE:
+								sprintf(reason, "Explosion");
+								break;
+							case SHIP_COLLISION_DAMAGE:
+								sprintf(reason, "Ramming");
+								break;
+							default:
+								sprintf(reason, "%s", weapon_id_to_name(ddt->source_id));
+								break;
+						}
+
+						gr_printf(x, this_y, "%s: %0.1f", reason, f2fl(ddt->total_damage));
+						this_y += 27;
+
+						j++;
+						ddt = ddt->next;
+					}
+				} else {
+					gr_string(x, this_y, "No Damage");
+				}
+
+				x += 405;
+			}
+		} else {
+			// Show top 1 damage done source per pilot.
+			y -= (27 * 5);
+
+			gr_set_fontcolor(BM_XRGB(0, 31, 0), -1);
+			gr_string(0x8000, y, "Top Damaging Weapon");
+
+			y += 27;
+
+			x = grd_curcanv->cv_bitmap.bm_w / 2 - 500;
+
+			int this_y = y;
+			int n_drawn = 0;
+
+			for (int i = 0; i < n_players; i++) {
+				pnum = player_list[i];
+
+				if (Netgame.host_is_obs && pnum == 0) {
+					continue;
+				}
+
+				if (Players[pnum].connected != CONNECT_PLAYING) {
+					color = BM_XRGB(12, 12, 12);
+				} else {
+					int color_for_player = get_color_for_player(pnum, 0);
+					color = BM_XRGB(selected_player_rgb[color_for_player].r, selected_player_rgb[color_for_player].g, selected_player_rgb[color_for_player].b);
+				}
+
+				if (First_damage_done_totals[pnum] != NULL) {
+					int j = 0;
+					damage_done_totals* ddt = First_damage_done_totals[pnum];
+
+					switch (ddt->source_id) {
+						case SHIP_EXPLOSION_DAMAGE:
+							sprintf(reason, "Explosion");
+							break;
+						case SHIP_COLLISION_DAMAGE:
+							sprintf(reason, "Ramming");
+							break;
+						default:
+							sprintf(reason, "%s", weapon_id_to_name(ddt->source_id));
+							break;
+					}
+
+					gr_printf(x, this_y, "%s's %s: %0.1f", Players[pnum].callsign, reason, f2fl(ddt->total_damage));
+				} else {
+					gr_printf(x, this_y, "%s: No Damage", Players[pnum].callsign);
+				}
+
+				n_drawn++;
+
+				if (n_drawn >= drawn_players / 2) {
+					n_drawn = 0 - MAX_PLAYERS;
+					x += 505;
+					this_y = y;
+				} else {
+					this_y += 27;
+				}
+			}
+		}
 	}
 }
 
@@ -3906,10 +4035,6 @@ void observer_maybe_show_death_log(int y) {
 	}
 }
 
-void observer_maybe_show_death_summaries() {
-
-}
-
 void observer_show_kill_list()
 {
 	// Show the clock at the top of the screen.
@@ -3921,10 +4046,8 @@ void observer_show_kill_list()
 	// Show the team's score.
 	observer_maybe_show_team_score();
 
-	// Show the kill graph, which is a line graph of kills over time for each pilot.
-	if (PlayerCfg.ObsShowKillGraph) {
-		observer_maybe_show_kill_graph();
-	}
+	// Show the kill graph, which is a line graph of kills over time for each pilot, and kill summaries, which is each pilot's most damaging weapon(s).
+	observer_maybe_show_kill_graph();
 
 	int y = grd_curcanv->cv_bitmap.bm_h - 5;
 
@@ -3941,13 +4064,10 @@ void observer_show_kill_list()
 		Observer_message_y_start = 49;
 	}
 
-	// Show a death log, including who killed who and with what.
+	// Show a death log, including who killed who and with what, and death summaries.
 	if (PlayerCfg.ObsShowKillFeed) {
 		observer_maybe_show_death_log(Observer_message_y_start);
 	}
-
-	// Show death summaries, including the killing blow and a line graph of shields over time.
-	observer_maybe_show_death_summaries();
 }
 
 #endif
