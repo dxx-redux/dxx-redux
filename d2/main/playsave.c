@@ -155,6 +155,8 @@ int new_player_config()
 	PlayerCfg.ObsShowKillGraph = 0;
 	PlayerCfg.ObsShowBreakdown = 0;
 	PlayerCfg.ObsShowObs = 1;
+	PlayerCfg.ObsChat = 1;
+	PlayerCfg.ObsPlayerChat = 1;
 
 	// Default taunt macros
 	#ifdef NETWORK
@@ -436,6 +438,10 @@ int read_player_d2x(char *filename)
 					PlayerCfg.ObsShowBreakdown = atoi(line);
 				if(!strcmp(word,"OBSSHOWOBS"))
 					PlayerCfg.ObsShowObs = atoi(line);
+				if (!strcmp(word, "OBSCHAT"))
+					PlayerCfg.ObsChat = atoi(line);
+				if (!strcmp(word, "OBSPLAYERCHAT"))
+					PlayerCfg.ObsPlayerChat = atoi(line);
 
 				//if(!strcmp(word,"QUIETPLASMA"))
 				//	PlayerCfg.QuietPlasma = atoi(line);							
@@ -637,6 +643,8 @@ int write_player_d2x(char *filename)
 		PHYSFSX_printf(fout,"obsshowkillgraph=%i\n",PlayerCfg.ObsShowKillGraph);
 		PHYSFSX_printf(fout,"obsshowbreakdown=%i\n",PlayerCfg.ObsShowBreakdown);
 		PHYSFSX_printf(fout,"obsshowobs=%i\n",PlayerCfg.ObsShowObs);
+		PHYSFSX_printf(fout,"obschat=%i\n",PlayerCfg.ObsChat);
+		PHYSFSX_printf(fout,"obsplayerchat=%i\n",PlayerCfg.ObsPlayerChat);
 		//PHYSFSX_printf(fout,"quietplasma=%i\n",PlayerCfg.QuietPlasma);	
 		PHYSFSX_printf(fout,"maxfps=%i\n",PlayerCfg.maxFps);	
 		PHYSFSX_printf(fout,"[end]\n");

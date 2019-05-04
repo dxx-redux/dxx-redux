@@ -114,6 +114,8 @@ typedef struct player_config
 	ubyte ObsShowKillGraph;
 	ubyte ObsShowBreakdown;
 	ubyte ObsShowObs;
+	ubyte ObsChat;
+	ubyte ObsPlayerChat;
 } __pack__ player_config;
 
 extern struct player_config PlayerCfg;

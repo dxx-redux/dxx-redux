@@ -1706,6 +1706,10 @@ extern int force_cockpit_redraw;
 
 void multi_send_message_end()
 {
+	if (is_observer() && !PlayerCfg.ObsChat) {
+		return;
+	}
+
 	char *mytempbuf;
 	int i,t;
 
@@ -2098,6 +2102,12 @@ multi_do_fire(const ubyte *buf)
 void multi_do_message(const ubyte* cbuf)
 {
 	const char *buf = (const char *)cbuf;
+
+	if (is_observer() && !PlayerCfg.ObsPlayerChat) {
+		multi_sending_message[(int)buf[1]] = 0;
+		return;
+	}
+
 	const char *tilde;
 	char *colon;
 	char mesbuf[100];
@@ -2169,6 +2179,10 @@ void multi_do_message(const ubyte* cbuf)
 
 void multi_do_obs_message(const ubyte* cbuf)
 {
+	if (!PlayerCfg.ObsChat) {
+		return;
+	}
+
 	const char* buf = (const char*)cbuf;
 
 	HUD_init_message(HM_MULTI, "%c%c%s", CC_COLOR, BM_XRGB(8, 8, 32), buf + 2);
