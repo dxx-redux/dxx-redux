@@ -658,7 +658,12 @@ int choose_drop_segment()
 	while ((segnum == -1) && (cur_drop_depth > BASE_NET_DROP_DEPTH/2)) {
 		pnum = (d_rand() * N_players) >> 15;
 		count = 0;
-		while ((count < N_players) && ((Players[pnum].connected == CONNECT_DISCONNECTED) || (pnum==Player_num) || ((Game_mode & (GM_TEAM|GM_CAPTURE)) && (get_team(pnum)==get_team(Player_num))))) {
+		while ((count < N_players) && (
+			(Players[pnum].connected == CONNECT_DISCONNECTED) || // skip disconnected players
+			(pnum==Player_num) || // skip ourselves
+			((Game_mode & (GM_TEAM|GM_CAPTURE)) && (get_team(pnum)==get_team(Player_num))) || // also skip our teammates
+			(Netgame.host_is_obs && pnum == 0) // and skip observers
+			)) {
 			pnum = (pnum+1)%N_players;
 			count++;
 		}

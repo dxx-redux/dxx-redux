@@ -1111,8 +1111,6 @@ void multi_compute_kill(int killer, int killed)
 
 	if ((killer_pnum < 0) || (killer_pnum >= N_players))
 		Int3(); // See rob, tracking down bug with kill HUD messages
-	if ((killed_pnum < 0) || (killed_pnum >= N_players))
-		Int3(); // See rob, tracking down bug with kill HUD messages
 
 	if (killer_pnum == killed_pnum)
 	{
@@ -3173,7 +3171,7 @@ multi_send_destroy_controlcen(int objnum, int player)
 
 	if (player == Player_num)
 		HUD_init_message_literal(HM_MULTI, TXT_YOU_DEST_CONTROL);
-	else if ((player > 0) && (player < N_players))
+	else if ((player >= 0) && (player < N_players))
 		HUD_init_message(HM_MULTI, "%s %s", Players[player].callsign, TXT_HAS_DEST_CONTROL);
 	else
 		HUD_init_message_literal(HM_MULTI, TXT_CONTROL_DESTROYED);
@@ -4765,7 +4763,7 @@ void change_playernum_to( int new_Player_num )
 int multi_all_players_alive()
 {
 	int i;
-	for (i=0;i<N_players;i++)
+	for (i=(Netgame.host_is_obs ? 1 : 0);i<N_players;i++)
 	{
 		if (PKilledFlags[i] && Players[i].connected)
 			return (0);
@@ -5082,7 +5080,7 @@ void multi_check_for_killgoal_winner ()
 		HUD_init_message(HM_MULTI, "The winner is %s, with the most kills!",Netgame.team_name[winner]);
 
 	} else {
-		for (i=0;i<N_players;i++)
+		for (i=(Netgame.host_is_obs ? 1 : 0);i<N_players;i++)
 		{
 			if (Players[i].KillGoalCount>best)
 			{
@@ -6267,6 +6265,11 @@ void multi_send_restore_game(ubyte slot, uint id)
 
 void multi_initiate_save_game()
 {
+	if (Netgame.host_is_obs) {
+		HUD_init_message_literal(HM_MULTI, "Can't save with a host that is observing!");
+		return;
+	}
+
 	fix game_id = 0;
 	int i, j, slot;
 	char filename[PATH_MAX];
@@ -6325,6 +6328,11 @@ extern int state_get_game_id(char *);
 
 void multi_initiate_restore_game()
 {
+	if (Netgame.host_is_obs) {
+		HUD_init_message_literal(HM_MULTI, "Can't load with a host that is observing!");
+		return;
+	}
+
 	int i, j, slot;
 	char filename[PATH_MAX];
 

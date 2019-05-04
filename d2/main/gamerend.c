@@ -338,7 +338,7 @@ void show_netplayerinfo()
 	// process players table
 	for (i=0; i<MAX_PLAYERS; i++)
 	{
-		if (!Players[i].connected)
+		if (!Players[i].connected || i == 0 && Netgame.host_is_obs)
 			continue;
 
 		y+=LINE_SPACING;
