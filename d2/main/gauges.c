@@ -3049,6 +3049,15 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 		}
 	}
 
+	// Draw box around card if we are observing this player.
+	if (Current_obs_player == pnum) {
+		gr_setcolor(color);
+		gr_line(i2f(x), i2f(starty + 3), i2f(x), i2f(y - 4));
+		gr_line(i2f(x + OBS_PLAYER_CARD_WIDTH), i2f(starty + 3), i2f(x + OBS_PLAYER_CARD_WIDTH), i2f(y - 4));
+		gr_line(i2f(x), i2f(starty + 3), i2f(x + OBS_PLAYER_CARD_WIDTH), i2f(starty + 3));
+		gr_line(i2f(x), i2f(y - 4), i2f(x + OBS_PLAYER_CARD_WIDTH), i2f(y - 4));
+	}
+
 	glLineWidth(linedotscale);
 
 	return y - starty;
