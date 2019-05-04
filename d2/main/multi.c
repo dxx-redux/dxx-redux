@@ -1346,8 +1346,7 @@ void multi_do_frame(void)
 	}
 }
 
-void
-multi_send_data(const ubyte *buf, int len, int priority)
+void multi_send_data(unsigned char* buf, int len, int priority)
 {
 	if (len != message_length[(int)buf[0]]) {
 		//Error("multi_send_data: Packet type %i length: %i, expected: %i\n", buf[0], len, message_length[(int)buf[0]]);
@@ -1376,6 +1375,37 @@ multi_send_data(const ubyte *buf, int len, int priority)
 			default:
 				Error("Protocol handling missing in multi_send_data\n");
 				break;
+		}
+	}
+}
+
+void multi_send_obs_data(unsigned char* buf, int len)
+{
+	if (len != message_length[(int)buf[0]]) {
+		//Error("multi_send_data: Packet type %i length: %i, expected: %i\n", buf[0], len, message_length[(int)buf[0]]);
+		con_printf(CON_NORMAL, "multi_send_data: Packet type %i length: %i, expected: %i\n", buf[0], len, message_length[(int)buf[0]]);
+		for (int i = 0; i < len; i++) {
+			con_printf(CON_NORMAL, "    %d: %d\n", i, buf[i]);
+		}
+		return;
+	}
+	if (buf[0] >= sizeof(message_length) / sizeof(message_length[0])) {
+		con_printf(CON_NORMAL, "multi_send_data: Illegal packet type %i\n", buf[0]);
+		return;
+	}
+
+	if (Game_mode & GM_NETWORK)
+	{
+		switch (multi_protocol)
+		{
+#ifdef USE_UDP
+		case MULTI_PROTO_UDP:
+			net_udp_send_obs_data(buf, len);
+			break;
+#endif
+		default:
+			Error("Protocol handling missing in multi_send_obs_data\n");
+			break;
 		}
 	}
 }
@@ -1657,12 +1687,11 @@ multi_send_macro(int key)
 void
 multi_send_message_start()
 {
-
-	if (is_observer()) { return; }
-
 	if (Game_mode&GM_MULTI) {
 		multi_sending_message[Player_num] = 1;
-		multi_send_msgsend_state(1);
+		if (is_observer()) {
+			multi_send_msgsend_state(1);
+		}
 		multi_message_index = 0;
 		Network_message[multi_message_index] = 0;
 		key_toggle_repeat(1);
@@ -1677,8 +1706,11 @@ extern int force_cockpit_redraw;
 
 void multi_send_message_end()
 {
-
-	if (is_observer()) { return; }
+	if (is_observer()) {
+		HUD_init_message(HM_MULTI, "%s%s%s '%s'", (char)CC_COLOR, (char)BM_XRGB(8, 8, 32), TXT_SENDING, Network_message);
+		multi_send_obs_message();
+		return;
+	}
 
 	char *mytempbuf;
 	int i,t;
@@ -3611,6 +3643,22 @@ multi_send_message(void)
 		multi_send_data(multibuf, loc, 0);
 		Network_message_reciever = -1;
 	}
+}
+
+void multi_send_obs_message(void)
+{
+	int loc = 0;
+	multibuf[loc] = MULTI_OBS_MESSAGE; loc += 1;
+	multibuf[loc] = OBSERVER_PLAYER_ID; loc += 1;
+
+	multibuf[loc] = CC_COLOR; loc += 1;
+	multibuf[loc] = BM_XRGB(8, 8, 32); loc += 1;
+	strncpy((char*)multibuf + loc, Players[Player_num].callsign, strlen(Players[Player_num].callsign)); loc += strlen(Players[Player_num].callsign);
+	multibuf[loc] = ':'; loc += 1;
+	multibuf[loc] = ' '; loc += 1;
+	strncpy((char*)multibuf + loc, Network_message, MAX_MESSAGE_LEN); loc += MAX_MESSAGE_LEN;
+	multibuf[14 + MAX_MESSAGE_LEN - 1] = '\0';
+	multi_send_obs_data(multibuf, 14 + MAX_MESSAGE_LEN);
 }
 
 void

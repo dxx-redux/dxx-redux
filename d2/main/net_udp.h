@@ -13,6 +13,7 @@ void net_udp_list_join_game();
 int net_udp_objnum_is_past(int objnum);
 void net_udp_do_frame(int force, int listen);
 void net_udp_send_data(const ubyte * ptr, int len, int priority );
+void net_udp_send_obs_data(const ubyte* ptr, int len);
 void net_udp_leave_game();
 int net_udp_endlevel(int *secret);
 int net_udp_kmatrix_poll1( newmenu *menu, d_event *event, void *userdata );
@@ -89,7 +90,7 @@ void net_udp_send_netgame_update();
 #define UPID_PROXY_HEADER_SIZE (3 + 4)
 #define UPID_REATTEMPT_DIRECT 28
 #define UPID_REATTEMPT_DIRECT_SIZE (2 + 4 + sizeof(struct _sockaddr)) 
-
+#define UPID_OBSDATA 29
 
 // Structure keeping lite game infos (for netlist, etc.)
 typedef struct UDP_netgame_info_lite
