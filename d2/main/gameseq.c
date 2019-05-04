@@ -442,6 +442,7 @@ void init_player_stats_new_ship(ubyte pnum)
 
 	Players[pnum].energy = INITIAL_ENERGY;
 	Players[pnum].shields = StartingShields;
+	Players[pnum].shields_certain = 1;
 	Players[pnum].laser_level = 0;
 	Players[pnum].killer_objnum = -1;
 	Players[pnum].hostages_on_board = 0;

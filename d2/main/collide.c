@@ -198,7 +198,7 @@ void apply_force_damage(object *obj,fix force,object *other_obj)
 				damage /= 2;
 
 			#ifdef NETWORK
-			if (Game_mode & GM_MULTI)
+			if (obj->id == Player_num && Game_mode & GM_MULTI)
 			{
 				con_printf(CON_NORMAL, "You took %0.1f damage from colliding with a ship!\n", (double)(damage) / (double)(F1_0));
 
