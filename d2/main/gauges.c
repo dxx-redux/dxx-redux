@@ -3403,7 +3403,68 @@ void observer_maybe_show_kill_graph() {
 	}
 }
 
-void observer_maybe_show_streaks() {
+int maybe_show_observers(int startY) {
+	if (Netgame.max_numobservers == 0 && !Netgame.host_is_obs) {
+		return startY;
+	}
+
+	if (Netgame.numobservers == 0 && !Netgame.host_is_obs) {
+		return startY;
+	}
+
+	int height = 0;
+	int w, h, aw, x, y;
+
+	for (int i = 0; i < Netgame.max_numobservers; i++) {
+		if (Netgame.observers[i].callsign != 0) {
+			height += 27;
+		}
+	}
+
+	if (Netgame.host_is_obs) {
+		height += 27;
+	}
+
+	if (height <= 0) {
+		return startY;
+	}
+
+	height += 27; // Add for "Observers line"
+
+	y = startY - height;
+
+	gr_set_fontcolor(BM_XRGB(8, 8, 32), -1);
+
+	gr_get_string_size("Observers:", &w, &h, &aw);
+	x = grd_curcanv->cv_bitmap.bm_w - w - 5;
+
+	gr_printf(x, y, "Observers:");
+	y += 27;
+
+	if (Netgame.host_is_obs) {
+		gr_get_string_size(Players[0].callsign, &w, &h, &aw);
+		x = grd_curcanv->cv_bitmap.bm_w - w - 5;
+
+		gr_printf(x, y, "%s", Players[0].callsign);
+		y += 27;
+	}
+
+	for (int i = 0; i < Netgame.max_numobservers; i++) {
+		if (!Netgame.observers[i].callsign) {
+			continue;
+		}
+
+		gr_get_string_size(Netgame.observers[i].callsign, &w, &h, &aw);
+		x = grd_curcanv->cv_bitmap.bm_w - w - 5;
+
+		gr_printf(x, y, "%s", Netgame.observers[i].callsign);
+		y += 27;
+	}
+
+	return startY - height - 10;
+}
+
+int observer_maybe_show_streaks(int startY) {
 	game_status status;
 	int pnum;
 	fix64 diff;
@@ -3549,24 +3610,25 @@ void observer_maybe_show_streaks() {
 	// TODO: Team runs.
 
 	// Display all statuses in order.
-	int y = 0;
+	int height = 0;
+	int y;
 	player_status* p_status = First_status;
 	game_status* g_status;
 	int color;
 
 	while (p_status != NULL) {
-		y += 27;
+		height += 27;
 
 		g_status = p_status->statuses;
 
 		while (g_status != NULL) {
-			y += 27;
+			height += 27;
 
 			g_status = g_status->next;
 		}
 
 		if (p_status->next != NULL) {
-			y += 10;
+			height += 10;
 		}
 
 		p_status = p_status->next;
@@ -3577,45 +3639,49 @@ void observer_maybe_show_streaks() {
 	int aw;
 	int x;
 
-	if (y > 0) {
-		y = grd_curcanv->cv_bitmap.bm_h - y - 5;
+	if (height <= 0) {
+		return startY;
+	}
 
-		p_status = First_status;
+	y = startY - height;
 
-		gr_set_curfont(GAME_FONT);
+	p_status = First_status;
 
-		while (p_status != NULL) {
-			pnum = p_status->pnum;
+	gr_set_curfont(GAME_FONT);
 
-			color = get_color_for_player(pnum, 0);
-			gr_set_fontcolor(BM_XRGB(selected_player_rgb[color].r, selected_player_rgb[color].g, selected_player_rgb[color].b), -1);
+	while (p_status != NULL) {
+		pnum = p_status->pnum;
 
-			gr_get_string_size(Players[pnum].callsign, &w, &h, &aw);
+		color = get_color_for_player(pnum, 0);
+		gr_set_fontcolor(BM_XRGB(selected_player_rgb[color].r, selected_player_rgb[color].g, selected_player_rgb[color].b), -1);
+
+		gr_get_string_size(Players[pnum].callsign, &w, &h, &aw);
+		x = grd_curcanv->cv_bitmap.bm_w - w - 5;
+
+		gr_printf(x, y, "%s", Players[pnum].callsign);
+		y += 27;
+
+		color = get_color_for_player(pnum, 1);
+		gr_set_fontcolor(BM_XRGB(selected_player_rgb[color].r, selected_player_rgb[color].g, selected_player_rgb[color].b), -1);
+
+		g_status = p_status->statuses;
+
+		while (g_status != NULL) {
+			gr_get_string_size(g_status->text, &w, &h, &aw);
 			x = grd_curcanv->cv_bitmap.bm_w - w - 5;
 
-			gr_printf(x, y, "%s", Players[pnum].callsign);
+			gr_printf(x, y, "%s", g_status->text);
 			y += 27;
 
-			color = get_color_for_player(pnum, 1);
-			gr_set_fontcolor(BM_XRGB(selected_player_rgb[color].r, selected_player_rgb[color].g, selected_player_rgb[color].b), -1);
-
-			g_status = p_status->statuses;
-
-			while (g_status != NULL) {
-				gr_get_string_size(g_status->text, &w, &h, &aw);
-				x = grd_curcanv->cv_bitmap.bm_w - w - 5;
-
-				gr_printf(x, y, "%s", g_status->text);
-				y += 27;
-
-				g_status = g_status->next;
-			}
-
-			y += 10;
-
-			p_status = p_status->next;
+			g_status = g_status->next;
 		}
+
+		y += 10;
+
+		p_status = p_status->next;
 	}
+
+	return startY - height;
 }
 
 void observer_maybe_show_death_log(int y) {
@@ -3751,9 +3817,15 @@ void observer_show_kill_list()
 		observer_maybe_show_kill_graph();
 	}
 
+	int y = grd_curcanv->cv_bitmap.bm_h - 5;
+
+	if (PlayerCfg.ObsShowObs) {
+		y = maybe_show_observers(y);
+	}
+
 	// Show streaks, such as last kill, last death in non-1v1, kill streak, and runs in 1v1.
 	if (PlayerCfg.ObsShowStreaks) {
-		observer_maybe_show_streaks();
+		y = observer_maybe_show_streaks(y);
 	}
 
 	// Show a death log, including who killed who and with what.
@@ -4135,6 +4207,31 @@ void draw_hud()
 			show_reticle(PlayerCfg.ReticleType, 1);
 		if (PlayerCfg.CockpitMode[1] != CM_LETTERBOX && Newdemo_state != ND_STATE_PLAYBACK && (PlayerCfg.MouseControlStyle == MOUSE_CONTROL_FLIGHT_SIM) && PlayerCfg.MouseFSIndicator)
 			show_mousefs_indicator(Controls.raw_mouse_axis[0], Controls.raw_mouse_axis[1], Controls.raw_mouse_axis[2], GWIDTH/2, GHEIGHT/2, GHEIGHT/4);
+		if (Game_mode & GM_MULTI && PlayerCfg.ObsShowObs)
+		{
+			int startY = GHEIGHT;
+
+			if (PlayerCfg.CockpitMode[1] == CM_FULL_SCREEN || (is_observer() && (!is_observing_player() || Obs_at_distance || !PlayerCfg.ObsShowCockpit))) {
+				if ((Game_mode & GM_MULTI) || (Newdemo_state == ND_STATE_PLAYBACK && Newdemo_game_mode & GM_MULTI))
+					startY -= LINE_SPACING * 12;
+				else
+					startY -= LINE_SPACING * 6;
+			}
+			else if (PlayerCfg.CockpitMode[1] == CM_STATUS_BAR) {
+				if ((Game_mode & GM_MULTI) || (Newdemo_state == ND_STATE_PLAYBACK && Newdemo_game_mode & GM_MULTI))
+					startY -= LINE_SPACING * 8;
+				else
+					startY -= LINE_SPACING * 3;
+			}
+			else {
+				if ((Game_mode & GM_MULTI) || (Newdemo_state == ND_STATE_PLAYBACK && Newdemo_game_mode & GM_MULTI))
+					startY -= LINE_SPACING * 9;
+				else
+					startY -= LINE_SPACING * 4;
+			}
+
+			maybe_show_observers(startY);
+		}
 	}
 
 	if (Rear_view && PlayerCfg.CockpitMode[1]!=CM_REAR_VIEW) {
