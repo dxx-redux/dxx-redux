@@ -268,6 +268,14 @@ void add_observatory_stat(int player_num, ubyte event_type) {
 }
 
 void add_observatory_damage_stat(int player_num, fix shields_delta, fix new_shields, fix old_shields, ubyte killer_type, ubyte killer_id, ubyte damage_type, ubyte source_id) {
+	bool death = 0;
+
+	// Set shields delta to old_shields if there was a kill.
+	if (new_shields <= 0 && shields_delta > old_shields) {
+		shields_delta = old_shields;
+		death = 1;
+	}
+
 	// Set source_id for ship explosions and collisions.
 	if (killer_type == OBJ_PLAYER && damage_type == DAMAGE_BLAST && source_id == 0) {
 		source_id = SHIP_EXPLOSION_DAMAGE;
@@ -288,15 +296,20 @@ void add_observatory_damage_stat(int player_num, fix shields_delta, fix new_shie
 	}
 	Last_current_shield_status[player_num] = sta;
 
+	// Do not process further for shield pickups.
+	if (damage_type == DAMAGE_SHIELD) {
+		return;
+	}
+
 	// Record player's overall damage taken total.
 	damage_taken_totals* dtt = First_damage_taken_totals[player_num];
-	while (dtt != NULL && dtt->killer_type != killer_type && dtt->killer_id != killer_id && dtt->damage_type != damage_type && dtt->source_id != source_id) {
+	while (dtt != NULL && (dtt->killer_type != killer_type || dtt->killer_id != killer_id || dtt->damage_type != damage_type || dtt->source_id != source_id)) {
 		dtt = dtt->next;
 	}
 
 	if (dtt == NULL) {
 		dtt = (damage_taken_totals*)d_malloc(sizeof(damage_taken_totals));
-		dtt->total_damage = -(shields_delta);
+		dtt->total_damage = shields_delta;
 		dtt->killer_type = killer_type;
 		dtt->killer_id = killer_id;
 		dtt->damage_type = damage_type;
@@ -309,18 +322,18 @@ void add_observatory_damage_stat(int player_num, fix shields_delta, fix new_shie
 		First_damage_taken_totals[player_num] = dtt;
 	}
 	else {
-		dtt->total_damage -= shields_delta;
+		dtt->total_damage += shields_delta;
 	}
 
 	// Record player's damage taken total for this point.
 	dtt = First_damage_taken_current_totals[player_num];
-	while (dtt != NULL && dtt->killer_type != killer_type && dtt->killer_id != killer_id && dtt->damage_type != damage_type && dtt->source_id != source_id) {
+	while (dtt != NULL && (dtt->killer_type != killer_type || dtt->killer_id != killer_id || dtt->damage_type != damage_type || dtt->source_id != source_id)) {
 		dtt = dtt->next;
 	}
 
 	if (dtt == NULL) {
 		dtt = (damage_taken_totals*)d_malloc(sizeof(damage_taken_totals));
-		dtt->total_damage = -(shields_delta);
+		dtt->total_damage = shields_delta;
 		dtt->killer_type = killer_type;
 		dtt->killer_id = killer_id;
 		dtt->damage_type = damage_type;
@@ -333,7 +346,7 @@ void add_observatory_damage_stat(int player_num, fix shields_delta, fix new_shie
 		First_damage_taken_current_totals[player_num] = dtt;
 	}
 	else {
-		dtt->total_damage -= shields_delta;
+		dtt->total_damage += shields_delta;
 	}
 
 	// Record player's damage dealt total.
@@ -346,7 +359,7 @@ void add_observatory_damage_stat(int player_num, fix shields_delta, fix new_shie
 
 		if (ddt == NULL) {
 			ddt = (damage_done_totals*)d_malloc(sizeof(damage_done_totals));
-			ddt->total_damage = -(shields_delta);
+			ddt->total_damage = shields_delta;
 			ddt->source_id = source_id;
 			ddt->next = First_damage_done_totals[killer_id];
 			ddt->prev = NULL;
@@ -356,12 +369,12 @@ void add_observatory_damage_stat(int player_num, fix shields_delta, fix new_shie
 			First_damage_done_totals[killer_id] = ddt;
 		}
 		else {
-			ddt->total_damage -= shields_delta;
+			ddt->total_damage += shields_delta;
 		}
 	}
 
 	// Record death.
-	if (new_shields <= 0 && shields_delta > old_shields) {
+	if (death == 1) {
 		Last_previous_shield_status[player_num] = NULL;
 		while ((sta = First_previous_shield_status[player_num]) != NULL) {
 			First_previous_shield_status[player_num] = sta->next;
