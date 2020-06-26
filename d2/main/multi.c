@@ -6334,7 +6334,7 @@ void multi_do_obs_update(const ubyte *buf) {
 
 	// Someone joined
 	if(buf[1] == 0) {
-		char who_joined[9];
+		char who_joined[9] = { 0 };
 		strncpy(who_joined, (char*) &buf[4 + buf[2]*8], 8);
 		HUD_init_message(HM_MULTI, "%s is now observing.", who_joined);
 

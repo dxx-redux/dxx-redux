@@ -2096,13 +2096,13 @@ int menu_misc_options_handler ( newmenu *menu, d_event *event, void *userdata )
 	
 	if (event->type == EVENT_NEWMENU_CHANGED)
 	{
-		if (citem == 22) {
-			PlayerCfg.ShipColor = menus[22].value;
-			print_ship_color(menus[22].text, PlayerCfg.ShipColor);
+		if (citem == 24) {
+			PlayerCfg.ShipColor = menus[24].value;
+			print_ship_color(menus[24].text, PlayerCfg.ShipColor);
 			
-		} else if (citem == 23) {
-			PlayerCfg.MissileColor = menus[23].value;
-			print_missile_color(menus[23].text, PlayerCfg.MissileColor);
+		} else if (citem == 25) {
+			PlayerCfg.MissileColor = menus[25].value;
+			print_missile_color(menus[25].text, PlayerCfg.MissileColor);
 			
 		}
 
