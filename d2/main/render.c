@@ -1815,15 +1815,6 @@ void build_segment_list(int start_seg_num, int window_num)
 						codes_and_3d &= pnt->p3_codes;
 						codes_and_2d &= code_window_point(_x,_y,check_w);
 
-						#ifndef NDEBUG
-						if (draw_edges) {
-							gr_setcolor(BM_XRGB(31,0,31));
-							gr_line(pnt->p3_sx,pnt->p3_sy,
-								Segment_points[seg->verts[Side_to_verts[siden][(i+1)%4]]].p3_sx,
-								Segment_points[seg->verts[Side_to_verts[siden][(i+1)%4]]].p3_sy);
-						}
-						#endif
-
 						if (_x < min_x) min_x = _x;
 						if (_x > max_x) max_x = _x;
 
