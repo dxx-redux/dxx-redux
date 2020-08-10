@@ -20,6 +20,6 @@ add_library(2d STATIC
 
 include_directories(../include ../arch/include ../main)
 
-find_package(physfs REQUIRED)
-find_package(sdl REQUIRED)
+find_package(PhysFS REQUIRED)
+find_package(SDL REQUIRED)
 target_include_directories(2d PUBLIC ${SDL_INCLUDE_DIR} ${PHYSFS_INCLUDE_DIR})

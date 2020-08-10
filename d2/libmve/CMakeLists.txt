@@ -8,10 +8,10 @@ add_library(libmve STATIC
 
 include_directories(../include ../arch/include ../main)
 
-find_package(sdl)
+find_package(SDL)
 target_include_directories(libmve PUBLIC ${SDL_INCLUDE_DIR})
 
 if(SDLMIXER)
-    find_package(sdl_mixer)
+    find_package(SDL_mixer)
     target_include_directories(libmve PUBLIC ${SDL_MIXER_INCLUDE_DIRS})
 endif()
