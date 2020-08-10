@@ -47,7 +47,10 @@ if(UDP)
 endif()
 
 if(WIN32)
-    add_definitions(/DWINDOWS /DHAVE_STRUCT_TIMEVAL)
+    # WINDOWS_IGNORE_PACKING_MISMATCH is required to suppress asserts in winnt.h that warn about
+    # memory corruption when Windows headers are compiled with non-default packing (set in
+    # include/pstypes.h). This may actually be a problem that warrants fixing; keep an eye on that.
+    add_definitions(/DWINDOWS /DHAVE_STRUCT_TIMEVAL /DWINDOWS_IGNORE_PACKING_MISMATCH)
 elseif(__APPLE__)
     add_definitions(/DHAVE_STRUCT_TIMESPEC /DHAVE_STRUCT_TIMEVAL /D__unix__)
 elseif(__LINUX__)
