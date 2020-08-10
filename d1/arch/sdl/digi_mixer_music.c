@@ -6,8 +6,8 @@
  *  -- MD2211 (2006-04-24)
  */
 
-#include <SDL/SDL.h>
-#include <SDL/SDL_mixer.h>
+#include <SDL.h>
+#include <SDL_mixer.h>
 #include <string.h>
 #include <stdlib.h>
 
