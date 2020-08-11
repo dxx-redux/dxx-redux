@@ -2836,7 +2836,9 @@ void observer_show_time() {
 #define OBS_TIME_WIDTH 224
 
 int observer_draw_player_card(int pnum, int color, int x, int y) {
+#ifdef OGL
 	glLineWidth(1);
+#endif
 
 	int sw, sh, saw;
 	int starty = y;
@@ -3058,7 +3060,9 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 		gr_line(i2f(x), i2f(y - 4), i2f(x + OBS_PLAYER_CARD_WIDTH), i2f(y - 4));
 	}
 
+#ifdef OGL
 	glLineWidth(linedotscale);
+#endif
 
 	return y - starty;
 }
@@ -3170,7 +3174,9 @@ void observer_maybe_show_kill_graph() {
 		kill_event* last_ev;
 		int old_x, old_y;
 
+#ifdef OGL
 		glLineWidth(1);
+#endif
 
 		for (int i = 0; i < n_players; i++) {
 			pnum = player_list[i];
@@ -3408,7 +3414,9 @@ void observer_maybe_show_kill_graph() {
 			}
 		}
 
+#ifdef OGL
 		glLineWidth(linedotscale);
+#endif
 	} else if (PlayerCfg.ObsShowBreakdown && GameTime64 < Show_graph_until + (PlayerCfg.ObsShowKillGraph ? i2f(15) : 0)) {
 		int drawn_players = n_players - (Netgame.host_is_obs ? 1 : 0);
 		int y = grd_curcanv->cv_bitmap.bm_h - 60;
@@ -4183,7 +4191,9 @@ void show_HUD_names()
 						gr_string (x1, y1, s);
 					}
 					if (is_observer() && PlayerCfg.ObsShowShieldBar) {
+#ifdef OGL
 						glLineWidth(1);
+#endif
 
 						int x2 = f2i(x) - 199 / 2;
 						int y2;
@@ -4239,7 +4249,9 @@ void show_HUD_names()
 							gr_uline(i2f(x2 - 1 + 20 * seg), i2f(y2), i2f(x2 - 1 + 20 * seg), i2f(y2 + 9));
 						}
 
+#ifdef OGL
 						glLineWidth(linedotscale);
+#endif
 					}
 
 					if (!Netgame.obs_min && is_observer() && PlayerCfg.ObsShowDamage)
