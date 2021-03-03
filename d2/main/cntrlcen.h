@@ -64,6 +64,7 @@ static inline int get_reactor_model_number(int id)
 
 static inline reactor *get_reactor_definition(int id)
 {
+	if (id >= MAX_REACTORS) return &Reactors[0]; // workaround for badly-ported D1 levels
 	return &Reactors[id];
 }
 
