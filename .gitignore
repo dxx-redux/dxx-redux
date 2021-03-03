@@ -52,8 +52,11 @@ Thumbs.db
 # VS Code #
 ###########
 .vscode/*
+/.vs
+*/.vs
 
 # Executables #
 ###############
 *.app
 d*x-rebirth
+/*/out/install

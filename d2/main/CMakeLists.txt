@@ -85,6 +85,10 @@ if(WIN32)
         ${CMAKE_SOURCE_DIR}/arch/win32/d2x-rebirth.rc
         )
     set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} /NODEFAULTLIB:msvcrt.lib")
+    install(FILES
+        ${PROJECT_BINARY_DIR}/main/SDL.dll
+        ${PROJECT_BINARY_DIR}/main/physfs.dll
+        DESTINATION .)
 endif()
 
 if(__APPLE__)
@@ -102,6 +106,7 @@ endif()
 if(SDLMIXER)
     find_package(SDL_mixer REQUIRED)
     target_link_libraries(d2x-retro PUBLIC ${SDL_MIXER_LIBRARIES})
+    install(FILES ${SDL_MIXER_LIBRARIES}/../SDL_mixer.dll DESTINATION .)
 endif()
 
 if(EDITOR)
