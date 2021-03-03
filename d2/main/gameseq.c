@@ -159,7 +159,7 @@ void verify_console_object()
 	Assert( Player_num > -1 );
 	Assert( Players[Player_num].objnum > -1 );
 	ConsoleObject = &Objects[Players[Player_num].objnum];
-	Assert( ConsoleObject->type==OBJ_PLAYER );
+	Assert( ConsoleObject->type==OBJ_PLAYER || (is_observer() && Player_num == OBSERVER_PLAYER_ID) );
 	Assert( ConsoleObject->id==Player_num );
 }
 

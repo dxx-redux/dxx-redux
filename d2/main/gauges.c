@@ -2977,7 +2977,7 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 
 		if (PlayerCfg.ObsShowPrimary) {
 			// Selected primary
-			char primary[7];
+			char primary[8];
 			switch (Players[pnum].primary_weapon) {
 			case 0:
 				sprintf(primary, "%s %i", (Players[pnum].flags & PLAYER_FLAGS_QUAD_LASERS) ? "QUAD" : "LASER", Players[pnum].laser_level + 1);

@@ -4402,7 +4402,7 @@ int net_udp_setup_game()
 	opt.moreopts = optnum;
 	m[optnum].type = NM_TYPE_MENU;  m[optnum].text = "Advanced Options"; optnum++;
 
-	Assert(optnum <= 21);
+	Assert(optnum <= 23);
 
 	i = newmenu_do1( NULL, TXT_NETGAME_SETUP, optnum, m, (int (*)( newmenu *, d_event *, void * ))net_udp_game_param_handler, &opt, opt.start_game );
 
