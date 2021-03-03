@@ -422,6 +422,17 @@ void draw_window_label()
 
 	}
 }
+
+void draw_debug_text()
+{
+	gr_set_curfont(GAME_FONT);
+	gr_set_fontcolor(BM_XRGB(0, 63, 0), -1);
+
+	int y = (LINE_SPACING * 5) + FSPACY(1);
+	// Draw real-time debug info here (copy as many times as you need lines)
+	//gr_printf(FSPACX(1), y, "P: %+0.4f", f2fl(ConsoleObject->mtype.phys_info.rotthrust.x));
+	//y += LINE_SPACING;
+}
 #endif
 
 void render_countdown_gauge()
@@ -450,6 +461,7 @@ void game_draw_hud_stuff()
 {
 #ifndef NDEBUG
 	draw_window_label();
+	draw_debug_text();
 #endif
 
 #ifdef NETWORK

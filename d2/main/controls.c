@@ -117,7 +117,9 @@ void read_flying_controls( object * obj )
 	}
 #endif
 	
-	if ((obj->type!=OBJ_PLAYER) || (obj->id!=Player_num)) return;	//references to player_ship require that this obj be the player
+	//references to player_ship require that this obj be the player
+	if ((obj->type != OBJ_PLAYER && !(is_observer() && obj->type == OBJ_GHOST)) || (obj->id != Player_num))
+		return;
 
 
 	forward_thrust_time = Controls.forward_thrust_time;
