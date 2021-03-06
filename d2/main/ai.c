@@ -1354,7 +1354,7 @@ int add_awareness_event(object *objp, int type)
 // The object (probably player or weapon) which created the awareness is objp.
 void create_awareness_event(object *objp, int type)
 {
-	if(is_observer() && objp->id == Player_num) {
+	if (object_is_observer(objp)) {
 		return;
 	}
 

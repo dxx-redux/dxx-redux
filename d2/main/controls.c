@@ -118,7 +118,7 @@ void read_flying_controls( object * obj )
 #endif
 	
 	//references to player_ship require that this obj be the player
-	if ((obj->type != OBJ_PLAYER && !(is_observer() && obj->type == OBJ_GHOST)) || (obj->id != Player_num))
+	if ((obj->type != OBJ_PLAYER && !object_is_observer(obj)) || (obj->id != Player_num))
 		return;
 
 

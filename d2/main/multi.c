@@ -6245,6 +6245,11 @@ bool is_observing_player() {
 	return is_observer() && (Current_obs_player != OBSERVER_PLAYER_ID && (!multi_i_am_master() || Current_obs_player != 0));
 }
 
+bool object_is_observer(object* obj)
+{
+	return is_observer() && obj == ConsoleObject;
+}
+
 /* Bounty packer sender and handler */
 void multi_send_bounty( void )
 {
