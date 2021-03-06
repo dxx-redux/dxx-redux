@@ -2975,6 +2975,8 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 			y += 4;
 		}
 
+		gr_set_curfont(MEDIUM1_FONT);
+
 		if (PlayerCfg.ObsShowPrimary) {
 			// Selected primary
 			char primary[8];
@@ -2994,6 +2996,18 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 			case 4:
 				sprintf(primary, "FUSION");
 				break;
+			case 6:
+				sprintf(primary, "GAUSS");
+				break;
+			case 7:
+				sprintf(primary, "HELIX");
+				break;
+			case 8:
+				sprintf(primary, "PHOENIX");
+				break;
+			case 9:
+				sprintf(primary, "OMEGA");
+				break;
 			}
 
 			// Primary ammo
@@ -3001,10 +3015,12 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 			gr_set_fontcolor(color, -1);
 			gr_printf(x + 3, y, "%s", primary);
 
-			if (Players[pnum].primary_weapon == 1) {
+			// List ammo for Vulcan or Gauss
+			if (Players[pnum].primary_weapon == 1 || Players[pnum].primary_weapon == 6) {
 				gr_set_fontcolor(BM_XRGB(25, 25, 25), -1);
 				int_to_string((int)ammo, primary_ammo);
 			}
+			// Energy for everything else
 			else {
 				gr_set_fontcolor(BM_XRGB(25, 18, 6), -1);
 				sprintf(primary_ammo, "%i", (int)energy);
@@ -3034,6 +3050,21 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 				break;
 			case 4:
 				sprintf(secondary, "MEGA");
+				break;
+			case 5:
+				sprintf(secondary, "FLASH");
+				break;
+			case 6:
+				sprintf(secondary, "GUIDED");
+				break;
+			case 7:
+				sprintf(secondary, "SMINE");
+				break;
+			case 8:
+				sprintf(secondary, "MERC");
+				break;
+			case 9:
+				sprintf(secondary, "SHAKER");
 				break;
 			}
 

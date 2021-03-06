@@ -6212,12 +6212,17 @@ void multi_send_ship_status_for_frame()
 	PUT_INTEL_SHORT(multibuf + 13, Players[Player_num].secondary_ammo[2]);
 	PUT_INTEL_SHORT(multibuf + 15, Players[Player_num].secondary_ammo[3]);
 	PUT_INTEL_SHORT(multibuf + 17, Players[Player_num].secondary_ammo[4]);
-	multibuf[19] = Players[Player_num].secondary_weapon_flags;
-	multibuf[20] = (ubyte)Players[Player_num].secondary_weapon;
-	PUT_INTEL_INT(multibuf + 21, Players[Player_num].energy);
-	PUT_INTEL_INT(multibuf + 25, Players[Player_num].homing_object_dist);
+	PUT_INTEL_SHORT(multibuf + 19, Players[Player_num].secondary_ammo[5]);
+	PUT_INTEL_SHORT(multibuf + 21, Players[Player_num].secondary_ammo[6]);
+	PUT_INTEL_SHORT(multibuf + 23, Players[Player_num].secondary_ammo[7]);
+	PUT_INTEL_SHORT(multibuf + 25, Players[Player_num].secondary_ammo[8]);
+	PUT_INTEL_SHORT(multibuf + 27, Players[Player_num].secondary_ammo[9]);
+	multibuf[29] = Players[Player_num].secondary_weapon_flags;
+	multibuf[30] = (ubyte)Players[Player_num].secondary_weapon;
+	PUT_INTEL_INT(multibuf + 31, Players[Player_num].energy);
+	PUT_INTEL_INT(multibuf + 35, Players[Player_num].homing_object_dist);
 
-	multi_send_data_direct( multibuf, 29, multi_who_is_master(), 2);
+	multi_send_data_direct( multibuf, 39, multi_who_is_master(), 2);
 }
 
 void multi_do_ship_status( const ubyte *buf )
@@ -6234,10 +6239,15 @@ void multi_do_ship_status( const ubyte *buf )
 		Players[buf[1]].secondary_ammo[2] = GET_INTEL_SHORT(buf + 13);
 		Players[buf[1]].secondary_ammo[3] = GET_INTEL_SHORT(buf + 15);
 		Players[buf[1]].secondary_ammo[4] = GET_INTEL_SHORT(buf + 17);
-		Players[buf[1]].secondary_weapon_flags = buf[19];
-		Players[buf[1]].secondary_weapon = (sbyte)buf[20];
-		Players[buf[1]].energy = GET_INTEL_INT(buf + 21);
-		Players[buf[1]].homing_object_dist = GET_INTEL_INT(buf + 25);
+		Players[buf[1]].secondary_ammo[5] = GET_INTEL_SHORT(buf + 19);
+		Players[buf[1]].secondary_ammo[6] = GET_INTEL_SHORT(buf + 21);
+		Players[buf[1]].secondary_ammo[7] = GET_INTEL_SHORT(buf + 23);
+		Players[buf[1]].secondary_ammo[8] = GET_INTEL_SHORT(buf + 25);
+		Players[buf[1]].secondary_ammo[9] = GET_INTEL_SHORT(buf + 27);
+		Players[buf[1]].secondary_weapon_flags = buf[29];
+		Players[buf[1]].secondary_weapon = (sbyte)buf[30];
+		Players[buf[1]].energy = GET_INTEL_INT(buf + 31);
+		Players[buf[1]].homing_object_dist = GET_INTEL_INT(buf + 35);
 	}
 }
 
