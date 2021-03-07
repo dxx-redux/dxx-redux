@@ -2853,7 +2853,7 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 
 	gr_printf(x + OBS_PLAYER_CARD_WIDTH / 2 - sw / 2, y, "%s", Players[pnum].callsign);
 
-	y += 27;
+	y += sh + 3;
 
 	// Score
 	char score[12];
@@ -2869,7 +2869,7 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 
 		gr_printf(x + OBS_PLAYER_CARD_WIDTH / 2 - sw / 2, y, "%s", score);
 
-		y += 27;
+		y += sh + 1;
 	}
 	else {
 		sprintf(score, "%d", Players[pnum].net_kills_total);
@@ -2880,17 +2880,18 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 
 		gr_printf(x + OBS_PLAYER_CARD_WIDTH - sw - 3, y, "%s", score);
 
-		y += 17;
+		y += 20; // string height slightly misleading in this font
 	}
 
 	if (!Netgame.obs_min) {
+		gr_set_curfont(GAME_FONT);
+
 		if (PlayerCfg.ObsShowScoreboardShieldText) {
 			// Shields
 			char shields[7];
 
 			sprintf(shields, "%0.1f%s", f2db(Players[pnum].shields), Players[pnum].shields_certain ? "" : "?");
 
-			gr_set_curfont(GAME_FONT);
 			gr_set_fontcolor(color, -1);
 
 			gr_get_string_size(shields, &sw, &sh, &saw);
@@ -2902,7 +2903,7 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 				gr_printf(x + 3, y, "%s", shields);
 			}
 
-			y += 27;
+			y += sh + 1;
 		}
 
 		if (PlayerCfg.ObsShowScoreboardShieldBar) {
@@ -2918,6 +2919,8 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 			else {
 				pulse_strength = 0;
 			}
+
+			y += 2;
 
 			// Fill bar with color
 			if (shield_count > 0) {
@@ -2958,6 +2961,10 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 		double ammo = f2db(Players[pnum].primary_ammo[1] * VULCAN_AMMO_SCALE);
 
 		if (PlayerCfg.ObsShowAmmoBars) {
+			if (!PlayerCfg.ObsShowScoreboardShieldBar) {
+				y += 2;
+			}
+
 			// Energy display
 			if (energy > 0) {
 				gr_setcolor(BM_XRGB(25, 18, 6));
@@ -2968,27 +2975,26 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 
 			// Ammo display
 			if (ammo > 0) {
+				double player_max_ammo = (Players[pnum].flags & PLAYER_FLAGS_AMMO_RACK) ? 20000.0 : 10000.0;
 				gr_setcolor(BM_XRGB(25, 25, 25));
-				gr_urect(x + 2, y, min(x + 2 + (int)(ammo * ((double)OBS_PLAYER_CARD_WIDTH - 4.0) / 10000.0), x + OBS_PLAYER_CARD_WIDTH - 2), y + 2);
+				gr_urect(x + 2, y, min(x + 2 + (int)(ammo * ((double)OBS_PLAYER_CARD_WIDTH - 4.0) / player_max_ammo), x + OBS_PLAYER_CARD_WIDTH - 2), y + 2);
 			}
 
 			y += 4;
 		}
 
-		gr_set_curfont(MEDIUM1_FONT);
-
 		if (PlayerCfg.ObsShowPrimary) {
 			// Selected primary
-			char primary[8];
+			char primary[11];
 			switch (Players[pnum].primary_weapon) {
 			case 0:
 				sprintf(primary, "%s %i", (Players[pnum].flags & PLAYER_FLAGS_QUAD_LASERS) ? "QUAD" : "LASER", Players[pnum].laser_level + 1);
 				break;
 			case 1:
-				sprintf(primary, "VUL");
+				sprintf(primary, "VULCAN");
 				break;
 			case 2:
-				sprintf(primary, "SPREAD");
+				sprintf(primary, "SPREADFIRE");
 				break;
 			case 3:
 				sprintf(primary, "PLASMA");
@@ -3010,10 +3016,13 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 				break;
 			}
 
-			// Primary ammo
-			char primary_ammo[7];
+			y += 2;
+
 			gr_set_fontcolor(color, -1);
 			gr_printf(x + 3, y, "%s", primary);
+
+			// Primary ammo
+			char primary_ammo[7];
 
 			// List ammo for Vulcan or Gauss
 			if (Players[pnum].primary_weapon == 1 || Players[pnum].primary_weapon == 6) {
@@ -3029,21 +3038,21 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 			gr_get_string_size(primary_ammo, &sw, &sh, &saw);
 			gr_printf(x + OBS_PLAYER_CARD_WIDTH - 1 - sw, y, primary_ammo);
 
-			y += 27;
+			y += sh + 1;
 		}
 
 		if (PlayerCfg.ObsShowSecondary) {
 			// Selected secondary
-			char secondary[7];
+			char secondary[12];
 			switch (Players[pnum].secondary_weapon) {
 			case 0:
-				sprintf(secondary, "CONC");
+				sprintf(secondary, "CONCUSSION");
 				break;
 			case 1:
 				sprintf(secondary, "HOMING");
 				break;
 			case 2:
-				sprintf(secondary, "PROX");
+				sprintf(secondary, "PROX BOMB");
 				break;
 			case 3:
 				sprintf(secondary, "SMART");
@@ -3058,15 +3067,17 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 				sprintf(secondary, "GUIDED");
 				break;
 			case 7:
-				sprintf(secondary, "SMINE");
+				sprintf(secondary, "SMART MINE");
 				break;
 			case 8:
-				sprintf(secondary, "MERC");
+				sprintf(secondary, "MERCURY");
 				break;
 			case 9:
-				sprintf(secondary, "SHAKER");
+				sprintf(secondary, "EARTHSHAKER");
 				break;
 			}
+
+			y += 2;
 
 			gr_set_fontcolor(color, -1);
 			gr_printf(x + 3, y, "%s", secondary);
@@ -3078,24 +3089,24 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 			gr_get_string_size(secondary_ammo, &sw, &sh, &saw);
 			gr_printf(x + OBS_PLAYER_CARD_WIDTH - 1 - sw, y, secondary_ammo);
 
-			y += 27;
+			y += sh + 1;
 		}
 	}
 
 	// Draw box around card if we are observing this player.
 	if (Current_obs_player == pnum) {
 		gr_setcolor(color);
-		gr_line(i2f(x), i2f(starty + 3), i2f(x), i2f(y - 4));
-		gr_line(i2f(x + OBS_PLAYER_CARD_WIDTH), i2f(starty + 3), i2f(x + OBS_PLAYER_CARD_WIDTH), i2f(y - 4));
+		gr_line(i2f(x), i2f(starty + 3), i2f(x), i2f(y));
+		gr_line(i2f(x + OBS_PLAYER_CARD_WIDTH), i2f(starty + 3), i2f(x + OBS_PLAYER_CARD_WIDTH), i2f(y));
 		gr_line(i2f(x), i2f(starty + 3), i2f(x + OBS_PLAYER_CARD_WIDTH), i2f(starty + 3));
-		gr_line(i2f(x), i2f(y - 4), i2f(x + OBS_PLAYER_CARD_WIDTH), i2f(y - 4));
+		gr_line(i2f(x), i2f(y), i2f(x + OBS_PLAYER_CARD_WIDTH), i2f(y));
 	}
 
 #ifdef OGL
 	glLineWidth(linedotscale);
 #endif
 
-	return y - starty;
+	return y - starty + 3;
 }
 
 int observer_show_player_cards() {
