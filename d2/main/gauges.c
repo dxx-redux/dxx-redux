@@ -2880,7 +2880,7 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 
 		gr_printf(x + OBS_PLAYER_CARD_WIDTH - sw - 3, y, "%s", score);
 
-		y += 20; // string height slightly misleading in this font
+        y += (sh * 0.72) + 1; // string height slightly misleading in this font
 	}
 
 	if (!Netgame.obs_min) {
@@ -2895,6 +2895,9 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 			gr_set_fontcolor(color, -1);
 
 			gr_get_string_size(shields, &sw, &sh, &saw);
+
+			// Print on the bottom-left of the score row
+			y -= sh + 1;
 
 			if ((Game_mode & GM_MULTI_COOP) || (Game_mode & GM_MULTI_ROBOTS)) {
 				gr_printf(x + OBS_PLAYER_CARD_WIDTH / 2 - sw / 2, y, "%s", shields);
@@ -2958,7 +2961,7 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 		}
 
 		double energy = f2db(Players[pnum].energy);
-		double ammo = f2db(Players[pnum].primary_ammo[1] * VULCAN_AMMO_SCALE);
+		double ammo = f2db(Players[pnum].primary_ammo[1]) * VULCAN_AMMO_SCALE;
 
 		if (PlayerCfg.ObsShowAmmoBars) {
 			if (!PlayerCfg.ObsShowScoreboardShieldBar) {
@@ -2975,7 +2978,7 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 
 			// Ammo display
 			if (ammo > 0) {
-				double player_max_ammo = (Players[pnum].flags & PLAYER_FLAGS_AMMO_RACK) ? 20000.0 : 10000.0;
+				double player_max_ammo = (Players[pnum].flags & PLAYER_FLAGS_AMMO_RACK) ? 40000.0 : 20000.0;
 				gr_setcolor(BM_XRGB(25, 25, 25));
 				gr_urect(x + 2, y, min(x + 2 + (int)(ammo * ((double)OBS_PLAYER_CARD_WIDTH - 4.0) / player_max_ammo), x + OBS_PLAYER_CARD_WIDTH - 2), y + 2);
 			}
@@ -2985,16 +2988,16 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 
 		if (PlayerCfg.ObsShowPrimary) {
 			// Selected primary
-			char primary[11];
+			char primary[8];
 			switch (Players[pnum].primary_weapon) {
 			case 0:
 				sprintf(primary, "%s %i", (Players[pnum].flags & PLAYER_FLAGS_QUAD_LASERS) ? "QUAD" : "LASER", Players[pnum].laser_level + 1);
 				break;
 			case 1:
-				sprintf(primary, "VULCAN");
+				sprintf(primary, "VUL");
 				break;
 			case 2:
-				sprintf(primary, "SPREADFIRE");
+				sprintf(primary, "SPREAD");
 				break;
 			case 3:
 				sprintf(primary, "PLASMA");
@@ -3003,7 +3006,7 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 				sprintf(primary, "FUSION");
 				break;
 			case 6:
-				sprintf(primary, "GAUSS");
+				sprintf(primary, "GAU");
 				break;
 			case 7:
 				sprintf(primary, "HELIX");
@@ -3043,16 +3046,16 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 
 		if (PlayerCfg.ObsShowSecondary) {
 			// Selected secondary
-			char secondary[12];
+			char secondary[7];
 			switch (Players[pnum].secondary_weapon) {
 			case 0:
-				sprintf(secondary, "CONCUSSION");
+				sprintf(secondary, "CONC");
 				break;
 			case 1:
 				sprintf(secondary, "HOMING");
 				break;
 			case 2:
-				sprintf(secondary, "PROX BOMB");
+				sprintf(secondary, "PROX");
 				break;
 			case 3:
 				sprintf(secondary, "SMART");
@@ -3067,13 +3070,13 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 				sprintf(secondary, "GUIDED");
 				break;
 			case 7:
-				sprintf(secondary, "SMART MINE");
+				sprintf(secondary, "SMINE");
 				break;
 			case 8:
-				sprintf(secondary, "MERCURY");
+				sprintf(secondary, "MERC");
 				break;
 			case 9:
-				sprintf(secondary, "EARTHSHAKER");
+				sprintf(secondary, "SHAKER");
 				break;
 			}
 
