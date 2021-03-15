@@ -915,19 +915,25 @@ multi_new_game(void)
 	for (i = 0; i < MAX_PLAYERS; i++) {
 		while ((dtt = First_damage_taken_totals[i]) != NULL) {
 			First_damage_taken_totals[i] = dtt->next;
-			dtt->next->prev = NULL;
+			if (dtt->next != NULL) {
+				dtt->next->prev = NULL;
+			}
 			d_free(dtt);
 		}
 
 		while ((dtt = First_damage_taken_current_totals[i]) != NULL) {
 			First_damage_taken_current_totals[i] = dtt->next;
-			dtt->next->prev = NULL;
+			if (dtt->next != NULL) {
+				dtt->next->prev = NULL;
+			}
 			d_free(dtt);
 		}
 
 		while ((dtt = First_damage_taken_previous_totals[i]) != NULL) {
 			First_damage_taken_previous_totals[i] = dtt->next;
-			dtt->next->prev = NULL;
+			if (dtt->next != NULL) {
+				dtt->next->prev = NULL;
+			}
 			d_free(dtt);
 		}
 
