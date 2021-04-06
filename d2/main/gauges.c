@@ -2790,8 +2790,8 @@ void observer_show_time() {
 	gr_get_string_size(time_str, &sw, &sh, &saw);
 
 	if ((Game_mode & GM_MULTI) && (Game_mode & GM_MULTI_COOP)) {
-		// For co-op, we show 0.01-second precision.
-		char decimal_str[3];
+		// For co-op, we show 0.01-second precision. (+ null terminator)
+		char decimal_str[4];
 		char* t;
 		int w = sw;
 		int h = sh;
@@ -2869,7 +2869,7 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 
 		gr_printf(x + OBS_PLAYER_CARD_WIDTH / 2 - sw / 2, y, "%s", score);
 
-		y += sh + 1;
+		y += sh + 3;
 	}
 	else {
 		sprintf(score, "%d", Players[pnum].net_kills_total);
@@ -2896,15 +2896,12 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 
 			gr_get_string_size(shields, &sw, &sh, &saw);
 
-			// Print on the bottom-left of the score row
-			y -= sh + 1;
+			if (!(Game_mode & GM_MULTI_COOP) && !(Game_mode & GM_MULTI_ROBOTS)) {
+				// Print on the bottom-left of the score row
+				y -= sh + 1;
+			}
 
-			if ((Game_mode & GM_MULTI_COOP) || (Game_mode & GM_MULTI_ROBOTS)) {
-				gr_printf(x + OBS_PLAYER_CARD_WIDTH / 2 - sw / 2, y, "%s", shields);
-			}
-			else {
-				gr_printf(x + 3, y, "%s", shields);
-			}
+			gr_printf(x + 3, y, "%s", shields);
 
 			y += sh + 1;
 		}
