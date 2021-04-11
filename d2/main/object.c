@@ -1855,7 +1855,7 @@ void obj_relink_all(void)
 			segnum = obj->segnum;
 			obj->next = obj->prev = obj->segnum = -1;
 			
-			if (segnum > Highest_segment_index)
+			if (segnum < 0 || segnum > Highest_segment_index)
 				segnum = 0;
 			obj_link(objnum, segnum);
 		}
