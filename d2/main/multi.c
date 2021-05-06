@@ -5449,7 +5449,7 @@ void multi_do_sound_function (const ubyte *buf)
 	char pnum,whichfunc;
 	int sound;
 
-	if (Players[Player_num].connected!=CONNECT_PLAYING)
+    if (Players[Player_num].connected != CONNECT_PLAYING && !is_observer())
 		return;
 
 	pnum=buf[1];

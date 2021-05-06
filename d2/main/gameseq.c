@@ -462,7 +462,7 @@ void init_player_stats_new_ship(ubyte pnum)
 	VulcanBoxAmmo[pnum] = 0; 
 
 #ifdef NETWORK
-	if(Game_mode & GM_MULTI && Netgame.BornWithBurner) {
+	if(Game_mode & GM_MULTI && Netgame.BornWithBurner && !is_observer()) {
 		Players[pnum].flags |= PLAYER_FLAGS_AFTERBURNER;
 		if (pnum == Player_num)
 			Afterburner_charge = f1_0;
