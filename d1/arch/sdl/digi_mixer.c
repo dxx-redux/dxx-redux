@@ -123,7 +123,7 @@ void mixdigi_convert_sound(int i)
 		if (SDL_ConvertAudio(&cvt)) con_printf(CON_DEBUG,"conversion of %d failed\n", i);
 
 		SoundChunks[i].abuf = cvt.buf;
-		SoundChunks[i].alen = dlen * cvt.len_mult;
+		SoundChunks[i].alen = cvt.len_cvt;
 		SoundChunks[i].allocated = 1;
 		SoundChunks[i].volume = 128; // Max volume = 128
 	}
