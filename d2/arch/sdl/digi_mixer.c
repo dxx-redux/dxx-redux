@@ -150,6 +150,8 @@ int digi_mixer_start_sound(short soundnum, fix volume, int pan, int looping, int
 	if (MIX_DIGI_DEBUG) con_printf(CON_DEBUG,"digi_start_sound %d, volume %d, pan %d (start=%d, end=%d)\n", soundnum, mix_vol, mix_pan, loop_start, loop_end);
 
 	channel = digi_mixer_find_channel();
+	if (channel == -1)
+		return -1;
 
 	Mix_PlayChannel(channel, &(SoundChunks[soundnum]), mix_loop);
 	Mix_SetPanning(channel, 255-mix_pan, mix_pan);
