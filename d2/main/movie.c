@@ -388,6 +388,13 @@ int RunMovie(char *filename, int hires_flag, int must_have,int dx,int dy)
 
 	filehndl = PHYSFSRWOPS_openRead(filename);
 
+	if (!filehndl && strlen(filename) < 13) {
+		char buf[13];
+		strcpy(buf, filename);
+		d_strupr(buf);
+		filehndl = PHYSFSRWOPS_openRead(buf);
+	}
+
 	if (!filehndl)
 	{
 		if (must_have)
@@ -500,6 +507,13 @@ int InitRobotMovie(char *filename)
 	MVE_sndInit(-1);        //tell movies to play no sound for robots
 
 	RoboFile = PHYSFSRWOPS_openRead(filename);
+
+	if (!RoboFile && strlen(filename) < 13) {
+		char buf[13];
+		strcpy(buf, filename);
+		d_strupr(buf);
+		RoboFile = PHYSFSRWOPS_openRead(buf);
+	}
 
 	if (!RoboFile)
 	{
