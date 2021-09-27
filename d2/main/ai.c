@@ -756,11 +756,12 @@ _exit_cheat:
 
 		if (ready_to_fire(robptr, ailp)) {
 			int do_stuff = 0;
+			int pi = aip->hide_index + aip->cur_path_index + aip->PATH_DIR;
 			if (openable_doors_in_segment(obj->segnum) != -1)
 				do_stuff = 1;
-			else if (openable_doors_in_segment(Point_segs[aip->hide_index + aip->cur_path_index + aip->PATH_DIR].segnum) != -1)
+			else if (pi >= 0 && openable_doors_in_segment(Point_segs[pi].segnum) != -1)
 				do_stuff = 1;
-			else if (openable_doors_in_segment(Point_segs[aip->hide_index + aip->cur_path_index + 2*aip->PATH_DIR].segnum) != -1)
+			else if (pi + aip->PATH_DIR >= 0 && openable_doors_in_segment(Point_segs[pi + aip->PATH_DIR].segnum) != -1)
 				do_stuff = 1;
 			else if ((ailp->mode == AIM_GOTO_PLAYER) && (dist_to_player < 3*MIN_ESCORT_DISTANCE/2) && (vm_vec_dot(&ConsoleObject->orient.fvec, &vec_to_player) > -F1_0/4)) {
 				do_stuff = 1;
@@ -1409,7 +1410,7 @@ void set_player_awareness_all(void)
 	process_awareness_events();
 
 	for (i=0; i<=Highest_object_index; i++)
-		if (Objects[i].control_type == CT_AI) {
+		if (Objects[i].control_type == CT_AI && Objects[i].segnum != -1) {
 			if (New_awareness[Objects[i].segnum] > Ai_local_info[i].player_awareness_type) {
 				Ai_local_info[i].player_awareness_type = New_awareness[Objects[i].segnum];
 				Ai_local_info[i].player_awareness_time = PLAYER_AWARENESS_INITIAL_TIME;
