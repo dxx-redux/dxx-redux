@@ -1227,7 +1227,7 @@ void add_segment_edges(automap *am, segment *seg)
 		if (seg->sides[sn].wall_num > -1)	{
 		
 			trigger_num = Walls[seg->sides[sn].wall_num].trigger;
-			ttype = Triggers[trigger_num].type;
+			ttype = trigger_num >= 0 ? Triggers[trigger_num].type : -1;
 			if (ttype==TT_SECRET_EXIT)
 				{
 			    color = BM_XRGB( 29, 0, 31 );
