@@ -1,6 +1,7 @@
 #SConstruct
 
 # needed imports
+from __future__ import print_function
 import sys
 import os
 import SCons.Util
@@ -15,7 +16,7 @@ class argumentIndirection:
 # endianess-checker
 def checkEndian():
     import struct
-    array = struct.pack('cccc', '\x01', '\x02', '\x03', '\x04')
+    array = struct.pack('cccc', b'\x01', b'\x02', b'\x03', b'\x04')
     i = struct.unpack('i', array)
     if i == struct.unpack('<i', array):
         return "little"
@@ -55,7 +56,7 @@ class DXXCommon:
 			builddir_suffix = ARGUMENTS.get('builddir_suffix', None)
 			default_builddir = builddir_prefix or ''
 			if builddir_prefix is not None or builddir_suffix is not None:
-				if os.environ.has_key('CC'):
+				if 'CC' in os.environ:
 					default_builddir += '%s-' % os.path.basename(os.environ['CC'])
 				for a in (
 					('debug', 'dbg'),
@@ -91,7 +92,7 @@ class DXXCommon:
 		osdef = '__APPLE__'
 		def __init__(self,user_settings):
 			user_settings.asm = 0
-			self.lflags = os.environ["LDFLAGS"] if os.environ.has_key('LDFLAGS') else ''
+			self.lflags = os.environ["LDFLAGS"] if 'LDFLAGS' in os.environ else ''
 		def adjust_environment(self,program,env):
 			VERSION = str(program.VERSION_MAJOR) + '.' + str(program.VERSION_MINOR)
 			if (program.VERSION_MICRO):
@@ -129,7 +130,7 @@ class DXXCommon:
 				flags = self.__pkg_config_sdl[cmd]
 			except KeyError as e:
 				if (program.user_settings.verbosebuild != 0):
-					print "%s: reading SDL settings from `%s`" % (program.PROGRAM_NAME, cmd)
+					print("%s: reading SDL settings from `%s`" % (program.PROGRAM_NAME, cmd))
 				self.__pkg_config_sdl[cmd] = env.backtick(cmd)
 				flags = self.__pkg_config_sdl[cmd]
 			env.MergeFlags(flags)
@@ -154,34 +155,34 @@ class DXXCommon:
 		self.env.Append(CPPDEFINES = ['NETWORK'])
 		# Get traditional compiler environment variables
 		for cc in ['CC', 'CXX']:
-			if os.environ.has_key(cc):
+			if cc in os.environ:
 				self.env[cc] = os.environ[cc]
 		for flags in ['CFLAGS', 'CXXFLAGS']:
-			if os.environ.has_key(flags):
+			if flags in os.environ:
 				self.env[flags] += SCons.Util.CLVar(os.environ[flags])
 
 	def check_endian(self):
 		# set endianess
 		if (self.__endian == "big"):
-			print "%s: BigEndian machine detected" % self.PROGRAM_NAME
+			print("%s: BigEndian machine detected" % self.PROGRAM_NAME)
 			self.asm = 0
 			self.env.Append(CPPDEFINES = ['WORDS_BIGENDIAN'])
 		elif (self.__endian == "little"):
-			print "%s: LittleEndian machine detected" % self.PROGRAM_NAME
+			print("%s: LittleEndian machine detected" % self.PROGRAM_NAME)
 
 	def check_platform(self):
 		# windows or *nix?
 		if sys.platform == 'win32':
-			print "%s: compiling on Windows" % self.PROGRAM_NAME
+			print("%s: compiling on Windows" % self.PROGRAM_NAME)
 			platform = self.Win32PlatformSettings
 		elif sys.platform == 'darwin':
-			print "%s: compiling on Mac OS X" % self.PROGRAM_NAME
+			print("%s: compiling on Mac OS X" % self.PROGRAM_NAME)
 			platform = self.DarwinPlatformSettings
 		elif sys.platform == 'cygwin':
-			print "%s: compiling on Widnows Cygwin" % self.PROGRAM_NAME
+			print("%s: compiling on Widnows Cygwin" % self.PROGRAM_NAME)
 			platform = self.Win32PlatformSettings
 		else:
-			print "%s: compiling on *NIX" % self.PROGRAM_NAME
+			print("%s: compiling on *NIX" % self.PROGRAM_NAME)
 			platform = self.LinuxPlatformSettings
 		self.platform_settings = platform(self.user_settings)
 		# Acquire environment object...
@@ -195,15 +196,15 @@ class DXXCommon:
 		# opengl or software renderer?
 		if (self.user_settings.opengl == 1) or (self.user_settings.opengles == 1):
 			if (self.user_settings.opengles == 1):
-				print "%s: building with OpenGL ES" % self.PROGRAM_NAME
+				print("%s: building with OpenGL ES" % self.PROGRAM_NAME)
 				env.Append(CPPDEFINES = ['OGLES'])
 			else:
-				print "%s: building with OpenGL" % self.PROGRAM_NAME
+				print("%s: building with OpenGL" % self.PROGRAM_NAME)
 			env.Append(CPPDEFINES = ['OGL'])
 
 		# assembler code?
 		if (self.user_settings.asm == 1) and (self.user_settings.opengl == 0):
-			print "%s: including: ASSEMBLER" % self.PROGRAM_NAME
+			print("%s: including: ASSEMBLER" % self.PROGRAM_NAME)
 			env.Replace(AS = 'nasm')
 			env.Append(ASCOM = ' -f ' + str(self.platform_settings.osasmdef) + ' -d' + str(self.platform_settings.osdef) + ' -Itexmap/ ')
 			self.common_sources += asm_sources
@@ -212,12 +213,12 @@ class DXXCommon:
 
 		# SDL_mixer support?
 		if (self.user_settings.sdlmixer == 1):
-			print "%s: including SDL_mixer" % self.PROGRAM_NAME
+			print("%s: including SDL_mixer" % self.PROGRAM_NAME)
 			env.Append(CPPDEFINES = ['USE_SDLMIXER'])
 
 		# debug?
 		if (self.user_settings.debug == 1):
-			print "%s: including: DEBUG" % self.PROGRAM_NAME
+			print("%s: including: DEBUG" % self.PROGRAM_NAME)
 			if (sys.platform == 'cygwin'):
 				# C preprocessor macro expansion for gdb
 				env.Append(CPPFLAGS = ['-g3'])
@@ -249,7 +250,7 @@ class DXXCommon:
 
 		# Raspberry Pi?
 		if (self.user_settings.raspberrypi == 1):
-			print "using Raspberry Pi vendor libs in %s" % self.user_settings.rpi_vc_path
+			print("using Raspberry Pi vendor libs in %s" % self.user_settings.rpi_vc_path)
 			env.Append(CPPDEFINES = ['RPI', 'WORDS_NEED_ALIGNMENT'])
 			env.Append(CPPPATH = [
 				self.user_settings.rpi_vc_path+'/include',
@@ -304,7 +305,7 @@ class DXXProgram(DXXCommon):
 		def __init__(self,user_settings):
 			DXXCommon.LinuxPlatformSettings.__init__(self,user_settings)
 			user_settings.sharepath += '/'
-			self.lflags = os.environ["LDFLAGS"] if os.environ.has_key('LDFLAGS') else ''
+			self.lflags = os.environ["LDFLAGS"] if 'LDFLAGS' in os.environ else ''
 		def adjust_environment(self,program,env):
 			DXXCommon.LinuxPlatformSettings.adjust_environment(self, program, env)
 			self.libs = env['LIBS']
@@ -326,7 +327,7 @@ class DXXProgram(DXXCommon):
 		self.env.Append(CPPDEFINES = [('DXX_VERSION_MAJORi', str(self.VERSION_MAJOR)), ('DXX_VERSION_MINORi', str(self.VERSION_MINOR)), ('DXX_VERSION_MICROi', str(self.VERSION_MICRO))])
 
 	def banner(self):
-		print '\n===== ' + self.PROGRAM_NAME + self.VERSION_STRING + ' =====\n'
+		print('\n===== ' + self.PROGRAM_NAME + self.VERSION_STRING + ' =====\n')
 
 	def process_user_settings(self):
 		DXXCommon.process_user_settings(self)
@@ -339,7 +340,7 @@ class DXXProgram(DXXCommon):
 			else:
 				env.Append(FRAMEWORKS = ['OpenGL'])
 		else:
-			print "%s: building with Software Renderer" % self.PROGRAM_NAME
+			print("%s: building with Software Renderer" % self.PROGRAM_NAME)
 			self.common_sources += self.arch_sdl_sources
 
 		# SDL_mixer support?
@@ -401,7 +402,7 @@ class D1XProgram(DXXProgram):
 		self.env.Append(CPPPATH = [os.path.join(self.srcdir, f) for f in ['include', 'main', 'arch/include']])
 
 	def __init__(self):
-	# general source files
+		# general source files
 		self.common_sources = [os.path.join(self.srcdir, f) for f in [
 '2d/2dsline.c',
 '2d/bitblt.c',
@@ -526,7 +527,7 @@ class D1XProgram(DXXProgram):
 ]
 ]
 
-	# for editor
+		# for editor
 		self.editor_sources = [os.path.join(self.srcdir, f) for f in [
 'editor/centers.c',
 'editor/curves.c',
@@ -585,34 +586,33 @@ class D1XProgram(DXXProgram):
 'ui/userbox.c'
 ]
 ]
-		DXXProgram.__init__(self)
 
-	sources_use_udp = [os.path.join(srcdir, 'main/net_udp.c')]
+		self.sources_use_udp = [os.path.join(self.srcdir, 'main/net_udp.c')]
 
-	# SDL_mixer sound implementation
-	arch_sdlmixer = [os.path.join(srcdir, f) for f in [
+		# SDL_mixer sound implementation
+		self.arch_sdlmixer = [os.path.join(self.srcdir, f) for f in [
 'arch/sdl/digi_mixer.c',
 'arch/sdl/digi_mixer_music.c',
 'arch/sdl/jukebox.c'
 ]
 ]
 
-	# for opengl
-	arch_ogl_sources = [os.path.join(srcdir, f) for f in [
+		# for opengl
+		self.arch_ogl_sources = [os.path.join(self.srcdir, f) for f in [
 'arch/ogl/gr.c',
 'arch/ogl/ogl.c',
 ]
 ]
 
-	# for non-ogl
-	arch_sdl_sources = [os.path.join(srcdir, f) for f in [
+		# for non-ogl
+		self.arch_sdl_sources = [os.path.join(self.srcdir, f) for f in [
 'arch/sdl/gr.c',
 'texmap/tmapflat.c'
 ]
 ]
 
-	# assembler related
-	asm_sources = [os.path.join(srcdir, f) for f in [
+		# assembler related
+		self.asm_sources = [os.path.join(self.srcdir, f) for f in [
 'texmap/tmap_ll.asm',
 'texmap/tmap_flt.asm',
 'texmap/tmapfade.asm',
@@ -620,6 +620,7 @@ class D1XProgram(DXXProgram):
 'texmap/tmap_per.asm'
 ]
 ]
+		DXXProgram.__init__(self)
 
 	def register_program(self):
 		self._register_program('d1x')
