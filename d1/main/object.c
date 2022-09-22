@@ -383,7 +383,10 @@ void draw_polygon_object(object *obj)
 	int	imsave;
 	fix engine_glow_value[1];
 
-	light = compute_object_light(obj,NULL);
+	if (Lighting_on) // off in endlevel sequence
+		light = compute_object_light(obj,NULL);
+	else
+		light.r = light.g = light.b = F1_0*2;
 
 	//	If option set for bright players in netgame, brighten them!
 #ifdef NETWORK
