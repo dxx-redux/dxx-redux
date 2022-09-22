@@ -61,6 +61,7 @@ static const char WindowModeStr[] ="WindowMode";
 static const char TexFiltStr[] ="TexFilt";
 static const char VSyncStr[] ="VSync";
 static const char MultisampleStr[] ="Multisample";
+static const char ClassicDepthStr[] ="ClassicDepth";
 static const char FPSIndicatorStr[] ="FPSIndicator";
 static const char GrabinputStr[] ="GrabInput";
 
@@ -109,6 +110,7 @@ int ReadConfigFile()
 	GameCfg.TexFilt = 0;
 	GameCfg.VSync = 0;
 	GameCfg.Multisample = 0;
+	GameCfg.ClassicDepth = 0;
 	GameCfg.FPSIndicator = 0;
 	GameCfg.Grabinput = 1;
 
@@ -216,6 +218,8 @@ int ReadConfigFile()
 				GameCfg.VSync = strtol(value, NULL, 10);
 			else if (!strcmp(token, MultisampleStr))
 				GameCfg.Multisample = strtol(value, NULL, 10);
+			else if (!strcmp(token, ClassicDepthStr))
+				GameCfg.ClassicDepth = strtol(value, NULL, 10);
 			else if (!strcmp(token, FPSIndicatorStr))
 				GameCfg.FPSIndicator = strtol(value, NULL, 10);
 			else if (!strcmp(token, GrabinputStr))
@@ -272,6 +276,7 @@ int WriteConfigFile()
 	PHYSFSX_printf(infile, "%s=%i\n", TexFiltStr, GameCfg.TexFilt);
 	PHYSFSX_printf(infile, "%s=%i\n", VSyncStr, GameCfg.VSync);
 	PHYSFSX_printf(infile, "%s=%i\n", MultisampleStr, GameCfg.Multisample);
+	PHYSFSX_printf(infile, "%s=%i\n", ClassicDepthStr, GameCfg.ClassicDepth);
 	PHYSFSX_printf(infile, "%s=%i\n", FPSIndicatorStr, GameCfg.FPSIndicator);
 	PHYSFSX_printf(infile, "%s=%i\n", GrabinputStr, GameCfg.Grabinput);
 

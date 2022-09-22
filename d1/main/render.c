@@ -1199,9 +1199,31 @@ int n_sort_items;
 int sort_func(sort_item *a,sort_item *b)
 {
 	fix delta_dist;
-//	  object *obj_a,*obj_b;
+	object *obj_a,*obj_b;
 
 	delta_dist = a->dist - b->dist;
+
+	if (!GameCfg.ClassicDepth)
+		return delta_dist;
+
+	obj_a = &Objects[a->objnum];
+	obj_b = &Objects[b->objnum];
+
+	if (abs(delta_dist) < (obj_a->size + obj_b->size)) {		//same position
+
+		//these two objects are in the same position.  see if one is a fireball
+		//or laser or something that should plot on top
+
+		if (obj_a->type == OBJ_WEAPON || obj_a->type == OBJ_FIREBALL)
+			if (!(obj_b->type == OBJ_WEAPON || obj_b->type == OBJ_FIREBALL))
+				return -1;	//a is weapon, b is not, so say a is closer
+			else;				//both are weapons
+		else
+			if (obj_b->type == OBJ_WEAPON || obj_b->type == OBJ_FIREBALL)
+				return 1;	//b is weapon, a is not, so say a is farther
+
+		//no special case, fall through to normal return
+	}
 
 	return delta_dist;	//return distance
 }
@@ -1696,7 +1718,9 @@ void render_mine(int start_seg_num,fix eye_offset)
 		}
 	}
 
-#ifndef OGL
+#ifdef OGL
+	if (GameCfg.ClassicDepth) {
+#endif
 	for (nn=N_render_segs;nn--;) {
 		int segnum;
 		int objnp;
@@ -1708,10 +1732,13 @@ void render_mine(int start_seg_num,fix eye_offset)
 		//if (!no_render_flag[nn])
 		if (segnum!=-1 && (_search_mode || eye_offset>0 || (unsigned char)visited[segnum]!=255)) {
 			//set global render window vars
+			void ogl_update_window_clip();
+
 			Window_clip_left  = render_windows[nn].left;
 			Window_clip_top   = render_windows[nn].top;
 			Window_clip_right = render_windows[nn].right;
 			Window_clip_bot   = render_windows[nn].bot;
+			ogl_update_window_clip();
 
 			render_segment(segnum); 
 			visited[segnum]=255;
@@ -1720,6 +1747,7 @@ void render_mine(int start_seg_num,fix eye_offset)
 			Window_clip_left  = Window_clip_top = 0;
 			Window_clip_right = grd_curcanv->cv_bitmap.bm_w-1;
 			Window_clip_bot   = grd_curcanv->cv_bitmap.bm_h-1;
+			ogl_update_window_clip();
 
 			//int n_expl_objs=0,expl_objs[5],i;
 			int listnum;
@@ -1748,7 +1776,8 @@ void render_mine(int start_seg_num,fix eye_offset)
 			Max_linear_depth = save_linear_depth;
 		}
 	}
-#else
+#ifdef OGL
+	} else {
 	// Sorting elements for Alpha - 3 passes
 	// First Pass: render opaque level geometry + transculent level geometry with high Alpha-Test func
 	for (nn=N_render_segs;nn--;)
@@ -1892,6 +1921,7 @@ void render_mine(int start_seg_num,fix eye_offset)
 			}
 			visited[segnum]=255;
 		}
+	}
 	}
 #endif
 

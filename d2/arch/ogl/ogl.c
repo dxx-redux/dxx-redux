@@ -1223,10 +1223,13 @@ void ogl_start_frame(void){
 
 	glEnable(GL_ALPHA_TEST);
 	glAlphaFunc(GL_GEQUAL,0.02);
-	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LEQUAL);
 
-	glClear(GL_DEPTH_BUFFER_BIT);
+	if (!GameCfg.ClassicDepth) {
+		glEnable(GL_DEPTH_TEST);
+		glDepthFunc(GL_LEQUAL);
+
+		glClear(GL_DEPTH_BUFFER_BIT);
+	}
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_FRONT);
 
@@ -1987,4 +1990,21 @@ bool ogl_ubitmapm_cs(int x, int y,int dw, int dh, grs_bitmap *bm,int c, int scal
 	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 	
 	return 0;
+}
+
+void ogl_update_window_clip()
+{
+	extern int Window_clip_left, Window_clip_top, Window_clip_right, Window_clip_bot;
+	int cw = grd_curcanv->cv_bitmap.bm_w, ch = grd_curcanv->cv_bitmap.bm_h;
+
+	if (!Window_clip_left && !Window_clip_top &&
+		Window_clip_right == cw - 1 && Window_clip_bot == ch - 1) {
+		glDisable(GL_SCISSOR_TEST);
+	} else {
+		glScissor(Window_clip_left + grd_curcanv->cv_bitmap.bm_x,
+			grd_curscreen->sc_h - grd_curcanv->cv_bitmap.bm_y - Window_clip_bot - 1,
+			Window_clip_right - Window_clip_left + 1,
+			Window_clip_bot - Window_clip_top + 1);
+		glEnable(GL_SCISSOR_TEST);
+	}
 }

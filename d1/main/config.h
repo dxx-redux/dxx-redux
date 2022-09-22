@@ -48,6 +48,7 @@ typedef struct Cfg
 	int Multisample;
 	int FPSIndicator;
 	int Grabinput;
+	int ClassicDepth;
 } __pack__ Cfg;
 
 extern struct Cfg GameCfg;

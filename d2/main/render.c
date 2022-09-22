@@ -1977,7 +1977,9 @@ void render_mine(int start_seg_num,fix eye_offset, int window_num)
 		}
 	}
 
-#ifndef OGL
+#ifdef OGL
+	if (GameCfg.ClassicDepth) {
+#endif
 	for (nn=N_render_segs;nn--;) {
 		int segnum;
 		int objnp;
@@ -1989,10 +1991,13 @@ void render_mine(int start_seg_num,fix eye_offset, int window_num)
 		//if (!no_render_flag[nn])
 		if (segnum!=-1 && (_search_mode || visited[segnum]!=255)) {
 			//set global render window vars
+			void ogl_update_window_clip();
+
 			Window_clip_left  = render_windows[nn].left;
 			Window_clip_top   = render_windows[nn].top;
 			Window_clip_right = render_windows[nn].right;
 			Window_clip_bot   = render_windows[nn].bot;
+			ogl_update_window_clip();
 
 			render_segment(segnum, window_num);
 			visited[segnum]=255;
@@ -2001,6 +2006,7 @@ void render_mine(int start_seg_num,fix eye_offset, int window_num)
 			Window_clip_left  = Window_clip_top = 0;
 			Window_clip_right = grd_curcanv->cv_bitmap.bm_w-1;
 			Window_clip_bot   = grd_curcanv->cv_bitmap.bm_h-1;
+			ogl_update_window_clip();
 
 			//int n_expl_objs=0,expl_objs[5],i;
 			int listnum;
@@ -2029,7 +2035,8 @@ void render_mine(int start_seg_num,fix eye_offset, int window_num)
 			Max_linear_depth = save_linear_depth;
 		}
 	}
-#else
+#ifdef OGL
+	} else {
 	// Sorting elements for Alpha - 3 passes
 	// First Pass: render opaque level geometry + transculent level geometry with high Alpha-Test func
 	for (nn=N_render_segs;nn--;)
@@ -2175,6 +2182,7 @@ void render_mine(int start_seg_num,fix eye_offset, int window_num)
 			}
 			visited[segnum]=255;
 		}
+	}
 	}
 #endif
 
