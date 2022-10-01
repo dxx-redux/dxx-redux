@@ -1517,7 +1517,7 @@ void build_segment_list(int start_seg_num)
 
 				ch=seg->children[c];
 
-				if ( (window_check || !visited[ch]) && ((wid & WID_RENDPAST_FLAG) || observer) ) {
+				if ( (window_check || !visited[ch]) && ((wid & WID_RENDPAST_FLAG) || (observer && ch >= 0)) ) {
 					if (!observer && behind_check) {
 						sbyte *sv = Side_to_verts[c];
 						ubyte codes_and=0xff;
