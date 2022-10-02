@@ -4299,7 +4299,7 @@ void net_udp_read_sync_packet( ubyte * data, int data_len, struct _sockaddr send
 
 	memcpy(temp_callsign, Players[Player_num].callsign, CALLSIGN_LEN+1);
 	
-	Player_num = -1;
+	Player_num = (Game_mode & GM_OBSERVER) ? OBSERVER_PLAYER_ID : -1;
 
 	for (i=0; i<MAX_PLAYERS; i++ )
 	{
@@ -4363,7 +4363,8 @@ void net_udp_read_sync_packet( ubyte * data, int data_len, struct _sockaddr send
 	if (Network_rejoined)
 	{
 		net_udp_process_monitor_vector(Netgame.monitor_vector);
-		Players[Player_num].time_level = Netgame.level_time;
+		if (Player_num != -1)
+			Players[Player_num].time_level = Netgame.level_time;
 	}
 
 	team_kills[0] = Netgame.team_kills[0];
