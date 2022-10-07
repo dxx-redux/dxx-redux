@@ -5699,7 +5699,7 @@ void add_message_to_obs_buffer(ubyte *data, int data_len) {
 	}
 
 	cur_obs_msg++; 
-	if(cur_obs_msg >= MAX_OBS_MESSAGES*MAX_MESSAGE_SIZE) {
+	if(cur_obs_msg >= MAX_OBS_MESSAGES) {
 		cur_obs_msg = 0; 
 	}
 	memcpy(observer_data_buffer + bufslot, data, data_len);
