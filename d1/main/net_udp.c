@@ -4268,6 +4268,8 @@ void net_udp_read_sync_packet( ubyte * data, int data_len, struct _sockaddr send
 	int i, j;
 
 	char temp_callsign[CALLSIGN_LEN+1];
+
+	int prev_status = Network_status;
 	
 	// This function is now called by all people entering the netgame.
 
@@ -4289,7 +4291,8 @@ void net_udp_read_sync_packet( ubyte * data, int data_len, struct _sockaddr send
 	if (Netgame.segments_checksum != my_segments_checksum)
 	{
 		Network_status = NETSTAT_MENU;
-		nm_messagebox(TXT_ERROR, 1, TXT_OK, TXT_NETLEVEL_NMATCH);
+		if (prev_status != NETSTAT_MENU)
+			nm_messagebox(TXT_ERROR, 1, TXT_OK, TXT_NETLEVEL_NMATCH);
 #ifdef NDEBUG
 		return;
 #endif
