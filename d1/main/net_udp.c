@@ -1328,6 +1328,8 @@ int net_udp_list_join_poll( newmenu *menu, d_event *event, direct_join *dj )
 		// These next two loops protect against menu skewing
 		// if missiontitle or gamename contain a tab
 
+		gr_set_curfont(GAME_FONT);
+
 		for (x=0,tx=0,k=0,j=0;j<15;j++)
 		{
 			if (Active_udp_games[(i+(NLPage*UDP_NETGAMES_PPAGE))].mission_title[j]=='\t')
