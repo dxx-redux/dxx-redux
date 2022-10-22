@@ -364,7 +364,7 @@ static int setup_buffers(hmp_file *hmp) {
 		memset(buf, 0, sizeof(MIDIHDR));
 		buf->lpData = (char *)buf + sizeof(MIDIHDR);
 		buf->dwBufferLength = HMP_BUFSIZE;
-		buf->dwUser = (DWORD)hmp;
+		buf->dwUser = (DWORD_PTR)hmp;
 		buf->lpNext = lastbuf;
 		lastbuf = buf;
 	}
@@ -387,7 +387,7 @@ static void reset_tracks(struct hmp_file *hmp)
 	hmp->cur_time = 0;
 }
 
-static void _stdcall midi_callback(HMIDISTRM hms, UINT uMsg, DWORD dwUser, DWORD dw1, DWORD dw2) {
+static void _stdcall midi_callback(HMIDISTRM hms, UINT uMsg, DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2) {
 	MIDIHDR *mhdr;
 	hmp_file *hmp;
 	int rc;
@@ -458,7 +458,7 @@ int hmp_play(hmp_file *hmp, int bLoop)
 
 	if ((rc = setup_buffers(hmp)))
 		return rc;
-	if ((midiStreamOpen(&hmp->hmidi, &hmp->devid,1, (DWORD) (size_t) midi_callback, 0, CALLBACK_FUNCTION)) != MMSYSERR_NOERROR) {
+	if ((midiStreamOpen(&hmp->hmidi, &hmp->devid,1, (DWORD_PTR) midi_callback, 0, CALLBACK_FUNCTION)) != MMSYSERR_NOERROR) {
 		hmp->hmidi = NULL;
 		return HMP_MM_ERR;
 	}
