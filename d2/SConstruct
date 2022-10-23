@@ -89,7 +89,7 @@ class DXXCommon:
 		def __init__(self,user_settings):
 			pass
 		def adjust_environment(self,program,env):
-			env.Append(CPPDEFINES = ['_WIN32', 'HAVE_STRUCT_TIMEVAL'])
+			env.Append(CPPDEFINES = ['_WIN32', 'HAVE_STRUCT_TIMEVAL', 'HAVE_STRUCT_TIMESPEC'])
 	class DarwinPlatformSettings(_PlatformSettings):
 		osdef = '__APPLE__'
 		def __init__(self,user_settings):
