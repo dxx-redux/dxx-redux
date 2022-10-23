@@ -1774,6 +1774,12 @@ int ai_restore_state(PHYSFS_file *fp, int version, int swap)
 		Escort_special_goal = PHYSFSX_readSXE32(fp, swap);
 		Escort_goal_index = PHYSFSX_readSXE32(fp, swap);
 		PHYSFS_read(fp, &Stolen_items, sizeof(Stolen_items[0]) * MAX_STOLEN_ITEMS, 1);
+
+		// rebirth uses UINT8_MAX for ESCORT_GOAL_UNSPECIFIED
+		if (Escort_goal_object == 255)
+			Escort_goal_object = ESCORT_GOAL_UNSPECIFIED;
+		if (Escort_special_goal == 255)
+			Escort_special_goal = ESCORT_GOAL_UNSPECIFIED;
 	} else {
 		int i;
 

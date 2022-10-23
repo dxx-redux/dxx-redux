@@ -1118,12 +1118,13 @@ int state_restore_all_sub(char *filename)
 	PHYSFS_file *fp;
 	int swap = 0;	// if file is not endian native, have to swap all shorts and ints
 	int current_level;
-	char mission[16];
+	char mission[128];
 	char desc[DESC_LENGTH+1];
 	char id[5];
 	char org_callsign[CALLSIGN_LEN+16];
 	fix tmptime32 = 0;
 	player_rw *pl_rw;
+	int rebirth = 0;
 
 	#ifndef NDEBUG
 	if (GameArg.SysUsePlayersDir && strncmp(filename, "Players/", 8))
@@ -1179,6 +1180,17 @@ int state_restore_all_sub(char *filename)
 
 // Read the mission info...
 	PHYSFS_read(fp, mission, sizeof(char) * 9, 1);
+
+	if (mission[8] == 1) { // rebirth savegame_mission_name_abi::pathname
+		char *p;
+		PHYSFS_read(fp, mission, 128, 1);
+		if (mission[127]) {
+			PHYSFS_close(fp);
+			return 0;
+		}
+		if ((p = strrchr(mission, '/')))
+			memmove(mission, p + 1, strlen(p + 1) + 1);
+	}
 
 	if (!load_mission_by_name( mission ))	{
 		nm_messagebox( NULL, 1, "Ok", "Error!\nUnable to load mission\n'%s'\n", mission );
@@ -1279,6 +1291,13 @@ RetryObjectLoading:
 		}
 	}
 
+	//Check for rebirth missing signatures
+	if (!Objects[0].signature && !Objects[1].signature) {
+		for (i=0; i<=Highest_object_index; i++)
+			Objects[i].signature = i + 1;
+		rebirth = 1;
+	}
+
 	for (i=0; i<=Highest_object_index; i++ )	{
 		obj = &Objects[i];
 		obj->rtype.pobj_info.alt_textures = -1;
@@ -1320,6 +1339,11 @@ RetryObjectLoading:
 			}
 		}
 	}
+
+	//Check for rebirth linked_wall value
+	for (i=0;i<Num_walls;i++)
+		if (Walls[i].linked_wall == 65535) // rebirth dcx::wallnum_t::None
+			Walls[i].linked_wall = -1;
 
 	//Restore door info
 	Num_open_doors = PHYSFSX_readSXE32(fp, swap);
@@ -1364,7 +1388,7 @@ RetryObjectLoading:
 		Total_countdown_time = Countdown_timer/F0_5; // we do not need to know this, but it should not be 0 either...
 
 	// Restore the AI state
-	ai_restore_state( fp, version, swap );
+	ai_restore_state( fp, version, swap, rebirth );
 
 	// Restore the automap visited info
 	if ( Highest_segment_index+1 > MAX_SEGMENTS_ORIGINAL )
@@ -1481,6 +1505,10 @@ RetryObjectLoading:
 		Viewer = ConsoleObject = &Objects[Players[Player_num].objnum]; // make sure Viewer and ConsoleObject are set up (which we skipped by not using InitPlayerObject but we need since objects changed while loading)
 		special_reset_objects(); // since we juggeled around with objects to remap coop players rebuild the index of free objects
 	}
+
+	if (PHYSFS_tell(fp) != PHYSFS_fileLength(fp))
+		con_printf(CON_URGENT, "savegame not completely read, might be corrupt! (cur %d, size %d)",
+			(int)PHYSFS_tell(fp), (int)PHYSFS_fileLength(fp));
 
 	PHYSFS_close(fp);
 

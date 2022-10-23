@@ -3278,14 +3278,14 @@ void ai_cloak_info_read_n_swap(ai_cloak_info *ci, int n, int swap, PHYSFS_file *
 	}
 }
 
-int ai_restore_state(PHYSFS_file *fp, int version, int swap)
+int ai_restore_state(PHYSFS_file *fp, int version, int swap, int rebirth)
 {
 	(void)version;
 	fix tmptime32 = 0;
 
 	Ai_initialized = PHYSFSX_readSXE32(fp, swap);
 	Overall_agitation = PHYSFSX_readSXE32(fp, swap);
-	ai_local_read_n_swap(Ai_local_info, MAX_OBJECTS, swap, fp);
+	ai_local_read_n_swap(Ai_local_info, rebirth ? 350 : MAX_OBJECTS, swap, fp);
 	point_seg_read_n_swap(Point_segs, MAX_POINT_SEGS, swap, fp);
 	ai_cloak_info_read_n_swap(Ai_cloak_info, MAX_AI_CLOAK_INFO, swap, fp);
 	tmptime32 = PHYSFSX_readSXE32(fp, swap);
