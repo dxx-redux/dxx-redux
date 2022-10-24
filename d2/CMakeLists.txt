@@ -1,8 +1,12 @@
 ﻿# CMakeList.txt : CMake project for d2x-retro, include source and define
 # project specific logic here.
 #
-cmake_minimum_required (VERSION 3.8)
-project(d2x-retro)
+cmake_minimum_required (VERSION 3.21)
+project(
+    d2x-retro
+    VERSION 1.4.7
+    LANGUAGES C
+    )
 
 option(OPENGL "Build with OpenGL support [default: ON]" ON)
 option(SDLMIXER "Build with SDL_Mixer support for sound and music (includes external music support) [default: ON]" ON)

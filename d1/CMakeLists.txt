@@ -1,7 +1,7 @@
 ﻿# CMakeList.txt : CMake project for d1x-retro, include source and define
 # project specific logic here.
 #
-cmake_minimum_required (VERSION 3.8)
+cmake_minimum_required (VERSION 3.21)
 project(d1x-retro)
 
 option(OPENGL "Build with OpenGL support [default: ON]" ON)
