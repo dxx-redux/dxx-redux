@@ -3020,6 +3020,7 @@ void net_udp_send_game_info(struct _sockaddr sender_addr, ubyte info_upid, ubyte
 		buf[len] = Netgame.AllowPreferredColors;        len++; 
 		buf[len] = Netgame.obs_min; len++;
 		buf[len] = Netgame.host_is_obs; len++;
+		buf[len] = Netgame.HomingUpdateRate; len++;
 
 		if(info_upid == UPID_SYNC) {
 			PUT_INTEL_INT(buf + len, player_tokens[to_player]); len += 4; 
@@ -3246,6 +3247,7 @@ int net_udp_process_game_info(ubyte *data, int data_len, struct _sockaddr game_a
 		Netgame.AllowPreferredColors = data[len];         len++; 
 		Netgame.obs_min = data[len]; len++;
 		Netgame.host_is_obs = data[len]; len++;
+		Netgame.HomingUpdateRate = data[len]; len++;
 
 		if (Netgame.host_is_obs) {
 			multi_make_player_ghost(0);
@@ -3740,6 +3742,7 @@ static int opt_spawn_no_invul, opt_spawn_short_invul, opt_spawn_long_invul, opt_
 //static int opt_dark_smarts;
 static int opt_allowprefcolor; 
 static int opt_low_vulcan;
+static int opt_homing_update_rate;
 #ifdef USE_TRACKER
 static int opt_tracker;
 #endif
@@ -3769,6 +3772,7 @@ void net_udp_more_game_options ()
 	int opt=0,i=0;
 	char PlayText[80],KillText[80],srinvul[50],packstring[5];
 	char PrimDupText[80],SecDupText[80],SecCapText[80]; 
+	char HomingUpdateRateText[80];
 #ifdef USE_TRACKER
 	newmenu_item m[34];
 #else
@@ -3888,6 +3892,10 @@ void net_udp_more_game_options ()
 	opt_blackwhite = opt;
 	m[opt].type = NM_TYPE_CHECK; m[opt].text = "Alternate Colors (Ships 6 and 7)"; m[opt].value = Netgame.BlackAndWhitePyros; opt++;	
 
+	opt_homing_update_rate=opt;
+	sprintf( HomingUpdateRateText, "Homing Update Rate: %d", Netgame.HomingUpdateRate);
+	m[opt].type = NM_TYPE_SLIDER; m[opt].value=max(0, Netgame.HomingUpdateRate - 15); m[opt].text= HomingUpdateRateText; m[opt].min_value=0; m[opt].max_value=10; opt++;
+
 menu:
 	i = newmenu_do1( NULL, "Advanced netgame options", opt, m, net_udp_more_options_handler, NULL, 0 );
 
@@ -3940,6 +3948,7 @@ menu:
 	//Netgame.DarkSmartBlobs = m[opt_dark_smarts].value;
 	Netgame.LowVulcan = m[opt_low_vulcan].value;
 	Netgame.AllowPreferredColors = m[opt_allowprefcolor].value;
+	Netgame.HomingUpdateRate = m[opt_homing_update_rate].value + 15;
 
 }
 
@@ -4001,6 +4010,11 @@ int net_udp_more_options_handler( newmenu *menu, d_event *event, void *userdata 
 
 				sprintf( menus[opt_secondary_cap].text, "Cap Secondaries: %s", Netgame.SecondaryCapFactor == 0 ? "Uncapped" : (Netgame.SecondaryCapFactor == 1 ? "Max Six" : "Max Two"));
 
+			}
+			else if (citem == opt_homing_update_rate)
+			{
+				Netgame.HomingUpdateRate=menus[opt_homing_update_rate].value + 15;
+				sprintf( menus[opt_homing_update_rate].text, "Homing Update Rate: %d", Netgame.HomingUpdateRate);
 			} else if (citem == opt_spawn_no_invul) {
 				Netgame.SpawnStyle = SPAWN_STYLE_NO_INVUL;
 			} else if (citem == opt_spawn_short_invul) {
@@ -4239,6 +4253,7 @@ int net_udp_setup_game()
 	Netgame.DarkSmartBlobs = 0;
 	Netgame.LowVulcan = 0;
 	Netgame.AllowPreferredColors = 1; 
+	Netgame.HomingUpdateRate = 25;
 
 #ifdef USE_TRACKER
 	Netgame.Tracker = 1;

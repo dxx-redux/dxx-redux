@@ -536,5 +536,7 @@ extern void create_small_fireball_on_object(object *objp, fix size_scale, int so
 
 extern void object_rw_swap(object_rw *obj_rw, int swap);
 
+extern void set_homing_update_rate(int update_rate);
+
 #endif
  

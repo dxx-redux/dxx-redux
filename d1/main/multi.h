@@ -64,7 +64,7 @@ extern int multi_protocol; // set and determinate used protocol
 #define MULTI_PROTO_UDP 1 // UDP protocol
 
 // What version of the multiplayer protocol is this? Increment each time something drastic changes in Multiplayer without the version number changes. Can be reset to 0 each time the version of the game changes
-#define MULTI_PROTO_VERSION 12947 // Retromod 1.4x7 Temporary
+#define MULTI_PROTO_VERSION 22947 // Retromod arne/1.4x7 Temporary
 
 // PROTOCOL VARIABLES AND DEFINES - END
 
@@ -498,6 +498,7 @@ typedef struct netgame_info
 	ubyte						DarkSmartBlobs;
 	ubyte						LowVulcan;
 	ubyte						AllowPreferredColors;
+	ubyte						HomingUpdateRate;
 } __pack__ netgame_info;
 
 extern int Host_is_obs; // Reminder for host only that they are an observer.  Do not set for other players or observers.
