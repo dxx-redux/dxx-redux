@@ -3849,7 +3849,7 @@ void net_udp_more_game_options ()
 
 	m[opt].type = NM_TYPE_TEXT; m[opt].text = ""; opt++;
 
-	m[opt].type = NM_TYPE_TEXT; m[opt].text = "Packets per second (2 - 30)"; opt++;
+	m[opt].type = NM_TYPE_TEXT; m[opt].text = "Packets per second (2 - 40)"; opt++;
 	opt_packets=opt;
 	m[opt].type = NM_TYPE_INPUT; m[opt].text=packstring; m[opt].text_len=2; opt++;
 
@@ -3901,10 +3901,10 @@ menu:
 
 	Netgame.PacketsPerSec=atoi(packstring);
 	
-	if (Netgame.PacketsPerSec>30)
+	if (Netgame.PacketsPerSec>40)
 	{
-		Netgame.PacketsPerSec=30;
-		nm_messagebox(TXT_ERROR, 1, TXT_OK, "Packet value out of range\nSetting value to 30");
+		Netgame.PacketsPerSec=40;
+		nm_messagebox(TXT_ERROR, 1, TXT_OK, "Packet value out of range\nSetting value to 40");
 	}
 
 	if (Netgame.PacketsPerSec<10)
