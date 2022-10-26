@@ -3796,12 +3796,12 @@ void net_udp_more_game_options ()
 	char xp[5];
 	sprintf(xp, "x%d", Netgame.PrimaryDupFactor); 
 	sprintf( PrimDupText, "Extra Primaries: %s", Netgame.PrimaryDupFactor < 2 ? "None" : xp);
-	m[opt].type = NM_TYPE_SLIDER; m[opt].value=Netgame.PrimaryDupFactor - 1; m[opt].text= PrimDupText; m[opt].min_value=0; m[opt].max_value=3; opt++;
+	m[opt].type = NM_TYPE_SLIDER; m[opt].value=Netgame.PrimaryDupFactor - 1; m[opt].text= PrimDupText; m[opt].min_value=0; m[opt].max_value=7; opt++;
 
 	opt_secondary_dup=opt;
 	sprintf(xp, "x%d", Netgame.SecondaryDupFactor); 
 	sprintf( SecDupText, "Extra Secondaries: %s", Netgame.SecondaryDupFactor < 2 ? "None" : xp);
-	m[opt].type = NM_TYPE_SLIDER; m[opt].value=Netgame.SecondaryDupFactor - 1; m[opt].text= SecDupText; m[opt].min_value=0; m[opt].max_value=3; opt++;
+	m[opt].type = NM_TYPE_SLIDER; m[opt].value=Netgame.SecondaryDupFactor - 1; m[opt].text= SecDupText; m[opt].min_value=0; m[opt].max_value=7; opt++;
 
 	opt_secondary_cap=opt;
 	sprintf( SecCapText, "Cap Secondaries: %s", Netgame.SecondaryCapFactor == 0 ? "Uncapped" : (Netgame.SecondaryCapFactor == 1 ? "Max Six" : "Max Two"));
