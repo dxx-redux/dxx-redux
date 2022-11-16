@@ -1,0 +1,9 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg/master/scripts/vcpkg.schema.json",
+  "name": "d1x-retro",
+  "version-semver": "1.4.6",
+  "dependencies": [
+    "physfs",
+    "sdl1"
+  ]
+}
