@@ -3527,7 +3527,7 @@ int multi_received_objects = 0;
 
 char original_object_types[MAX_OBJECTS];
 void save_original_objects() {
-	for (int i=0; i<=MAX_OBJECTS; i++) {
+	for (int i=0; i<MAX_OBJECTS; i++) {
 		original_object_types[i] = Objects[i].type; 
 	}
 }
