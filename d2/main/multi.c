@@ -813,12 +813,11 @@ get_team(int pnum)
 int get_team_size(int team_num)
 {
 	int team_size = 0;
-	int observer_player_id = Netgame.host_is_obs ? 0 : OBSERVER_PLAYER_ID;
 	for (int i = 0; i < Netgame.max_numplayers; i++)
 	{
-		if (is_observer() && i == observer_player_id)
+		if (is_observer() && Netgame.host_is_obs && i == 0)
 			continue;
-		if (Players[i].connected != CONNECT_DISCONNECTED && get_team(i) == team_num)
+		if (get_team(i) == team_num)
 			team_size++;
 	}
 	return team_size;
