@@ -3109,13 +3109,16 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 	return y - starty + 3;
 }
 
+#define OBS_PLAYER_CARD_PADDING FSPACX(3)
+#define OBS_PLAYER_CARD_WIDTH_PADDED (OBS_PLAYER_CARD_WIDTH + 2 * OBS_PLAYER_CARD_PADDING)
+
 int observer_show_player_cards() {
 	if (Netgame.BlackAndWhitePyros)
 		selected_player_rgb = player_rgb_alt;
 	else
 		selected_player_rgb = player_rgb;
 
-	if ((Game_mode & GM_MULTI) && (Game_mode & GM_TEAM)) {
+	if ((Game_mode & GM_MULTI) && (Game_mode & GM_TEAM) && get_team_size(TEAM_BLUE) <= 4 && get_team_size(TEAM_RED) <= 4) {
 		// Show team one to the left, team two to the right when possible.
 		// TODO
 	}
@@ -3146,29 +3149,39 @@ int observer_show_player_cards() {
 
 			int position = i - (found_host_as_obs ? 1 : 0);
 
-			if (grd_curcanv->cv_bitmap.bm_w < 2 * OBS_PLAYER_CARD_WIDTH + OBS_TIME_WIDTH) {
-				x = grd_curcanv->cv_bitmap.bm_w / 2 - OBS_PLAYER_CARD_WIDTH + OBS_PLAYER_CARD_WIDTH * (position % 2);
+			if (grd_curcanv->cv_bitmap.bm_w < 2 * OBS_PLAYER_CARD_WIDTH_PADDED + OBS_TIME_WIDTH) {
+				x = grd_curcanv->cv_bitmap.bm_w / 2 - OBS_PLAYER_CARD_WIDTH_PADDED
+					+ OBS_PLAYER_CARD_WIDTH_PADDED * (position % 2)
+					+ OBS_PLAYER_CARD_PADDING;
 				y = 53 + obs_player_card_height * (position / 2);
 			}
-			else if (grd_curcanv->cv_bitmap.bm_w < 4 * OBS_PLAYER_CARD_WIDTH + OBS_TIME_WIDTH) {
-				x = grd_curcanv->cv_bitmap.bm_w / 2 - OBS_TIME_WIDTH / 2 - OBS_PLAYER_CARD_WIDTH + (OBS_PLAYER_CARD_WIDTH + OBS_TIME_WIDTH) * (position % 2);
+			else if (grd_curcanv->cv_bitmap.bm_w < 4 * OBS_PLAYER_CARD_WIDTH_PADDED + OBS_TIME_WIDTH) {
+				x = grd_curcanv->cv_bitmap.bm_w / 2 - OBS_TIME_WIDTH / 2 - OBS_PLAYER_CARD_WIDTH_PADDED
+					+ (OBS_PLAYER_CARD_WIDTH_PADDED + OBS_TIME_WIDTH) * (position % 2)
+					+ OBS_PLAYER_CARD_PADDING;
 				y = 0 + obs_player_card_height * (position / 2);
 			}
-			else if (grd_curcanv->cv_bitmap.bm_w < 6 * OBS_PLAYER_CARD_WIDTH + OBS_TIME_WIDTH) {
+			else if (grd_curcanv->cv_bitmap.bm_w < 6 * OBS_PLAYER_CARD_WIDTH_PADDED + OBS_TIME_WIDTH) {
 				if (drawn_players < 3) {
 					position += 1;
 				}
-				x = grd_curcanv->cv_bitmap.bm_w / 2 - OBS_TIME_WIDTH / 2 - 2 * OBS_PLAYER_CARD_WIDTH + OBS_PLAYER_CARD_WIDTH * (position % 4) + OBS_TIME_WIDTH * ((position % 4) / 2);
+				x = grd_curcanv->cv_bitmap.bm_w / 2 - OBS_TIME_WIDTH / 2 - 2 * OBS_PLAYER_CARD_WIDTH_PADDED
+					+ OBS_PLAYER_CARD_WIDTH_PADDED * (position % 4)
+					+ OBS_TIME_WIDTH * ((position % 4) / 2)
+					+ OBS_PLAYER_CARD_PADDING;
 				y = 0 + obs_player_card_height * (position / 4);
 			}
-			else if (grd_curcanv->cv_bitmap.bm_w < 8 * OBS_PLAYER_CARD_WIDTH + OBS_TIME_WIDTH) {
+			else if (grd_curcanv->cv_bitmap.bm_w < 8 * OBS_PLAYER_CARD_WIDTH_PADDED + OBS_TIME_WIDTH) {
 				if (drawn_players < 3) {
 					position += 2;
 				}
 				else if (drawn_players < 5) {
 					position += 1;
 				}
-				x = grd_curcanv->cv_bitmap.bm_w / 2 - OBS_TIME_WIDTH / 2 - 3 * OBS_PLAYER_CARD_WIDTH + OBS_PLAYER_CARD_WIDTH * (position % 6) + OBS_TIME_WIDTH * ((position % 6) / 3);
+				x = grd_curcanv->cv_bitmap.bm_w / 2 - OBS_TIME_WIDTH / 2 - 3 * OBS_PLAYER_CARD_WIDTH_PADDED
+					+ OBS_PLAYER_CARD_WIDTH_PADDED * (position % 6)
+					+ OBS_TIME_WIDTH * ((position % 6) / 3)
+					+ OBS_PLAYER_CARD_PADDING;
 				y = 0 + obs_player_card_height * (position / 6);
 			}
 			else {
@@ -3181,7 +3194,10 @@ int observer_show_player_cards() {
 				else if (drawn_players < 7) {
 					position += 1;
 				}
-				x = grd_curcanv->cv_bitmap.bm_w / 2 - OBS_TIME_WIDTH / 2 - 4 * OBS_PLAYER_CARD_WIDTH + OBS_PLAYER_CARD_WIDTH * (position % 8) + OBS_TIME_WIDTH * ((position % 8) / 4);
+				x = grd_curcanv->cv_bitmap.bm_w / 2 - OBS_TIME_WIDTH / 2 - 4 * OBS_PLAYER_CARD_WIDTH_PADDED
+					+ OBS_PLAYER_CARD_WIDTH_PADDED * (position % 8)
+					+ OBS_TIME_WIDTH * ((position % 8) / 4)
+					+ OBS_PLAYER_CARD_PADDING;
 				y = 0 + obs_player_card_height * (position / 8);
 			}
 
