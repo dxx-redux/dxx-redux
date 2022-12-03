@@ -903,19 +903,25 @@ multi_new_game(void)
 	for (i = 0; i < MAX_PLAYERS; i++) {
 		while ((dtt = First_damage_taken_totals[i]) != NULL) {
 			First_damage_taken_totals[i] = dtt->next;
-			dtt->next->prev = NULL;
+			if (dtt->next != NULL) {
+				dtt->next->prev = NULL;
+			}
 			d_free(dtt);
 		}
 
 		while ((dtt = First_damage_taken_current_totals[i]) != NULL) {
 			First_damage_taken_current_totals[i] = dtt->next;
-			dtt->next->prev = NULL;
+			if (dtt->next != NULL) {
+				dtt->next->prev = NULL;
+			}
 			d_free(dtt);
 		}
 
 		while ((dtt = First_damage_taken_previous_totals[i]) != NULL) {
 			First_damage_taken_previous_totals[i] = dtt->next;
-			dtt->next->prev = NULL;
+			if (dtt->next != NULL) {
+				dtt->next->prev = NULL;
+			}
 			d_free(dtt);
 		}
 
@@ -4743,6 +4749,11 @@ bool is_observing_player() {
 	return is_observer() && (Current_obs_player != OBSERVER_PLAYER_ID && (!multi_i_am_master() || Current_obs_player != 0));
 }
 
+bool object_is_observer(object* obj)
+{
+	return is_observer() && obj == ConsoleObject;
+}
+
 /* Bounty packer sender and handler */
 void multi_send_bounty( void )
 {
@@ -5487,14 +5498,15 @@ void multi_object_rw_to_object(object_rw *obj_rw, object *obj)
 			obj->ctype.powerup_info.count         = obj_rw->ctype.powerup_info.count;
 			break;
 		case CT_CNTRLCEN:
-		{
-			// gun points of reactor now part of the object but of course not saved in object_rw. Let's just recompute them.
-			int i = 0;
-			reactor *reactor = get_reactor_definition(obj->id);
-			for (i=0; i<reactor->n_guns; i++)
-				calc_controlcen_gun_point(reactor, obj, i);
+			if (obj->type != OBJ_GHOST) // don't bother getting gunpoints for deleted reactors (e.g. boss levels)
+			{
+				// gun points of reactor now part of the object but of course not saved in object_rw. Let's just recompute them.
+				int i = 0;
+				reactor *reactor = get_reactor_definition(obj->id);
+				for (i=0; i<reactor->n_guns; i++)
+					calc_controlcen_gun_point(reactor, obj, i);
+			}
 			break;
-		}
 	}
 	
 	switch (obj->render_type)

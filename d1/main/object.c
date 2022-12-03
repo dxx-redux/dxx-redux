@@ -206,7 +206,12 @@ void draw_object_blob(object *obj,bitmap_index bmi)
 		obj->id == PLAYER_SMART_HOMING_ID &&
 		obj->ctype.laser_info.parent_num == Players[Player_num].objnum) {
 
+#ifdef OGL
 		g3_draw_bitmap_colorwarp(&pos,fixmuldiv(obj->size,bm->bm_w,bm->bm_h),obj->size,bm, 0.0, 0.4, 0.0);
+#else
+		// Color warping not implemented in software renderer
+		g3_draw_bitmap(&pos, fixmuldiv(obj->size, bm->bm_w, bm->bm_h), obj->size, bm);
+#endif
 
 	} else {
 		if (bm->bm_w > bm->bm_h)
@@ -1704,7 +1709,7 @@ void obj_relink_all(void)
 			segnum = obj->segnum;
 			obj->next = obj->prev = obj->segnum = -1;
 			
-			if (segnum > Highest_segment_index)
+			if (segnum < 0 || segnum > Highest_segment_index)
 				segnum = 0;
 			obj_link(objnum, segnum);
 		}

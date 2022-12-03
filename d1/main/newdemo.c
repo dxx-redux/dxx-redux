@@ -3223,8 +3223,8 @@ void newdemo_stop_recording()
 	gr_palette_load( gr_palette );
 
 	if(Game_mode & GM_MULTI) {
-		char p1[8];
-		sprintf(p1, Players[Player_num].callsign);
+		char p1[CALLSIGN_LEN + 1];
+		strcpy(p1, Players[Player_num].callsign);
 
 		char p2[16];
 
@@ -3236,7 +3236,7 @@ void newdemo_stop_recording()
 			int me = Player_num;
 			int you = Player_num ? 0 : 1;
 
-			sprintf(p2, "%s_%d_%d", Players[you].callsign, Players[me].net_kills_total, Players[you].net_kills_total);
+			snprintf(p2, ARRAYSIZE(p2), "%s_%d_%d", Players[you].callsign, Players[me].net_kills_total, Players[you].net_kills_total);
 		} else {
 			sprintf(p2, "ANARCHY");
 		}

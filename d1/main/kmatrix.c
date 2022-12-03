@@ -326,7 +326,8 @@ int kmatrix_handler(window *wind, d_event *event, kmatrix_screen *km)
 				
 				Netgame.numobservers = 0;
 				
-				window_close(wind);
+				if (window_exists(wind))
+					window_close(wind);
 				break;
 			}
 

@@ -1147,6 +1147,9 @@ void StartNewLevelSub(int level_num, int page_in_textures, int secret_flag)
 			return;
 		}
 
+		// Reset the timestamp when we can send another ship status packet (for observer mode)
+		Next_ship_status_time = GameTime64;
+
 		if (imulti_new_game)
 		{
 			for (int i=0;i<MAX_PLAYERS;i++)

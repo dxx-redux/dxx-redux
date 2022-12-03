@@ -291,6 +291,7 @@ int get_color_for_team(int team, int missile);
 void multi_send_obs_update(ubyte event, ubyte event_data);
 void multi_send_ship_status_for_frame();
 bool is_observing_player();
+bool object_is_observer(object* obj);
 
 // Exported variables
 

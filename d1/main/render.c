@@ -1475,7 +1475,10 @@ void build_segment_list(int start_seg_num)
 
 				ch=seg->children[c];
 
-				if ((wid & WID_RENDPAST_FLAG) || is_observer()) {
+				// Only add side if it doesn't block rendering of the child segment
+				// (in observer mode, add side as long as it has a child)
+				if ((wid & WID_RENDPAST_FLAG) || (is_observer() && (ch >= 0))) {
+					// Skip sides that are behind the camera (except in observer mode)
 					if (!is_observer()) {
 						sbyte *sv = Side_to_verts[c];
 						ubyte codes_and=0xff;
@@ -1488,8 +1491,8 @@ void build_segment_list(int start_seg_num)
 							codes_and &= Segment_points[seg->verts[sv[i]]].p3_codes;
 
 						if (codes_and & CC_BEHIND) continue;
-
 					}
+
 					child_list[n_children++] = c;
 				}
 			}
