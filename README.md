@@ -5,7 +5,13 @@ Latest versions
 ---------------
 
 * D1X-Retro - 1.4X6
-* D2X-Retro - 1.3a
+* D2X-Retro - 1.4X3 for Windows, 1.3a for Mac
+
+Windows 10 Performance Notice
+----------------------------
+If you are noticing long periods of time when your game locks up, this is likely due to the Windows 10 2017 Fall Creator's Update.  To resolve this, turn on "Disable fullscreen optimizations" in the properties dialog of your Retro .exe file.
+
+![image](https://user-images.githubusercontent.com/498929/36879953-01acc5fa-1d7b-11e8-9e4b-b8a6d6e1927f.png)
 
 Changelog
 ---------

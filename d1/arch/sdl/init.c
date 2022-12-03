@@ -21,7 +21,8 @@ void arch_close(void)
 	if (!GameArg.CtlNoJoystick)
 		joy_close();
 
-	mouse_close();
+	if (!GameArg.CtlNoMouse)
+		mouse_close();
 
 	if (!GameArg.SndNoSound)
 	{
@@ -47,7 +48,8 @@ void arch_init(void)
 	if (!GameArg.SndNoSound)
 		digi_init();
 
-	mouse_init();
+	if (!GameArg.CtlNoMouse)
+		mouse_init();
 
 	if (!GameArg.CtlNoJoystick)
 		joy_init();

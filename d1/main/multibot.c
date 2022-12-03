@@ -73,13 +73,7 @@ int robot_send_pending[MAX_ROBOTS_CONTROLLED];
 int robot_fired[MAX_ROBOTS_CONTROLLED];
 ubyte robot_fire_buf[MAX_ROBOTS_CONTROLLED][18+3];
 
-#define MULTI_ROBOT_PRIORITY(objnum, pnum) (((objnum % 4) + pnum) % N_players)
-
-//#define MULTI_ROBOT_PRIORITY(objnum, pnum) multi_robot_priority(objnum, pnum)
-//int multi_robot_priority(int objnum, int pnum)
-//{
-//	return( ((objnum % 4) + pnum) % N_players);
-//}
+#define MULTI_ROBOT_PRIORITY(objnum, pnum) ((objnum + pnum) % (N_players - (Netgame.host_is_obs ? 1 : 0)))
 
 int
 multi_can_move_robot(int objnum, int agitation)
@@ -1291,7 +1285,7 @@ multi_drop_robot_powerups(int objnum)
 
 	robptr = &Robot_info[del_obj->id];
 
-	if(Game_mode & GM_MULTI_ROBOTS)
+	if(Game_mode & GM_MULTI_ROBOTS && !(Game_mode & GM_MULTI_COOP))
 		return; 
 
 	Net_create_loc = 0;

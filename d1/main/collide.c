@@ -169,7 +169,7 @@ void apply_force_damage(object *obj,fix force,object *other_obj)
 				damage = fixmul(damage, FrameTime*2);
 
 			#ifdef NETWORK
-			if (Game_mode & GM_MULTI)
+			if (obj->id == Player_num && Game_mode & GM_MULTI)
 			{
 				con_printf(CON_NORMAL, "You took %0.1f damage from colliding with a ship!\n", (double)(damage) / (double)(F1_0)); 
 
@@ -284,7 +284,7 @@ void collide_player_and_wall( object * player, fix hitspeed, short hitseg, short
 	if (player->id != Player_num) // Execute only for local player
 		return;
 
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 	//	If this wall does damage, don't make *BONK* sound, we'll be making another sound.
 	if (TmapInfo[Segments[hitseg].sides[hitwall].tmap_num].damage > 0)
@@ -320,7 +320,7 @@ void collide_player_and_wall( object * player, fix hitspeed, short hitseg, short
 				{
 			  		con_printf(CON_NORMAL, "You took %0.1f damage from hitting a wall!\n", (double)(damage) / (double)(F1_0)); 
 
-					multi_send_damage(damage, Players[Player_num].shields, NULL, NULL, DAMAGE_WALL, NULL);
+					multi_send_damage(damage, Players[Player_num].shields, OBJ_WALL, 0, DAMAGE_WALL, NULL);
 				}
 			  	#endif
 			  	apply_damage_to_player( player, player, damage, 0 );			  	
@@ -354,7 +354,7 @@ void scrape_player_on_wall(object *obj, short hitseg, short hitside, vms_vector 
 			{
 				con_printf(CON_NORMAL, "You took %0.1f damage from lava!\n", (double)(damage) / (double)(F1_0)); 
 
-				multi_send_damage(damage, Players[Player_num].shields, NULL, NULL, DAMAGE_LAVA, NULL);
+				multi_send_damage(damage, Players[Player_num].shields, OBJ_WALL, 0, DAMAGE_LAVA, NULL);
 			}
 			#endif
 			  	
@@ -494,7 +494,7 @@ void collide_weapon_and_wall( object * weapon, fix hitspeed, short hitseg, short
 
 	//if ((seg->sides[hitwall].tmap_num2==0) && (TmapInfo[seg->sides[hitwall].tmap_num].flags & TMI_VOLATILE)) {
 
-	fix volume = ((Game_mode & GM_OBSERVER) != 0 && Objects[weapon->ctype.laser_info.parent_num].type == OBJ_CNTRLCEN) ? F1_0 / 4 : F1_0;
+	fix volume = (is_observer() && Objects[weapon->ctype.laser_info.parent_num].type == OBJ_CNTRLCEN) ? F1_0 / 4 : F1_0;
 		
 	if (Objects[weapon->ctype.laser_info.parent_num].type == OBJ_PLAYER)
 		playernum = Objects[weapon->ctype.laser_info.parent_num].id;
@@ -655,7 +655,7 @@ void collide_robot_and_controlcen( object * obj1, object * obj2, vms_vector *col
 //##}
 
 void collide_robot_and_player( object * robot, object * player, vms_vector *collision_point ) {
-	if (player->id == Player_num && Game_mode & GM_OBSERVER) {
+	if (player->id == Player_num && is_observer()) {
 		return;
 	}
 
@@ -766,7 +766,7 @@ void apply_damage_to_controlcen(object *controlcen, fix damage, short who)
 
 void collide_player_and_controlcen( object * controlcen, object * player, vms_vector *collision_point )
 {
-	if (player->id == Player_num && Game_mode & GM_OBSERVER) {
+	if (player->id == Player_num && is_observer()) {
 		return;
 	}
 
@@ -1024,7 +1024,7 @@ void collide_robot_and_weapon( object * robot, object * weapon, vms_vector *coll
 //##}
 
 void collide_hostage_and_player( object * hostage, object * player, vms_vector *collision_point ) {
-	if (player->id == Player_num && Game_mode & GM_OBSERVER) {
+	if (player->id == Player_num && is_observer()) {
 		return;
 	}
 
@@ -1084,7 +1084,7 @@ void collide_hostage_and_player( object * hostage, object * player, vms_vector *
 
 void collide_player_and_player( object * player1, object * player2, vms_vector *collision_point )
 {
-	if ((player1->id == Player_num || player2->id == Player_num) && Game_mode & GM_OBSERVER) {
+	if ((player1->id == Player_num || player2->id == Player_num) && is_observer()) {
 		return;
 	}
 
@@ -1311,7 +1311,7 @@ void apply_damage_to_player(object *player, object *killer, fix damage, ubyte po
 	if (Endlevel_sequence)
 		return;
 
-	if (player->id == Player_num && Game_mode & GM_OBSERVER) {
+	if (player->id == Player_num && is_observer()) {
 		return;
 	}	
 
@@ -1327,6 +1327,8 @@ void apply_damage_to_player(object *player, object *killer, fix damage, ubyte po
 		PALETTE_FLASH_ADD(f2i(damage)*4,-f2i(damage/2),-f2i(damage/2));	//flash red
 
 		if (Players[Player_num].shields < 0)	{
+			// Don't auto select when you're dead.
+			reset_auto_select();
 
   			Players[Player_num].killer_objnum = killer-Objects;
 
@@ -1375,7 +1377,7 @@ void collide_player_and_weapon( object * player, object * weapon, vms_vector *co
 	fix		damage = weapon->shields;
 	object * killer=NULL;
 
-	if (player->id == Player_num && Game_mode & GM_OBSERVER) {
+	if (player->id == Player_num && is_observer()) {
 		return;
 	}
 
@@ -1487,7 +1489,7 @@ void collide_player_and_weapon( object * player, object * weapon, vms_vector *co
 					con_printf(CON_NORMAL, "You took %0.1f damage from %s's %s!\n", 
 						(double)(damage)/(double)(F1_0), killer_name, weapon_name); 
 
-					multi_send_damage(damage, Players[Player_num].shields, killer->type, killer->id, DAMAGE_WEAPON, NULL);
+					multi_send_damage(damage, Players[Player_num].shields, killer->type, killer->id, DAMAGE_WEAPON, weapon);
 				}
 				#endif
 			}
@@ -1506,7 +1508,7 @@ void collide_player_and_weapon( object * player, object * weapon, vms_vector *co
 //	Nasty robots are the ones that attack you by running into you and doing lots of damage.
 void collide_player_and_nasty_robot( object * player, object * robot, vms_vector *collision_point )
 {
-	if (player->id == Player_num && Game_mode & GM_OBSERVER) {
+	if (player->id == Player_num && is_observer()) {
 		return;
 	}
 
@@ -1523,7 +1525,7 @@ void collide_player_and_nasty_robot( object * player, object * robot, vms_vector
 		{
 			con_printf(CON_NORMAL, "You took %0.1f damage from bumping a robot!\n", (double)(damage) / (double)(F1_0)); 
 
-			multi_send_damage(damage, Players[Player_num].shields, OBJ_ROBOT, NULL, DAMAGE_COLLISION, NULL);
+			multi_send_damage(damage, Players[Player_num].shields, OBJ_ROBOT, 0, DAMAGE_COLLISION, NULL);
 		}
 	#endif
 	apply_damage_to_player( player, robot, damage, 0);
@@ -1533,7 +1535,7 @@ void collide_player_and_nasty_robot( object * player, object * robot, vms_vector
 
 void collide_player_and_materialization_center(object *objp)
 {
-	if (Game_mode & GM_OBSERVER) {
+	if (is_observer()) {
 		return;
 	}
 
@@ -1606,7 +1608,7 @@ void collide_robot_and_materialization_center(object *objp)
 extern int Network_got_powerup; // HACK!!!
 
 void collide_player_and_powerup( object * player, object * powerup, vms_vector *collision_point ) {
-	if (player->id == Player_num && Game_mode & GM_OBSERVER) {
+	if (player->id == Player_num && is_observer()) {
 		return;
 	}
 
@@ -1639,6 +1641,7 @@ void collide_player_and_powerup( object * player, object * powerup, vms_vector *
 			default:
 				break;
 		}
+
 	}
 #endif
 	return;
@@ -1649,7 +1652,7 @@ void collide_player_and_powerup( object * player, object * powerup, vms_vector *
 //##}
 
 void collide_player_and_clutter( object * player, object * clutter, vms_vector *collision_point ) {
-	if (player->id == Player_num && Game_mode & GM_OBSERVER) {
+	if (player->id == Player_num && is_observer()) {
 		return;
 	}
 
@@ -1783,7 +1786,7 @@ void collide_two_objects( object * A, object * B, vms_vector *collision_point )
 {
 	int collision_type;
 
-	if ((A->id == Player_num || B->id == Player_num) && Game_mode & GM_OBSERVER) {
+	if ((A->id == Player_num || B->id == Player_num) && is_observer()) {
 		return;
 	}
 

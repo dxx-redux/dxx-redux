@@ -176,7 +176,7 @@ void do_weapon_n_item_stuff()
 	}
 
 	if (allowed_to_fire_missile() && Controls.fire_secondary_state)
-		Global_missile_firing_count += Weapon_info[Secondary_weapon_to_weapon_info[Secondary_weapon]].fire_count;
+		Global_missile_firing_count += Weapon_info[Secondary_weapon_to_weapon_info[Players[Player_num].secondary_weapon]].fire_count;
 
 	if (Global_missile_firing_count) {
 		do_missile_firing(0);
@@ -741,15 +741,15 @@ int HandleGameKey(int key)
 		case KEY_CTRLED + KEY_5:
 		case KEY_CTRLED + KEY_6:
 		case KEY_CTRLED + KEY_7:
-			if (Game_mode & GM_OBSERVER)
+			if (is_observer())
 				set_obs(key - KEY_CTRLED - KEY_1);
 			break;
 		case KEY_CTRLED + KEY_8:
-			if (Game_mode & GM_OBSERVER)
+			if (is_observer())
 				reset_obs();
 			break;
 		case KEY_CTRLED + KEY_9:
-			if (Game_mode & GM_OBSERVER)
+			if (is_observer())
 				while (1) {
 					new_obs = (MAX_PLAYERS + new_obs - 1) % MAX_PLAYERS;
 					if (new_obs == OBSERVER_PLAYER_ID) {
@@ -763,7 +763,7 @@ int HandleGameKey(int key)
 				}
 			break;
 		case KEY_CTRLED + KEY_0:
-			if (Game_mode & GM_OBSERVER)
+			if (is_observer())
 				while (1) {
 					new_obs = (new_obs + 1) % MAX_PLAYERS;
 					if (new_obs == OBSERVER_PLAYER_ID) {
@@ -777,17 +777,19 @@ int HandleGameKey(int key)
 				}
 			break;
 		case KEY_CTRLED + KEY_MINUS:
-			if (Game_mode & GM_OBSERVER)
-				if (Obs_at_distance == 1 && Current_obs_player != OBSERVER_PLAYER_ID) {
+			if (is_observer())
+				if (Obs_at_distance && is_observing_player()) {
 					HUD_init_message_literal(HM_MULTI, "Observing first person.");
 					Obs_at_distance = 0;
+					init_cockpit();
 				}
 			break;
 		case KEY_CTRLED + KEY_EQUAL:
-			if (Game_mode & GM_OBSERVER)
-				if (Obs_at_distance == 0 && Current_obs_player != OBSERVER_PLAYER_ID) {
+			if (is_observer())
+				if (!Obs_at_distance && is_observing_player()) {
 					HUD_init_message_literal(HM_MULTI, "Observing third person.");
 					Obs_at_distance = 1;
+					init_cockpit();
 				}
 			break;
 #endif
@@ -1339,13 +1341,9 @@ int ReadControls(d_event *event)
 		}
 
 
-	if (Game_mode & GM_OBSERVER && Newdemo_state < ND_STATE_PLAYBACK) {
+	if (is_observer() && Newdemo_state < ND_STATE_PLAYBACK) {
 		// Force the observer to a certain camera based on whether they are freely observing or observing a specific player.
-		if (Current_obs_player == OBSERVER_PLAYER_ID) {
-			// If we're freely observing, just update position and orientation as normal.
-			ConsoleObject->pos = Objects[Players[Current_obs_player].objnum].pos;
-			ConsoleObject->orient = Objects[Players[Current_obs_player].objnum].orient;
-		} else {
+		if (is_observing_player()) {
 			// We're observing a player directly, and need to interpolate the position and orientation.  Check to see if the real position has updated, and accumulate Last_real_update time.
 			if (vm_vec_equal(&Real_pos, &Objects[Players[Current_obs_player].objnum].pos) && vm_mat_equal(&Real_orient, &Objects[Players[Current_obs_player].objnum].orient)) {
 				Last_real_update += FrameTime;
@@ -1355,7 +1353,7 @@ int ReadControls(d_event *event)
 				Real_orient = Objects[Players[Current_obs_player].objnum].orient;
 				Last_real_update = 0;
 
-				// If we're obsserving at a distance, move the camera accordingly.achieved_state
+				// If we're observing at a distance, move the camera accordingly.achieved_state
 				if (Obs_at_distance == 1) {
 					vms_vector move = ZERO_VECTOR;
 					vm_vec_copy_scale(&move, &Real_orient.fvec, F1_0 * -20);
@@ -1403,6 +1401,10 @@ int ReadControls(d_event *event)
 				
 				vm_vec_add2(&ConsoleObject->pos, &vec_diff);
 			}
+		} else {
+			// If we're freely observing, just update position and orientation as normal.
+			ConsoleObject->pos = Objects[Players[Current_obs_player].objnum].pos;
+			ConsoleObject->orient = Objects[Players[Current_obs_player].objnum].orient;
 		}
 	}
 
@@ -1482,7 +1484,7 @@ int ReadControls(d_event *event)
 			Controls.automap_count = 0;
 			if (!((Game_mode & GM_MULTI) && Control_center_destroyed && (Countdown_seconds_left < 10)))
 			{
-				do_automap(0);
+				do_automap();
 				return 1;
 			}
 		}

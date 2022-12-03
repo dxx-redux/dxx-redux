@@ -162,6 +162,9 @@ int check_trigger_sub(int trigger_num, int pnum, int shot)
 
 		if (Triggers[trigger_num].flags & TRIGGER_ENERGY_DRAIN) {
 			Players[Player_num].energy -= Triggers[trigger_num].value;
+
+			if (Game_mode & GM_MULTI)
+				multi_send_ship_status();
 		}
 	}
 

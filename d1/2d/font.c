@@ -166,6 +166,7 @@ int get_centered_x(const char *s)
 			continue;//skip color codes.
 		}
 		get_char_width_f(s[0],s[1],&w2,&s2);
+		s2 = (int)s2;
 		w += s2;
 	}
 
@@ -683,7 +684,7 @@ void ogl_init_font(grs_font * font)
 		gr_init_sub_bitmap(&font->ft_bitmaps[i],&font->ft_parent_bitmap,curx,cury,w,h);
 		curx+=w+gap;
 	}
-	ogl_loadbmtexture_f(&font->ft_parent_bitmap, GameCfg.TexFilt);
+	ogl_loadbmtexture_f(&font->ft_parent_bitmap, GameCfg.TexFilt, 0);
 }
 
 int ogl_internal_string(int x, int y, const char *s )

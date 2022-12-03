@@ -88,6 +88,7 @@ void net_udp_send_mdata_direct(ubyte *data, int data_len, int pnum, int priority
 #define UPID_PROXY_HEADER_SIZE (3 + 4)
 #define UPID_REATTEMPT_DIRECT 28
 #define UPID_REATTEMPT_DIRECT_SIZE (2 + 4 + sizeof(struct _sockaddr)) 
+#define UPID_OBSDATA 29
 
 // Structure keeping lite game infos (for netlist, etc.)
 typedef struct UDP_netgame_info_lite
@@ -148,9 +149,22 @@ typedef struct UDP_mdata_store
 	int				pkt_num;			// Packet number
 	ubyte				Player_num;			// sender of this packet
 	ubyte				player_ack[MAX_PLAYERS]; 	// 0 if player has not ACK'd this packet, 1 if ACK'd or not connected
-	ubyte				data[UPID_MDATA_BUF_SIZE];	// extra data of a packet - contains all multibuf data we don't want to loose
+	ubyte				data[UPID_MDATA_BUF_SIZE];	// extra data of a packet - contains all multibuf data we don't want to lose
 	ushort				data_size;
 } __pack__ UDP_mdata_store;
+
+// structure to store MDATA obs to maybe resend
+typedef struct UDP_mdata_obs_store
+{
+	int 				used;
+	fix64				pkt_initial_timestamp;		// initial timestamp to see if packet is outdated
+	fix64				pkt_timestamp[MAX_OBSERVERS];	// Packet timestamp
+	int				pkt_num;			// Packet number
+	ubyte				Player_num;			// sender of this packet
+	ubyte				observer_ack[MAX_OBSERVERS]; 	// 0 if observer has not ACK'd this packet, 1 if ACK'd or not connected
+	ubyte				data[UPID_MDATA_BUF_SIZE];	// extra data of a packet - contains all multibuf data we don't want to lose
+	ushort				data_size;
+} __pack__ UDP_mdata_obs_store;
 
 // structure to keep track of MDATA packets we've already got
 typedef struct UDP_mdata_recv
@@ -160,10 +174,12 @@ typedef struct UDP_mdata_recv
 } __pack__ UDP_mdata_recv;
 	
 
-typedef enum {NONE, DIRECT, PROXY} connection_type;
+typedef enum {CONNT_NONE, CONNT_DIRECT, CONNT_PROXY} connection_type;
 typedef struct connection_status {
 	connection_type type;
 	ubyte proxy_through;
 	ubyte holepunch_attempts; 
 	fix64 last_direct_pong; 
 } connection_status;
+
+int Observer_num;

@@ -78,6 +78,7 @@ typedef struct player {
 	fix     shields_delta;          // recent change to shields
 	fix     shields_time;           // the time the shields recently changed
 	sbyte   shields_time_hours;     // the time the shields recently changed (hours)
+	ubyte   shields_certain;        // Whether or not the observer is certain about the player's shield value.
 	ubyte   lives;                  // Lives remaining, 0 = game over.
 	sbyte   level;                  // Current level player is playing. (must be signed for secret levels)
 	ubyte   laser_level;            // Current level of the laser.
@@ -87,6 +88,8 @@ typedef struct player {
 	ubyte		secondary_weapon_flags;					//	bit set indicates the player has this weapon.
 	ushort  primary_ammo[MAX_PRIMARY_WEAPONS]; // How much ammo of each type.
 	ushort  secondary_ammo[MAX_SECONDARY_WEAPONS]; // How much ammo of each type.
+	sbyte	primary_weapon;			// The currently selected primary weapon.
+	sbyte	secondary_weapon;		// The currently selected secondary weapon.
 
 	//  -- make sure you're 4 byte aligned now
 

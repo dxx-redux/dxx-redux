@@ -106,6 +106,7 @@ void game(void);
 void close_game(void);
 void init_cockpit(void);
 void calc_frame_time(void);
+void calc_game_time(void);
 void calc_d_tick();
 int do_flythrough(struct object *obj,int first_time);
 
@@ -184,6 +185,8 @@ void reset_rear_view(void);
 void game_init_render_buffers (int render_max_w, int render_max_h);
 void game_render_frame_mono(int flip);
 void game_leave_menus(void);
+
+bool is_observer();
 
 //Cheats
 typedef struct game_cheats

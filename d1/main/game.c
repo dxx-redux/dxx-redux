@@ -189,43 +189,47 @@ void init_cockpit()
 
 	gr_set_current_canvas(NULL);
 
-	switch( PlayerCfg.CockpitMode[1] ) {
-		case CM_FULL_COCKPIT:
-			game_init_render_sub_buffers(0, 0, SWIDTH, (SHEIGHT*2)/3);
-			break;
+	if (is_observer() && (!is_observing_player() || Obs_at_distance || !PlayerCfg.ObsShowCockpit)) {
+		game_init_render_sub_buffers(0, 0, SWIDTH, SHEIGHT);
+	} else {
+		switch( PlayerCfg.CockpitMode[1] ) {
+			case CM_FULL_COCKPIT:
+				game_init_render_sub_buffers(0, 0, SWIDTH, (SHEIGHT*2)/3);
+				break;
 
-		case CM_REAR_VIEW:
-		{
-			int x1 = 0, y1 = 0, x2 = SWIDTH, y2 = (SHEIGHT*2)/3;
-			grs_bitmap *bm;
+			case CM_REAR_VIEW:
+			{
+				int x1 = 0, y1 = 0, x2 = SWIDTH, y2 = (SHEIGHT*2)/3;
+				grs_bitmap *bm;
 
-			PIGGY_PAGE_IN(cockpit_bitmap[PlayerCfg.CockpitMode[1]]);
-			bm = &GameBitmaps[cockpit_bitmap[PlayerCfg.CockpitMode[1]].index];
-			gr_bitblt_find_transparent_area(bm, &x1, &y1, &x2, &y2);
-			game_init_render_sub_buffers(x1*((float)SWIDTH/bm->bm_w), y1*((float)SHEIGHT/bm->bm_h), (x2-x1+1)*((float)SWIDTH/bm->bm_w), (y2-y1+2)*((float)SHEIGHT/bm->bm_h));
-			break;
-		}
-		case CM_FULL_SCREEN:
-			game_init_render_sub_buffers(0, 0, SWIDTH, SHEIGHT);
-			break;
+				PIGGY_PAGE_IN(cockpit_bitmap[PlayerCfg.CockpitMode[1]]);
+				bm = &GameBitmaps[cockpit_bitmap[PlayerCfg.CockpitMode[1]].index];
+				gr_bitblt_find_transparent_area(bm, &x1, &y1, &x2, &y2);
+				game_init_render_sub_buffers(x1*((float)SWIDTH/bm->bm_w), y1*((float)SHEIGHT/bm->bm_h), (x2-x1+1)*((float)SWIDTH/bm->bm_w), (y2-y1+2)*((float)SHEIGHT/bm->bm_h));
+				break;
+			}
+			case CM_FULL_SCREEN:
+				game_init_render_sub_buffers(0, 0, SWIDTH, SHEIGHT);
+				break;
 
-		case CM_STATUS_BAR:
-			game_init_render_sub_buffers( 0, 0, SWIDTH, (HIRESMODE?(SHEIGHT*2)/2.6:(SHEIGHT*2)/2.72) );
-			break;
+			case CM_STATUS_BAR:
+				game_init_render_sub_buffers( 0, 0, SWIDTH, (HIRESMODE?(SHEIGHT*2)/2.6:(SHEIGHT*2)/2.72) );
+				break;
 
-		case CM_LETTERBOX:
-		{
-			int x,y,w,h;
+			case CM_LETTERBOX:
+			{
+				int x,y,w,h;
 
-			x = 0; w = SM_W(Game_screen_mode);
-			h = (SM_H(Game_screen_mode) * 3) / 4; // true letterbox size (16:9)
-			y = (SM_H(Game_screen_mode)-h)/2;
+				x = 0; w = SM_W(Game_screen_mode);
+				h = (SM_H(Game_screen_mode) * 3) / 4; // true letterbox size (16:9)
+				y = (SM_H(Game_screen_mode)-h)/2;
 
-			gr_rect(x,0,w,SM_H(Game_screen_mode)-h);
-			gr_rect(x,SM_H(Game_screen_mode)-h,w,SM_H(Game_screen_mode));
+				gr_rect(x,0,w,SM_H(Game_screen_mode)-h);
+				gr_rect(x,SM_H(Game_screen_mode)-h,w,SM_H(Game_screen_mode));
 
-			game_init_render_sub_buffers( x, y, w, h );
-			break;
+				game_init_render_sub_buffers( x, y, w, h );
+				break;
+			}
 		}
 	}
 
@@ -319,10 +323,6 @@ void stop_time()
 		fix64 time;
 		timer_update();
 		time = timer_query();
-		last_timer_value = time - last_timer_value;
-		if (last_timer_value < 0) {
-			last_timer_value = 0;
-		}
 	}
 	time_paused++;
 }
@@ -335,7 +335,6 @@ void start_time()
 		fix64 time;
 		timer_update();
 		time = timer_query();
-		last_timer_value = time - last_timer_value;
 	}
 }
 
@@ -401,7 +400,10 @@ void calc_frame_time()
 
 	if (FrameTime < 0)				//if bogus frametime...
 		FrameTime = (last_frametime==0?1:last_frametime);		//...then use time from last frame
+}
 
+void calc_game_time()
+{
 	GameTime64 += FrameTime;
 
 	calc_d_tick();
@@ -487,7 +489,7 @@ void do_cloak_stuff(void)
 {
 	int i;
 
-	for (i = 0; i < N_players; i++)
+	for (i = (Netgame.host_is_obs ? 1 : 0); i < N_players; i++)
 		if (Players[i].flags & PLAYER_FLAGS_CLOAKED) {
 			if (GameTime64 > Players[i].cloak_time+CLOAK_TIME_MAX)
 			{
@@ -496,7 +498,10 @@ void do_cloak_stuff(void)
 					digi_play_sample( SOUND_CLOAK_OFF, F1_0);
 #ifdef NETWORK
 					if (Game_mode & GM_MULTI)
+					{
 						multi_send_play_sound(SOUND_CLOAK_OFF, F1_0);
+						multi_send_ship_status();
+					}
 					maybe_drop_net_powerup(POW_CLOAK);
 					if ( Newdemo_state != ND_STATE_PLAYBACK )
 						multi_send_decloak(); // For demo recording
@@ -523,6 +528,7 @@ void do_invulnerable_stuff(void)
 				{
 					multi_send_play_sound(SOUND_INVULNERABILITY_OFF, F1_0);
 					maybe_drop_net_powerup(POW_INVULNERABILITY);
+					multi_send_ship_status();
 				}
 				#endif
 			}
@@ -620,7 +626,7 @@ int allowed_to_fire_laser(void)
 		return 0;
 	}
 
-	if(Game_mode & GM_OBSERVER) {
+	if(is_observer()) {
 		return 0; 
 	}
 
@@ -636,7 +642,7 @@ int allowed_to_fire_flare(void)
 	if (Next_flare_fire_time > GameTime64)
 		return 0;
 
-	if(Game_mode & GM_OBSERVER) {
+	if(is_observer()) {
 		return 0; 
 	}
 
@@ -651,7 +657,7 @@ int allowed_to_fire_missile(void)
 	if (Next_missile_fire_time > GameTime64)
 		return 0;
 
-	if(Game_mode & GM_OBSERVER) {
+	if(is_observer()) {
 		return 0; 
 	}
 
@@ -737,7 +743,7 @@ void show_netgame_help()
 		return;
 
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "F1\t  THIS SCREEN";
-	if (!(Game_mode & GM_OBSERVER)) {
+	if (!is_observer()) {
 #if !(defined(__APPLE__) || defined(macintosh))
 		m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "Alt-F2/F3\t  SAVE/LOAD COOP GAME";
 #else
@@ -747,7 +753,7 @@ void show_netgame_help()
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "ALT-F4\t  SHOW PLAYER NAMES ON HUD";
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "F6\t  TOGGLE CONNECTION STATS";
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "F7\t  TOGGLE KILL LIST";
-	if (!(Game_mode & GM_OBSERVER)) {
+	if (!is_observer()) {
 		m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "F8\t  SEND MESSAGE";
 		m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "(SHIFT-)F9 to F12\t  (DEFINE)SEND MACRO";
 	}
@@ -757,7 +763,7 @@ void show_netgame_help()
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "";
 	m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "(Use \x85-# for F#. e.g. \x85-1 for F1)";
 #endif
-	if (Game_mode & GM_OBSERVER) {
+	if (is_observer()) {
 		m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "";
 		m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "OBSERVERS:";
 		m[nitems].type = NM_TYPE_TEXT; m[nitems++].text = "CTRL+1 to CTRL+7\t  OBSERVE SPECIFIC PLAYER";
@@ -997,9 +1003,11 @@ int game_handler(window *wind, d_event *event, void *data)
 			return ReadControls(event);
 
 		case EVENT_WINDOW_DRAW:
+			calc_frame_time();
+			
 			if (!time_paused)
 			{
-				calc_frame_time();
+				calc_game_time();
 				GameProcessFrame();
 			}
 
@@ -1168,7 +1176,7 @@ void GameProcessFrame(void)
 
 
 		if (Auto_fire_fusion_cannon_time) {
-			if (Primary_weapon != FUSION_INDEX)
+			if (Players[Player_num].primary_weapon != FUSION_INDEX)
 				Auto_fire_fusion_cannon_time = 0;
 			else if (GameTime64 + FrameTime/2 >= Auto_fire_fusion_cannon_time) {
 				Auto_fire_fusion_cannon_time = 0;
@@ -1238,9 +1246,9 @@ void GameProcessFrame(void)
 void FireLaser()
 {
 
-	Global_laser_firing_count = Controls.fire_primary_state?Weapon_info[Primary_weapon_to_weapon_info[Primary_weapon]].fire_count:0;
+	Global_laser_firing_count = Controls.fire_primary_state?Weapon_info[Primary_weapon_to_weapon_info[Players[Player_num].primary_weapon]].fire_count:0;
 
-	if ((Primary_weapon == FUSION_INDEX) && (Global_laser_firing_count)) {
+	if ((Players[Player_num].primary_weapon == FUSION_INDEX) && (Global_laser_firing_count)) {
 		if ((Players[Player_num].energy < F1_0*2) && (Auto_fire_fusion_cannon_time == 0)) {
 			Global_laser_firing_count = 0;
 		} else {
@@ -1291,6 +1299,9 @@ void FireLaser()
 				}
 				Fusion_next_sound_time = GameTime64 + F1_0/8 + d_rand()/4;
 			}
+
+			if (Game_mode & GM_MULTI)
+				multi_send_ship_status();
 		}
 	}
 }
@@ -1437,3 +1448,7 @@ void show_free_objects(void)
 }
 
 #endif
+
+bool is_observer() {
+	return (Game_mode & GM_OBSERVER) != 0;
+}

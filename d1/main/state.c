@@ -930,8 +930,8 @@ int state_save_all_sub(char *filename, char *desc)
 	}
 
 // Save the current weapon info
-	PHYSFS_write(fp, &Primary_weapon, sizeof(sbyte), 1);
-	PHYSFS_write(fp, &Secondary_weapon, sizeof(sbyte), 1);
+	PHYSFS_write(fp, &Players[Player_num].primary_weapon, sizeof(sbyte), 1);
+	PHYSFS_write(fp, &Players[Player_num].secondary_weapon, sizeof(sbyte), 1);
 
 // Save the difficulty level
 	PHYSFS_write(fp, &Difficulty_level, sizeof(int), 1);
@@ -1228,11 +1228,11 @@ int state_restore_all_sub(char *filename)
 		Players[Player_num].objnum = coop_org_objnum;
 
 // Restore the weapon states
-	PHYSFS_read(fp, &Primary_weapon, sizeof(sbyte), 1);
-	PHYSFS_read(fp, &Secondary_weapon, sizeof(sbyte), 1);
+	PHYSFS_read(fp, &Players[Player_num].primary_weapon, sizeof(sbyte), 1);
+	PHYSFS_read(fp, &Players[Player_num].secondary_weapon, sizeof(sbyte), 1);
 
-	select_weapon(Primary_weapon, 0, 0, 0);
-	select_weapon(Secondary_weapon, 1, 0, 0);
+	select_weapon(Players[Player_num].primary_weapon, 0, 0, 0);
+	select_weapon(Players[Player_num].secondary_weapon, 1, 0, 0);
 
 // Restore the difficulty level
 	Difficulty_level = PHYSFSX_readSXE32(fp, swap);

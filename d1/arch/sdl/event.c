@@ -13,6 +13,7 @@
 #include "window.h"
 #include "timer.h"
 #include "config.h"
+#include "args.h"
 
 #include "joy.h"
 
@@ -45,23 +46,33 @@ void event_poll()
 				break;
 			case SDL_MOUSEBUTTONDOWN:
 			case SDL_MOUSEBUTTONUP:
+				if (GameArg.CtlNoMouse)
+					break;
 				mouse_button_handler((SDL_MouseButtonEvent *)&event);
 				idle = 0;
 				break;
 			case SDL_MOUSEMOTION:
+				if (GameArg.CtlNoMouse)
+					break;
 				mouse_motion_handler((SDL_MouseMotionEvent *)&event);
 				idle = 0;
 				break;
 			case SDL_JOYBUTTONDOWN:
 			case SDL_JOYBUTTONUP:
+				if (GameArg.CtlNoJoystick)
+					break;
 				joy_button_handler((SDL_JoyButtonEvent *)&event);
 				idle = 0;
 				break;
 			case SDL_JOYAXISMOTION:
+				if (GameArg.CtlNoJoystick)
+					break;
 				if (joy_axis_handler((SDL_JoyAxisEvent *)&event))
 					idle = 0;
 				break;
 			case SDL_JOYHATMOTION:
+				if (GameArg.CtlNoJoystick)
+					break;
 				joy_hat_handler((SDL_JoyHatEvent *)&event);
 				idle = 0;
 				break;

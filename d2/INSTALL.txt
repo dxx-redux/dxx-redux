@@ -61,9 +61,9 @@ Needed files:
 
    Since D2X-Rebirth is a Sourceport of the Descent2-Engine you will need the Game-Content data files to run
    the game. You don't own the full game, yet?
-   Unfortunately, the electronic version that used to be on distributors such as GOG and Steam have been removed
-   for the time being. This makes it a bit harder to get your hands on a copy.
-   Your best bet on getting Descent 2 most likely is finding a hard copy on Ebay.
+   Just visit GOOD OLD GAMES via:
+   https://www.gog.com/game/descent_2
+   and download it for a very low price! DRM-FREE!
 
    Following files are needed to run the game:
    descent2.ham

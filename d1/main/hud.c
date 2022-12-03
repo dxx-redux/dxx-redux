@@ -94,7 +94,11 @@ void HUD_render_message_frame()
 			HUD_color = BM_XRGB(0,28,0);
 
 		gr_set_curfont( GAME_FONT );
-		y = FSPACY(1);
+
+		if (is_observer())
+            y = Observer_message_y_start;
+		else
+			y = FSPACY(1);
 
 		for (i=startmsg; i<HUD_nmessages; i++ )	{
 			gr_set_fontcolor( HUD_color, -1);

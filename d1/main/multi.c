@@ -168,6 +168,9 @@ int     VerifyPlayerJoined=-1;      // Player (num) to enter game before any ing
 int     Player_joining_extras=-1;  // This is so we know who to send 'latecomer' packets to.
 int     Network_player_added = 0;   // Is this a new player or a returning player?
 
+ubyte Send_ship_status = 0; // Whether we owe observers a ship status packet.
+fix64 Next_ship_status_time = 0; // The next time we are allowed to send a ship status.
+
 ushort          my_segments_checksum = 0;
 
 netgame_info Netgame;
@@ -206,6 +209,363 @@ char *multi_allow_powerup_text[MULTI_ALLOW_POWERUP_MAX] =
 #define define_netflag_string(NAME,STR)	STR,
 	for_each_netflag_value(define_netflag_string)
 };
+
+// The Observatory stat tracking
+kill_event* First_event[MAX_PLAYERS] = {NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
+kill_event* Last_event[MAX_PLAYERS] = {NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
+kill_event* Last_kill[MAX_PLAYERS] = {NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
+kill_event* Last_death[MAX_PLAYERS] = {NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
+int Kill_streak[MAX_PLAYERS] = {0,0,0,0,0,0,0,0};
+int Next_graph = 5;
+fix64 Show_graph_until = -1;
+
+player_status* First_status = NULL;
+
+shield_status* First_current_shield_status[MAX_PLAYERS] = {NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
+shield_status* Last_current_shield_status[MAX_PLAYERS] = {NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
+shield_status* First_previous_shield_status[MAX_PLAYERS] = {NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
+shield_status* Last_previous_shield_status[MAX_PLAYERS] = {NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
+
+fix64 Show_death_until[MAX_PLAYERS] = {0,0,0,0,0,0,0,0};
+
+damage_taken_totals* First_damage_taken_totals[MAX_PLAYERS] = {NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
+damage_taken_totals* First_damage_taken_current_totals[MAX_PLAYERS] = {NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
+damage_taken_totals* First_damage_taken_previous_totals[MAX_PLAYERS] = {NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
+
+damage_done_totals* First_damage_done_totals[MAX_PLAYERS] = {NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
+
+kill_log_event* Kill_log = NULL;
+
+void add_observatory_stat(int player_num, ubyte event_type) {
+	kill_event* ev = (kill_event*)d_malloc(sizeof(kill_event));
+	ev->timestamp = GameTime64;
+	ev->obs_event = event_type;
+	ev->score = ((Game_mode & GM_MULTI_COOP) || (Game_mode & GM_MULTI_ROBOTS)) ? Players[player_num].score : Players[player_num].net_kills_total;
+	ev->next = NULL;
+	ev->prev = Last_event[player_num];
+	if (ev->prev != NULL) {
+		ev->prev->next = ev;
+	}
+	Last_event[player_num] = ev;
+	if (First_event[player_num] == NULL) {
+		First_event[player_num] = ev;
+	}
+	if ((event_type & OBSEV_KILL) != 0) {
+		Last_kill[player_num] = ev;
+		Kill_streak[player_num] += 1;
+	}
+	if ((event_type & OBSEV_DEATH) != 0) {
+		Last_death[player_num] = ev;
+		Kill_streak[player_num] = 0;
+	}
+}
+
+void add_observatory_damage_stat(int player_num, fix shields_delta, fix new_shields, fix old_shields, ubyte killer_type, ubyte killer_id, ubyte damage_type, ubyte source_id) {
+    bool death = 0;
+
+    // Set shields delta to old_shields if there was a kill.
+	if (new_shields <= 0 && shields_delta > old_shields) {
+        shields_delta = old_shields;
+        death = 1;
+    }
+
+	// Set source_id for ship explosions and collisions.
+	if (killer_type == OBJ_PLAYER && damage_type == DAMAGE_BLAST && source_id == 0) {
+		source_id = SHIP_EXPLOSION_DAMAGE;
+	}
+
+    if (killer_type == OBJ_PLAYER && damage_type == DAMAGE_COLLISION && source_id == 0) {
+        source_id = SHIP_COLLISION_DAMAGE;
+    }
+
+	// Record player's damage over time.
+	shield_status* sta = (shield_status*)d_malloc(sizeof(shield_status));
+	sta->timestamp = GameTime64;
+	sta->shields = new_shields;
+	sta->next = NULL;
+
+	if (First_current_shield_status[player_num] == NULL) {
+		First_current_shield_status[player_num] = sta;
+	}
+
+	if (Last_current_shield_status[player_num] != NULL) {
+		Last_current_shield_status[player_num]->next = sta;
+	}
+	Last_current_shield_status[player_num] = sta;
+
+    // Do not process further for shield pickups.
+    if (damage_type == DAMAGE_SHIELD) {
+        return;
+    }
+
+    // Record player's overall damage taken total.
+    damage_taken_totals* dtt = First_damage_taken_totals[player_num];
+    while (dtt != NULL && (dtt->killer_type != killer_type || dtt->killer_id != killer_id || dtt->damage_type != damage_type || dtt->source_id != source_id)) {
+        dtt = dtt->next;
+    }
+
+    if (dtt == NULL) {
+        dtt = (damage_taken_totals*)d_malloc(sizeof(damage_taken_totals));
+        dtt->total_damage = shields_delta;
+        dtt->killer_type = killer_type;
+        dtt->killer_id = killer_id;
+        dtt->damage_type = damage_type;
+        dtt->source_id = source_id;
+        dtt->next = First_damage_taken_totals[player_num];
+        dtt->prev = NULL;
+        if (First_damage_taken_totals[player_num] != NULL) {
+            First_damage_taken_totals[player_num]->prev = dtt;
+        }
+        First_damage_taken_totals[player_num] = dtt;
+    } else {
+        dtt->total_damage += shields_delta;
+    }
+    
+    // Record player's damage taken total for this point.
+    dtt = First_damage_taken_current_totals[player_num];
+    while (dtt != NULL && (dtt->killer_type != killer_type || dtt->killer_id != killer_id || dtt->damage_type != damage_type || dtt->source_id != source_id)) {
+        dtt = dtt->next;
+    }
+
+    if (dtt == NULL) {
+        dtt = (damage_taken_totals*)d_malloc(sizeof(damage_taken_totals));
+        dtt->total_damage = shields_delta;
+        dtt->killer_type = killer_type;
+        dtt->killer_id = killer_id;
+        dtt->damage_type = damage_type;
+        dtt->source_id = source_id;
+        dtt->next = First_damage_taken_current_totals[player_num];
+        dtt->prev = NULL;
+        if (First_damage_taken_current_totals[player_num] != NULL) {
+            First_damage_taken_current_totals[player_num]->prev = dtt;
+        }
+        First_damage_taken_current_totals[player_num] = dtt;
+    } else {
+        dtt->total_damage += shields_delta;
+    }
+
+    // Record player's damage dealt total.
+    damage_done_totals* ddt = NULL;
+    if (killer_type == OBJ_PLAYER) {
+        ddt = First_damage_done_totals[killer_id];
+        while (ddt != NULL && ddt->source_id != source_id) {
+            ddt = ddt->next;
+        }
+
+        if (ddt == NULL) {
+            ddt = (damage_done_totals*)d_malloc(sizeof(damage_done_totals));
+            ddt->total_damage = shields_delta;
+            ddt->source_id = source_id;
+            ddt->next = First_damage_done_totals[killer_id];
+            ddt->prev = NULL;
+            if (First_damage_done_totals[killer_id] != NULL) {
+                First_damage_done_totals[killer_id]->prev = ddt;
+            }
+            First_damage_done_totals[killer_id] = ddt;
+        } else {
+            ddt->total_damage += shields_delta;
+        }
+    }
+
+    // Sort damage done totals by total damage.
+    ddt = First_damage_done_totals[killer_id];
+    damage_done_totals* next_ddt = NULL;
+    damage_done_totals* ddt_a = NULL;
+    damage_done_totals* ddt_b = NULL;
+    while (ddt != NULL) {
+        next_ddt = ddt->next;
+
+        if (ddt->prev != NULL) {
+            while (ddt != NULL && ddt->prev != NULL && ddt->total_damage > ddt->prev->total_damage) {
+                ddt_a = ddt->prev;
+                ddt_b = ddt;
+
+                ddt_a->next = ddt_b->next;
+                ddt_b->prev = ddt_a->prev;
+
+                if (ddt_a->next != NULL) {
+                    ddt_a->next->prev = ddt_a;
+                }
+
+                if (ddt_b->prev != NULL) {
+                    ddt_b->prev->next = ddt_b;
+                }
+
+                ddt_b->next = ddt_a;
+                ddt_a->prev = ddt_b;
+
+                if (ddt_a == First_damage_done_totals[killer_id]) {
+                    First_damage_done_totals[killer_id] = ddt_b;
+                }
+            }
+        }
+
+        ddt = next_ddt;
+    }
+
+    // Record death.
+    if (death == 1) {
+        Last_previous_shield_status[player_num] = NULL;
+        while ((sta = First_previous_shield_status[player_num]) != NULL) {
+            First_previous_shield_status[player_num] = sta->next;
+            d_free(sta);
+        }
+
+        First_previous_shield_status[player_num] = First_current_shield_status[player_num];
+        Last_previous_shield_status[player_num] = Last_current_shield_status[player_num];
+
+        First_current_shield_status[player_num] = NULL;
+        Last_current_shield_status[player_num] = NULL;
+
+        while ((dtt = First_damage_taken_previous_totals[player_num]) != NULL) {
+            First_damage_taken_previous_totals[player_num] = dtt->next;
+            d_free(dtt);
+        }
+
+        First_damage_taken_previous_totals[player_num] = First_damage_taken_current_totals[player_num];
+
+        First_damage_taken_current_totals[player_num] = NULL;
+
+        // Sort damage taken previous totals by total damage.
+        dtt = First_damage_taken_previous_totals[player_num];
+        damage_taken_totals* next_dtt = NULL;
+        damage_taken_totals* dtt_a = NULL;
+        damage_taken_totals* dtt_b = NULL;
+        while (dtt != NULL) {
+            next_dtt = dtt->next;
+
+            if (dtt->prev != NULL) {
+                while (dtt != NULL && dtt->prev != NULL && dtt->total_damage > dtt->prev->total_damage) {
+                    dtt_a = dtt->prev;
+                    dtt_b = dtt;
+
+                    dtt_a->next = dtt_b->next;
+                    dtt_b->prev = dtt_a->prev;
+
+                    if (dtt_a->next != NULL) {
+                        dtt_a->next->prev = dtt_a;
+                    }
+
+                    if (dtt_b->prev != NULL) {
+                        dtt_b->prev->next = dtt_b;
+                    }
+
+                    dtt_b->next = dtt_a;
+                    dtt_a->prev = dtt_b;
+
+                    if (dtt_a == First_damage_taken_previous_totals[player_num]) {
+                        First_damage_taken_previous_totals[player_num] = dtt_b;
+                    }
+                }
+            }
+
+            dtt = next_dtt;
+        }
+
+        // Add to the kill log.
+        kill_log_event* kle = (kill_log_event*)d_malloc(sizeof(kill_log_event));
+        kle->timestamp = GameTime64;
+        kle->killed_id = player_num;
+        kle->killer_type = killer_type;
+        kle->killer_id = killer_id;
+        kle->damage_type = damage_type;
+        kle->source_id = source_id;
+        kle->next = Kill_log;
+        Kill_log = kle;
+
+        // Show the player's most recent death until the time listed.
+        Show_death_until[player_num] = GameTime64 + i2f(15);
+    }
+}
+
+
+void add_player_status(ubyte pnum, game_status status) {
+	status.next = NULL;
+
+	player_status* p_status = NULL;
+	player_status* last_p_status = NULL;
+	game_status* g_status = NULL;
+	game_status* last_g_status = NULL;
+
+	for (p_status = First_status; p_status != NULL; p_status = (last_p_status = p_status)->next) {
+		if (p_status->pnum == pnum) {
+			for (g_status = p_status->statuses; g_status != NULL; g_status = (last_g_status = g_status)->next) {
+				// Found an existing status for this player.
+				if (g_status->type == status.type) {
+					memcpy(g_status, &status, sizeof(game_status));
+					return;
+				}
+			}
+
+			// Add a new status for this player.
+			g_status = (game_status *)d_malloc(sizeof(game_status));
+			last_g_status->next = g_status;
+			memcpy(g_status, &status, sizeof(game_status));
+			return;
+		}
+	}
+
+	// Add the player with their first status.
+	p_status = (player_status *)d_malloc(sizeof(player_status));
+	p_status->next = NULL;
+	if (last_p_status == NULL) {
+		First_status = p_status;
+	} else {
+		last_p_status->next = p_status;
+	}
+	p_status->pnum = pnum;
+
+	g_status = (game_status *)d_malloc(sizeof(game_status));
+	p_status->statuses = g_status;
+	memcpy(g_status, &status, sizeof(game_status));
+}
+
+void remove_player_status(ubyte pnum, ubyte type) {
+	player_status* p_status = First_status;
+	player_status* last_p_status = NULL;
+	game_status* g_status = NULL;
+	game_status* last_g_status = NULL;
+
+	while (p_status != NULL) {
+		if (p_status->pnum == pnum) {
+			g_status = p_status->statuses;
+			while (g_status != NULL) {
+				if (g_status->type == type) {
+					// We found the pnum and type combination, remove the game status.
+					if (last_g_status == NULL) {
+						p_status->statuses = g_status->next;
+					} else {
+						last_g_status->next = g_status->next;
+					}
+					d_free(g_status);
+
+					// If this is the last player status, remove the player status as well.
+					if (p_status->statuses == NULL) {
+						if (last_p_status == NULL) {
+							First_status = p_status->next;
+						} else {
+							last_p_status->next = p_status->next;
+						}
+						d_free(p_status);
+					}
+
+					// We're done, bail.
+					return;
+				}
+
+				last_g_status = g_status;
+				g_status = g_status->next;
+			}
+
+			// Player found, but type wasn't, bail.
+			return;
+		}
+
+		last_p_status = p_status;
+		p_status = p_status->next;
+	}
+	// Didn't find the player, nothing to do!
+}
 
 int GetMyNetRanking()
 {
@@ -458,10 +818,6 @@ multi_new_game(void)
 			reset_obs();
 		}
 
-		Players[i].net_killed_total = 0;
-		Players[i].net_kills_total = 0;
-		Players[i].flags = 0;
-		Players[i].KillGoalCount=0;
 		multi_sending_message[i] = 0;
 	}
 
@@ -488,6 +844,92 @@ multi_new_game(void)
 	Show_kill_list = 1;
 	game_disable_cheats();
 	multi_received_objects = 0; 
+
+	// The observatory stats reset
+	kill_event* ev = NULL;
+	for (i = 0; i < MAX_PLAYERS; i++) {
+		Last_kill[i] = NULL;
+		Last_death[i] = NULL;
+		Kill_streak[i] = 0;
+		while ((ev = Last_event[i]) != NULL) {
+			if (ev->prev != NULL) {
+				ev->prev->next = NULL;
+				Last_event[i] = ev->prev;
+			} else {
+				Last_event[i] = NULL;
+				First_event[i] = NULL;
+			}
+			d_free(ev);
+			ev = NULL;
+		}
+		add_observatory_stat(i, OBSEV_NONE);
+	}
+	Next_graph = 5;
+	Show_graph_until = -1;
+
+	Send_ship_status = 0;
+	Next_ship_status_time = 0;
+
+	player_status* p_status = NULL;
+	game_status* g_status = NULL;
+	while ((p_status = First_status) != NULL) {
+		First_status = p_status->next;
+		while ((g_status = p_status->statuses) != NULL) {
+			p_status->statuses = g_status->next;
+			d_free(g_status);
+		}
+		d_free(p_status);
+	}
+
+	shield_status* sta = NULL;
+	for (i = 0; i < MAX_PLAYERS; i++) {
+		while ((sta = First_current_shield_status[i]) != NULL) {
+			First_current_shield_status[i] = sta->next;
+			d_free(sta);
+		}
+		Last_current_shield_status[i] = NULL;
+
+		while ((sta = First_previous_shield_status[i]) != NULL) {
+			First_previous_shield_status[i] = sta->next;
+			d_free(sta);
+		}
+		Last_previous_shield_status[i] = NULL;
+
+		Show_death_until[i] = 0;
+	}
+
+	damage_taken_totals* dtt = NULL;
+	damage_done_totals* ddt = NULL;
+	for (i = 0; i < MAX_PLAYERS; i++) {
+		while ((dtt = First_damage_taken_totals[i]) != NULL) {
+			First_damage_taken_totals[i] = dtt->next;
+			dtt->next->prev = NULL;
+			d_free(dtt);
+		}
+
+		while ((dtt = First_damage_taken_current_totals[i]) != NULL) {
+			First_damage_taken_current_totals[i] = dtt->next;
+			dtt->next->prev = NULL;
+			d_free(dtt);
+		}
+
+		while ((dtt = First_damage_taken_previous_totals[i]) != NULL) {
+			First_damage_taken_previous_totals[i] = dtt->next;
+			dtt->next->prev = NULL;
+			d_free(dtt);
+		}
+
+		while ((ddt = First_damage_done_totals[i]) != NULL) {
+			First_damage_done_totals[i] = ddt->next;
+			d_free(ddt);
+		}
+	}
+
+	kill_log_event* kle = NULL;
+	while((kle = Kill_log) != NULL) {
+		Kill_log = kle->next;
+		d_free(kle);
+	}
 }
 
 void
@@ -668,6 +1110,9 @@ void multi_compute_kill(int killer, int killed)
 		}
 		else
 			HUD_init_message(HM_MULTI, "%s %s %s.", killed_name, TXT_WAS, TXT_KILLED_BY_NONPLAY );
+		
+		add_observatory_stat(killed_pnum, OBSEV_DEATH | OBSEV_REACTOR);
+
 		return;
 	}
 
@@ -683,6 +1128,9 @@ void multi_compute_kill(int killer, int killed)
 			else
 				HUD_init_message(HM_MULTI, "%s %s %s.", killed_name, TXT_WAS, TXT_KILLED_BY_ROBOT );
 		Players[killed_pnum].net_killed_total++;
+
+		add_observatory_stat(killed_pnum, OBSEV_DEATH | OBSEV_ROBOT);
+
 		return;
 	}
 
@@ -696,8 +1144,6 @@ void multi_compute_kill(int killer, int killed)
 	// Beyond this point, it was definitely a player-player kill situation
 
 	if ((killer_pnum < 0) || (killer_pnum >= N_players))
-		Int3(); // See rob, tracking down bug with kill HUD messages
-	if ((killed_pnum < 0) || (killed_pnum >= N_players))
 		Int3(); // See rob, tracking down bug with kill HUD messages
 
 	if (killer_pnum == killed_pnum)
@@ -740,6 +1186,8 @@ void multi_compute_kill(int killer, int killed)
 			/* Select new target  - it will be sent later when we're done with this function */
 			multi_new_bounty_target( new );
 		}
+
+		add_observatory_stat(killed_pnum, OBSEV_DEATH | OBSEV_SELF);
 	}
 
 	else
@@ -790,13 +1238,18 @@ void multi_compute_kill(int killer, int killed)
 		Players[killed_pnum].net_killed_total += 1;
 		kill_matrix[killer_pnum][killed_pnum] += 1;
 
+		if (Players[killer_pnum].net_kills_total >= Next_graph) {
+			Next_graph += (Next_graph < 20 || N_players > 2 ? 5 : 1);
+			Show_graph_until = GameTime64 + 15 * F1_0;
+		}
+
 		if (killer_pnum == Player_num) {
 			HUD_init_message(HM_MULTI, "%s %s %s!", TXT_YOU, TXT_KILLED, killed_name);
 			multi_add_lifetime_kills();
 			if ((Game_mode & GM_MULTI_COOP) && (Players[Player_num].score >= 1000))
 				add_points_to_score(-1000);
 
-			if (Game_mode & GM_MULTI_ROBOTS)
+			else if (Game_mode & GM_MULTI_ROBOTS)
 				add_points_to_score(10000);
 		}
 		else if (killed_pnum == Player_num)
@@ -806,6 +1259,9 @@ void multi_compute_kill(int killer, int killed)
 		}
 		else
 			HUD_init_message(HM_MULTI, "%s %s %s!", killer_name, TXT_KILLED, killed_name);
+
+		add_observatory_stat(killed_pnum, OBSEV_DEATH | OBSEV_PLAYER);
+		add_observatory_stat(killer_pnum, OBSEV_KILL | OBSEV_PLAYER);
 	}
 
 	TheGoal=Netgame.KillGoal*10;
@@ -910,8 +1366,7 @@ void multi_do_frame(void)
 	}
 }
 
-void
-multi_send_data(unsigned char *buf, int len, int priority)
+void multi_send_data(unsigned char *buf, int len, int priority)
 {
 	if (len != message_length[(int)buf[0]]) {
 		//Error("multi_send_data: Packet type %i length: %i, expected: %i\n", buf[0], len, message_length[(int)buf[0]]);
@@ -937,6 +1392,37 @@ multi_send_data(unsigned char *buf, int len, int priority)
 #endif
 			default:
 				Error("Protocol handling missing in multi_send_data\n");
+				break;
+		}
+	}
+}
+
+void multi_send_obs_data(unsigned char *buf, int len)
+{
+	if (len != message_length[(int)buf[0]]) {
+		//Error("multi_send_data: Packet type %i length: %i, expected: %i\n", buf[0], len, message_length[(int)buf[0]]);
+		con_printf(CON_NORMAL, "multi_send_obs_data: Packet type %i length: %i, expected: %i\n", buf[0], len, message_length[(int)buf[0]]);
+		for(int i = 0; i < len; i++) {
+			con_printf(CON_NORMAL, "    %d: %d\n", i, buf[i]); 
+		}
+		return;
+	}
+	if (buf[0] >= sizeof(message_length) / sizeof(message_length[0])) {
+		con_printf(CON_NORMAL, "multi_send_obs_data: Illegal packet type %i\n", buf[0]);
+		return;
+	}
+
+	if (Game_mode & GM_NETWORK)
+	{
+		switch (multi_protocol)
+		{
+#ifdef USE_UDP
+			case MULTI_PROTO_UDP:
+				net_udp_send_mdata_direct(buf, len, 0, 0);
+				break;
+#endif
+			default:
+				Error("Protocol handling missing in multi_send_obs_data\n");
 				break;
 		}
 	}
@@ -1178,15 +1664,10 @@ multi_message_feedback(void)
 	}
 }
 
-//added/moved on 11/10/98 by Victor Rachels to declare before this function
-void multi_send_message_end();
-//end this section change - VR
-
-void
-multi_send_macro(int key)
+void multi_send_macro(int key)
 {
 
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 	if (! (Game_mode & GM_MULTI) )
 		return;
@@ -1223,12 +1704,15 @@ multi_send_macro(int key)
 void
 multi_send_message_start()
 {
-
-	if(Game_mode & GM_OBSERVER) { return; }
+    if (is_observer() && !PlayerCfg.ObsChat) {
+        return;
+    }
 
 	if (Game_mode&GM_MULTI) {
 		multi_sending_message[Player_num] = 1;
-		multi_send_msgsend_state(1);
+        if (!is_observer()) {
+		    multi_send_msgsend_state(1);
+        }
 		multi_message_index = 0;
 		Network_message[multi_message_index] = 0;
 		key_toggle_repeat(1);
@@ -1239,16 +1723,24 @@ extern fix StartingShields;
 
 void multi_send_message_end()
 {
-
-	if(Game_mode & GM_OBSERVER) { return; }
+    if (is_observer() && !PlayerCfg.ObsChat) {
+        return;
+    }
 
 	char *mytempbuf;
 	int i,t;
 
-  multi_message_index = 0;
-  multi_sending_message[Player_num] = 0;
-  multi_send_msgsend_state(0);
-  key_toggle_repeat(0);
+    multi_message_index = 0;
+    multi_sending_message[Player_num] = 0;
+    multi_send_msgsend_state(0);
+    key_toggle_repeat(0);
+
+	if(is_observer()) {
+        multi_send_obs_message();
+        multi_message_feedback();
+        game_flush_inputs();
+        return;
+    }
 
 	if (!d_strnicmp (Network_message,"/Handicap: ",11))
 	{
@@ -1404,8 +1896,10 @@ void multi_send_message_end()
 			HUD_init_message(HM_MULTI, "Only %s can disconnect observers!",Players[multi_who_is_master()].callsign);
 		else
 		{			
-			for(int i = 0; i < Netgame.numobservers; i++) {
-				net_udp_dump_player(Netgame.observers[i].protocol.udp.addr, 0, DUMP_KICKED);
+			for(int i = 0; i < Netgame.max_numobservers; i++) {
+				if (Netgame.observers[i].connected == 1) {
+					net_udp_dump_player(Netgame.observers[i].protocol.udp.addr, 0, DUMP_KICKED);
+				}
 			}
 			Netgame.numobservers = 0; 
 			HUD_init_message(HM_MULTI, "All observers disconnected.");
@@ -1586,10 +2080,15 @@ multi_do_fire(const ubyte *buf)
 	}
 }
 
-void
-multi_do_message(const ubyte *cbuf)
+void multi_do_message(const ubyte *cbuf)
 {
 	const char *buf = (const char*)cbuf;
+
+    if (is_observer() && !PlayerCfg.ObsPlayerChat) {
+		multi_sending_message[(int)buf[1]] = 0;
+        return;
+    }
+
 	char *colon,mesbuf[100];
 	int t;
 
@@ -1643,6 +2142,16 @@ multi_do_message(const ubyte *cbuf)
 		HUD_init_message(HM_MULTI, "%s %s", mesbuf, colon+2);
 		multi_sending_message[(int)buf[1]] = 0;
 	}
+}
+
+void multi_do_obs_message(const ubyte *cbuf)
+{
+    if (!PlayerCfg.ObsChat) {
+        return;
+    }
+	const char *buf = (const char*)cbuf;
+
+    HUD_init_message(HM_MULTI, "%c%c%s", CC_COLOR, BM_XRGB(8, 8, 32), buf+2);
 }
 
 void
@@ -1792,6 +2301,17 @@ multi_do_player_explode(const ubyte *buf)
 	}
 }
 
+void multi_obs_check_all_escaped()
+{
+	for (int i = 0; i < MAX_PLAYERS; i++)
+	{
+		if (Players[i].connected == CONNECT_PLAYING)
+			return;
+	}
+
+	PlayerFinishedLevel(0);
+}
+
 /*
  * Process can compute a kill. If I am a Client this might be my own one (see multi_send_kill()) but with more specific data so I can compute my kill correctly.
  */
@@ -1840,6 +2360,15 @@ multi_do_kill(const ubyte *buf)
 
 	if (Game_mode & GM_BOUNTY && multi_i_am_master()) // update in case if needed... we could attach this to this packet but... meh...
 		multi_send_bounty();
+	
+	if (Control_center_destroyed) {
+		reset_obs();
+		Players[pnum].connected = CONNECT_DIED_IN_MINE;
+
+		if (is_observer()) {
+			multi_obs_check_all_escaped();
+		}
+	}
 }
 
 
@@ -1870,8 +2399,7 @@ void multi_do_controlcen_destroy(const ubyte *buf)
 	}
 }
 
-void
-multi_do_escape(const ubyte *buf)
+void multi_do_escape(const ubyte *buf)
 {
 	int objnum;
 
@@ -1912,6 +2440,10 @@ multi_do_escape(const ubyte *buf)
 
 	create_player_appearance_effect(&Objects[objnum]);
 	multi_make_player_ghost(buf[1]);
+
+	if (is_observer()) {
+		multi_obs_check_all_escaped();
+	}
 }
 
 #define MAX_PACKETS 200 // Memory's cheap ;)
@@ -2093,11 +2625,15 @@ void multi_disconnect_player(int pnum)
 		return;
 	}
 
-	for (i = 0; i < N_players; i++)
-		if (Players[i].connected) n++;
-	if (n == 1)
-	{
-		HUD_init_message_literal(HM_MULTI, "You are the only person remaining in this netgame");
+	if (is_observer()) {
+		multi_obs_check_all_escaped();
+	} else {
+		for (i = 0; i < N_players; i++)
+			if (Players[i].connected) n++;
+		if (n == 1)
+		{
+			HUD_init_message_literal(HM_MULTI, "You are the only person remaining in this netgame");
+		}
 	}
 }
 
@@ -2140,6 +2676,19 @@ multi_do_decloak(const ubyte *buf)
 	if (Newdemo_state == ND_STATE_RECORDING)
 		newdemo_record_multi_decloak(pnum);
 
+}
+
+void
+multi_do_invuln(const ubyte *buf)
+{
+	int pnum;
+
+	pnum = buf[1];
+
+	Assert(pnum < N_players);
+
+	Players[pnum].flags |= PLAYER_FLAGS_INVULNERABLE;
+	Players[pnum].invulnerable_time = GameTime64;
 }
 
 void
@@ -2309,6 +2858,8 @@ multi_do_score(const ubyte *buf)
 		newdemo_record_multi_score(pnum, score);
 	}
 
+	add_observatory_stat(pnum, OBSEV_NONE);
+
 	Players[pnum].score = GET_INTEL_INT(buf + 2);
 
 	multi_sort_kill_list();
@@ -2460,7 +3011,7 @@ int get_color_for_player(int player, int missile) {
 		return(color); 
 	}
 
-	if(Game_mode & GM_MULTI && Netgame.FairColors && ! (Game_mode & GM_OBSERVER)) {
+	if(Game_mode & GM_MULTI && Netgame.FairColors && !is_observer()) {
 		return 0;
 	}
 
@@ -2557,7 +3108,7 @@ multi_process_bigdata(const ubyte *buf, unsigned len)
 
 void multi_send_fire(int laser_gun, int laser_level, int laser_flags, int laser_fired, short laser_track)
 {
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 	multi_do_protocol_frame(1, 0); // provoke positional update if possible
 
@@ -2583,11 +3134,11 @@ void multi_send_fire(int laser_gun, int laser_level, int laser_flags, int laser_
 void
 multi_send_destroy_controlcen(int objnum, int player)
 {
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 	if (player == Player_num)
 		HUD_init_message_literal(HM_MULTI, TXT_YOU_DEST_CONTROL);
-	else if ((player > 0) && (player < N_players))
+	else if ((player >= 0) && (player < N_players))
 		HUD_init_message(HM_MULTI, "%s %s", Players[player].callsign, TXT_HAS_DEST_CONTROL);
 	else
 		HUD_init_message_literal(HM_MULTI, TXT_CONTROL_DESTROYED);
@@ -2601,7 +3152,7 @@ multi_send_destroy_controlcen(int objnum, int player)
 void 
 multi_send_endlevel_start(int secret)
 {
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 	multibuf[0] = (char)MULTI_ENDLEVEL_START;
 	multibuf[1] = Player_num;
@@ -2628,13 +3179,17 @@ multi_send_endlevel_start(int secret)
 				Error("Protocol handling missing in multi_send_endlevel_start\n");
 				break;
 		}
+
+		if (is_observer()) {
+			multi_obs_check_all_escaped();
+		}
 	}
 }
 
 void
 multi_send_player_explode(char type)
 {
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 	int count = 0;
 	int i;
@@ -2742,7 +3297,7 @@ void multi_powcap_cap_objects()
 		return;
 	}
 
-	// Don't even try.
+	// Don't even try.  TODO: There is no try, only do.
 	if(Netgame.PrimaryDupFactor > 1 || Netgame.SecondaryDupFactor > 1 || Netgame.SecondaryCapFactor > 1 ) {
 		return;
 	}
@@ -2870,10 +3425,28 @@ multi_send_message(void)
 	}
 }
 
+void multi_send_obs_message(void)
+{
+	int loc = 0;
+    multibuf[loc] = MULTI_OBS_MESSAGE; loc += 1;
+    multibuf[loc] = OBSERVER_PLAYER_ID; loc += 1;
+
+    strncpy((char*)multibuf+loc, Players[Player_num].callsign, strlen(Players[Player_num].callsign)); loc += strlen(Players[Player_num].callsign);
+    multibuf[loc] = ':'; loc += 1;
+    multibuf[loc] = ' '; loc += 1;
+    strncpy((char*)multibuf+loc, Network_message, MAX_MESSAGE_LEN); loc += MAX_MESSAGE_LEN;
+    multibuf[12 + MAX_MESSAGE_LEN - 1] = '\0';
+    multi_send_obs_data(multibuf, 12 + MAX_MESSAGE_LEN);
+
+    if (multi_i_am_master()) {
+        HUD_init_message(HM_MULTI, "%c%c%s: %s", (char)CC_COLOR, (char)BM_XRGB(8, 8, 32), Players[Player_num].callsign, Network_message);
+    }
+}
+
 void
 multi_send_reappear()
 {
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 	multi_send_position(Players[Player_num].objnum);
 	
@@ -2888,7 +3461,7 @@ multi_send_reappear()
 void
 multi_send_position(int objnum)
 {
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 #ifdef WORDS_BIGENDIAN
 	shortpos sp;
@@ -2922,7 +3495,7 @@ multi_send_position(int objnum)
 void
 multi_send_kill(int objnum)
 {
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 	// I died, tell the world.
 
@@ -2976,7 +3549,7 @@ void
 multi_send_remobj(int objnum)
 {
 	// Tell the other guy to remove an object from his list
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 	sbyte obj_owner;
 	short remote_objnum;
@@ -3038,7 +3611,7 @@ void
 multi_send_quit(int why)
 {
 	// I am quitting the game, tell the other guy the bad news.
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer() && !Netgame.host_is_obs) { return; }
 
 	Assert (why == MULTI_QUIT);
 
@@ -3051,7 +3624,7 @@ void
 multi_send_cloak(void)
 {
 	// Broadcast a change in our pflags (made to support cloaking)
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 	multibuf[0] = MULTI_CLOAK;
 	multibuf[1] = (char)Player_num;
@@ -3069,7 +3642,7 @@ void
 multi_send_decloak(void)
 {
 	// Broadcast a change in our pflags (made to support cloaking)
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 	multibuf[0] = MULTI_DECLOAK;
 	multibuf[1] = (char)Player_num;
@@ -3080,9 +3653,24 @@ multi_send_decloak(void)
 	multi_send_data(multibuf, 2, 2);
 }
 
+void
+multi_send_invuln(void)
+{
+	// Broadcast a change in our pflags (made to support invuln)
+	if(is_observer() || (Netgame.max_numobservers == 0 && !Netgame.host_is_obs)) { return; }
+
+	multibuf[0] = MULTI_INVULN;
+	multibuf[1] = (char)Player_num;
+
+	if(Netgame.RetroProtocol) {
+		multi_send_data(multibuf, 2, 1);
+	}
+	multi_send_data(multibuf, 2, 2);
+}
+
 void multi_send_door_open(int segnum, int side, ubyte flag)
 {
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 	(void)flag;
 	multibuf[0] = MULTI_DOOR_OPEN;
@@ -3105,7 +3693,7 @@ void
 multi_send_create_explosion(int pnum)
 {
 	// Send all data needed to create a remote explosion
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 	int count = 0;
 
@@ -3120,7 +3708,7 @@ multi_send_create_explosion(int pnum)
 void
 multi_send_controlcen_fire(vms_vector *to_goal, int best_gun_num, int objnum)
 {
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 #ifdef WORDS_BIGENDIAN
 	vms_vector swapped_vec;
@@ -3146,7 +3734,7 @@ multi_send_controlcen_fire(vms_vector *to_goal, int best_gun_num, int objnum)
 void
 multi_send_create_powerup(int powerup_type, int segnum, int objnum, vms_vector *pos)
 {
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 	// Create a powerup on a remote machine, used for remote
 	// placement of used powerups like missiles and cloaking
@@ -3196,7 +3784,7 @@ multi_send_create_powerup(int powerup_type, int segnum, int objnum, vms_vector *
 void
 multi_send_play_sound(int sound_num, fix volume)
 {
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 	int count = 0;
 
@@ -3234,7 +3822,7 @@ multi_send_audio_taunt(int taunt_num)
 void
 multi_send_score(void)
 {
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 	// Send my current score to all other players so it will remain
 	// synced.
@@ -3253,7 +3841,7 @@ void
 multi_send_trigger(int triggernum)
 {
 	// Send an event to trigger something in the mine
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 	int count = 0;
 
@@ -3270,7 +3858,7 @@ multi_send_hostage_door_status(int wallnum)
 	// Tell the other player what the hit point status of a hostage door
 	// should be
 
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 	int count = 0;
 
@@ -3366,6 +3954,8 @@ multi_prep_level(void)
 	int i;
 	int     cloak_count, inv_count;
 
+	Show_graph_until = -1;
+
 	Assert(Game_mode & GM_MULTI);
 
 	Assert(NumNetPlayerPositions > 0);
@@ -3378,8 +3968,6 @@ multi_prep_level(void)
 	{
 		PKilledFlags[i]=1;
 		multi_sending_message[i] = 0;
-		if (imulti_new_game)
-			init_player_stats_new_ship(i);
 	}
 
 	for (i = 0; i < NumNetPlayerPositions; i++)
@@ -3725,7 +4313,7 @@ void change_playernum_to( int new_Player_num )
 int multi_all_players_alive()
 {
 	int i;
-	for (i=0;i<N_players;i++)
+	for (i=(Netgame.host_is_obs ? 1 : 0);i<N_players;i++)
 	{
 		if (PKilledFlags[i] && Players[i].connected)
 			return (0);
@@ -3842,7 +4430,7 @@ void multi_check_for_killgoal_winner ()
 		HUD_init_message(HM_MULTI, "The winner is %s, with the most kills!",Netgame.team_name[winner]);
 
 	} else {
-		for (i=0;i<N_players;i++)
+		for (i=(Netgame.host_is_obs ? 1 : 0);i<N_players;i++)
 		{
 			if (Players[i].KillGoalCount>best)
 			{
@@ -3973,12 +4561,22 @@ int multi_maybe_disable_friendly_fire(object *killer)
 	return 0; // all other cases -> harm me!
 }
 
+void multi_do_request_status()
+{
+	if (is_observer()) { return; }
+
+	if (Netgame.max_numobservers == 0 && !Netgame.host_is_obs) { return; }
+
+	multi_send_repair(0, Players[Player_num].shields, 0);
+	multi_send_ship_status();
+}
+
 void multi_send_damage(fix damage, fix shields, ubyte killer_type, ubyte killer_id, ubyte damage_type, object* source)
 {
-	if (Game_mode & GM_OBSERVER) { return; }
+	if (is_observer()) { return; }
 
 	// Sending damage to the host isn't interesting if there cannot be any observers.
-	if (Netgame.max_numobservers == 0) { return; }
+	if (Netgame.max_numobservers == 0 && !Netgame.host_is_obs) { return; }
 
 	// Calculate new shields amount.
 	if (shields < damage)
@@ -3989,64 +4587,59 @@ void multi_send_damage(fix damage, fix shields, ubyte killer_type, ubyte killer_
 	// Setup damage packet.
 	multibuf[0] = MULTI_DAMAGE;
 	multibuf[1] = Player_num;
-	multibuf[2] = (damage >> 24) & 0xFF;
-	multibuf[3] = (damage >> 16) & 0xFF;
-	multibuf[4] = (damage >> 8) & 0xFF;
-	multibuf[5] = damage & 0xFF;
-	multibuf[6] = (shields >> 24) & 0xFF;
-	multibuf[7] = (shields >> 16) & 0xFF;
-	multibuf[8] = (shields >> 8) & 0xFF;
-	multibuf[9] = shields & 0xFF;
+	PUT_INTEL_INT(multibuf + 2, damage);
+	PUT_INTEL_INT(multibuf + 6, shields);
 	multibuf[10] = killer_type;
 	multibuf[11] = killer_id;
 	multibuf[12] = damage_type;
 	if (source == NULL)
 	{
 		multibuf[13] = 0;
-		multibuf[14] = 0;
 	}
 	else if (source->type == OBJ_WEAPON)
 	{
-		multibuf[13] = OBJ_WEAPON;
-		multibuf[14] = 0;
-	}
-	else if (source->type == OBJ_PLAYER)
-	{
-		multibuf[13] = OBJ_WEAPON;
-		multibuf[14] = source->id;
+		multibuf[13] = source->id;
 	}
 	else
 	{
 		multibuf[13] = 0;
-		multibuf[14] = 0;
 	}
 
-	if (multi_i_am_master())
-		multi_do_damage( multibuf );
-
-	multi_send_data_direct( multibuf, 15, multi_who_is_master(), 2 );
+	multi_send_data_direct( multibuf, 14, multi_who_is_master(), 2 );
 }
 
 void multi_do_damage( const ubyte *buf )
 {
-	if (Game_mode & GM_OBSERVER)
+	if (is_observer())
 	{
-		Players[buf[1]].shields = ((fix)buf[6] << 24) + ((fix)buf[7] << 16) + ((fix)buf[8] << 8) + (fix)buf[9];
+		fix old_shields = Players[buf[1]].shields;
+		fix new_shields = GET_INTEL_INT(buf + 6);
+		fix shields_delta = GET_INTEL_INT(buf + 2);
+		Players[buf[1]].shields_certain = (new_shields <= 0 || Players[buf[1]].shields - shields_delta == new_shields) ? 1 : 0;
+		Players[buf[1]].shields = (new_shields > 0) ? new_shields : 0;
 		if (Players[Player_num].hours_total - Players[buf[1]].shields_time_hours > 1 || Players[Player_num].hours_total - Players[buf[1]].shields_time_hours == 1 && i2f(3600) + Players[Player_num].time_total - Players[buf[1]].shields_time > i2f(2) || Players[Player_num].time_total - Players[buf[1]].shields_time > i2f(2)) {
 			Players[buf[1]].shields_delta = 0;
+			Players[buf[1]].shields_certain = 1;
 		}
-		Players[buf[1]].shields_delta -= ((fix)buf[2] << 24) + ((fix)buf[3] << 16) + ((fix)buf[4] << 8) + (fix)buf[5];
-		Players[buf[1]].shields_time = Players[Player_num].time_total;
-		Players[buf[1]].shields_time_hours = Players[Player_num].hours_total;
+		Players[buf[1]].shields_delta -= shields_delta;
+
+		if (GET_INTEL_INT(buf + 2) != 0) {
+			Players[buf[1]].shields_time = Players[Player_num].time_total;
+			Players[buf[1]].shields_time_hours = Players[Player_num].hours_total;
+		}
+
+		if (shields_delta != 0) {
+			add_observatory_damage_stat(buf[1], shields_delta, new_shields, old_shields, buf[10], buf[11], buf[12], buf[13]);
+		}
 	}
 }
 
 void multi_send_repair(fix repair, fix shields, ubyte sourcetype)
 {
-	if (Game_mode & GM_OBSERVER) { return; }
+	if (is_observer()) { return; }
 
-	// Sending damage to the host isn't interesting if there cannot be any observers.
-	if (Netgame.max_numobservers == 0) { return; }
+	// Sending repairs to the host isn't interesting if there cannot be any observers.
+	if (Netgame.max_numobservers == 0 && !Netgame.host_is_obs) { return; }
 
 	// Calculate new shields amount.
 	if (shields + repair > MAX_SHIELDS)
@@ -4057,40 +4650,103 @@ void multi_send_repair(fix repair, fix shields, ubyte sourcetype)
 	// Setup repair packet.
 	multibuf[0] = MULTI_REPAIR;
 	multibuf[1] = Player_num;
-	multibuf[2] = (repair >> 24) & 0xFF;
-	multibuf[3] = (repair >> 16) & 0xFF;
-	multibuf[4] = (repair >> 8) & 0xFF;
-	multibuf[5] = repair & 0xFF;
-	multibuf[6] = (shields >> 24) & 0xFF;
-	multibuf[7] = (shields >> 16) & 0xFF;
-	multibuf[8] = (shields >> 8) & 0xFF;
-	multibuf[9] = shields & 0xFF;
+	PUT_INTEL_INT(multibuf + 2, repair);
+	PUT_INTEL_INT(multibuf + 6, shields);
 	multibuf[10] = sourcetype;
 
-	if (multi_i_am_master())
-		multi_do_repair( multibuf );
-	
 	multi_send_data_direct( multibuf, 11, multi_who_is_master(), 2);
 }
 
 void multi_do_repair( const ubyte *buf )
 {
-	if (Game_mode & GM_OBSERVER)
+	if (is_observer())
 	{
-		Players[buf[1]].shields = ((fix)buf[6] << 24) + ((fix)buf[7] << 16) + ((fix)buf[8] << 8) + (fix)buf[9];
-		if (Players[Player_num].hours_total - Players[buf[1]].shields_time_hours > 1 || Players[Player_num].hours_total - Players[buf[1]].shields_time_hours == 1 && i2f(3600) + Players[Player_num].time_total - Players[buf[1]].shields_time > i2f(2) || Players[Player_num].time_total - Players[buf[1]].shields_time > i2f(2)) {
-			Players[buf[1]].shields_delta = 0;
+		fix old_shields = Players[buf[1]].shields;
+		fix new_shields = GET_INTEL_INT(buf + 6);
+		fix shields_delta = GET_INTEL_INT(buf + 2);
+		Players[buf[1]].shields_certain = (Players[buf[1]].shields + shields_delta == new_shields) ? 1 : 0;
+		Players[buf[1]].shields = (new_shields > 0) ? new_shields : 0;
+
+		if (shields_delta == 0) {
+			Players[buf[1]].shields_certain = 1;
+		} else {
+			if (Players[Player_num].hours_total - Players[buf[1]].shields_time_hours > 1 || Players[Player_num].hours_total - Players[buf[1]].shields_time_hours == 1 && i2f(3600) + Players[Player_num].time_total - Players[buf[1]].shields_time > i2f(2) || Players[Player_num].time_total - Players[buf[1]].shields_time > i2f(2)) {
+				Players[buf[1]].shields_delta = 0;
+			}
+			Players[buf[1]].shields_delta += shields_delta;
+
+			Players[buf[1]].shields_time = Players[Player_num].time_total;
+			Players[buf[1]].shields_time_hours = Players[Player_num].hours_total;
 		}
-		Players[buf[1]].shields_delta += ((fix)buf[2] << 24) + ((fix)buf[3] << 16) + ((fix)buf[4] << 8) + (fix)buf[5];
-		Players[buf[1]].shields_time = Players[Player_num].time_total;
-		Players[buf[1]].shields_time_hours = Players[Player_num].hours_total;
+
+		if (shields_delta != 0) {
+			add_observatory_damage_stat(buf[1], shields_delta, new_shields, old_shields, 0, 0, DAMAGE_SHIELD, 0);
+		}
 	}
+}
+
+void multi_send_ship_status()
+{
+	if (is_observer()) { return; }
+
+	// Sending ship status to the host isn't interesting if there cannot be any observers.
+	if (Netgame.max_numobservers == 0 && !Netgame.host_is_obs) { return; }
+
+	Send_ship_status = 1;
+}
+
+void multi_send_ship_status_for_frame()
+{
+	// Setup ship status packet.
+	multibuf[0] = MULTI_SHIP_STATUS;
+	multibuf[1] = Player_num;
+	multibuf[2] = Players[Player_num].laser_level;
+	PUT_INTEL_SHORT(multibuf + 3, Players[Player_num].flags);
+	PUT_INTEL_SHORT(multibuf + 5, Players[Player_num].primary_ammo[1]);
+	multibuf[7] = Players[Player_num].primary_weapon_flags;
+	multibuf[8] = (ubyte)Players[Player_num].primary_weapon;
+	PUT_INTEL_SHORT(multibuf + 9, Players[Player_num].secondary_ammo[0]);
+	PUT_INTEL_SHORT(multibuf + 11, Players[Player_num].secondary_ammo[1]);
+	PUT_INTEL_SHORT(multibuf + 13, Players[Player_num].secondary_ammo[2]);
+	PUT_INTEL_SHORT(multibuf + 15, Players[Player_num].secondary_ammo[3]);
+	PUT_INTEL_SHORT(multibuf + 17, Players[Player_num].secondary_ammo[4]);
+	multibuf[19] = Players[Player_num].secondary_weapon_flags;
+	multibuf[20] = (ubyte)Players[Player_num].secondary_weapon;
+	PUT_INTEL_INT(multibuf + 21, Players[Player_num].energy);
+	PUT_INTEL_INT(multibuf + 25, Players[Player_num].homing_object_dist);
+
+	multi_send_data_direct( multibuf, 29, multi_who_is_master(), 2);
+}
+
+void multi_do_ship_status( const ubyte *buf )
+{
+	if (is_observer())
+	{
+		Players[buf[1]].laser_level = buf[2];
+		Players[buf[1]].flags = GET_INTEL_SHORT(buf + 3);
+		Players[buf[1]].primary_ammo[1] = GET_INTEL_SHORT(buf + 5);
+		Players[buf[1]].primary_weapon_flags = buf[7];
+		Players[buf[1]].primary_weapon = (sbyte)buf[8];
+		Players[buf[1]].secondary_ammo[0] = GET_INTEL_SHORT(buf + 9);
+		Players[buf[1]].secondary_ammo[1] = GET_INTEL_SHORT(buf + 11);
+		Players[buf[1]].secondary_ammo[2] = GET_INTEL_SHORT(buf + 13);
+		Players[buf[1]].secondary_ammo[3] = GET_INTEL_SHORT(buf + 15);
+		Players[buf[1]].secondary_ammo[4] = GET_INTEL_SHORT(buf + 17);
+		Players[buf[1]].secondary_weapon_flags = buf[19];
+		Players[buf[1]].secondary_weapon = (sbyte)buf[20];
+		Players[buf[1]].energy = GET_INTEL_INT(buf + 21);
+		Players[buf[1]].homing_object_dist = GET_INTEL_INT(buf + 25);
+	}
+}
+
+bool is_observing_player() {
+	return is_observer() && (Current_obs_player != OBSERVER_PLAYER_ID && (!multi_i_am_master() || Current_obs_player != 0));
 }
 
 /* Bounty packer sender and handler */
 void multi_send_bounty( void )
 {
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 	/* Test game mode */
 	if( !( Game_mode & GM_BOUNTY ) )
@@ -4122,21 +4778,30 @@ void multi_send_obs_update(ubyte event, ubyte event_data) {
 	multibuf[2] = event_data;
 	multibuf[3] = Netgame.numobservers;
 
-	for(int i = 0; i < Netgame.numobservers; i++) {
-		memcpy(&multibuf[4 + i*8], &Netgame.observers[i].callsign, 8);
+	for(int i = 0; i < Netgame.max_numobservers; i++) {
+		if (Netgame.observers[i].connected == 1) {
+			memcpy(&multibuf[4 + i*8], &Netgame.observers[i].callsign, 8);
+		} else {
+			memset(&multibuf[4 + i*8], 0, 8);
+		}
 	}
 
 	multi_send_data( multibuf, 4 + 8*MAX_OBSERVERS, 2 );
+
+	if (event == 0 && !is_observer())
+	{
+		multi_do_request_status();
+	}
 }
 
 void multi_do_obs_update(const ubyte *buf) {
 	if(multi_i_am_master()) { return; }
 
+	Netgame.numobservers = buf[3];
 	if(Netgame.max_numobservers < Netgame.numobservers) {
 		Netgame.max_numobservers = Netgame.numobservers;
 	}
-	Netgame.numobservers = buf[3];
-	for(int i = 0; i < Netgame.numobservers; i++) {
+	for(int i = 0; i < Netgame.max_numobservers; i++) {
 		memcpy(&Netgame.observers[i].callsign, &buf[4+i*8], 8); 
 	}
 
@@ -4145,6 +4810,11 @@ void multi_do_obs_update(const ubyte *buf) {
 		char who_joined[9];
 		strncpy(who_joined, (char*) &buf[4 + buf[2]*8], 8); 
 		HUD_init_message(HM_MULTI, "%s is now observing.", who_joined);
+
+		if (!is_observer())
+		{
+			multi_do_request_status();
+		}
 	}
 }
 
@@ -4202,7 +4872,7 @@ void multi_do_restore_game(const ubyte *buf)
 
 void multi_send_save_game(ubyte slot, uint id, char * desc)
 {
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 	int count = 0;
 	
@@ -4225,6 +4895,11 @@ void multi_send_restore_game(ubyte slot, uint id)
 
 void multi_initiate_save_game()
 {
+	if (Netgame.host_is_obs) {
+		HUD_init_message_literal(HM_MULTI, "Can't save with a host that is observing!");
+		return;
+	}
+
 	fix game_id = 0;
 	int i, j, slot;
 	char filename[PATH_MAX];
@@ -4283,6 +4958,11 @@ extern int state_get_game_id(char *);
 
 void multi_initiate_restore_game()
 {
+	if (Netgame.host_is_obs) {
+		HUD_init_message_literal(HM_MULTI, "Can't load with a host that is observing!");
+		return;
+	}
+
 	int i, j, slot;
 	char filename[PATH_MAX];
 
@@ -4377,7 +5057,7 @@ void multi_do_msgsend_state(const ubyte *buf)
 
 void multi_send_msgsend_state(int state)
 {
-	if(Game_mode & GM_OBSERVER) { return; }
+	if(is_observer()) { return; }
 
 	multibuf[0] = (char)MULTI_TYPING_STATE;
 	multibuf[1] = Player_num;
@@ -4456,6 +5136,8 @@ multi_process_data(const ubyte *buf, int len)
 			if (!Endlevel_sequence) multi_do_player_explode(buf); break;
 		case MULTI_MESSAGE:
 			if (!Endlevel_sequence) multi_do_message(buf); break;
+        case MULTI_OBS_MESSAGE:
+			if (!Endlevel_sequence) multi_do_obs_message(buf); break;
 		case MULTI_QUIT:
 			if (!Endlevel_sequence) multi_do_quit(buf); break;
 		case MULTI_BEGIN_SYNC:
@@ -4470,6 +5152,8 @@ multi_process_data(const ubyte *buf, int len)
 			if (!Endlevel_sequence) multi_do_cloak(buf); break;
 		case MULTI_DECLOAK:
 			if (!Endlevel_sequence) multi_do_decloak(buf); break;
+		case MULTI_INVULN:
+			if (!Endlevel_sequence) multi_do_invuln(buf); break;
 		case MULTI_DOOR_OPEN:
 			if (!Endlevel_sequence) multi_do_door_open(buf); break;
 		case MULTI_CREATE_EXPLOSION:
@@ -4530,6 +5214,8 @@ multi_process_data(const ubyte *buf, int len)
 			multi_do_damage(buf); break;
 		case MULTI_REPAIR:
 			multi_do_repair(buf); break;
+		case MULTI_SHIP_STATUS:
+			multi_do_ship_status(buf); break;
 		default:
 			Int3();
 	}

@@ -650,7 +650,7 @@ void render_object(object *obj)
 		return;
 	
 	// Don't draw a player if we are observing them in first person.
-	if (Game_mode & GM_OBSERVER && Obs_at_distance == 0 && obj->type == OBJ_PLAYER && Current_obs_player != OBSERVER_PLAYER_ID && Players[Current_obs_player].objnum == obj - Objects) {
+	if (is_observer() && !Obs_at_distance && obj->type == OBJ_PLAYER && is_observing_player() && Players[Current_obs_player].objnum == obj - Objects) {
 		return;
 	}
 
@@ -961,7 +961,9 @@ void obj_link(int objnum,int segnum)
 
 	obj->segnum = segnum;
 	
-	obj->next = Segments[segnum].objects;
+	if (Segments[segnum].objects != objnum)
+		obj->next = Segments[segnum].objects;
+
 	obj->prev = -1;
 
 	Segments[segnum].objects = objnum;
@@ -1744,6 +1746,9 @@ void object_move_one( object * obj )
 		fuel=fuelcen_give_fuel( &Segments[obj->segnum], i2f(100)-Players[Player_num].energy );
 		if (fuel > 0 )	{
 			Players[Player_num].energy += fuel;
+
+			if (Game_mode & GM_MULTI)
+				multi_send_ship_status();
 		}
 	}
 
