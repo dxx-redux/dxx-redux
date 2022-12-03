@@ -177,7 +177,7 @@ extern obj_position Player_init[MAX_PLAYERS];
 
 uint netgame_token = 0; 
 uint my_player_token = 0; 
-uint player_tokens[MAX_MULTI_PLAYERS]; 
+uint player_tokens[MAX_PLAYERS+4];
 
 const struct connection_status CONNECTION_NONE = {CONNT_NONE, 0, 0};
 const char MAX_CONNECTIONS = 8; 

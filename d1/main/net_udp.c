@@ -188,7 +188,7 @@ extern obj_position Player_init[MAX_PLAYERS];
 
 uint netgame_token = 0; 
 uint my_player_token = 0; 
-uint player_tokens[MAX_MULTI_PLAYERS]; 
+uint player_tokens[MAX_PLAYERS+4];
 
 const struct connection_status CONNECTION_NONE = {NONE, 0, 0};
 const char MAX_CONNECTIONS = 8; 
@@ -1384,6 +1384,8 @@ int net_udp_list_join_poll( newmenu *menu, d_event *event, direct_join *dj )
 
 		// These next two loops protect against menu skewing
 		// if missiontitle or gamename contain a tab
+
+		gr_set_curfont(GAME_FONT);
 
 		for (x=0,tx=0,k=0,j=0;j<15;j++)
 		{
@@ -4325,6 +4327,8 @@ void net_udp_read_sync_packet( ubyte * data, int data_len, struct _sockaddr send
 	int i, j;
 
 	char temp_callsign[CALLSIGN_LEN+1];
+
+	int prev_status = Network_status;
 	
 	// This function is now called by all people entering the netgame.
 
@@ -4346,7 +4350,8 @@ void net_udp_read_sync_packet( ubyte * data, int data_len, struct _sockaddr send
 	if (Netgame.segments_checksum != my_segments_checksum)
 	{
 		Network_status = NETSTAT_MENU;
-		nm_messagebox(TXT_ERROR, 1, TXT_OK, TXT_NETLEVEL_NMATCH);
+		if (prev_status != NETSTAT_MENU)
+			nm_messagebox(TXT_ERROR, 1, TXT_OK, TXT_NETLEVEL_NMATCH);
 #ifdef NDEBUG
 		return;
 #endif
@@ -4356,7 +4361,7 @@ void net_udp_read_sync_packet( ubyte * data, int data_len, struct _sockaddr send
 
 	memcpy(temp_callsign, Players[Player_num].callsign, CALLSIGN_LEN+1);
 	
-	Player_num = -1;
+	Player_num = (Game_mode & GM_OBSERVER) ? OBSERVER_PLAYER_ID : -1;
 
 	for (i=0; i<MAX_PLAYERS; i++ )
 	{
@@ -4420,7 +4425,8 @@ void net_udp_read_sync_packet( ubyte * data, int data_len, struct _sockaddr send
 	if (Network_rejoined)
 	{
 		net_udp_process_monitor_vector(Netgame.monitor_vector);
-		Players[Player_num].time_level = Netgame.level_time;
+		if (Player_num != -1)
+			Players[Player_num].time_level = Netgame.level_time;
 	}
 
 	team_kills[0] = Netgame.team_kills[0];
@@ -5755,7 +5761,7 @@ void add_message_to_obs_buffer(ubyte *data, int data_len) {
 	}
 
 	cur_obs_msg++; 
-	if(cur_obs_msg >= MAX_OBS_MESSAGES*MAX_MESSAGE_SIZE) {
+	if(cur_obs_msg >= MAX_OBS_MESSAGES) {
 		cur_obs_msg = 0; 
 	}
 	memcpy(observer_data_buffer + bufslot, data, data_len);

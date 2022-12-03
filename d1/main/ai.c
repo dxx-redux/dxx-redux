@@ -2585,7 +2585,7 @@ void do_ai_frame(object *obj)
 			int anger_level = 65;
 
 			if (aip->behavior == AIB_STATION)
-				if (Point_segs[aip->hide_index + aip->path_length - 1].segnum == aip->hide_segment) {
+				if (aip->path_length >= 1 && Point_segs[aip->hide_index + aip->path_length - 1].segnum == aip->hide_segment) {
 					anger_level = 64;
 				}
 

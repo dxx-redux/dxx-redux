@@ -192,13 +192,13 @@ enum { NETFLAG_DOPOWERUP = 0 for_each_netflag_value(define_netflag_powerup_mask)
 #define MULTI_GAME_TYPE_COUNT	8
 #define MULTI_GAME_NAME_LENGTH	13
 #define MULTI_ALLOW_POWERUP_MAX 13
-int multi_allow_powerup_mask[MAX_POWERUP_TYPES];
+extern int multi_allow_powerup_mask[MAX_POWERUP_TYPES];
 extern char *multi_allow_powerup_text[MULTI_ALLOW_POWERUP_MAX];
 extern const char GMNames[MULTI_GAME_TYPE_COUNT][MULTI_GAME_NAME_LENGTH];
 extern const char GMNamesShrt[MULTI_GAME_TYPE_COUNT][8];
 
-int Current_obs_player; // Current player being observed.
-bool Obs_at_distance; // True if you're viewing the player from a cube back.
+extern int Current_obs_player; // Current player being observed.
+extern bool Obs_at_distance; // True if you're viewing the player from a cube back.
 
 // Exported functions
 

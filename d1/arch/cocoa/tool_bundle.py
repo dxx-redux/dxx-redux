@@ -2,6 +2,7 @@
 
 # http://www.scons.org/wiki/SubstInFileBuilder
 
+from __future__ import print_function
 import re
 from SCons.Script import *
 from SCons.Builder import *
@@ -23,32 +24,32 @@ def TOOL_SUBST(env):
         then all instances of %VERSION% in the file will be replaced with 1.2345 etc.
         """
         try:
-            f = open(sourcefile, 'rb')
+            f = open(sourcefile, 'r')
             contents = f.read()
             f.close()
         except:
-            raise SCons.Errors.UserError, "Can't read source file %s"%sourcefile
-        for (k,v) in dict.items():
+            raise SCons.Errors.UserError("Can't read source file %s"%sourcefile)
+        for (k,v) in list(dict.items()):
             contents = re.sub(k, v, contents)
         try:
-            f = open(targetfile, 'wb')
+            f = open(targetfile, 'w')
             f.write(contents)
             f.close()
         except:
-            raise SCons.Errors.UserError, "Can't write target file %s"%targetfile
+            raise SCons.Errors.UserError("Can't write target file %s"%targetfile)
         return 0 # success
 
     def subst_in_file(target, source, env):
-        if not env.has_key('SUBST_DICT'):
-            raise SCons.Errors.UserError, "SubstInFile requires SUBST_DICT to be set."
+        if 'SUBST_DICT' not in env:
+            raise SCons.Errors.UserError("SubstInFile requires SUBST_DICT to be set.")
         d = dict(env['SUBST_DICT']) # copy it
-        for (k,v) in d.items():
+        for (k,v) in list(d.items()):
             if callable(v):
                 d[k] = env.subst(v())
             elif SCons.Util.is_String(v):
                 d[k]=env.subst(v)
             else:
-                raise SCons.Errors.UserError, "SubstInFile: key %s: %s must be a string or callable"%(k, repr(v))
+                raise SCons.Errors.UserError("SubstInFile: key %s: %s must be a string or callable"%(k, repr(v)))
         for (t,s) in zip(target, source):
             return do_subst_in_file(str(t), str(s), d)
 
@@ -62,7 +63,7 @@ def TOOL_SUBST(env):
         Returns original target, source tuple unchanged.
         """
         d = env['SUBST_DICT'].copy() # copy it
-        for (k,v) in d.items():
+        for (k,v) in list(d.items()):
             if callable(v):
                 d[k] = env.subst(v())
             elif SCons.Util.is_String(v):
@@ -98,7 +99,7 @@ def TOOL_BUNDLE(env):
     if 'BUNDLE' in env['TOOLS']: return
     if sys.platform == 'darwin':
         #if tools_verbose:
-        print " running tool: TOOL_BUNDLE"
+        print(" running tool: TOOL_BUNDLE")
         env.Append(TOOLS = 'BUNDLE')
         # This is like the regular linker, but uses different vars.
         # XXX: NOTE: this may be out of date now, scons 0.96.91 has some bundle linker stuff built in.
@@ -143,10 +144,10 @@ def TOOL_BUNDLE(env):
             if not ('.' in bundledir):
                 bundledir += '.$BUNDLEDIRSUFFIX'
             bundledir = env.subst(bundledir) # substitute again
-            suffix=bundledir[string.rfind(bundledir,'.'):]
+            suffix=bundledir[bundledir.rfind('.'):]
             if (suffix=='.app' and typecode != 'APPL' or
                 suffix!='.app' and typecode == 'APPL'):
-                raise Error, "MakeBundle: inconsistent dir suffix %s and type code %s: app bundles should end with .app and type code APPL."%(suffix, typecode)
+                raise Error("MakeBundle: inconsistent dir suffix %s and type code %s: app bundles should end with .app and type code APPL."%(suffix, typecode))
             if subst_dict is None:
                 subst_dict={'%SHORTVERSION%': '$VERSION_NUM',
                             '%LONGVERSION%': '$VERSION_NAME',
@@ -175,7 +176,7 @@ def TOOL_BUNDLE(env):
         SConsEnvironment.MakeBundle = MakeBundle
 def TOOL_WRITE_VAL(env):
     #if tools_verbose:
-    print " running tool: TOOL_WRITE_VAL"
+    print(" running tool: TOOL_WRITE_VAL")
     env.Append(TOOLS = 'WRITE_VAL')
     def write_val(target, source, env):
         """Write the contents of the first source into the target.

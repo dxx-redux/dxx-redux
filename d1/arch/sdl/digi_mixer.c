@@ -123,7 +123,7 @@ void mixdigi_convert_sound(int i)
 		if (SDL_ConvertAudio(&cvt)) con_printf(CON_DEBUG,"conversion of %d failed\n", i);
 
 		SoundChunks[i].abuf = cvt.buf;
-		SoundChunks[i].alen = dlen * cvt.len_mult;
+		SoundChunks[i].alen = cvt.len_cvt;
 		SoundChunks[i].allocated = 1;
 		SoundChunks[i].volume = 128; // Max volume = 128
 	}
@@ -145,6 +145,8 @@ int digi_mixer_start_sound(short soundnum, fix volume, int pan, int looping, int
 	if (MIX_DIGI_DEBUG) con_printf(CON_DEBUG,"digi_start_sound %d, volume %d, pan %d (start=%d, end=%d)\n", soundnum, mix_vol, mix_pan, loop_start, loop_end);
 
 	channel = digi_mixer_find_channel();
+	if (channel == -1)
+		return -1;
 
 	Mix_PlayChannel(channel, &(SoundChunks[soundnum]), mix_loop);
 	Mix_SetPanning(channel, 255-mix_pan, mix_pan);

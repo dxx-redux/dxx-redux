@@ -548,8 +548,11 @@ extern void ogl_loadbmtexture(grs_bitmap *bm);
 void update_cockpits()
 {
 	grs_bitmap *bm;
-	PIGGY_PAGE_IN(cockpit_bitmap[PlayerCfg.CockpitMode[1]]);
-	bm = &GameBitmaps[cockpit_bitmap[PlayerCfg.CockpitMode[1]].index];
+
+	if (PlayerCfg.CockpitMode[1] < N_COCKPIT_BITMAPS) {
+		PIGGY_PAGE_IN(cockpit_bitmap[PlayerCfg.CockpitMode[1]]);
+		bm = &GameBitmaps[cockpit_bitmap[PlayerCfg.CockpitMode[1]].index];
+	}
 
 	switch( PlayerCfg.CockpitMode[1] )	{
 		case CM_FULL_COCKPIT:

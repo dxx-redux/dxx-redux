@@ -477,7 +477,7 @@ static int audio_data_handler(unsigned char major, unsigned char minor, unsigned
 					out_format, out_channels, out_freq);
 
 				clen = nsamp * cvt.len_mult;
-				cvt.buf = malloc(clen);
+				cvt.buf = mve_alloc(clen);
 				cvt.len = nsamp;
 
 				// read the audio buffer into the conversion buffer
@@ -488,9 +488,8 @@ static int audio_data_handler(unsigned char major, unsigned char minor, unsigned
 
 				// copy back to the audio buffer
 				mve_free(mve_audio_buffers[mve_audio_buftail]); // free the old audio buffer
-				mve_audio_buflens[mve_audio_buftail] = clen;
-				mve_audio_buffers[mve_audio_buftail] = (short *)mve_alloc(clen);
-				memcpy(mve_audio_buffers[mve_audio_buftail], cvt.buf, clen);
+				mve_audio_buflens[mve_audio_buftail] = cvt.len_cvt;
+				mve_audio_buffers[mve_audio_buftail] = cvt.buf;
 			}
 #endif
 
