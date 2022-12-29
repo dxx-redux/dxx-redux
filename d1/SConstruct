@@ -38,6 +38,7 @@ class DXXCommon:
 			self.editor = int(ARGUMENTS.get('editor', 0))
 			self.extra_version = ARGUMENTS.get('extra_version', None)
 			self.sdlmixer = int(ARGUMENTS.get('sdlmixer', 1))
+			self.png = int(ARGUMENTS.get('png', 1))
 			self.ipv6 = int(ARGUMENTS.get('ipv6', 0))
 			self.use_udp = int(ARGUMENTS.get('use_udp', 1))
 			self.use_tracker = int(ARGUMENTS.get('use_tracker', 1))
@@ -216,6 +217,11 @@ class DXXCommon:
 			print("%s: including SDL_mixer" % self.PROGRAM_NAME)
 			env.Append(CPPDEFINES = ['USE_SDLMIXER'])
 
+		# png support?
+		if (self.user_settings.png == 1):
+			print("%s: including PNG" % self.PROGRAM_NAME)
+			env.Append(CPPDEFINES = ['HAVE_LIBPNG'])
+
 		# debug?
 		if (self.user_settings.debug == 1):
 			print("%s: including: DEBUG" % self.PROGRAM_NAME)
@@ -350,6 +356,10 @@ class DXXProgram(DXXCommon):
 				self.platform_settings.libs += ['SDL_mixer']
 			else:
 				env.Append(FRAMEWORKS = ['SDL_mixer'])
+
+		# png support?
+		if (self.user_settings.png == 1):
+			self.platform_settings.libs += ['png']
 
 		# profiler?
 		if (self.user_settings.profiler == 1):
@@ -518,6 +528,7 @@ class D1XProgram(DXXProgram):
 'misc/hash.c',
 'misc/hmp.c',
 'misc/ignorecase.c',
+'misc/pngfile.c',
 'misc/physfsx.c',
 'misc/strio.c',
 'misc/strutil.c',

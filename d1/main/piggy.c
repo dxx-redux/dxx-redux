@@ -1064,3 +1064,14 @@ int bitmap_index_read_n(bitmap_index *bi, int n, PHYSFS_file *fp)
 		bi[i].index = PHYSFSX_readShort(fp);
 	return i;
 }
+
+char* piggy_game_bitmap_name(grs_bitmap *bmp)
+{
+	if (bmp >= GameBitmaps && bmp < &GameBitmaps[MAX_BITMAP_FILES])
+	{
+		int i = bmp-GameBitmaps; // i = (bmp - GameBitmaps) / sizeof(grs_bitmap);
+		Assert (bmp == &GameBitmaps[i] && i >= 0 && i < MAX_BITMAP_FILES);
+		return AllBitmaps[i].name;
+	}
+	return NULL;
+}

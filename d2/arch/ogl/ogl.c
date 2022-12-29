@@ -1315,7 +1315,7 @@ void ogl_init_pixel_buffers(int w, int h)
 
 	if (texbuf)
 		d_free(texbuf);
-	texbuf = d_malloc(max(w, 1024)*max(h, 256)*4);	// must also fit big font texture
+	texbuf = d_malloc(max(w, 1024)*max(h, 1024)*4);	// must also fit big font texture
 
 	if ((pixels == NULL) || (texbuf == NULL))
 		Error("Not enough memory for current resolution");
@@ -1331,7 +1331,7 @@ void ogl_filltexbuf(unsigned char *data, GLubyte *texp, int truewidth, int width
 {
 	int x,y,c,i;
 
-	if ((width > max(grd_curscreen->sc_w, 1024)) || (height > max(grd_curscreen->sc_h, 256)))
+	if ((width > max(grd_curscreen->sc_w, 1024)) || (height > max(grd_curscreen->sc_h, 1024)))
 		Error("Texture is too big: %ix%i", width, height);
 
 	i=0;
@@ -1690,14 +1690,14 @@ void ogl_loadbmtexture_f(grs_bitmap *bm, int texfilt, int filter_blueship_wing)
 		char filename[64];
 		png_data pdata;
 
-		sprintf(filename, "textures/%s.png", bitmapname);
+		sprintf(filename, /*"textures/"*/ "%s.png", bitmapname);
 		if (read_png(filename, &pdata))
 		{
 			con_printf(CON_DEBUG,"%s: %ux%ux%i p=%i(%i) c=%i a=%i chans=%i\n", filename, pdata.width, pdata.height, pdata.depth, pdata.paletted, pdata.num_palette, pdata.color, pdata.alpha, pdata.channels);
 			if (pdata.depth == 8 && pdata.color)
 			{
 				if (bm->gltexture == NULL)
-					ogl_init_texture(bm->gltexture = ogl_get_free_texture(), pdata.width, pdata.height, flags | ((pdata.alpha || bm->bm_flags & BM_FLAG_TRANSPARENT) ? OGL_FLAG_ALPHA : 0));
+					ogl_init_texture(bm->gltexture = ogl_get_free_texture(), pdata.width, pdata.height, ((pdata.alpha || bm->bm_flags & BM_FLAG_TRANSPARENT) ? OGL_FLAG_ALPHA : 0));
 				ogl_loadtexture(pdata.data, 0, 0, bm->gltexture, bm->bm_flags, pdata.paletted ? 0 : pdata.channels, texfilt);
 				free(pdata.data);
 				if (pdata.palette)
