@@ -52,6 +52,7 @@
 #include "config.h"
 #include "vers_id.h"
 #include "game.h"
+#include "pngfile.h"
 
 #if defined(__APPLE__) && defined(__MACH__)
 #include <OpenGL/glu.h>
@@ -1023,25 +1024,51 @@ typedef struct
 
 //writes out an uncompressed RGB .tga file
 //if we got really spiffy, we could optionally link in libpng or something, and use that.
-void write_bmp(char *savename,int w,int h,unsigned char *buf)
+void write_bmp(char *savename,int w,int h)
 {
-	PHYSFS_file* TGAFile;
+	unsigned char *rgbaBuf, *buf;
+	#ifdef HAVE_LIBPNG
+	png_data pdata;
+	int x, y;
+	#else
 	TGA_header TGA;
 	GLbyte HeightH,HeightL,WidthH,WidthL;
-	unsigned int pixel;
-	unsigned char *rgbaBuf;
+	PHYSFS_File *TGAFile;
+	int pixel;
+	#endif
 
-	buf = (unsigned char*)d_calloc(w*h*4,sizeof(unsigned char));
+	buf = (unsigned char*)d_malloc(w * h * 3);
 
-	rgbaBuf = (unsigned char*) d_calloc(w * h * 4, sizeof(unsigned char));
+	rgbaBuf = (unsigned char*) d_malloc(w * h * 4);
 	glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, rgbaBuf);
+	#ifdef HAVE_LIBPNG
+	for(y = 0; y < h; y++) {
+		int wofs = y * w * 3, rofs = (h - 1 - y) * w * 4;
+		for(x = 0; x < w; x++) {
+			*(buf + wofs + x * 3) = *(rgbaBuf + rofs + x * 4);
+			*(buf + wofs + x * 3 + 1) = *(rgbaBuf + rofs + x * 4 + 1);
+			*(buf + wofs + x * 3 + 2) = *(rgbaBuf + rofs + x * 4 + 2);
+		}
+	}
+	#else
 	for(pixel = 0; pixel < w * h; pixel++) {
 		*(buf + pixel * 3) = *(rgbaBuf + pixel * 4 + 2);
 		*(buf + pixel * 3 + 1) = *(rgbaBuf + pixel * 4 + 1);
 		*(buf + pixel * 3 + 2) = *(rgbaBuf + pixel * 4);
 	}
+	#endif
 	d_free(rgbaBuf);
 
+	#ifdef HAVE_LIBPNG
+	memset(&pdata, 0, sizeof(pdata));
+	pdata.width = w;
+	pdata.height = h;
+	pdata.data = buf;
+	pdata.depth = 8;
+
+	if (!write_png(savename, &pdata))
+		con_printf(CON_URGENT,"Could not create PNG file to dump screenshot!");
+	#else
 	if (!(TGAFile = PHYSFSX_openWriteBuffered(savename)))
 	{
 		con_printf(CON_URGENT,"Could not create TGA file to dump screenshot!");
@@ -1075,6 +1102,8 @@ void write_bmp(char *savename,int w,int h,unsigned char *buf)
 	PHYSFS_write(TGAFile,&TGA,sizeof(TGA_header),1);
 	PHYSFS_write(TGAFile,buf,w*h*3*sizeof(unsigned char),1);
 	PHYSFS_close(TGAFile);
+	#endif
+
 	d_free(buf);
 }
 
@@ -1082,7 +1111,11 @@ void save_screen_shot(int automap_flag)
 {
 	static int savenum=0;
 	char savename[13+sizeof(SCRNS_DIR)];
-	unsigned char *buf;
+	#ifdef HAVE_LIBPNG
+	const char *ext = "png";
+	#else
+	const char *ext = "tga";
+	#endif
 
 	if (!GameArg.DbgGlReadPixelsOk){
 		if (!automap_flag)
@@ -1097,19 +1130,17 @@ void save_screen_shot(int automap_flag)
 
 	do
 	{
-		sprintf(savename, "%sscrn%04d.tga",SCRNS_DIR, savenum++);
+		sprintf(savename, "%sscrn%04d.%s", SCRNS_DIR, savenum++, ext);
 	} while (PHYSFSX_exists(savename,0));
 
 	if (!automap_flag)
-		HUD_init_message(HM_DEFAULT, "%s 'scrn%04d.tga'", TXT_DUMPING_SCREEN, savenum-1 );
+		HUD_init_message(HM_DEFAULT, "%s '%s'", TXT_DUMPING_SCREEN, savename + strlen(SCRNS_DIR));
 
 #ifndef OGLES
 	glReadBuffer(GL_FRONT);
 #endif
 
-	buf = d_malloc(grd_curscreen->sc_w*grd_curscreen->sc_h*3);
-	write_bmp(savename,grd_curscreen->sc_w,grd_curscreen->sc_h,buf);
-	d_free(buf);
+	write_bmp(savename,grd_curscreen->sc_w,grd_curscreen->sc_h);
 
 	start_time();
 }
