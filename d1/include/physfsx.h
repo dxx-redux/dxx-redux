@@ -29,6 +29,21 @@
 
 extern void PHYSFSX_init(int argc, char *argv[]);
 
+// Workaround for PHYSFS_read / PHYSFS_write deprecation
+
+static inline PHYSFS_sint64 PHYSFSX_read(PHYSFS_File *handle, void *buffer, PHYSFS_uint32 objSize, PHYSFS_uint32 objCount)
+{
+	return PHYSFS_readBytes(handle, buffer, objSize * objCount) / objSize;
+}
+
+static inline PHYSFS_sint64 PHYSFSX_write(PHYSFS_File *handle, const void *buffer, PHYSFS_uint32 objSize, PHYSFS_uint32 objCount)
+{
+	return PHYSFS_writeBytes(handle, buffer, objSize * objCount) / objSize;
+}
+
+#define PHYSFS_read PHYSFSX_read
+#define PHYSFS_write PHYSFSX_write
+
 static inline int PHYSFSX_readSXE16(PHYSFS_file *file, int swap)
 {
 	PHYSFS_sint16 val;
