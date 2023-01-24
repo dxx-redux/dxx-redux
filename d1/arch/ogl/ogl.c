@@ -1939,7 +1939,7 @@ bool ogl_ubitmapm_cs(int x, int y,int dw, int dh, grs_bitmap *bm,int c, int scal
 	
 	if (bm->bm_x==0){
 		u1=0;
-		if (bm->bm_w==bm->gltexture->w)
+		if (bm->bm_w==bm->gltexture->w || !bm->bm_parent)
 			u2=bm->gltexture->u;
 		else
 			u2=(bm->bm_w+bm->bm_x)/(float)bm->gltexture->tw;
@@ -1949,7 +1949,7 @@ bool ogl_ubitmapm_cs(int x, int y,int dw, int dh, grs_bitmap *bm,int c, int scal
 	}
 	if (bm->bm_y==0){
 		v1=0;
-		if (bm->bm_h==bm->gltexture->h)
+		if (bm->bm_h==bm->gltexture->h || !bm->bm_parent)
 			v2=bm->gltexture->v;
 		else
 			v2=(bm->bm_h+bm->bm_y)/(float)bm->gltexture->th;
