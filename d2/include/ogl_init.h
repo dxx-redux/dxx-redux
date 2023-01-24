@@ -62,6 +62,7 @@ typedef struct _ogl_texture {
 	GLfloat prio;
 	int wrapstate;
 	unsigned long numrend;
+	int is_png;
 } ogl_texture;
 
 extern ogl_texture* ogl_get_free_texture();

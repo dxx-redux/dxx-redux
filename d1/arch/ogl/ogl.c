@@ -190,6 +190,7 @@ void ogl_init_texture(ogl_texture* t, int w, int h, int flags)
 	t->lw = t->w = w;
 	t->h = h;
 	ogl_init_texture_stats(t);
+	t->is_png = 0;
 }
 
 void ogl_reset_texture(ogl_texture* t)
@@ -242,6 +243,20 @@ void ogl_smash_texture_list_internal(void){
 			ogl_texture_list[i].handle=0;
 		}
 		ogl_texture_list[i].wrapstate = -1;
+	}
+}
+
+int ogl_allow_png(void){
+	return !(Game_mode & GM_MULTI) || Netgame.AllowCustomModelsTextures;
+}
+
+void ogl_smash_png_textures(void){
+	int i;
+	for (i=0;i<OGL_TEXTURE_LIST_SIZE;i++){
+		if (ogl_texture_list[i].handle>0 && ogl_texture_list[i].is_png){
+			glDeleteTextures( 1, &ogl_texture_list[i].handle );
+			ogl_texture_list[i].handle=0;
+		}
 	}
 }
 
@@ -399,6 +414,9 @@ void ogl_cache_level_textures(void)
 	int max_efx=0,ef;
 	
 	ogl_reset_texture_stats_internal();//loading a new lev should reset textures
+
+	if (!ogl_allow_png())
+		ogl_smash_png_textures();
 	
 	for (i=0,ec=Effects;i<Num_effects;i++,ec++) {
 		ogl_cache_vclipn_textures(Effects[i].dest_vclip);
@@ -1681,7 +1699,7 @@ void ogl_loadbmtexture_f(grs_bitmap *bm, int texfilt, int filter_blueship_wing)
 		return;
 	buf=bm->bm_data;
 #ifdef HAVE_LIBPNG
-	if ((bitmapname = piggy_game_bitmap_name(bm)))
+	if (ogl_allow_png() && (bitmapname = piggy_game_bitmap_name(bm)))
 	{
 		char filename[64];
 		png_data pdata;
@@ -1698,6 +1716,7 @@ void ogl_loadbmtexture_f(grs_bitmap *bm, int texfilt, int filter_blueship_wing)
 				free(pdata.data);
 				if (pdata.palette)
 					free(pdata.palette);
+				bm->gltexture->is_png = 1;
 				return;
 			}
 			else

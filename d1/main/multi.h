@@ -500,6 +500,7 @@ typedef struct netgame_info
 	ubyte						AllowPreferredColors;
 	ubyte						HomingUpdateRate;
 	ubyte						HomingNormQuick;
+	ubyte						AllowCustomModelsTextures;
 } __pack__ netgame_info;
 
 extern int Host_is_obs; // Reminder for host only that they are an observer.  Do not set for other players or observers.
