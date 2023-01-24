@@ -4465,8 +4465,8 @@ void net_udp_read_sync_packet( ubyte * data, int data_len, struct _sockaddr send
 	{
 		if ( Netgame.players[i].protocol.udp.isyou == 1 && (!d_stricmp( Netgame.players[i].callsign, temp_callsign)) )
 		{
-			Assert(Player_num == -1); // Make sure we don't find ourselves twice!  Looking for interplay reported bug
 			if(!is_observer()) {
+				Assert(Player_num == -1); // Make sure we don't find ourselves twice!  Looking for interplay reported bug
 				change_playernum_to(i);
 			}
 		}
