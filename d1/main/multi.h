@@ -350,6 +350,7 @@ extern void multi_message_feedback();
 extern int Bounty_target;
 
 extern bitmap_index multi_player_textures[MAX_PLAYERS][N_PLAYER_SHIP_TEXTURES];
+extern ubyte multi_player_tex_color[MAX_PLAYERS];
 
 extern char *RankStrings[];
 

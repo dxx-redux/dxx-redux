@@ -104,7 +104,7 @@ if(__LINUX__)
 endif()
 
 if(OPENGL)
-    target_link_libraries(d1x-retro PRIVATE arch_ogl)
+    target_link_libraries(d1x-retro PRIVATE arch_ogl xmodel)
 endif()
 
 if(SDLMIXER)

@@ -86,7 +86,8 @@ endif()
 
 if(OPENGL)
     add_subdirectory(arch/ogl)
-    add_dependencies(d1x-retro arch_ogl)
+    add_subdirectory(xmodel)
+    add_dependencies(d1x-retro arch_ogl xmodel)
 endif()
 
 if(EDITOR)

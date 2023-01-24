@@ -50,6 +50,7 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "endlevel.h"
 #include "cntrlcen.h"
 #include "rle.h"
+#include "xmodel.h"
 
 #ifdef EDITOR
 #include "editor/texpage.h"
@@ -129,6 +130,8 @@ int gamedata_init()
 		gamedata_read_tbl(retval == PIGGY_PC_SHAREWARE);
 
 	piggy_read_sounds(retval == PIGGY_PC_SHAREWARE);
+
+	xmodel_load_all();
 	
 	return 0;
 }

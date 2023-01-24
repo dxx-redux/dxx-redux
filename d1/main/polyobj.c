@@ -46,6 +46,7 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #ifdef OGL
 #include "ogl_init.h"
 #endif
+#include "xmodel.h"
 
 polymodel Polygon_models[MAX_POLYGON_MODELS];	// = {&bot11,&bot17,&robot_s2,&robot_b2,&bot11,&bot17,&robot_s2,&robot_b2};
 
@@ -499,6 +500,14 @@ void free_model(polymodel *po)
 
 grs_bitmap *texture_list[MAX_POLYOBJ_TEXTURES];
 bitmap_index texture_list_index[MAX_POLYOBJ_TEXTURES];
+#include "multi.h"
+
+int alt_textures_to_ship_color(bitmap_index alt_textures[]) {
+	if (alt_textures &&
+		alt_textures >= multi_player_textures[0] && alt_textures < multi_player_textures[MAX_PLAYERS])
+		return multi_player_tex_color[(alt_textures - multi_player_textures[0]) / N_PLAYER_SHIP_TEXTURES];
+	return 0;
+}
 
 //draw a polygon model
 
@@ -509,6 +518,10 @@ void draw_polygon_model(vms_vector *pos,vms_matrix *orient,vms_angvec *anim_angl
 
 	if (model_num < 0)
 		return;
+
+	if (!(Game_mode & GM_MULTI) || Netgame.AllowCustomModelsTextures)
+		if (xmodel_show_if_loaded(model_num, pos, orient, alt_textures_to_ship_color(alt_textures), &light))
+			return;
 
 	Assert(model_num < N_polygon_models);
 
