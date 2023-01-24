@@ -2057,7 +2057,7 @@ void ai_do_actual_firing_stuff(object *obj, ai_static *aip, ai_local *ailp, robo
 	} else if (Weapon_info[Robot_info[obj->id].weapon_type].homing_flag == 1) {
 		//	Robots which fire homing weapons might fire even if they don't have a bead on the player.
 		if (((!object_animates) || (ailp->achieved_state[aip->CURRENT_GUN] == AIS_FIRE)) && (ailp->next_fire <= 0) && (vm_vec_dist_quick(&Hit_pos, &obj->pos) > F1_0*40)) {
-			if (!ai_multiplayer_awareness(obj, ROBOT_FIRE_AGITATION))
+			if (!ai_multiplayer_awareness(obj, ROBOT_FIRE_AGITATION) || IS_VEC_NULL(gun_point))
 				return;
 			ai_fire_laser_at_player(obj, gun_point);
 
