@@ -131,7 +131,9 @@ int gamedata_init()
 
 	piggy_read_sounds(retval == PIGGY_PC_SHAREWARE);
 
+#ifdef OGL
 	xmodel_load_all();
+#endif
 	
 	return 0;
 }

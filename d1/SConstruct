@@ -534,11 +534,7 @@ class D1XProgram(DXXProgram):
 'misc/strio.c',
 'misc/strutil.c',
 'texmap/ntmap.c',
-'texmap/scanline.c',
-'xmodel/aseread.cpp',
-'xmodel/submodel.cpp',
-'xmodel/tga.cpp',
-'xmodel/xmodel.cpp',
+'texmap/scanline.c'
 #'tracker/client/tracker_client.c'
 ]
 ]
@@ -617,6 +613,10 @@ class D1XProgram(DXXProgram):
 		self.arch_ogl_sources = [os.path.join(self.srcdir, f) for f in [
 'arch/ogl/gr.c',
 'arch/ogl/ogl.c',
+'xmodel/aseread.cpp',
+'xmodel/submodel.cpp',
+'xmodel/tga.cpp',
+'xmodel/xmodel.cpp',
 ]
 ]
 

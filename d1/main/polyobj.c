@@ -519,9 +519,11 @@ void draw_polygon_model(vms_vector *pos,vms_matrix *orient,vms_angvec *anim_angl
 	if (model_num < 0)
 		return;
 
+#ifdef OGL
 	if (!(Game_mode & GM_MULTI) || Netgame.AllowCustomModelsTextures)
 		if (xmodel_show_if_loaded(model_num, pos, orient, alt_textures_to_ship_color(alt_textures), &light))
 			return;
+#endif
 
 	Assert(model_num < N_polygon_models);
 
