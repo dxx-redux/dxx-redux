@@ -1330,6 +1330,8 @@ void read_netgame_profile(netgame_info *ng)
 				ng->HomingNormQuick = strtol(value, NULL, 10);
 			else if (!strcmp(token, "AllowCustomModelsTextures"))
 				ng->AllowCustomModelsTextures = strtol(value, NULL, 10);
+			else if (!strcmp(token, "ReducedFlash"))
+				ng->ReducedFlash = strtol(value, NULL, 10);
 #ifdef USE_TRACKER
 			else if (!strcmp(token, "Tracker"))
 				ng->Tracker = strtol(value, NULL, 10);
@@ -1382,6 +1384,7 @@ void write_netgame_profile(netgame_info *ng)
 	PHYSFSX_printf(file, "HomingUpdateRate=%i\n", ng->HomingUpdateRate);
 	PHYSFSX_printf(file, "HomingNormQuick=%i\n", ng->HomingNormQuick);
 	PHYSFSX_printf(file, "AllowCustomModelsTextures=%i\n", ng->AllowCustomModelsTextures);
+	PHYSFSX_printf(file, "ReducedFlash=%i\n", ng->ReducedFlash);
 #ifdef USE_TRACKER
 	PHYSFSX_printf(file, "Tracker=%i\n", ng->Tracker);
 #else

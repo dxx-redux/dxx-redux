@@ -486,11 +486,13 @@ int pick_up_secondary(int weapon_index,int count)
 	}
 
 	if (num_picked_up>1) {
-		PALETTE_FLASH_ADD(15,15,15);
+		if (!(Game_mode & GM_MULTI) || !Netgame.ReducedFlash)
+			PALETTE_FLASH_ADD(15,15,15);
 		HUD_init_message(HM_DEFAULT, "%d %s%s",num_picked_up,SECONDARY_WEAPON_NAMES(weapon_index), TXT_SX);
 	}
 	else {
-		PALETTE_FLASH_ADD(10,10,10);
+		if (!(Game_mode & GM_MULTI) || !Netgame.ReducedFlash)
+			PALETTE_FLASH_ADD(10,10,10);
 		HUD_init_message(HM_DEFAULT, "%s!",SECONDARY_WEAPON_NAMES(weapon_index));
 	}
 
@@ -638,7 +640,8 @@ int pick_up_primary_helper(int weapon_index, int is_quads)
 	//	select_weapon(weapon_index,0,0,1);
 	//}
 
-	PALETTE_FLASH_ADD(7,14,21);
+	if (!(Game_mode & GM_MULTI) || !Netgame.ReducedFlash)
+		PALETTE_FLASH_ADD(7,14,21);
 
    if (weapon_index!=LASER_INDEX)
 		HUD_init_message(HM_DEFAULT, "%s!",PRIMARY_WEAPON_NAMES(weapon_index));

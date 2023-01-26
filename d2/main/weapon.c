@@ -599,11 +599,13 @@ int pick_up_secondary(int weapon_index,int count)
 
 	//note: flash for all but concussion was 7,14,21
 	if (num_picked_up>1) {
-		PALETTE_FLASH_ADD(15,15,15);
+		if (!(Game_mode & GM_MULTI) || !Netgame.ReducedFlash)
+			PALETTE_FLASH_ADD(15,15,15);
 		HUD_init_message(HM_DEFAULT, "%d %s%s",num_picked_up,SECONDARY_WEAPON_NAMES(weapon_index), TXT_SX);
 	}
 	else {
-		PALETTE_FLASH_ADD(10,10,10);
+		if (!(Game_mode & GM_MULTI) || !Netgame.ReducedFlash)
+			PALETTE_FLASH_ADD(10,10,10);
 		HUD_init_message(HM_DEFAULT, "%s!",SECONDARY_WEAPON_NAMES(weapon_index));
 	}
 
@@ -730,7 +732,8 @@ int pick_up_primary(int weapon_index)
 	//if (((Controls.fire_primary_state && PlayerCfg.NoFireAutoselect)?0:1) && POrderList(weapon_index)<cutpoint && POrderList(weapon_index)<POrderList(supposed_weapon))
 	//	select_weapon(weapon_index,0,0,1);
 
-	PALETTE_FLASH_ADD(7,14,21);
+	if (!(Game_mode & GM_MULTI) || !Netgame.ReducedFlash)
+		PALETTE_FLASH_ADD(7,14,21);
 
    if (weapon_index!=LASER_INDEX)
    	HUD_init_message(HM_DEFAULT, "%s!",PRIMARY_WEAPON_NAMES(weapon_index));

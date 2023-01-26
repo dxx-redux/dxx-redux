@@ -576,14 +576,15 @@ void PALETTE_FLASH_ADD(int _dr, int _dg, int _db)
 void diminish_palette_towards_normal(void)
 {
 	int	dec_amount = 0;
+	int	diminish_rate = !(Game_mode & GM_MULTI) || !Netgame.ReducedFlash ? DIMINISH_RATE : (DIMINISH_RATE * 10);
 
 	//	Diminish at DIMINISH_RATE units/second.
 	//	For frame rates > DIMINISH_RATE Hz, use randomness to achieve this.
-	if (FrameTime < F1_0/DIMINISH_RATE) {
-		if (d_rand() < FrameTime*DIMINISH_RATE/2)	//	Note: d_rand() is in 0..32767, and 8 Hz means decrement every frame
+	if (FrameTime < F1_0/diminish_rate) {
+		if (d_rand() < FrameTime*diminish_rate/2)	//	Note: d_rand() is in 0..32767, and 8 Hz means decrement every frame
 			dec_amount = 1;
 	} else {
-		dec_amount = f2i(FrameTime*DIMINISH_RATE);	// one second = DIMINISH_RATE counts
+		dec_amount = f2i(FrameTime*diminish_rate);	// one second = DIMINISH_RATE counts
 		if (dec_amount == 0)
 			dec_amount++;				// make sure we decrement by something
 	}
@@ -1253,6 +1254,7 @@ void FireLaser()
 			Global_laser_firing_count = 0;
 		} else {
 			static fix64 Fusion_next_sound_time = 0;
+			int flash_val;
 
 			if (Fusion_charge == 0)
 				Players[Player_num].energy -= F1_0*2;
@@ -1266,10 +1268,12 @@ void FireLaser()
 			} else
 				Auto_fire_fusion_cannon_time = GameTime64 + FrameTime/2 + 1;		//	Fire the fusion cannon at this time in the future.
 
+			flash_val = !(Game_mode & GM_MULTI) || !Netgame.ReducedFlash ? Fusion_charge >> 11 :
+				PaletteRedAdd < 10 ? 10 - PaletteRedAdd : 0;
 			if (Fusion_charge < F1_0*2)
-				PALETTE_FLASH_ADD(Fusion_charge >> 11, 0, Fusion_charge >> 11);
+				PALETTE_FLASH_ADD(flash_val, 0, flash_val);
 			else
-				PALETTE_FLASH_ADD(Fusion_charge >> 11, Fusion_charge >> 11, 0);
+				PALETTE_FLASH_ADD(flash_val, flash_val, 0);
 
 			if (Fusion_next_sound_time > GameTime64 + F1_0/8 + D_RAND_MAX/4) // GameTime64 is smaller than max delay - player in new level?
 				Fusion_next_sound_time = GameTime64 - 1;

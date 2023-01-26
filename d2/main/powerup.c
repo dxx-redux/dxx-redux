@@ -136,7 +136,8 @@ void powerup_basic(int redadd, int greenadd, int blueadd, int score, const char 
 	HUD_init_message_va(HM_DEFAULT, format, args);
 	va_end(args);
 
-	PALETTE_FLASH_ADD(redadd,greenadd,blueadd);
+	if (!(Game_mode & GM_MULTI) || !Netgame.ReducedFlash)
+		PALETTE_FLASH_ADD(redadd,greenadd,blueadd);
 
 	add_points_to_score(score);
 
