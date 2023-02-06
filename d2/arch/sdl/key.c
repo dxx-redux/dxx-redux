@@ -191,7 +191,7 @@ const key_props key_properties[256] = {
 { "",       255,    SDLK_UNKNOWN                 },
 { "",       255,    SDLK_UNKNOWN                 },
 { "",       255,    SDLK_UNKNOWN                 },
-{ "PAD",    255,    SDLK_KP_ENTER      },
+{ "PAD\x83",255,    SDLK_KP_ENTER      },
 { "RCTRL",  255,    SDLK_RCTRL         },
 { "LCMD",   255,    SDLK_LMETA         },
 { "RCMD",   255,    SDLK_RMETA         },
