@@ -1365,7 +1365,7 @@ int net_udp_list_join_poll( newmenu *menu, d_event *event, direct_join *dj )
 	{
 		int game_status = Active_udp_games[(i+(NLPage*UDP_NETGAMES_PPAGE))].game_status;
 		int j,x, k,tx,ty,ta,nplayers = 0;
-		char levelname[8],MissName[25],GameName[25],thold[2],status[8];
+		char levelname[8],MissName[25],GameName[25],thold[2],status[9];
 		thold[1]=0;
 
 		if ((i+(NLPage*UDP_NETGAMES_PPAGE)) >= num_active_udp_games)
