@@ -680,7 +680,7 @@ fix64	Time_flash_last_played;
 void diminish_palette_towards_normal(void)
 {
 	int	dec_amount = 0;
-	int	diminish_rate = !(Game_mode & GM_MULTI) || !Netgame.ReducedFlash ? DIMINISH_RATE : (DIMINISH_RATE * 10);
+	int	diminish_rate = !(Game_mode & GM_MULTI) || !Netgame.ReducedFlash ? DIMINISH_RATE : (DIMINISH_RATE * 20);
 
 	//	Diminish at DIMINISH_RATE units/second.
 	//	For frame rates > DIMINISH_RATE Hz, use randomness to achieve this.
