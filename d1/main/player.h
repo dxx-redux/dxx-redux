@@ -191,6 +191,8 @@ extern player_ship *Player_ship;
 
 // Probably should go in player struct, but I don't want to break savegames for this
 extern int RespawningConcussions[MAX_PLAYERS]; 
+extern int VulcanAmmoBoxesOnBoard[MAX_PLAYERS];
+extern int VulcanBoxAmmo[MAX_PLAYERS];
 
 extern vms_vector Last_pos; // Saved position of observer prior to following a player.
 extern vms_matrix Last_orient; // Saved orientation of observer prior to following a player.

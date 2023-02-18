@@ -170,6 +170,11 @@ for_each_multiplayer_command(enum {, define_multiplayer_command, });
 #define SPAWN_STYLE_LONG_INVUL 2
 #define SPAWN_STYLE_PREVIEW 3
 
+#define GAUSS_STYLE_DUPLICATING 0
+#define GAUSS_STYLE_DEPLETING 1
+#define GAUSS_STYLE_STEADY_RECHARGING 2
+#define GAUSS_STYLE_STEADY_RESPAWNING 3
+
 #define for_each_netflag_value(VALUE)	\
 	VALUE(NETFLAG_DOLASER, "Laser upgrade")	\
 	VALUE(NETFLAG_DOQUAD, "Quad lasers")	\
@@ -503,6 +508,7 @@ typedef struct netgame_info
 	ubyte						HomingNormQuick;
 	ubyte						AllowCustomModelsTextures;
 	ubyte						ReducedFlash;
+	ubyte						GaussAmmoStyle;
 } __pack__ netgame_info;
 
 extern int Host_is_obs; // Reminder for host only that they are an observer.  Do not set for other players or observers.

@@ -1228,6 +1228,22 @@ void do_laser_firing_player(void)
 				else
 					plp->primary_ammo[Players[Player_num].primary_weapon] -= ammo_used;
 
+				if( (Game_mode & GM_MULTI) &&
+				    (! (Game_mode & GM_MULTI_COOP)) &&
+				    Netgame.GaussAmmoStyle == GAUSS_STYLE_STEADY_RESPAWNING )
+				{
+					if(VulcanBoxAmmo[Player_num] > 0) {
+						VulcanBoxAmmo[Player_num] -= ammo_used;
+
+						if(VulcanBoxAmmo[Player_num] <=
+							(VulcanAmmoBoxesOnBoard[Player_num] - 1) * VULCAN_AMMO_AMOUNT) {
+
+							maybe_drop_net_powerup(POW_VULCAN_AMMO);
+							VulcanAmmoBoxesOnBoard[Player_num] -= 1;
+						}
+					}
+				}
+
 			auto_select_weapon(0);		//	Make sure the player can fire from this weapon.
 
 			if (Game_mode & GM_MULTI)

@@ -2249,7 +2249,15 @@ multi_do_player_explode(const ubyte *buf)
 	Players[pnum].secondary_ammo[SMART_INDEX] = buf[count];         count++;
 	Players[pnum].secondary_ammo[MEGA_INDEX] = buf[count];          count++;
 	Players[pnum].secondary_ammo[PROXIMITY_INDEX] = buf[count]; count++;
-	Players[pnum].primary_ammo[VULCAN_INDEX] = GET_INTEL_SHORT(buf + count); count += 2;
+
+	if( (Netgame.GaussAmmoStyle == GAUSS_STYLE_STEADY_RECHARGING) ||
+		(Netgame.GaussAmmoStyle == GAUSS_STYLE_STEADY_RESPAWNING) )
+	 {
+		VulcanAmmoBoxesOnBoard[pnum] = GET_INTEL_SHORT(buf + count); count += 2;
+	} else {
+		Players[pnum].primary_ammo[VULCAN_INDEX] = GET_INTEL_SHORT(buf + count); count += 2;
+	}
+
 	Players[pnum].flags = GET_INTEL_INT(buf + count);               count += 4;
 
 	multi_powcap_adjust_remote_cap (pnum);
@@ -3227,8 +3235,15 @@ multi_send_player_explode(char type)
 	multibuf[count++] = (char)Players[Player_num].secondary_ammo[SMART_INDEX];
 	multibuf[count++] = (char)Players[Player_num].secondary_ammo[MEGA_INDEX];
 	multibuf[count++] = (char)Players[Player_num].secondary_ammo[PROXIMITY_INDEX];
-	PUT_INTEL_SHORT(multibuf+count, Players[Player_num].primary_ammo[VULCAN_INDEX] );
-	count += 2;
+	if( (Netgame.GaussAmmoStyle == GAUSS_STYLE_STEADY_RECHARGING) ||
+		(Netgame.GaussAmmoStyle == GAUSS_STYLE_STEADY_RESPAWNING) )
+	{
+		PUT_INTEL_SHORT(multibuf+count, (short)(VulcanAmmoBoxesOnBoard[Player_num]) );
+		count += 2;
+	} else {
+		PUT_INTEL_SHORT(multibuf+count, Players[Player_num].primary_ammo[VULCAN_INDEX] );
+		count += 2;
+	}
 	PUT_INTEL_INT(multibuf+count, Players[Player_num].flags );
 	count += 4;
 

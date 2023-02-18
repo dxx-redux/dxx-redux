@@ -192,6 +192,8 @@ int pick_up_vulcan_ammo(void)
 //added/killed on 1/21/99 by Victor Rachels ... how is this wrong?
 //-killed-        int     pwsave = Players[Player_num].primary_weapon;                // Ugh, save selected primary weapon around the picking up of the ammo.  I apologize for this code.  Matthew A. Toschlog
 	if (pick_up_ammo(CLASS_PRIMARY, VULCAN_INDEX, VULCAN_AMMO_AMOUNT)) {
+		VulcanAmmoBoxesOnBoard[Player_num] += 1;
+		VulcanBoxAmmo[Player_num] += VULCAN_AMMO_AMOUNT;
 		powerup_basic(7, 14, 21, VULCAN_AMMO_SCORE, "%s!", TXT_VULCAN_AMMO);
 		used = 1;
 	} else {
@@ -208,7 +210,9 @@ int pick_up_vulcan_ammo(void)
 int do_powerup(object *obj)
 {
 	int used=0;
-	int vulcan_ammo_to_add_with_cannon;
+	int special_used=0;
+	int id=obj->id;
+	int ammo;
 
 	if ((Player_is_dead) || (ConsoleObject->type == OBJ_GHOST) || (Players[Player_num].shields < 0))
 		return 0;
@@ -360,17 +364,40 @@ int do_powerup(object *obj)
 				used = pick_up_energy();
 			break;
 		case	POW_VULCAN_WEAPON:
-			if ((used = pick_up_primary(VULCAN_INDEX)) != 0) {
-				vulcan_ammo_to_add_with_cannon = obj->ctype.powerup_info.count;
-				if (vulcan_ammo_to_add_with_cannon < VULCAN_WEAPON_AMMO_AMOUNT) vulcan_ammo_to_add_with_cannon = VULCAN_WEAPON_AMMO_AMOUNT;
-				if ( (Game_mode & GM_MULTI) &&
-					 (!(Game_mode & GM_MULTI_COOP)) &&
-					 Netgame.LowVulcan &&
-					 vulcan_ammo_to_add_with_cannon > VULCAN_WEAPON_AMMO_AMOUNT/2) 
-				{
-					vulcan_ammo_to_add_with_cannon = VULCAN_WEAPON_AMMO_AMOUNT/2;
+			ammo = obj->ctype.powerup_info.count;
+
+			used = pick_up_primary(VULCAN_INDEX);
+
+			//didn't get the weapon (because we already have it), but
+			//maybe snag some of the ammo.  if single-player, grab all the ammo
+			//and remove the powerup.  If multi-player take ammo in excess of
+			//the amount in a powerup, and leave the rest.
+			if (! used)
+				if ((Game_mode & GM_MULTI) ) {
+					if(Netgame.GaussAmmoStyle == GAUSS_STYLE_DUPLICATING) {
+						ammo -= VULCAN_AMMO_AMOUNT;
+					} else {
+						ammo = 0; // Forgot to tell other players we took ammo, it dups, very bad
+					}
 				}
-				pick_up_ammo(CLASS_PRIMARY, VULCAN_INDEX, vulcan_ammo_to_add_with_cannon);
+			if (used || ((Game_mode & GM_MULTI) && ammo > 0)) {
+				if (used) {
+					if (ammo < VULCAN_WEAPON_AMMO_AMOUNT)
+						ammo = VULCAN_WEAPON_AMMO_AMOUNT;
+					if ( (Game_mode & GM_MULTI) && (!(Game_mode & GM_MULTI_COOP)) &&
+						 Netgame.LowVulcan && ammo > VULCAN_WEAPON_AMMO_AMOUNT/2)
+						ammo = VULCAN_WEAPON_AMMO_AMOUNT/2;
+				}
+				int ammo_used;
+				ammo_used = pick_up_ammo(CLASS_PRIMARY, VULCAN_INDEX, ammo);
+				obj->ctype.powerup_info.count -= ammo_used;
+				if (!used && ammo_used) {
+					powerup_basic(7, 14, 21, VULCAN_AMMO_SCORE, "%s!", TXT_VULCAN_AMMO);
+					special_used = 1;
+					id = POW_VULCAN_AMMO;		//set new id for making sound at end of this function
+					if (obj->ctype.powerup_info.count == 0)
+						used = 1;		//say used if all ammo taken
+				}
 			}
 
 //added/edited 8/3/98 by Victor Rachels to fix vulcan multi bug
@@ -483,12 +510,12 @@ int do_powerup(object *obj)
 //is solved.  Note also the break statements above that are commented out
 //!!	used=1;
 
-	if (used && Powerup_info[obj->id].hit_sound  > -1 ) {
+	if ((used || special_used) && Powerup_info[id].hit_sound  > -1 ) {
 		#ifdef NETWORK
 		if (Game_mode & GM_MULTI) // Added by Rob, take this out if it turns out to be not good for net games!
-			multi_send_play_sound(Powerup_info[obj->id].hit_sound, F1_0);
+			multi_send_play_sound(Powerup_info[id].hit_sound, F1_0);
 		#endif
-		digi_play_sample( Powerup_info[obj->id].hit_sound, F1_0 );
+		digi_play_sample( Powerup_info[id].hit_sound, F1_0 );
 	}
 
 	return used;

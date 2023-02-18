@@ -1212,6 +1212,13 @@ void drop_player_eggs_remote(object *playerobj, ubyte remote)
 		{
 			min_vulcan_ammo = VULCAN_WEAPON_AMMO_AMOUNT /2;
 		}
+		if( (Game_mode & GM_MULTI) && ! (Game_mode & GM_MULTI_COOP)) {
+			if( (Netgame.GaussAmmoStyle == GAUSS_STYLE_STEADY_RECHARGING) ||
+			    (Netgame.GaussAmmoStyle == GAUSS_STYLE_STEADY_RESPAWNING) )
+			{
+				vulcan_ammo = min_vulcan_ammo;
+			}
+		}
 		if (vulcan_ammo < min_vulcan_ammo)
 			vulcan_ammo = min_vulcan_ammo;	//make sure gun has at least as much as a powerup
 		objnum = maybe_drop_primary_weapon_egg(playerobj, VULCAN_INDEX);
@@ -1235,15 +1242,37 @@ void drop_player_eggs_remote(object *playerobj, ubyte remote)
 		drop_missile_1_or_4(playerobj,HOMING_INDEX, remote);
 		drop_missile_1_or_4(playerobj,CONCUSSION_INDEX, remote);
 
-		//	If player has vulcan ammo, but no vulcan cannon, drop the ammo.
-		if (!(Players[playerobj->id].primary_weapon_flags & HAS_VULCAN_FLAG)) {
-			int	amount = Players[playerobj->id].primary_ammo[VULCAN_INDEX];
-			if (amount > 200) {
-				amount = 200;
+		if( (! (Game_mode & GM_MULTI))  ||
+			  (  Game_mode & GM_MULTI_COOP)   ||
+			  ( Netgame.GaussAmmoStyle == GAUSS_STYLE_DEPLETING)) {
+			if (!(Players[playerobj->id].primary_weapon_flags & HAS_VULCAN_FLAG)) {
+				int	amount = Players[playerobj->id].primary_ammo[VULCAN_INDEX];
+				if (amount > 200) {
+					amount = 200;
+				}
+				while (amount > 0) {
+					call_object_create_egg(playerobj, 1, OBJ_POWERUP, POW_VULCAN_AMMO);
+					amount -= VULCAN_AMMO_AMOUNT;
+				}
 			}
-			while (amount > 0) {
+		} else if (Netgame.GaussAmmoStyle == GAUSS_STYLE_DUPLICATING) {
+			if (! (Players[playerobj->id].primary_weapon_flags & HAS_FLAG(VULCAN_INDEX)) ) {
+				int	amount = Players[playerobj->id].primary_ammo[VULCAN_INDEX];
+				if (amount > 200) {
+					amount = 200;
+				}
+				while (amount > 0) {
+					call_object_create_egg(playerobj, 1, OBJ_POWERUP, POW_VULCAN_AMMO);
+					amount -= VULCAN_AMMO_AMOUNT;
+				}
+			}
+		} else if ( (Netgame.GaussAmmoStyle == GAUSS_STYLE_STEADY_RECHARGING) ||
+			        (Netgame.GaussAmmoStyle == GAUSS_STYLE_STEADY_RESPAWNING) )
+		{
+			int boxes = VulcanAmmoBoxesOnBoard[playerobj->id];
+			while (boxes > 0) {
 				call_object_create_egg(playerobj, 1, OBJ_POWERUP, POW_VULCAN_AMMO);
-				amount -= VULCAN_AMMO_AMOUNT;
+				boxes -= 1;
 			}
 		}
 

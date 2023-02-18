@@ -410,6 +410,8 @@ void init_player_stats_new_ship(ubyte pnum)
 	Players[pnum].homing_object_dist = -F1_0;
 
 	RespawningConcussions[pnum] = 0; 
+	VulcanAmmoBoxesOnBoard[pnum] = 0;
+	VulcanBoxAmmo[pnum] = 0;
 
 	digi_kill_sound_linked_to_object(Players[pnum].objnum);
 	

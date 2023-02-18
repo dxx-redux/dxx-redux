@@ -722,7 +722,7 @@ int pick_up_ammo(int class_flag,int weapon_index,int ammo_count)
 	if (Game_mode & GM_MULTI)
 		multi_send_ship_status();
 
-	return 1;	//return amount used
+	return ammo_count;	//return amount used
 }
 
 void reset_auto_select()

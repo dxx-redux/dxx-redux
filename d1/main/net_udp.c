@@ -3024,6 +3024,7 @@ void net_udp_send_game_info(struct _sockaddr sender_addr, ubyte info_upid, ubyte
 		buf[len] = Netgame.HomingNormQuick; len++;
 		buf[len] = Netgame.AllowCustomModelsTextures; len++;
 		buf[len] = Netgame.ReducedFlash; len++;
+		buf[len] = Netgame.GaussAmmoStyle; len++;
 
 		if(info_upid == UPID_SYNC) {
 			PUT_INTEL_INT(buf + len, player_tokens[to_player]); len += 4; 
@@ -3254,6 +3255,7 @@ int net_udp_process_game_info(ubyte *data, int data_len, struct _sockaddr game_a
 		Netgame.HomingNormQuick = data[len]; len++;
 		Netgame.AllowCustomModelsTextures = data[len]; len++;
 		Netgame.ReducedFlash = data[len]; len++;
+		Netgame.GaussAmmoStyle = data[len]; len++;
 
 		if (Netgame.host_is_obs) {
 			multi_make_player_ghost(0);
@@ -3752,6 +3754,8 @@ static int opt_homing_update_rate;
 static int opt_homing_norm_quick;
 static int opt_allow_custom_models_textures;
 static int opt_reduced_flash;
+static int opt_gauss_duplicating, opt_gauss_depleting, opt_gauss_steady_recharge, opt_gauss_steady_respawn;
+
 #ifdef USE_TRACKER
 static int opt_tracker;
 #endif
@@ -3783,9 +3787,9 @@ void net_udp_more_game_options ()
 	char PrimDupText[80],SecDupText[80],SecCapText[80]; 
 	char HomingUpdateRateText[80];
 #ifdef USE_TRACKER
-	newmenu_item m[38];
+	newmenu_item m[44];
 #else
- 	newmenu_item m[37];
+	newmenu_item m[43];
 #endif
 
 	snprintf(packstring,sizeof(char)*4,"%d",Netgame.PacketsPerSec);
@@ -3839,6 +3843,18 @@ void net_udp_more_game_options ()
 	opt_spawn_preview = opt; 
 	m[opt].type = NM_TYPE_RADIO; m[opt].text = "Preview"; m[opt].value = Netgame.SpawnStyle == SPAWN_STYLE_PREVIEW; m[opt].group = 0; opt++;
 		
+	m[opt].type = NM_TYPE_TEXT; m[opt].text = ""; opt++;
+
+	m[opt].type = NM_TYPE_TEXT; m[opt].text = "Vulcan Ammo Style"; opt++;
+	opt_gauss_duplicating = opt;
+	m[opt].type = NM_TYPE_RADIO; m[opt].text = "D2 (Duplicating)"; m[opt].value = Netgame.GaussAmmoStyle == GAUSS_STYLE_DUPLICATING; m[opt].group = 1; opt++;
+	opt_gauss_depleting = opt;
+	m[opt].type = NM_TYPE_RADIO; m[opt].text = "Original (Depleting)"; m[opt].value = Netgame.GaussAmmoStyle == GAUSS_STYLE_DEPLETING; m[opt].group = 1; opt++;
+	opt_gauss_steady_recharge = opt;
+	m[opt].type = NM_TYPE_RADIO; m[opt].text = "Steady (Recharging)"; m[opt].value = Netgame.GaussAmmoStyle == GAUSS_STYLE_STEADY_RECHARGING; m[opt].group = 1; opt++;
+	opt_gauss_steady_respawn = opt;
+	m[opt].type = NM_TYPE_RADIO; m[opt].text = "Steady (Respawning)"; m[opt].value = Netgame.GaussAmmoStyle == GAUSS_STYLE_STEADY_RESPAWNING; m[opt].group = 1; opt++;
+
 
 	m[opt].type = NM_TYPE_TEXT; m[opt].text = ""; opt++;
 
@@ -4036,16 +4052,15 @@ int net_udp_more_options_handler( newmenu *menu, d_event *event, void *userdata 
 			{
 				Netgame.HomingUpdateRate=menus[opt_homing_update_rate].value + 15;
 				sprintf( menus[opt_homing_update_rate].text, "Homing Update Rate: %d", Netgame.HomingUpdateRate);
-			} else if (citem == opt_spawn_no_invul) {
-				Netgame.SpawnStyle = SPAWN_STYLE_NO_INVUL;
-			} else if (citem == opt_spawn_short_invul) {
-				Netgame.SpawnStyle = SPAWN_STYLE_SHORT_INVUL;
-			} else if (citem == opt_spawn_long_invul) {
-				Netgame.SpawnStyle = SPAWN_STYLE_LONG_INVUL;
-			} else if (citem == opt_spawn_preview) {
-				Netgame.SpawnStyle = SPAWN_STYLE_PREVIEW;
+			} else if (citem == opt_gauss_duplicating) {
+				Netgame.GaussAmmoStyle = GAUSS_STYLE_DUPLICATING;
+			}  else if (citem == opt_gauss_depleting) {
+				Netgame.GaussAmmoStyle = GAUSS_STYLE_DEPLETING;
+			}  else if (citem == opt_gauss_steady_recharge) {
+				Netgame.GaussAmmoStyle = GAUSS_STYLE_STEADY_RECHARGING;
+			}  else if (citem == opt_gauss_steady_respawn) {
+				Netgame.GaussAmmoStyle = GAUSS_STYLE_STEADY_RESPAWNING;
 			}
-
 
 			break;
 			
@@ -4278,6 +4293,7 @@ int net_udp_setup_game()
 	Netgame.HomingNormQuick = 0;
 	Netgame.AllowCustomModelsTextures = 0;
 	Netgame.ReducedFlash = 0;
+	Netgame.GaussAmmoStyle = GAUSS_STYLE_DEPLETING;
 
 #ifdef USE_TRACKER
 	Netgame.Tracker = 1;
