@@ -268,7 +268,7 @@ void xmodel_show_at(void *model, vms_vector *pos, vms_matrix *orient, int mpcolo
 void xmodel_free_all() {
 	for (int i = 0; i < NUM_XMODELS; i++)
 		if (xmodels[i]) {
-			free(xmodels[i]);
+			xmodel_free(xmodels[i]);
 			xmodels[i] = NULL;
 		}
 }
