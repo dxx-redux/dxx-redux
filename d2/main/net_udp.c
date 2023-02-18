@@ -3279,7 +3279,7 @@ int net_udp_process_game_info(ubyte *data, int data_len, struct _sockaddr game_a
 		Netgame.LowVulcan = data[len];                len++; 
 		Netgame.AllowPreferredColors = data[len];                len++; 
 		Netgame.BornWithBurner = data[len];                len++; 		
-		Netgame.GaussAmmoStyle = GAUSS_STYLE_STEADY_RECHARGING;    len++; 
+		Netgame.GaussAmmoStyle = data[len];                len++;
 		Netgame.OriginalD1Weapons = data[len];             len++; 
 		Netgame.obs_min = data[len]; len++;
 		Netgame.host_is_obs = data[len]; len++;
@@ -3778,7 +3778,7 @@ static int opt_burner_spawn;
 static int opt_allowprefcolor, opt_ow;
 //static int opt_dark_smarts;
 static int opt_low_vulcan;
-//static int opt_gauss_duplicating, opt_gauss_depleting, opt_gauss_steady_recharge, opt_gauss_steady_respawn; 
+static int opt_gauss_duplicating, opt_gauss_depleting, opt_gauss_steady_recharge, opt_gauss_steady_respawn; 
 static int opt_allow_custom_models_textures;
 static int opt_reduced_flash;
 
@@ -3813,9 +3813,9 @@ void net_udp_more_game_options ()
 	char PrimDupText[80],SecDupText[80],SecCapText[80]; 
 	
 #ifdef USE_TRACKER
-	newmenu_item m[40];
+	newmenu_item m[46];
 #else
- 	newmenu_item m[39];
+ 	newmenu_item m[45];
 #endif
 
 	snprintf(packstring,sizeof(char)*4,"%d",Netgame.PacketsPerSec);
@@ -3868,7 +3868,6 @@ void net_udp_more_game_options ()
 		
 	m[opt].type = NM_TYPE_TEXT; m[opt].text = ""; opt++;
 
-	/*
 	m[opt].type = NM_TYPE_TEXT; m[opt].text = "Gauss Ammo Style"; opt++;
 	opt_gauss_duplicating = opt; 
 	m[opt].type = NM_TYPE_RADIO; m[opt].text = "Original (Duplicating)"; m[opt].value = Netgame.GaussAmmoStyle == GAUSS_STYLE_DUPLICATING; m[opt].group = 1; opt++;
@@ -3880,7 +3879,6 @@ void net_udp_more_game_options ()
 	m[opt].type = NM_TYPE_RADIO; m[opt].text = "Steady (Respawning)"; m[opt].value = Netgame.GaussAmmoStyle == GAUSS_STYLE_STEADY_RESPAWNING; m[opt].group = 1; opt++;
 
 	m[opt].type = NM_TYPE_TEXT; m[opt].text = ""; opt++;
-	*/
 
 	opt_low_vulcan = opt;
 	m[opt].type = NM_TYPE_CHECK; m[opt].text = "Low Vulcan Ammo"; m[opt].value = Netgame.LowVulcan; opt++;	
@@ -4098,7 +4096,7 @@ int net_udp_more_options_handler( newmenu *menu, d_event *event, void *userdata 
 				Netgame.SpawnStyle = SPAWN_STYLE_LONG_INVUL;
 			} else if (citem == opt_spawn_preview) {
 				Netgame.SpawnStyle = SPAWN_STYLE_PREVIEW;
-			} /*else if (citem == opt_gauss_duplicating) {
+			} else if (citem == opt_gauss_duplicating) {
 				Netgame.GaussAmmoStyle = GAUSS_STYLE_DUPLICATING;
 			}  else if (citem == opt_gauss_depleting) {
 				Netgame.GaussAmmoStyle = GAUSS_STYLE_DEPLETING;
@@ -4106,7 +4104,7 @@ int net_udp_more_options_handler( newmenu *menu, d_event *event, void *userdata 
 				Netgame.GaussAmmoStyle = GAUSS_STYLE_STEADY_RECHARGING;
 			}  else if (citem == opt_gauss_steady_respawn) {
 				Netgame.GaussAmmoStyle = GAUSS_STYLE_STEADY_RESPAWNING;
-			} */
+			}
 
 			break;
 			
