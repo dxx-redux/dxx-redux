@@ -1171,6 +1171,8 @@ void read_netgame_profile(netgame_info *ng)
 				ng->AllowCustomModelsTextures = strtol(value, NULL, 10);
 			else if (!strcmp(token, "ReducedFlash"))
 				ng->ReducedFlash = strtol(value, NULL, 10);
+			else if (!strcmp(token, "DisableGaussSplash"))
+				ng->DisableGaussSplash = strtol(value, NULL, 10);
 #ifdef USE_TRACKER
 			else if (!strcmp(token, "Tracker"))
 				ng->Tracker = strtol(value, NULL, 10);
@@ -1227,6 +1229,7 @@ void write_netgame_profile(netgame_info *ng)
 	PHYSFSX_printf(file, "ObsDelay=%i\n", ng->obs_delay);
 	PHYSFSX_printf(file, "AllowCustomModelsTextures=%i\n", ng->AllowCustomModelsTextures);
 	PHYSFSX_printf(file, "ReducedFlash=%i\n", ng->ReducedFlash);
+	PHYSFSX_printf(file, "DisableGaussSplash=%i\n", ng->DisableGaussSplash);
 	
 #ifdef USE_TRACKER
 	PHYSFSX_printf(file, "Tracker=%i\n", ng->Tracker);

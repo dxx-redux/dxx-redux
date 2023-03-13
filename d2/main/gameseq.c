@@ -715,6 +715,7 @@ void load_level_robots(int level_num)
 		Robot_replacements_loaded = 0;
 	}
 	load_robot_replacements(level_name);
+	Robot_replacements_loaded |= multi_change_weapon_info();
 }
 
 //load a level off disk. level numbers start at 1.  Secret levels are -1,-2,-3

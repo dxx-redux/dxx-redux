@@ -7360,3 +7360,18 @@ void multi_object_rw_to_object(object_rw *obj_rw, object *obj)
 	}
 }
 
+// returns 1 if changed
+int multi_change_weapon_info(void)
+{
+	int changed = 0;
+	if (!(Game_mode & GM_MULTI))
+		return 0;
+	if (Netgame.DisableGaussSplash) {
+		Weapon_info[GAUSS_ID].mass = F1_0 / 100;
+		Weapon_info[GAUSS_ID].damage_radius = 0;
+		for (int i = 0; i < NDL; i++)
+			Weapon_info[GAUSS_ID].strength[i] = i2f(12) + F0_5;
+		changed = 1;
+	}
+	return changed;
+}

@@ -3038,6 +3038,7 @@ void net_udp_send_game_info(struct _sockaddr sender_addr, ubyte info_upid, ubyte
 		buf[len] = Netgame.host_is_obs; len++;
 		buf[len] = Netgame.AllowCustomModelsTextures; len++;
 		buf[len] = Netgame.ReducedFlash; len++;
+		buf[len] = Netgame.DisableGaussSplash; len++;
 
 		if(info_upid == UPID_SYNC) {
 			PUT_INTEL_INT(buf + len, player_tokens[to_player]); len += 4; 
@@ -3285,6 +3286,7 @@ int net_udp_process_game_info(ubyte *data, int data_len, struct _sockaddr game_a
 		Netgame.host_is_obs = data[len]; len++;
 		Netgame.AllowCustomModelsTextures = data[len]; len++;
 		Netgame.ReducedFlash = data[len]; len++;
+		Netgame.DisableGaussSplash = data[len]; len++;
 
 		if (Netgame.host_is_obs) {
 			multi_make_player_ghost(0);
@@ -3781,6 +3783,7 @@ static int opt_low_vulcan;
 static int opt_gauss_duplicating, opt_gauss_depleting, opt_gauss_steady_recharge, opt_gauss_steady_respawn; 
 static int opt_allow_custom_models_textures;
 static int opt_reduced_flash;
+static int opt_disable_gauss_splash;
 
 #ifdef USE_TRACKER
 static int opt_tracker;
@@ -3813,9 +3816,9 @@ void net_udp_more_game_options ()
 	char PrimDupText[80],SecDupText[80],SecCapText[80]; 
 	
 #ifdef USE_TRACKER
-	newmenu_item m[46];
+	newmenu_item m[47];
 #else
- 	newmenu_item m[45];
+ 	newmenu_item m[46];
 #endif
 
 	snprintf(packstring,sizeof(char)*4,"%d",Netgame.PacketsPerSec);
@@ -3969,6 +3972,9 @@ void net_udp_more_game_options ()
 	opt_reduced_flash=opt;
 	m[opt].type = NM_TYPE_CHECK; m[opt].text = "Reduced flash effects"; m[opt].value = Netgame.ReducedFlash; opt++;
 
+	opt_disable_gauss_splash=opt;
+	m[opt].type = NM_TYPE_CHECK; m[opt].text = "Disable Gauss Splash"; m[opt].value = Netgame.DisableGaussSplash; opt++;
+
 menu:
 	i = newmenu_do1( NULL, "Advanced netgame options", opt, m, net_udp_more_options_handler, NULL, 0 );
 
@@ -4028,6 +4034,7 @@ menu:
 	Netgame.OriginalD1Weapons = m[opt_ow].value;
 	Netgame.AllowCustomModelsTextures = m[opt_allow_custom_models_textures].value;
 	Netgame.ReducedFlash = m[opt_reduced_flash].value;
+	Netgame.DisableGaussSplash = m[opt_disable_gauss_splash].value;
 }
 
 int net_udp_more_options_handler( newmenu *menu, d_event *event, void *userdata )
@@ -4328,6 +4335,7 @@ int net_udp_setup_game()
 	Netgame.LowVulcan = 0; 
 	Netgame.AllowCustomModelsTextures = 0;
 	Netgame.ReducedFlash = 0;
+	Netgame.DisableGaussSplash = 0;
 
 #ifdef USE_TRACKER
 	Netgame.Tracker = 1;
