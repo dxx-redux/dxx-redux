@@ -1537,7 +1537,7 @@ void Laser_do_weapon_sequence(object *obj, int doHomerFrame, fix idealHomerFrame
 					} 
 				}
 				if (speed+F1_0 < max_speed) {
-					speed += fixmul(max_speed, FrameTime/2);
+					speed += fixmul(max_speed, idealHomerFrameTime/2);
 					if (speed > max_speed)
 						speed = max_speed;
 				}
