@@ -5,7 +5,7 @@ cmake_minimum_required (VERSION 3.21)
 project(
     d2x-retro
     VERSION 1.4.7
-    LANGUAGES C
+    LANGUAGES C CXX
     )
 
 option(OPENGL "Build with OpenGL support [default: ON]" ON)
@@ -91,7 +91,8 @@ endif()
 
 if(OPENGL)
     add_subdirectory(arch/ogl)
-    add_dependencies(d2x-retro arch_ogl)
+    add_subdirectory(xmodel)
+    add_dependencies(d2x-retro arch_ogl xmodel)
 endif()
 
 if(EDITOR)

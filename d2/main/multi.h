@@ -398,6 +398,7 @@ extern int PhallicLimit,PhallicMan;
 extern int Bounty_target;
 
 extern bitmap_index multi_player_textures[MAX_PLAYERS][N_PLAYER_SHIP_TEXTURES];
+extern ubyte multi_player_tex_color[MAX_PLAYERS];
 
 extern const char *const RankStrings[10];
 extern char PowerupsInMine[MAX_POWERUP_TYPES],

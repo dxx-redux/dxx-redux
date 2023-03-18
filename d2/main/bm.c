@@ -52,6 +52,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "interp.h"
 #include "console.h"
 #include "rle.h"
+#include "xmodel.h"
 
 ubyte Sounds[MAX_SOUNDS];
 ubyte AltSounds[MAX_SOUNDS];
@@ -148,6 +149,10 @@ int gamedata_init()
 				Error("Cannot open ham file\n");
 
 	piggy_read_sounds();
+
+#ifdef OGL
+	xmodel_load_all();
+#endif
 
 	return 0;
 }

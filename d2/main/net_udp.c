@@ -3960,14 +3960,8 @@ void net_udp_more_game_options ()
 	opt_blackwhite = opt;
 	m[opt].type = NM_TYPE_CHECK; m[opt].text = "Alternate Colors (Ships 6 and 7)"; m[opt].value = Netgame.BlackAndWhitePyros; opt++;	
 
-
-
-
-	
-
-
 	opt_allow_custom_models_textures=opt;
-	m[opt].type = NM_TYPE_CHECK; m[opt].text = "Allow custom textures"; m[opt].value = Netgame.AllowCustomModelsTextures; opt++;
+	m[opt].type = NM_TYPE_CHECK; m[opt].text = "Allow custom models and textures"; m[opt].value = Netgame.AllowCustomModelsTextures; opt++;
 
 	opt_reduced_flash=opt;
 	m[opt].type = NM_TYPE_CHECK; m[opt].text = "Reduced flash effects"; m[opt].value = Netgame.ReducedFlash; opt++;

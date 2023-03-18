@@ -53,6 +53,7 @@
 #include "gauges.h"
 #include "playsave.h"
 #include "args.h"
+#include "xmodel.h"
 
 //change to 1 for lots of spew.
 #if 0
@@ -244,6 +245,8 @@ void ogl_smash_texture_list_internal(void){
 		}
 		ogl_texture_list[i].wrapstate = -1;
 	}
+
+	xmodel_free_gl_all();
 }
 
 int ogl_allow_png(void){
@@ -516,6 +519,7 @@ void ogl_cache_level_textures(void)
 			}
 		}
 	}
+	xmodel_load_gl_all();
 	glmprintf((0,"finished caching\n"));
 	r_cachedtexcount = r_texcount;
 }
@@ -1242,12 +1246,12 @@ void ogl_start_frame(void){
 	glEnable(GL_ALPHA_TEST);
 	glAlphaFunc(GL_GEQUAL,0.02);
 
-	if (!GameCfg.ClassicDepth) {
+	if (!GameCfg.ClassicDepth)
 		glEnable(GL_DEPTH_TEST);
-		glDepthFunc(GL_LEQUAL);
+	glDepthFunc(GL_LEQUAL);
 
-		glClear(GL_DEPTH_BUFFER_BIT);
-	}
+	glClear(GL_DEPTH_BUFFER_BIT);
+
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_FRONT);
 

@@ -153,9 +153,10 @@ class DXXCommon:
 			self.env["ARCOMSTR"]     = "Archiving $TARGET ..."
 			self.env["RANLIBCOMSTR"] = "Indexing $TARGET ..."
 
-		self.env.Append(CCFLAGS = ['-Wall', '-funsigned-char', '-Werror=implicit-int', '-Werror=implicit-function-declaration', '-pthread'])
-		self.env.Append(CFLAGS = ['-std=gnu99'])
+		self.env.Append(CCFLAGS = ['-Wall', '-funsigned-char', '-pthread'])
+		self.env.Append(CFLAGS = ['-std=gnu99', '-Werror=implicit-int', '-Werror=implicit-function-declaration'])
 		self.env.Append(CPPDEFINES = ['NETWORK'])
+		self.env['LINK'] = '$CXX' # somehow needed on msys
 		# Get traditional compiler environment variables
 		for cc in ['CC', 'CXX']:
 			if cc in os.environ:
@@ -287,7 +288,7 @@ class DXXProgram(DXXCommon):
 			DXXCommon.Win32PlatformSettings.__init__(self,user_settings)
 			user_settings.sharepath = ''
 			self.lflags = '-mwindows'
-			self.libs = ['glu32', 'wsock32', 'ws2_32', 'winmm', 'mingw32', 'SDLmain', 'SDL']
+			self.libs = ['glu32', 'wsock32', 'ws2_32', 'winmm', 'mingw32', 'SDLmain', 'SDL', 'glew32', 'opengl32']
 		def adjust_environment(self,program,env):
 			DXXCommon.Win32PlatformSettings.adjust_environment(self, program, env)
 			env.Append(CPPPATH = [os.path.join(program.srcdir, 'arch/win32/include')])
@@ -623,6 +624,10 @@ class D2XProgram(DXXProgram):
 		self.arch_ogl_sources = [os.path.join(self.srcdir, f) for f in [
 'arch/ogl/gr.c',
 'arch/ogl/ogl.c',
+'xmodel/aseread.cpp',
+'xmodel/submodel.cpp',
+'xmodel/tga.cpp',
+'xmodel/xmodel.cpp',
 ]
 ]
 
