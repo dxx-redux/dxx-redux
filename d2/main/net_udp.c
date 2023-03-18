@@ -3875,11 +3875,11 @@ void net_udp_more_game_options ()
 	opt_gauss_duplicating = opt; 
 	m[opt].type = NM_TYPE_RADIO; m[opt].text = "Original (Duplicating)"; m[opt].value = Netgame.GaussAmmoStyle == GAUSS_STYLE_DUPLICATING; m[opt].group = 1; opt++;
 	opt_gauss_depleting = opt;
-	m[opt].type = NM_TYPE_RADIO; m[opt].text = "D1 (Depleting)"; m[opt].value = Netgame.GaussAmmoStyle == GAUSS_STYLE_DEPLETING; m[opt].group = 1; opt++;
+	m[opt].type = NM_TYPE_RADIO; m[opt].text = "Depleting (D1)"; m[opt].value = Netgame.GaussAmmoStyle == GAUSS_STYLE_DEPLETING; m[opt].group = 1; opt++;
 	opt_gauss_steady_recharge = opt;
-	m[opt].type = NM_TYPE_RADIO; m[opt].text = "Steady (Recharging)"; m[opt].value = Netgame.GaussAmmoStyle == GAUSS_STYLE_STEADY_RECHARGING; m[opt].group = 1; opt++;
+	m[opt].type = NM_TYPE_RADIO; m[opt].text = "Dropping Picked Up"; m[opt].value = Netgame.GaussAmmoStyle == GAUSS_STYLE_STEADY_RECHARGING; m[opt].group = 1; opt++;
 	opt_gauss_steady_respawn = opt;
-	m[opt].type = NM_TYPE_RADIO; m[opt].text = "Steady (Respawning)"; m[opt].value = Netgame.GaussAmmoStyle == GAUSS_STYLE_STEADY_RESPAWNING; m[opt].group = 1; opt++;
+	m[opt].type = NM_TYPE_RADIO; m[opt].text = "Respawning"; m[opt].value = Netgame.GaussAmmoStyle == GAUSS_STYLE_STEADY_RESPAWNING; m[opt].group = 1; opt++;
 
 	m[opt].type = NM_TYPE_TEXT; m[opt].text = ""; opt++;
 
