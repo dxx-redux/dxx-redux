@@ -384,7 +384,7 @@ class DXXProgram(DXXCommon):
 		objects = [self.env.StaticObject(target='%s%s%s' % (self.user_settings.builddir, os.path.splitext(s)[0], self.env["OBJSUFFIX"]), source=s) for s in self.common_sources]
 		objects.extend(self.platform_settings.platform_objects)
 		objects.extend(program_specific_objects)
-		versid_cppdefines=env['CPPDEFINES'][:]
+		versid_cppdefines=list(env['CPPDEFINES'])
 		if self.user_settings.program_name:
 			exe_target = self.user_settings.program_name
 		if self.user_settings.extra_version:
