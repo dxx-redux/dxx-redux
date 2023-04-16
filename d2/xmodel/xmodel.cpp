@@ -296,9 +296,15 @@ void xmodel_free_gl_all() {
 			xmodel_free_gl(xmodels[i]);
 }
 
+#define ELMS(x) (sizeof(x) / sizeof((x)[0]))
+
 // returns 1 if drawn
 int xmodel_show_if_loaded(int modelnum, vms_vector *pos, vms_matrix *orient, int mpcolor, g3s_lrgb *light) {
-	int xmodelnum = xmodel_xlate[modelnum];
+	int xmodelnum;
+
+	if (modelnum >= ELMS(xmodel_xlate))
+		return 0;
+	xmodelnum = xmodel_xlate[modelnum];
 	if (xmodelnum == -1 || !xmodels[xmodelnum])
 		return 0;
 	xmodel_show_at(xmodels[xmodelnum], pos, orient, mpcolor, light);
