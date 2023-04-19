@@ -3468,7 +3468,7 @@ void newdemo_stop_recording()
 			int me = Player_num;
 			int you = Player_num ? 0 : 1;
 
-			snprintf(p2, ARRAYSIZE(p2), "%s_%d_%d", Players[you].callsign, Players[me].net_kills_total, Players[you].net_kills_total);
+			snprintf(p2, sizeof(p2), "%s_%d_%d", Players[you].callsign, Players[me].net_kills_total, Players[you].net_kills_total);
 		} else {
 			sprintf(p2, "ANARCHY");
 		}

@@ -4396,7 +4396,7 @@ int net_udp_setup_game()
 	optnum++;
 
 	opt.obsmin = optnum;
-	m[optnum].type = NM_TYPE_CHECK; m[optnum].text = "Minimal Observer Info"; m[optnum].value = FALSE;
+	m[optnum].type = NM_TYPE_CHECK; m[optnum].text = "Minimal Observer Info"; m[optnum].value = 0;
 	optnum++;
 	
 	opt.moreopts = optnum;

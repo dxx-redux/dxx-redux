@@ -3208,14 +3208,14 @@ int observer_show_player_cards() {
 	else {
 		int pnum;
 		int drawn_players = n_players - (Netgame.host_is_obs ? 1 : 0);
-		bool found_host_as_obs = FALSE;
+		bool found_host_as_obs = 0;
 
 		// Show players in order of score.
 		for (int i = 0; i < n_players; i++) {
 			pnum = player_list[i];
 
 			if (Netgame.host_is_obs && pnum == 0) {
-				found_host_as_obs = TRUE;
+				found_host_as_obs = 1;
 				continue;
 			}
 
