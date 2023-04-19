@@ -500,7 +500,7 @@ typedef struct netgame_info
 	ubyte						AllowPreferredColors;
 } __pack__ netgame_info;
 
-int Host_is_obs; // Reminder for host only that they are an observer.  Do not set for other players or observers.
+extern int Host_is_obs; // Reminder for host only that they are an observer.  Do not set for other players or observers.
 
 // Events for observatory UI.
 #define OBSEV_NONE 0
@@ -521,22 +521,22 @@ typedef struct kill_event {
 } __pack__ kill_event;
 
 // The first event for each player.
-kill_event* First_event[MAX_PLAYERS];
+extern kill_event* First_event[MAX_PLAYERS];
 
 // The last event for each player.  Used to append the next event.
-kill_event* Last_event[MAX_PLAYERS];
+extern kill_event* Last_event[MAX_PLAYERS];
 
 // The last kill event for each player.  Used for last kill and run game statuses.
-kill_event* Last_kill[MAX_PLAYERS];
+extern kill_event* Last_kill[MAX_PLAYERS];
 
 // The last death event for each player.  Used for last kill and run game statuses.
-kill_event* Last_death[MAX_PLAYERS];
+extern kill_event* Last_death[MAX_PLAYERS];
 
 // The current kill streak for each player.  Used for kill streak game status.
-int Kill_streak[MAX_PLAYERS];
+extern int Kill_streak[MAX_PLAYERS];
 
 // When to show the score graph until.
-fix64 Show_graph_until;
+extern fix64 Show_graph_until;
 
 // Game statuses for observatory UI.
 enum game_status_type
@@ -562,7 +562,7 @@ typedef struct player_status {
 } __pack__ player_status;
 
 // The first player status to display.
-player_status* First_status;
+extern player_status* First_status;
 
 // Adds a player status.
 void add_player_status(ubyte pnum, game_status status);
@@ -591,19 +591,19 @@ typedef struct shield_status {
 } __pack__ shield_status;
 
 // The first shield status for the current point.
-shield_status* First_current_shield_status[MAX_PLAYERS];
+extern shield_status* First_current_shield_status[MAX_PLAYERS];
 
 // The last shield status for the current point.  Used to append the next status.
-shield_status* Last_current_shield_status[MAX_PLAYERS];
+extern shield_status* Last_current_shield_status[MAX_PLAYERS];
 
 // The first shield status for the previous point.
-shield_status* First_previous_shield_status[MAX_PLAYERS];
+extern shield_status* First_previous_shield_status[MAX_PLAYERS];
 
 // The last shield status for the current point.  Used to display the killing blow.
-shield_status* Last_previous_shield_status[MAX_PLAYERS];
+extern shield_status* Last_previous_shield_status[MAX_PLAYERS];
 
 // When to show the death summary until.
-fix64 Show_death_until[MAX_PLAYERS];
+extern fix64 Show_death_until[MAX_PLAYERS];
 
 #define SHIP_COLLISION_DAMAGE 254
 #define SHIP_EXPLOSION_DAMAGE 255
@@ -620,13 +620,13 @@ typedef struct damage_taken_totals {
 } __pack__ damage_taken_totals;
 
 // The first damage taken totals overall.
-damage_taken_totals* First_damage_taken_totals[MAX_PLAYERS];
+extern damage_taken_totals* First_damage_taken_totals[MAX_PLAYERS];
 
 // The first damage taken totals for the current point.
-damage_taken_totals* First_damage_taken_current_totals[MAX_PLAYERS];
+extern damage_taken_totals* First_damage_taken_current_totals[MAX_PLAYERS];
 
 // The first damage taken totals for the previous point.
-damage_taken_totals* First_damage_taken_previous_totals[MAX_PLAYERS];
+extern damage_taken_totals* First_damage_taken_previous_totals[MAX_PLAYERS];
 
 // Defines damage done totals for a single source.  Doubly linked list.
 typedef struct damage_done_totals {
@@ -637,7 +637,7 @@ typedef struct damage_done_totals {
 } __pack__ damage_done_totals;
 
 // The first damage done totals.
-damage_done_totals* First_damage_done_totals[MAX_PLAYERS];
+extern damage_done_totals* First_damage_done_totals[MAX_PLAYERS];
 
 // Defines a kill for the kill log.  Singly linked list.
 typedef struct kill_log_event {
@@ -651,7 +651,7 @@ typedef struct kill_log_event {
 } __pack__ kill_log_event;
 
 // The kill log, with the first entry being the most recent.
-kill_log_event* Kill_log;
+extern kill_log_event* Kill_log;
 
 // Adds a damage stat for observatory UI.
 void add_observatory_damage_stat(int player_num, fix shields_delta, fix new_shields, fix old_shields, ubyte killer_type, ubyte killer_id, ubyte damage_type, ubyte source_id);

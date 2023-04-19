@@ -214,11 +214,11 @@ extern int VulcanBoxAmmo[MAX_PLAYERS];
 extern struct object *Guided_missile[MAX_PLAYERS];
 extern int Guided_missile_sig[MAX_PLAYERS];
 
-vms_vector Last_pos; // Saved position of observer prior to following a player.
-vms_matrix Last_orient; // Saved orientation of observer prior to following a player.
-fix Last_real_update; // How long ago in seconds the observed player's real position got updated.
-vms_vector Real_pos; // The observed player's position.
-vms_matrix Real_orient; // The observed player's orientation.
+extern vms_vector Last_pos; // Saved position of observer prior to following a player.
+extern vms_matrix Last_orient; // Saved orientation of observer prior to following a player.
+extern fix Last_real_update; // How long ago in seconds the observed player's real position got updated.
+extern vms_vector Real_pos; // The observed player's position.
+extern vms_matrix Real_orient; // The observed player's orientation.
 
 /*
  * reads a player_ship structure from a PHYSFS_file

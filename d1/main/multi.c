@@ -156,6 +156,7 @@ const char GMNamesShrt[MULTI_GAME_TYPE_COUNT][8]={
 
 int Current_obs_player = OBSERVER_PLAYER_ID; // Current player being observed. Defaults to the observer player ID.
 bool Obs_at_distance = 0; // True if you're viewing the player from a cube back.
+int Host_is_obs;
 
 // For rejoin object syncing (used here and all protocols - globally)
 

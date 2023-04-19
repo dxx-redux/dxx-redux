@@ -183,4 +183,4 @@ typedef struct connection_status {
 	fix64 last_direct_pong; 
 } connection_status;
 
-int Observer_num;
+extern int Observer_num;
