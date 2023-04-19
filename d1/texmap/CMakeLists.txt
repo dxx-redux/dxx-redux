@@ -25,6 +25,6 @@ else()
     target_compile_definitions(texmap PUBLIC NO_ASM)
 endif()
 
-find_package(sdl)
-find_package(physfs)
+find_package(SDL)
+find_package(PhysFS)
 target_include_directories(texmap PUBLIC ${SDL_INCLUDE_DIR} ${PHYSFS_INCLUDE_DIR})

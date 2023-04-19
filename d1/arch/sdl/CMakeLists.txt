@@ -19,12 +19,12 @@ if(SDLMIXER)
         digi_mixer_music.c
         jukebox.c
         )
-    find_package(sdl_mixer)
+    find_package(SDL_mixer)
     target_include_directories(arch_sdl PUBLIC ${SDL_MIXER_INCLUDE_DIRS})
 endif()
 
 include_directories(${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/arch/include ${CMAKE_SOURCE_DIR}/main)
 
-find_package(sdl)
-find_package(physfs)
+find_package(SDL)
+find_package(PhysFS)
 target_include_directories(arch_sdl PUBLIC ${SDL_INCLUDE_DIR} ${PHYSFS_INCLUDE_DIR})

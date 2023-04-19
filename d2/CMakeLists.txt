@@ -61,6 +61,10 @@ elseif(__LINUX__)
     add_definitions(/D__LINUX__ /DHAVE_STRUCT_TIMESPEC /DHAVE_STRUCT_TIMEVAL)
 endif()
 
+if(NOT WIN32)
+    add_compile_definitions(SHAREPATH="/usr/share/games/d2x-rebirth")
+endif()
+
 add_subdirectory(2d)
 add_subdirectory(3d)
 add_subdirectory(arch/sdl)

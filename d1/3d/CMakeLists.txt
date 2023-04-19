@@ -12,6 +12,6 @@ add_library(3d STATIC
 
 include_directories(../include ../arch/include ../main)
 
-find_package(sdl)
-find_package(physfs)
+find_package(SDL)
+find_package(PhysFS)
 target_include_directories(3d PUBLIC ${SDL_INCLUDE_DIR} ${PHYSFS_INCLUDE_DIR})
