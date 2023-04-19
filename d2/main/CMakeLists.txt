@@ -77,6 +77,12 @@ target_compile_definitions(d2x-retro PUBLIC
     DXX_VERSION_MICROi=1
     )
 
+include(CheckTypeSize)
+check_type_size("ssize_t" SIZEOF_SSIZE_T LANGUAGE C)
+if(NOT "${SIZEOF_SSIZE_T}" STREQUAL "")
+    target_compile_definitions(d2x-retro PUBLIC HAVE_SSIZE_T=1)
+endif()
+
 if(WIN32)
     target_link_libraries(d2x-retro PUBLIC glu32 winmm ws2_32)
     target_link_libraries(d2x-retro PRIVATE arch_win32)

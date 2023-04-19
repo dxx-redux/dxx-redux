@@ -58,7 +58,7 @@
 #include <wincrypt.h>
 #endif
 
-#ifndef __unix__
+#ifndef HAVE_SSIZE_T
 #ifndef _SSIZE_T_
 #define _SSIZE_T_
 typedef long _ssize_t;
