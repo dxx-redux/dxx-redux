@@ -13,9 +13,9 @@
 #include "ase.h"
 #include "submodel.h"
 #include "xmodel.h"
-#include "internal.h"
 #include "xmodelnames.h"
 extern "C" {
+#include "internal.h"
 #include "../3d/globvars.h"
 #undef FILENAME_LEN
 #include "config.h"

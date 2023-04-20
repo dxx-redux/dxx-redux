@@ -27,6 +27,8 @@ static int bCacheModelData = 0;
 int nHiresModels;
 CArray<ASE::CModel> aseModels[2];
 
+#undef DBG
+
 int IsPlayerShip(int model) {
 	(void)model;
 	return 0;
@@ -135,7 +137,9 @@ for (i = 0; i < 3; i++)
 
 //------------------------------------------------------------------------------
 
+#ifndef _MSC_VER
 __attribute__((optimize("-O3")))
+#endif
 static char* ReadLine (CFile& cf)
 {
 while (!cf.EoF ()) {

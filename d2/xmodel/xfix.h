@@ -7,7 +7,11 @@
 // ------------------------------------------------------------------------
 
 //extract a fix from a quad product
-static __attribute__((always_inline)) inline fix FixQuadAdjust (tQuadInt *q)
+static
+#ifndef _MSC_VER
+__attribute__((always_inline))
+#endif
+inline fix FixQuadAdjust (tQuadInt *q)
 {
 #ifdef MATH64
 return q->q >> 16;

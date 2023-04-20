@@ -1148,7 +1148,10 @@ inline bool CFixVector::operator== (const CFixVector& other) const
 return (v.coord.x == other.v.coord.x) && (v.coord.y == other.v.coord.y) && (v.coord.z == other.v.coord.z);
 }
 
-__attribute__((always_inline)) inline const CFixVector& CFixVector::Set (fix x, fix y, fix z)
+#ifndef _MSC_VER
+__attribute__((always_inline))
+#endif
+inline const CFixVector& CFixVector::Set (fix x, fix y, fix z)
 {
 v.coord.x = x; v.coord.y = y; v.coord.z = z;
 return *this;
@@ -1262,7 +1265,10 @@ v.coord.z += F2X (other.v.coord.z);
 return *this;
 }
 
-__attribute__((always_inline)) inline const CFixVector& CFixVector::operator-= (const CFixVector& other) {
+#ifndef _MSC_VER
+__attribute__((always_inline))
+#endif
+inline const CFixVector& CFixVector::operator-= (const CFixVector& other) {
 	v.coord.x -= other.v.coord.x;
 	v.coord.y -= other.v.coord.y;
 	v.coord.z -= other.v.coord.z;

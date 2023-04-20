@@ -5,6 +5,7 @@
   "dependencies": [
     "physfs",
     "sdl1",
-    "libpng"
+    "libpng",
+    "glew"
   ]
 }

@@ -43,6 +43,7 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #endif
 #include "byteswap.h"
 #include "render.h"
+#include "multi.h"
 #ifdef OGL
 #include "ogl_init.h"
 #endif
@@ -500,7 +501,6 @@ void free_model(polymodel *po)
 
 grs_bitmap *texture_list[MAX_POLYOBJ_TEXTURES];
 bitmap_index texture_list_index[MAX_POLYOBJ_TEXTURES];
-#include "multi.h"
 
 int alt_textures_to_ship_color(bitmap_index alt_textures[]) {
 	if (alt_textures &&

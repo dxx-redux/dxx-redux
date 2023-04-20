@@ -29,7 +29,9 @@ static inline void strupr4(char *s) {
 }
 #endif
 
+#ifndef _MSC_VER
 __attribute__((optimize("-O3")))
+#endif
 static inline void strupr8(char *s) {
 	uint64_t *p = (uint64_t *)s;
 	for (int i, l = strlen(s); l >= 8; l -= 8, p++) {

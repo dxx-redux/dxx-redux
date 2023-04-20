@@ -26,7 +26,7 @@ int read_png(const char *filename, png_data *pdata)
 	int i;
 	PHYSFS_file *fp = NULL;
 	char *fbuf = NULL;
-	ssize_t fsize;
+	PHYSFS_sint64 fsize;
 	SDL_RWops *rw;
 
 	if (!filename || !pdata)

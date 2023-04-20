@@ -91,7 +91,7 @@ inline void WriteInt(int) { }
 inline void WriteShort(short) {}
 inline void WriteVector(CFloatVector3 const&) { }
 inline int Write(void const*buf, int a, int b, int c=0) { return 0;}
-inline size_t Seek(ssize_t ofs, int method) {
+inline size_t Seek(PHYSFS_sint64 ofs, int method) {
 	switch (method) {
 		case 0: PHYSFS_seek(f, ofs); break;
 		case 1: PHYSFS_seek(f, PHYSFS_tell(f) + ofs); break;

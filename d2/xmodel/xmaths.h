@@ -102,7 +102,11 @@ uint32_t sqrt64 (uint64_t a);
 
 //multiply two fixes, and add 64-bit product to a tQuadInt
 #ifdef MATH64
-static __attribute__((always_inline)) inline void FixMulAccum (tQuadInt * q, fix a, fix b)
+static
+#ifndef _MSC_VER
+__attribute__((always_inline))
+#endif
+inline void FixMulAccum (tQuadInt * q, fix a, fix b)
 {
 q->q += mul64 (a, b);
 }
