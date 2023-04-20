@@ -4,6 +4,7 @@
   "version-semver": "1.4.7",
   "dependencies": [
     "physfs",
-    "sdl1"
+    "sdl1",
+    "libpng"
   ]
 }

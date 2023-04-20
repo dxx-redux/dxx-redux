@@ -10,6 +10,10 @@ add_library(misc STATIC
     strutil.c
     )
 
+if(PNG)
+    target_sources(misc PRIVATE pngfile.c)
+endif()
+
 include_directories(../include ../arch/include ../main)
 
 find_package(SDL)
