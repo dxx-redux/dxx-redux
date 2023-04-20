@@ -490,6 +490,28 @@ void add_observatory_damage_stat(int player_num, fix shields_delta, fix new_shie
 	}
 }
 
+void reset_observatory_stats() {
+	int i;
+	kill_event* ev;
+
+	for (i = 0; i < MAX_PLAYERS; i++) {
+		Last_kill[i] = NULL;
+		Last_death[i] = NULL;
+		Kill_streak[i] = 0;
+		while ((ev = Last_event[i]) != NULL) {
+			if (ev->prev != NULL) {
+				ev->prev->next = NULL;
+				Last_event[i] = ev->prev;
+			} else {
+				Last_event[i] = NULL;
+				First_event[i] = NULL;
+			}
+			d_free(ev);
+			ev = NULL;
+		}
+	}
+}
+
 void add_player_status(ubyte pnum, game_status status) {
 	status.next = NULL;
 
@@ -873,22 +895,8 @@ multi_new_game(void)
 	game_disable_cheats();
 
 	// The observatory stats reset
-	kill_event* ev = NULL;
+	reset_observatory_stats();
 	for (i = 0; i < MAX_PLAYERS; i++) {
-		Last_kill[i] = NULL;
-		Last_death[i] = NULL;
-		Kill_streak[i] = 0;
-		while ((ev = Last_event[i]) != NULL) {
-			if (ev->prev != NULL) {
-				ev->prev->next = NULL;
-				Last_event[i] = ev->prev;
-			} else {
-				Last_event[i] = NULL;
-				First_event[i] = NULL;
-			}
-			d_free(ev);
-			ev = NULL;
-		}
 		add_observatory_stat(i, OBSEV_NONE);
 	}
 	Next_graph = 5;
@@ -1546,6 +1554,8 @@ multi_leave_game(void)
 				break;
 		}
 	}
+
+	reset_observatory_stats();
 }
 
 void
