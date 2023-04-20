@@ -222,6 +222,8 @@ gameseq_init_network_players()
 		Player_init[k].segnum = Objects[k % NumNetPlayerPositions].segnum;
 		Players[k].objnum = i;
 		Objects[i].id = k;
+
+		Objects[i].attached_obj = -1;
 	}
 
 	NumNetPlayerPositions = MAX_PLAYERS;
