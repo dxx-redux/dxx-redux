@@ -3,6 +3,10 @@ add_library(arch_ogl STATIC
     ogl.c
     )
 
+if(OPENGLMERGE)
+   target_sources(arch_ogl PRIVATE oglprog.c)
+endif()
+
 include_directories(../../include ../include ../../main)
 
 find_package(SDL)

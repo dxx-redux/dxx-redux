@@ -110,7 +110,7 @@ class DXXCommon:
 	class LinuxPlatformSettings(_PlatformSettings):
 		osdef = '__LINUX__'
 		osasmdef = 'elf'
-		__opengl_libs = ['GL', 'GLU']
+		__opengl_libs = ['GL', 'GLU', 'GLEW']
 		__pkg_config_sdl = {}
 		def __init__(self,user_settings):
 			if (user_settings.opengles == 1):
@@ -613,6 +613,7 @@ class D1XProgram(DXXProgram):
 		self.arch_ogl_sources = [os.path.join(self.srcdir, f) for f in [
 'arch/ogl/gr.c',
 'arch/ogl/ogl.c',
+'arch/ogl/oglprog.c',
 'xmodel/aseread.cpp',
 'xmodel/submodel.cpp',
 'xmodel/tga.cpp',

@@ -247,10 +247,12 @@ void render_face(int segnum, int sidenum, int nv, int *vp, int tmap1, int tmap2,
 			PIGGY_PAGE_IN(Textures[tmap2&0x3FFF]);
 			bm2 = &GameBitmaps[Textures[tmap2&0x3FFF].index];
 		}
+#ifndef OGL_MERGE
 		if (bm2 && (bm2->bm_flags&BM_FLAG_SUPER_TRANSPARENT)){
 			bm = texmerge_get_cached_bitmap( tmap1, tmap2 );
 			bm2 = NULL;
 		}
+#endif
 	}else
 #endif
 

@@ -53,6 +53,7 @@
 #include "vers_id.h"
 #include "game.h"
 #include "pngfile.h"
+#include "oglprog.h"
 
 #if defined(__APPLE__) && defined(__MACH__)
 #include <OpenGL/glu.h>
@@ -419,6 +420,10 @@ int ogl_init_window(int x, int y)
 		con_printf(CON_DEBUG, "EGL: made context current\n");
 	}
 #endif
+	glewInit();
+#ifdef OGL_MERGE
+	ogl_init_prog();
+#endif
 
 	linedotscale = ((x/640<y/480?x/640:y/480)<1?1:(x/640<y/480?x/640:y/480));
 
@@ -475,6 +480,9 @@ int gr_toggle_fullscreen(void)
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		ogl_smash_texture_list_internal();//if we are or were fullscreen, changing vid mode will invalidate current textures
+#ifdef OGL_MERGE
+		ogl_init_prog();
+#endif
 	}
 	GameCfg.WindowMode = (sdl_video_flags & SDL_FULLSCREEN)?0:1;
 	return (sdl_video_flags & SDL_FULLSCREEN)?1:0;
@@ -724,6 +732,10 @@ void gr_set_attributes(void)
 	ogl_smash_texture_list_internal();
 	gr_remap_color_fonts();
 	gr_remap_mono_fonts();
+#ifdef OGL_MERGE
+	if (gl_initialized)
+		ogl_init_prog();
+#endif
 }
 
 int gr_init(int mode)

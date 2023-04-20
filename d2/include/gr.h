@@ -97,6 +97,7 @@ typedef struct _grs_bitmap {
 	struct _grs_bitmap  *bm_parent;
 #ifdef OGL
 	struct _ogl_texture *gltexture;
+	struct _ogl_texture *gltexture_mask;
 #endif /* def OGL */
 } grs_bitmap;
 

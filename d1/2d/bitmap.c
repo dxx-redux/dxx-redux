@@ -64,7 +64,7 @@ void gr_init_bitmap( grs_bitmap *bm, int mode, int x, int y, int w, int h, int b
 
 	bm->bm_data = NULL;
 #ifdef OGL
-	bm->bm_parent=NULL;bm->gltexture=NULL;
+	bm->bm_parent=NULL;bm->gltexture=NULL;bm->gltexture_mask=NULL;
 #endif
 	gr_set_bitmap_data (bm, data);
 }
@@ -81,6 +81,7 @@ void gr_init_bitmap_data (grs_bitmap *bm) // TODO: virtulize
 	bm->bm_parent=NULL;
 #ifdef OGL
 	bm->gltexture=NULL;
+	bm->gltexture_mask=NULL;
 #endif
 }
 

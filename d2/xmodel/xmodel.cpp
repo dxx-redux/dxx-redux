@@ -1,11 +1,5 @@
 #include <stdio.h>
 #include <stddef.h>
-#define GL_GLEXT_PROTOTYPES
-#ifdef WIN32
-#include <GL/glew.h>
-#else
-#include <GL/gl.h>
-#endif
 
 #include "xdescent.h"
 #include "carray.h"
