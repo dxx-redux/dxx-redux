@@ -14,9 +14,9 @@ option(TRACKER "Enable Tracker support (requires UDP) [default: ON]" ON)
 option(PNG "Build with PNG support for screenshots and textures [default: ON]" ON)
 option(OPENGLMERGE "Use an OpenGL shader for texmerge [default: ON]" ON)
 
-set(CMAKE_C_FLAGS_MINSIZEREL "${CMAKE_C_FLAGS_MINSIZEREL} /DRELEASE")
-set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /DRELEASE")
-set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} /DRELEASE")
+set(CMAKE_C_FLAGS_MINSIZEREL "${CMAKE_C_FLAGS_MINSIZEREL} -DRELEASE")
+set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -DRELEASE")
+set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} -DRELEASE")
 
 # Global compile flags (have to be processed before subdirectories by some
 #  CMake implementations - even though the docs say they don't)
