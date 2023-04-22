@@ -3033,6 +3033,8 @@ void net_udp_send_game_info(struct _sockaddr sender_addr, ubyte info_upid, ubyte
 			PUT_INTEL_INT(buf + len, netgame_token); len += 4; 
 		}
 
+		Assert(len <= sizeof(buf));
+
 		if (send_to_observers != 2)
 			dxx_sendto (UDP_Socket[0], buf, len, 0, (struct sockaddr *)&sender_addr, sizeof(struct _sockaddr));
 
@@ -3269,13 +3271,19 @@ int net_udp_process_game_info(ubyte *data, int data_len, struct _sockaddr game_a
 				snprintf(err_mess, 200, "player token incorrect; received %u, expected %u",  my_token, my_player_token);
 				drop_rx_packet(data, err_mess); 
 				return 0; 
-				
-			} len += 4;
+			}
 		}
 
 		if (data[0] == UPID_GAME_INFO) {
 			netgame_token = my_player_token = GET_INTEL_INT(data + len); len += 4;
 			con_printf(CON_DEBUG, "Set token %d for UPID_GAME_INFO in net_udp_process_game_info\n", netgame_token); 
+		}
+
+		if (len > data_len) {
+			char err_mess[200];
+			snprintf(err_mess, sizeof(err_mess), "game info size incorrect; received %d, expected %d",  data_len, len);
+			drop_rx_packet(data, err_mess);
+			return 0;
 		}
 
 		Netgame.protocol.udp.valid = 1; // This game is valid! YAY!
@@ -3928,6 +3936,8 @@ void net_udp_more_game_options ()
 	opt_reduced_flash=opt;
 	m[opt].type = NM_TYPE_CHECK; m[opt].text = "Reduced flash effects"; m[opt].value = Netgame.ReducedFlash; opt++;
 
+	Assert(opt <= SDL_arraysize(m));
+
 menu:
 	i = newmenu_do1( NULL, "Advanced netgame options", opt, m, net_udp_more_options_handler, NULL, 0 );
 
@@ -4370,7 +4380,7 @@ int net_udp_setup_game()
 	opt.moreopts = optnum;
 	m[optnum].type = NM_TYPE_MENU;  m[optnum].text = "Advanced options"; optnum++;
 
-	Assert(optnum <= 21);
+	Assert(optnum <= SDL_arraysize(m));
 
 	i = newmenu_do1( NULL, TXT_NETGAME_SETUP, optnum, m, (int (*)( newmenu *, d_event *, void * ))net_udp_game_param_handler, &opt, opt.start_game );
 
