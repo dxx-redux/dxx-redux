@@ -56,6 +56,9 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 
 object *Guided_missile[MAX_PLAYERS]={NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
 int Guided_missile_sig[MAX_PLAYERS]={-1,-1,-1,-1,-1,-1,-1,-1};
+
+int Constant_homing_speed = 0;
+
 int Network_laser_track = -1;
 
 int find_homing_object_complete(vms_vector *curpos, object *tracker, int track_obj_type1, int track_obj_type2);
@@ -1529,7 +1532,7 @@ void Laser_do_weapon_sequence(object *obj, int doHomerFrame, fix idealHomerFrame
 
 				vm_vec_normalize_quick(&vector_to_object);
 				temp_vec = obj->mtype.phys_info.velocity;
-				speed = vm_vec_normalize(&temp_vec);
+				speed = Constant_homing_speed ? vm_vec_normalize(&temp_vec) : vm_vec_normalize_quick(&temp_vec);
 				max_speed = Weapon_info[obj->id].speed[Difficulty_level];
 				if( (Game_mode & GM_MULTI) && Netgame.OriginalD1Weapons) {
 					if(obj->id == 12) { // Spread
@@ -1550,7 +1553,7 @@ void Laser_do_weapon_sequence(object *obj, int doHomerFrame, fix idealHomerFrame
 				//	The boss' smart children track better...
 				if (Weapon_info[obj->id].render_type != WEAPON_RENDER_POLYMODEL)
 					vm_vec_add2(&temp_vec, &vector_to_object);
-				vm_vec_normalize(&temp_vec);
+				Constant_homing_speed ? vm_vec_normalize(&temp_vec) : vm_vec_normalize_quick(&temp_vec);
 				vm_vec_scale(&temp_vec, speed);
 				obj->mtype.phys_info.velocity = temp_vec;
 
@@ -2226,3 +2229,6 @@ void do_missile_firing(int drop_bomb)
 	}
 }
 
+void set_constant_homing_speed(int value) {
+	Constant_homing_speed = value;
+}

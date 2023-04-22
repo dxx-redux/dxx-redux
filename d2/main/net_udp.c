@@ -3037,6 +3037,7 @@ void net_udp_send_game_info(struct _sockaddr sender_addr, ubyte info_upid, ubyte
 		buf[len] = Netgame.obs_min; len++;
 		buf[len] = Netgame.host_is_obs; len++;
 		buf[len] = Netgame.HomingUpdateRate; len++;
+		buf[len] = Netgame.ConstantHomingSpeed; len++;
 		buf[len] = Netgame.AllowCustomModelsTextures; len++;
 		buf[len] = Netgame.ReducedFlash; len++;
 		buf[len] = Netgame.DisableGaussSplash; len++;
@@ -3286,6 +3287,7 @@ int net_udp_process_game_info(ubyte *data, int data_len, struct _sockaddr game_a
 		Netgame.obs_min = data[len]; len++;
 		Netgame.host_is_obs = data[len]; len++;
 		Netgame.HomingUpdateRate = data[len]; len++;
+		Netgame.ConstantHomingSpeed = data[len]; len++;
 		Netgame.AllowCustomModelsTextures = data[len]; len++;
 		Netgame.ReducedFlash = data[len]; len++;
 		Netgame.DisableGaussSplash = data[len]; len++;
@@ -3784,6 +3786,7 @@ static int opt_allowprefcolor, opt_ow;
 static int opt_low_vulcan;
 static int opt_gauss_duplicating, opt_gauss_depleting, opt_gauss_steady_recharge, opt_gauss_steady_respawn; 
 static int opt_homing_update_rate;
+static int opt_constant_homing_speed;
 static int opt_allow_custom_models_textures;
 static int opt_reduced_flash;
 static int opt_disable_gauss_splash;
@@ -3820,9 +3823,9 @@ void net_udp_more_game_options ()
 	char HomingUpdateRateText[80];
 	
 #ifdef USE_TRACKER
-	newmenu_item m[47];
+	newmenu_item m[48];
 #else
- 	newmenu_item m[46];
+ 	newmenu_item m[47];
 #endif
 
 	snprintf(packstring,sizeof(char)*4,"%d",Netgame.PacketsPerSec);
@@ -3968,6 +3971,9 @@ void net_udp_more_game_options ()
 	sprintf( HomingUpdateRateText, "Homing Update Rate: %d", Netgame.HomingUpdateRate);
 	m[opt].type = NM_TYPE_SLIDER; m[opt].value=max(0, Netgame.HomingUpdateRate - 20); m[opt].text= HomingUpdateRateText; m[opt].min_value=0; m[opt].max_value=10; opt++;
 
+	opt_constant_homing_speed=opt;
+	m[opt].type = NM_TYPE_CHECK; m[opt].text = "Retro Homing Speed"; m[opt].value = Netgame.ConstantHomingSpeed; opt++;
+
 	opt_allow_custom_models_textures=opt;
 	m[opt].type = NM_TYPE_CHECK; m[opt].text = "Allow custom models and textures"; m[opt].value = Netgame.AllowCustomModelsTextures; opt++;
 
@@ -4035,6 +4041,7 @@ menu:
 	Netgame.AllowPreferredColors = m[opt_allowprefcolor].value;
 	Netgame.OriginalD1Weapons = m[opt_ow].value;
 	Netgame.HomingUpdateRate = m[opt_homing_update_rate].value + 20;
+	Netgame.ConstantHomingSpeed = m[opt_constant_homing_speed].value;
 	Netgame.AllowCustomModelsTextures = m[opt_allow_custom_models_textures].value;
 	Netgame.ReducedFlash = m[opt_reduced_flash].value;
 	Netgame.DisableGaussSplash = m[opt_disable_gauss_splash].value;
@@ -4342,6 +4349,7 @@ int net_udp_setup_game()
 	Netgame.GaussAmmoStyle = GAUSS_STYLE_STEADY_RECHARGING;
 	Netgame.LowVulcan = 0; 
 	Netgame.HomingUpdateRate = 25;
+	Netgame.ConstantHomingSpeed = 0;
 	Netgame.AllowCustomModelsTextures = 0;
 	Netgame.ReducedFlash = 0;
 	Netgame.DisableGaussSplash = 0;
