@@ -119,7 +119,7 @@ static inline int is_any_proximity_mine(enum weapon_type_t id)
 	return id == PROXIMITY_ID;
 }
 
-extern void set_homing_norm_quick(int norm_quick);
+extern void set_constant_homing_speed(int value);
 
 #endif
 

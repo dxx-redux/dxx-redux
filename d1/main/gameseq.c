@@ -1231,7 +1231,7 @@ void StartNewLevelSub(int level_num, int page_in_textures, int secret_flag)
 	reset_respawnable_bots();
 
 	set_homing_update_rate(Game_mode & GM_MULTI ? Netgame.HomingUpdateRate : 25);
-	set_homing_norm_quick(Game_mode & GM_MULTI ? Netgame.HomingNormQuick : 0);
+	set_constant_homing_speed(Game_mode & GM_MULTI ? Netgame.ConstantHomingSpeed : 0);
 
 	//	Say player can use FLASH cheat to mark path to exit.
 	Last_level_path_created = -1;
