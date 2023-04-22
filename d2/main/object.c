@@ -141,7 +141,8 @@ char	Object_type_names[MAX_OBJECT_TYPES][9] = {
 static unsigned int homerFrameCount = 0; 
 static fix currentHomerFrameTime = F0_0; 
 static int doHomerFrame = 0; 
-static fix idealHomerFrameTime = F1_0/idealHomerFPS;
+static float idealHomerFPS = 25.0;
+static fix idealHomerFrameTime = F1_0/25;
 
 
 #ifndef RELEASE
@@ -2605,4 +2606,21 @@ void object_rw_swap(object_rw *obj, int swap)
 			break;
 			
 	}
+}
+
+void set_homing_update_rate(int update_rate) {
+	idealHomerFPS = update_rate;
+	idealHomerFrameTime = F1_0 / update_rate;
+	currentHomerFrameTime = 0;
+
+	//	Set value to determine whether homing missile can see target.
+	//	The lower frametime is, the more likely that it can see its target.
+	if (idealHomerFrameTime <= F1_0/16)
+		Min_trackable_dot = 3*(F1_0 - MIN_TRACKABLE_DOT)/4 + MIN_TRACKABLE_DOT;
+	else if (idealHomerFrameTime < F1_0/4)
+		Min_trackable_dot = fixmul(F1_0 - MIN_TRACKABLE_DOT, F1_0-4*idealHomerFrameTime) + MIN_TRACKABLE_DOT;
+	else
+		Min_trackable_dot = MIN_TRACKABLE_DOT;
+
+	con_printf(CON_NORMAL, "Homing update rate: %d\n", update_rate);
 }

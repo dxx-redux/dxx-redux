@@ -1167,6 +1167,8 @@ void read_netgame_profile(netgame_info *ng)
 				ng->OriginalD1Weapons = strtol(value, NULL, 10);
 			else if (!strcmp(token, "ObsDelay"))
 				ng->obs_delay = strtol(value, NULL, 10);
+			else if (!strcmp(token, "HomingUpdateRate"))
+				ng->HomingUpdateRate = strtol(value, NULL, 10);
 			else if (!strcmp(token, "AllowCustomModelsTextures"))
 				ng->AllowCustomModelsTextures = strtol(value, NULL, 10);
 			else if (!strcmp(token, "ReducedFlash"))
@@ -1227,6 +1229,7 @@ void write_netgame_profile(netgame_info *ng)
 	PHYSFSX_printf(file, "BornWithBurner=%i\n", ng->BornWithBurner);
 	PHYSFSX_printf(file, "OriginalD1Weapons=%i\n", ng->OriginalD1Weapons);
 	PHYSFSX_printf(file, "ObsDelay=%i\n", ng->obs_delay);
+	PHYSFSX_printf(file, "HomingUpdateRate=%i\n", ng->HomingUpdateRate);
 	PHYSFSX_printf(file, "AllowCustomModelsTextures=%i\n", ng->AllowCustomModelsTextures);
 	PHYSFSX_printf(file, "ReducedFlash=%i\n", ng->ReducedFlash);
 	PHYSFSX_printf(file, "DisableGaussSplash=%i\n", ng->DisableGaussSplash);
