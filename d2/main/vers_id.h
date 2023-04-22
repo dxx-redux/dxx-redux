@@ -6,7 +6,7 @@
 #define __stringize2(X)	#X
 #define __stringize(X)	__stringize2(X)
 
-#define RH_VERSION "1.4.X7"
+#define RH_VERSION "0.1"
 
 #define D2XMAJOR __stringize(DXX_VERSION_MAJORi)
 #define D2XMINOR __stringize(DXX_VERSION_MINORi)
@@ -14,7 +14,7 @@
 
 #define BASED_VERSION "Full Version v1.2"
 #define VERSION D2XMAJOR "." D2XMINOR "." D2XMICRO
-#define DESCENT_VERSION "D2X Retro " RH_VERSION 
+#define DESCENT_VERSION "D2X-Redux " RH_VERSION
 
 extern const char g_descent_version[40];
 extern const char g_descent_build_datetime[21];

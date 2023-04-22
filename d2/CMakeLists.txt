@@ -1,10 +1,10 @@
-﻿# CMakeList.txt : CMake project for d2x-retro, include source and define
+# CMakeList.txt : CMake project for d2x-redux, include source and define
 # project specific logic here.
 #
 cmake_minimum_required (VERSION 3.21)
 project(
-    d2x-retro
-    VERSION 1.4.7
+    d2x-redux
+    VERSION 0.1
     LANGUAGES C CXX
     )
 
@@ -84,27 +84,27 @@ add_subdirectory(mem)
 add_subdirectory(misc)
 add_subdirectory(texmap)
 
-add_dependencies(d2x-retro 2d 3d arch_sdl iff libmve maths mem misc texmap)
+add_dependencies(d2x-redux 2d 3d arch_sdl iff libmve maths mem misc texmap)
 
 if(WIN32)
     add_subdirectory(arch/win32)
-    add_dependencies(d2x-retro arch_win32)
+    add_dependencies(d2x-redux arch_win32)
 endif()
 
 if(__APPLE__)
     add_subdirectory(arch/carbon)
     add_subdirectory(arch/cocoa)
-    add_dependencies(d2x-retro arch_carbon arch_cocoa)
+    add_dependencies(d2x-redux arch_carbon arch_cocoa)
 endif()
 
 if(OPENGL)
     add_subdirectory(arch/ogl)
     add_subdirectory(xmodel)
-    add_dependencies(d2x-retro arch_ogl xmodel)
+    add_dependencies(d2x-redux arch_ogl xmodel)
 endif()
 
 if(EDITOR)
     add_subdirectory(editor)
     add_subdirectory(ui)
-    add_dependencies(d2x-retro editor ui)
+    add_dependencies(d2x-redux editor ui)
 endif()
