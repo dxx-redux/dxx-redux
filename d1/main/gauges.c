@@ -2704,8 +2704,6 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 			y += 4;
 		}
 
-		gr_set_curfont(MEDIUM1_FONT);
-
 		if (PlayerCfg.ObsShowPrimary) {
 			// Selected primary
 			char primary[8];

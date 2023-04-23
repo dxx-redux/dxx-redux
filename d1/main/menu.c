@@ -2062,13 +2062,13 @@ int menu_misc_options_handler ( newmenu *menu, d_event *event, void *userdata )
 	
 	if (event->type == EVENT_NEWMENU_CHANGED)
 	{
-		if (citem == 18) {
-			PlayerCfg.ShipColor = menus[18].value;
-			print_ship_color(menus[18].text, PlayerCfg.ShipColor);			
-		} else if (citem == 19) {
-			PlayerCfg.MissileColor = menus[19].value;
-			print_missile_color(menus[19].text, PlayerCfg.MissileColor);			
-		}		
+		if (citem == 20) {
+			PlayerCfg.ShipColor = menus[20].value;
+			print_ship_color(menus[20].text, PlayerCfg.ShipColor);
+		} else if (citem == 21) {
+			PlayerCfg.MissileColor = menus[21].value;
+			print_missile_color(menus[21].text, PlayerCfg.MissileColor);
+		}
 	}
 	
 	return 0;
