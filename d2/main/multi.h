@@ -150,7 +150,7 @@ for_each_multiplayer_command(enum {, define_multiplayer_command, });
 
 #define MAX_NET_CREATE_OBJECTS  40
 
-#define MAX_MULTI_MESSAGE_LEN   120
+#define MAX_MULTI_MESSAGE_LEN   (4 + 8*MAX_OBSERVERS)
 
 #define NETGAME_ANARCHY         0
 #define NETGAME_TEAM_ANARCHY    1

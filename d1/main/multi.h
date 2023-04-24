@@ -127,7 +127,7 @@ extern int multi_protocol; // set and determinate used protocol
 	AFTER
 for_each_multiplayer_command(enum {, define_multiplayer_command, });
 
-#define MAX_MULTI_MESSAGE_LEN  90 //didn't change it, just moved it up
+#define MAX_MULTI_MESSAGE_LEN  (4 + 8*MAX_OBSERVERS)
 
 #define MAX_NET_CREATE_OBJECTS 20
 
