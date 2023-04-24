@@ -1011,7 +1011,7 @@ bool g3_draw_tmap_2(int nv, const g3s_point **pointlist, g3s_uvl *uvl_list, g3s_
 	OGL_ENABLE(TEXTURE_2D);
 	ogl_bindbmtex(bmovl);
 	ogl_texwrap(bmovl->gltexture,GL_REPEAT);
-	#else
+#else
 	ogl_bindbmtex(bmbot);
 	ogl_texwrap(bmbot->gltexture,GL_REPEAT);
 

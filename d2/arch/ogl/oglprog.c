@@ -82,10 +82,10 @@ void ogl_init_prog() {
 		"\n varying vec4 vcolor;"
 		"\n uniform sampler2D utex;"
 		"\n uniform sampler2D utex2;"
-		"\n uniform sampler2D utex2m;"
 		"\n void main() {"
 		"\n  vec4 bot = texture2D(utex, vtexcoord), ovl = texture2D(utex2, vtexcoord2);"
-		"\n  gl_FragColor = vcolor * vec4(bot.rgb * (1.0 - ovl.a) + ovl.rgb * ovl.a, bot.a);"
+		"\n  vec4 c = vec4(mix(bot.rgb, ovl.rgb, ovl.a), bot.a + ovl.a - bot.a * ovl.a);" // same as 1 - (1 - bot.a) * (1 - ovl.a)
+		"\n  gl_FragColor = vcolor * c;"
 		"\n }");
 
 	ogl_prog_tex2m = ogl_mk_prog("attribute vec3 apos;"
@@ -109,12 +109,13 @@ void ogl_init_prog() {
 		"\n uniform sampler2D utex2m;"
 		"\n void main() {"
 		"\n  vec4 bot = texture2D(utex, vtexcoord), ovl = texture2D(utex2, vtexcoord2);"
+		"\n  vec4 c = vec4(mix(bot.rgb, ovl.rgb, ovl.a), bot.a + ovl.a - bot.a * ovl.a);" // same as 1 - (1 - bot.a) * (1 - ovl.a)
 		"\n  vec4 mask = texture2D(utex2m, vtexcoord2);"
-		"\n  gl_FragColor = vcolor * vec4(bot.rgb * (1.0 - ovl.a) + ovl.rgb * ovl.a, bot.a * mask.a);"
+		"\n  gl_FragColor = vcolor * vec4(c.rgb, c.a * mask.a);"
 		"\n }");
 
 	ogl_tex2_mat = glGetUniformLocation(ogl_prog_tex2, "umat");
-	ogl_tex2m_mat = glGetUniformLocation(ogl_prog_tex2, "umat");
+	ogl_tex2m_mat = glGetUniformLocation(ogl_prog_tex2m, "umat");
 
 	glUseProgram(ogl_prog_tex2);
 	glUniform1i(glGetUniformLocation(ogl_prog_tex2, "utex"), 0);
