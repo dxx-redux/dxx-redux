@@ -793,17 +793,22 @@ void drop_rx_packet(ubyte  *data, char* reason) {
 	con_printf(CON_URGENT, comment); 
 }
 
+int is_same_addr(struct _sockaddr *addr1, struct _sockaddr *addr2) {
+	return !memcmp(&addr1->sin_addr, &addr2->sin_addr, sizeof(struct in_addr)) &&
+		addr1->sin_port == addr2->sin_port;
+}
+
 int is_master_ip(struct _sockaddr addr) {
-	return !memcmp(&Netgame.players[0].protocol.udp.addr.sin_addr, &addr.sin_addr, sizeof(struct in_addr));
+	return is_same_addr(&Netgame.players[0].protocol.udp.addr, &addr);
 }
 
 int is_player_ip(struct _sockaddr addr, int pnum) {
-	return !memcmp(&Netgame.players[pnum].protocol.udp.addr.sin_addr, &addr.sin_addr, sizeof(struct in_addr));
+	return is_same_addr(&Netgame.players[pnum].protocol.udp.addr, &addr);
 }
 
 int is_observer_ip(struct _sockaddr addr) {
 	for (int i = 0; i < Netgame.max_numobservers; i++) {
-		if (!memcmp(&Netgame.observers[i].protocol.udp.addr.sin_addr, &addr.sin_addr, sizeof(struct in_addr))) {
+		if (is_same_addr(&Netgame.observers[i].protocol.udp.addr, &addr)) {
 			return 1;
 		}
 	}
