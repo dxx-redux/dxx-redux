@@ -887,7 +887,7 @@ void update_cockpits()
 	} else {
 		grs_bitmap *bm;
 
-		if (PlayerCfg.CockpitMode[1] < N_COCKPIT_BITMAPS) {
+		if (PlayerCfg.CockpitMode[1] < N_COCKPIT_BITMAPS/2) {
 			PIGGY_PAGE_IN(cockpit_bitmap[PlayerCfg.CockpitMode[1]+(HIRESMODE?(Num_cockpits/2):0)]);
 			bm=&GameBitmaps[cockpit_bitmap[PlayerCfg.CockpitMode[1]+(HIRESMODE?(Num_cockpits/2):0)].index];
 		}
