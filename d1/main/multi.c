@@ -4845,10 +4845,8 @@ void multi_do_obs_update(const ubyte *buf) {
 	}
 
 	// Someone joined
-	if(buf[1] == 0) {
-		char who_joined[9];
-		strncpy(who_joined, (char*) &buf[4 + buf[2]*8], 8); 
-		HUD_init_message(HM_MULTI, "%s is now observing.", who_joined);
+	if(buf[1] == 0 && buf[2] < Netgame.max_numobservers) {
+		HUD_init_message(HM_MULTI, "%s is now observing.", Netgame.observers[buf[2]].callsign);
 
 		if (!is_observer())
 		{
