@@ -81,28 +81,6 @@ if(NOT "${SIZEOF_SSIZE_T}" STREQUAL "")
     target_compile_definitions(d1x-redux PUBLIC HAVE_SSIZE_T=1)
 endif()
 
-if(WIN32)
-    target_link_libraries(d1x-redux PUBLIC glu32 winmm ws2_32)
-    target_link_libraries(d1x-redux PRIVATE arch_win32)
-    target_sources(d1x-redux PRIVATE
-        ${CMAKE_SOURCE_DIR}/arch/win32/d1x-rebirth.ico
-        ${CMAKE_SOURCE_DIR}/arch/win32/d1x-rebirth.rc
-        )
-    set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} /NODEFAULTLIB:msvcrt.lib")
-    install(FILES
-        ${PROJECT_BINARY_DIR}/main/SDL.dll
-        ${PROJECT_BINARY_DIR}/main/physfs.dll
-        DESTINATION .)
-endif()
-
-if(__APPLE__)
-    target_link_libraries(d1x-redux PRIVATE arch_carbon arch_cocoa)
-endif()
-
-if(__LINUX__)
-    target_include_directories(d1x-redux PUBLIC ${CMAKE_SOURCE_DIR}/arch/linux/include)
-endif()
-
 if(OPENGL)
     target_link_libraries(d1x-redux PRIVATE arch_ogl xmodel)
 endif()
@@ -110,7 +88,6 @@ endif()
 if(SDLMIXER)
     find_package(SDL_mixer REQUIRED)
     target_link_libraries(d1x-redux PUBLIC ${SDL_MIXER_LIBRARIES})
-    install(FILES ${SDL_MIXER_LIBRARIES}/../SDL_mixer.dll DESTINATION .)
 endif()
 
 if(EDITOR)
@@ -120,6 +97,52 @@ endif()
 
 if(UDP)
     target_sources(d1x-redux PRIVATE net_udp.c)
+endif()
+
+if(WIN32)
+    target_link_libraries(d1x-redux PUBLIC glu32 winmm ws2_32)
+    target_link_libraries(d1x-redux PRIVATE arch_win32)
+    target_sources(d1x-redux PRIVATE
+        ${CMAKE_SOURCE_DIR}/arch/win32/d1x-rebirth.ico
+        ${CMAKE_SOURCE_DIR}/arch/win32/d1x-rebirth.rc
+        ${CMAKE_SOURCE_DIR}/arch/win32/d1x-redux.manifest
+        )
+    set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} /NODEFAULTLIB:msvcrt.lib")
+
+    install(FILES
+        ${PROJECT_BINARY_DIR}/main/SDL.dll
+        ${PROJECT_BINARY_DIR}/main/physfs.dll
+        DESTINATION .)
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+        install(FILES ${PROJECT_BINARY_DIR}/main/zlibd1.dll DESTINATION .)
+    else()
+        install(FILES ${PROJECT_BINARY_DIR}/main/zlib1.dll DESTINATION .)
+    endif()
+    if(SDLMIXER)
+        install(FILES ${SDL_MIXER_LIBRARIES}/../SDL_mixer.dll DESTINATION .)
+    endif()
+    if(OPENGL)
+        if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+            install(FILES ${PROJECT_BINARY_DIR}/main/glew32d.dll DESTINATION .)
+        else()
+            install(FILES ${PROJECT_BINARY_DIR}/main/glew32.dll DESTINATION .)
+        endif()
+    endif()
+    if(PNG)
+        if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+            install(FILES ${PROJECT_BINARY_DIR}/main/libpng16d.dll DESTINATION .)
+        else()
+            install(FILES ${PROJECT_BINARY_DIR}/main/libpng16.dll DESTINATION .)
+        endif()
+    endif()
+endif()
+
+if(__APPLE__)
+    target_link_libraries(d1x-redux PRIVATE arch_carbon arch_cocoa)
+endif()
+
+if(__LINUX__)
+    target_include_directories(d1x-redux PUBLIC ${CMAKE_SOURCE_DIR}/arch/linux/include)
 endif()
 
 if(NOT WIN32)
