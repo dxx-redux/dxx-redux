@@ -177,6 +177,7 @@ UDP_mdata_store UDP_mdata_queue[UDP_MDATA_STOR_QUEUE_SIZE];
 UDP_mdata_obs_store UDP_mdata_obs_queue[UDP_MDATA_STOR_QUEUE_SIZE];
 UDP_mdata_recv UDP_mdata_got[MAX_PLAYERS];
 UDP_sequence_packet UDP_sync_player; // For rejoin object syncing
+int UDP_sync_obsnum;
 UDP_netgame_info_lite Active_udp_games[UDP_MAX_NETGAMES];
 int num_active_udp_games = 0;
 int num_active_udp_changed = 0;
@@ -1952,14 +1953,14 @@ void net_udp_welcome_player(UDP_sequence_packet *their)
 
 		UDP_sync_player = *their;
 		UDP_sync_player.player.connected = OBSERVER_PLAYER_ID;
+		UDP_sync_obsnum = obsnum;
 		Network_send_objects = 1;
 		Network_send_objnum = -1;
 		Netgame.observers[obsnum].LastPacketTime = timer_query();
-		Netgame.observers[obsnum].connected = 1; 
+		Netgame.observers[obsnum].connected = 0; // Not yet connected, see net_udp_send_rejoin_sync
 		Netgame.observers[obsnum].protocol.udp.addr = their->player.protocol.udp.addr;
 		strncpy((char*) &Netgame.observers[obsnum].callsign, (char*) &their->player.callsign, 8); 
 
-		multi_send_obs_update(0, obsnum);
 		HUD_init_message(HM_MULTI, "%s is now observing.", UDP_sync_player.player.callsign);
 
 		net_udp_send_objects();
@@ -2456,6 +2457,7 @@ void net_udp_read_object_packet( ubyte *data )
 	} // For each object in packet
 }
 
+// Finished sending objects
 void net_udp_send_rejoin_sync(int player_num)
 {
 	int i, j;
@@ -2463,6 +2465,8 @@ void net_udp_send_rejoin_sync(int player_num)
 	if (Netgame.max_numobservers > 0 && player_num == OBSERVER_PLAYER_ID)
 	{
 		Network_player_added = 0;
+		Netgame.observers[UDP_sync_obsnum].connected = 1;
+		multi_send_obs_update(0, UDP_sync_obsnum);
 	}
 	else
 	{
