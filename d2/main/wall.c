@@ -249,7 +249,7 @@ void wall_set_tmap_num(segment *seg,int side,segment *csegp,int cside,int anim_n
 				newdemo_record_wall_set_tmap_num1(seg-Segments,side,csegp-Segments,cside,tmap);
 		}
 	} else	{
-		Assert(tmap!=0 && seg->sides[side].tmap_num2!=0);
+		// Removed Assert(tmap!=0 && seg->sides[side].tmap_num2!=0) here, custom doors sometimes set as tmap1
 		if (tmap != seg->sides[side].tmap_num2 || tmap != csegp->sides[cside].tmap_num2)
 		{
 			seg->sides[side].tmap_num2 = csegp->sides[cside].tmap_num2 = tmap;
