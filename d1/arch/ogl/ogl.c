@@ -1787,7 +1787,7 @@ void ogl_loadpngmask(png_data *pdata, grs_bitmap *bm, int texfilt)
 	else
 		for (int i = 0; i < size; i++)
 			mask[i] = buf[i * 3] == 120 && buf[i * 3 + 1] == 88 && buf[i * 3 + 2] == 128 ? 255 : 0;
-	ogl_loadtexture(mask, 0, 0, bm->gltexture_mask, bm->bm_flags, 0, texfilt);
+	ogl_loadtexture(mask, 0, 0, bm->gltexture_mask, BM_FLAG_TRANSPARENT, 0, texfilt);
 	bm->gltexture_mask->is_png = 1;
 	d_free(mask);
 }
@@ -1995,7 +1995,7 @@ void ogl_loadbmtexture_f(grs_bitmap *bm, int texfilt, int filter_blueship_wing)
 		MALLOC(mask, unsigned char, size);
 		for (int i = 0; i < size; i++)
 			mask[i] = buf[i] == 254 ? 255 : 0;
-		ogl_loadtexture(mask, 0, 0, bm->gltexture_mask, bm->bm_flags, 0, texfilt);
+		ogl_loadtexture(mask, 0, 0, bm->gltexture_mask, BM_FLAG_TRANSPARENT, 0, texfilt);
 		d_free(mask);
 	}
 #endif
