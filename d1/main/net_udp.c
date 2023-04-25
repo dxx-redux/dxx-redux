@@ -1941,12 +1941,7 @@ void net_udp_welcome_player(UDP_sequence_packet *their)
 	memset(&UDP_sync_player, 0, sizeof(UDP_sequence_packet));
 	Network_player_added = 0;
 
-	if (their->player.observer)
-	{
-		// Flush mdata before processing the new observer so we don't send
-		// them packets they can't use
-		net_udp_send_mdata(0, timer_query());
-
+	if(their->player.observer) {
 		Netgame.numobservers++;
 
 		int obsnum = 0;
