@@ -107,9 +107,10 @@ if(WIN32)
     target_sources(d2x-redux PRIVATE
         ${CMAKE_SOURCE_DIR}/arch/win32/d2x-rebirth.ico
         ${CMAKE_SOURCE_DIR}/arch/win32/d2x-rebirth.rc
-        ${CMAKE_SOURCE_DIR}/arch/win32/d2x-redux.manifest
         )
     set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} /NODEFAULTLIB:msvcrt.lib")
+    # The manifest has to be included through the .rc for compatibility with MSYS
+    target_link_options(d2x-redux PRIVATE "/MANIFEST:NO")
 
     install(FILES
         ${PROJECT_BINARY_DIR}/main/SDL.dll
