@@ -6,7 +6,7 @@
 #define __stringize2(X)	#X
 #define __stringize(X)	__stringize2(X)
 
-#define RH_VERSION "0.3"
+#define RH_VERSION "0.4"
 
 #define DXX_VERSION_MAJOR __stringize(DXX_VERSION_MAJORi)
 #define DXX_VERSION_MINOR __stringize(DXX_VERSION_MINORi)
