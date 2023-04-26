@@ -23,6 +23,7 @@ void net_udp_disconnect_player(int playernum);
 int net_udp_level_sync();
 void net_udp_send_mdata_direct(ubyte *data, int data_len, int pnum, int priority);
 void net_udp_send_netgame_update();
+void net_udp_send_obs_quit();
 
 // Some defines
 #ifdef IPv6
@@ -90,6 +91,8 @@ void net_udp_send_netgame_update();
 #define UPID_REATTEMPT_DIRECT 28
 #define UPID_REATTEMPT_DIRECT_SIZE (2 + 4 + sizeof(struct _sockaddr)) 
 #define UPID_OBSDATA 29
+#define UPID_OBSQUIT 30
+#define UPID_OBSQUIT_SIZE (1 + 4 + 4)
 
 // Structure keeping lite game infos (for netlist, etc.)
 typedef struct UDP_netgame_info_lite

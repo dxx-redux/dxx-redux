@@ -137,6 +137,7 @@ void check_observers(fix64 now);
 void add_message_to_obs_buffer(ubyte *data, int data_len, int needack);
 void check_obs_buffer(fix64 now);
 void forward_to_observers_nodelay(ubyte *data, int data_len, int needack);
+void net_udp_process_obs_quit(ubyte *data, int data_len, struct _sockaddr sender_addr);
 
 void net_udp_reset_connection_statuses(); 
 
@@ -257,6 +258,8 @@ char* msg_name(int type)
 			return "UPID_REATTEMPT_DIRECT";
 		case UPID_OBSDATA:
 			return "UPID_OBSDATA";
+		case UPID_OBSQUIT:
+			return "UPID_OBSQUIT";
 
 		default:
 			return "UNKNOWN";
@@ -939,6 +942,7 @@ int valid_token(ubyte *data, int data_len, struct _sockaddr sender_addr) {
 		case UPID_PDATA:	
 		case UPID_MDATA_PNORM:
 		case UPID_OBSDATA:
+		case UPID_OBSQUIT:
 		case UPID_MDATA_PNEEDACK:
 		case UPID_P2P_PING: 
 		case UPID_P2P_PONG: 
@@ -3408,6 +3412,7 @@ void net_udp_process_packet(ubyte *data, struct _sockaddr sender_addr, int lengt
 			case UPID_MDATA_ACK:
 			case UPID_MDATA_PNEEDACK:
 			case UPID_OBSDATA:
+			case UPID_OBSQUIT:
 				break;
 			default:
 				con_printf(CON_URGENT, "Dropped pid %s: observer sent disallowed packet.\n", msg_name(data[0])); 
@@ -3425,6 +3430,10 @@ void net_udp_process_packet(ubyte *data, struct _sockaddr sender_addr, int lengt
 
 			case UPID_OBSDATA:
 				forward_to_observers_nodelay(data, length, 0);
+				break;
+
+			case UPID_OBSQUIT:
+				net_udp_process_obs_quit(data, length, sender_addr);
 				break;
 
 			case UPID_MDATA_PNEEDACK:
@@ -7513,4 +7522,37 @@ int net_udp_show_game_info()
 	// handled in above callback
 	else
 		return 0;
+}
+
+void net_udp_send_obs_quit()
+{
+	ubyte buf[UPID_OBSQUIT_SIZE];
+	int len = 0;
+
+	memset(&buf, 0, UPID_OBSQUIT_SIZE);
+
+	buf[len] = UPID_OBSQUIT; len++;
+	PUT_INTEL_INT(buf + len, netgame_token); len += 4;
+	PUT_INTEL_INT(buf + len, my_player_token); len += 4;
+
+	Assert(len == sizeof(buf));
+
+	net_udp_send_to_player_direct(buf, sizeof(buf), 0);
+}
+
+void net_udp_process_obs_quit(ubyte *data, int data_len, struct _sockaddr sender_addr)
+{
+	int obsnum = -1;
+	for(int i = 0; i < Netgame.max_numobservers; i++) {
+		if (is_same_addr(&Netgame.observers[i].protocol.udp.addr, &sender_addr)) {
+			obsnum = i;
+		}
+	}
+	if (obsnum == -1) {
+		drop_rx_packet(data, "not received from any observer ip");
+		return;
+	}
+	memset(&Netgame.observers[obsnum], 0, sizeof(netplayer_info));
+	Netgame.numobservers--;
+	multi_send_obs_update(1, 0);
 }
