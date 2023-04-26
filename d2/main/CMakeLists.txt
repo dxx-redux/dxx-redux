@@ -109,8 +109,12 @@ if(WIN32)
         ${CMAKE_SOURCE_DIR}/arch/win32/d2x-rebirth.rc
         )
     set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} /NODEFAULTLIB:msvcrt.lib")
-    # The manifest has to be included through the .rc for compatibility with MSYS
-    target_link_options(d2x-redux PRIVATE "/MANIFEST:NO")
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+        # The manifest has to be included through the .rc for compatibility with MSYS. However
+        # MSVC will automatically generate a manifest using this method - which will cause a
+        # collision - so we need to tell it not to.
+        target_link_options(d2x-redux PRIVATE "/MANIFEST:NO")
+    endif()
 
     install(FILES
         ${PROJECT_BINARY_DIR}/main/SDL.dll
