@@ -3647,7 +3647,10 @@ void
 multi_send_quit(int why)
 {
 	// I am quitting the game, tell the other guy the bad news.
-	if(is_observer() && !Netgame.host_is_obs) { return; }
+	if (is_observer() && !Netgame.host_is_obs) {
+		net_udp_send_obs_quit();
+		return;
+	}
 
 	Assert (why == MULTI_QUIT);
 
