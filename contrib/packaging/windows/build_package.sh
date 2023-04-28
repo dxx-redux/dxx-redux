@@ -4,13 +4,14 @@ set -x
 GIT_HASH=$(git rev-parse --short HEAD)
 
 build_app() {
-	builddir="$1"
+    builddir="$1"
     name="$2"
     prettyname="$3"
     
     zipfilename="${prettyname}-win-${GIT_HASH}.zip"
     outdir="${prettyname}"
     tmpdir="packagetemp"
+    inipath="${name:0:2}/${name:0:3}.ini"
     
     # Have to bundle in separate directory because of case-insensitivity clashes
     mkdir ${tmpdir}
@@ -30,6 +31,7 @@ build_app() {
 
     # Copy in other resources
     cp ../COPYING.txt ${outdir}/
+    cp ../${inipath} ${outdir}/
         
     # zip up and output to top level dir
     zip -r -X ../${zipfilename} ${outdir}

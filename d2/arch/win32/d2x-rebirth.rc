@@ -10,6 +10,8 @@
 #include "windows.h"
 IDI_DXX_ICON            ICON                    "d2x-rebirth.ico"
 
+CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "d2x-redux.exe.manifest"
+
 /////////////////////////////////////////////////////////////////////////////
 #undef APSTUDIO_READONLY_SYMBOLS
 
