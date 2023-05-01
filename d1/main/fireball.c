@@ -186,7 +186,7 @@ object *object_create_explosion_sub(object *objp, short segnum, vms_vector * pos
 												weapon_name = "unknown";
 										}
 										
-										con_printf(CON_NORMAL, "You took %0.1f damage from %s's %s blast!\n", (double)(damage)/(double)(F1_0), killer_name, weapon_name);
+										con_printf(CON_NORMAL, "You took %.1f damage from %s's %s blast, shields now %.1f\n", f2fl(damage), killer_name, weapon_name, f2fl(Players[Player_num].shields - damage));
 										
 										multi_send_damage(damage, obj0p->shields, killer->type, killer->id, DAMAGE_BLAST, objp);
 									}

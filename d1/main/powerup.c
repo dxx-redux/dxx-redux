@@ -43,6 +43,7 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "gr.h"	//	for powerup outline drawing
 #include "editor/editor.h"
 #endif
+#include "playsave.h"
 
 int N_powerup_types = 0;
 powerup_type_info Powerup_info[MAX_POWERUP_TYPES];
@@ -263,6 +264,8 @@ int do_powerup(object *obj)
 				if (Players[Player_num].shields > MAX_SHIELDS)
 					Players[Player_num].shields = MAX_SHIELDS;
 				powerup_basic(0, 0, 15, SHIELD_SCORE, "%s %s %d",TXT_SHIELD,TXT_BOOSTED_TO,f2ir(Players[Player_num].shields));
+				if (Game_mode & GM_MULTI && PlayerCfg.MultiMessages)
+					con_printf(CON_NORMAL, "You picked up %.1f shields, shields now %.1f\n", f2fl(repair), f2fl(Players[Player_num].shields));
 				used=1;
 			} else
 				HUD_init_message(HM_DEFAULT|HM_REDUNDANT|HM_MAYDUPL, TXT_MAXED_OUT,TXT_SHIELD);
