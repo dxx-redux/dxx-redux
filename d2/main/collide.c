@@ -200,7 +200,7 @@ void apply_force_damage(object *obj,fix force,object *other_obj)
 			#ifdef NETWORK
 			if (obj->id == Player_num && Game_mode & GM_MULTI)
 			{
-				con_printf(CON_NORMAL, "You took %0.1f damage from colliding with a ship!\n", (double)(damage) / (double)(F1_0));
+				con_printf(CON_NORMAL, "You took %.1f damage from colliding with a ship, shields now %.1f\n", f2fl(damage), f2fl(Players[Player_num].shields - damage));
 
 				multi_send_damage(damage, Players[Player_num].shields, OBJ_PLAYER, other_obj->id, DAMAGE_COLLISION, NULL);
 			}
@@ -381,7 +381,7 @@ void collide_player_and_wall( object * playerobj, fix hitspeed, short hitseg, sh
 				#ifdef NETWORK
 				if (Game_mode & GM_MULTI)
 				{
-					con_printf(CON_NORMAL, "You took %0.1f damage from hitting a wall!\n", (double)(damage) / (double)(F1_0));
+					con_printf(CON_NORMAL, "You took %.1f damage from hitting a wall, shields now %.1f\n", f2fl(damage), f2fl(Players[Player_num].shields - damage));
 
 					multi_send_damage(damage, Players[Player_num].shields, OBJ_WALL, 0, DAMAGE_WALL, NULL);
 				}
@@ -439,7 +439,7 @@ int check_volatile_wall(object *obj,int segnum,int sidenum,vms_vector *hitpt)
 					#ifdef NETWORK
 					if (Game_mode & GM_MULTI)
 					{
-						con_printf(CON_NORMAL, "You took %0.1f damage from lava!\n", (double)(damage) / (double)(F1_0)); 
+						con_printf(CON_NORMAL, "You took %.1f damage from lava, shields now %.1f\n", f2fl(damage), f2fl(Players[Player_num].shields - damage));
 
 						multi_send_damage(damage, Players[Player_num].shields, OBJ_WALL, 0, DAMAGE_LAVA, NULL);
 					}
@@ -2430,8 +2430,8 @@ void collide_player_and_weapon( object * playerobj, object * weapon, vms_vector 
 				#ifdef NETWORK
 				if (Game_mode & GM_MULTI)
 				{
-					con_printf(CON_NORMAL, "You took %0.1f damage from %s's %s!\n",
-						(double)(damage)/(double)(F1_0), killer_name, weapon_name);
+					con_printf(CON_NORMAL, "You took %.1f damage from %s's %s, shields now %.1f\n",
+						f2fl(damage), killer_name, weapon_name, f2fl(Players[Player_num].shields - damage));
 
 					multi_send_damage(damage, Players[Player_num].shields, killer->type, killer->id, DAMAGE_WEAPON, weapon);
 				}
@@ -2469,7 +2469,7 @@ void collide_player_and_nasty_robot( object * playerobj, object * robot, vms_vec
 	#ifdef NETWORK
 		if (Game_mode & GM_MULTI)
 		{
-			con_printf(CON_NORMAL, "You took %0.1f damage from bumping a robot!\n", (double)(damage) / (double)(F1_0)); 
+			con_printf(CON_NORMAL, "You took %.1f damage from bumping a robot, shields now %.1f\n", f2fl(damage), f2fl(Players[Player_num].shields - damage));
 
 			multi_send_damage(damage, Players[Player_num].shields, OBJ_ROBOT, 0, DAMAGE_COLLISION, NULL);
 		}
