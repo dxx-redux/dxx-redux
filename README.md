@@ -24,14 +24,19 @@ Building in Visual Studio
 Building in msys2 / Linux
 -------------------------
 
-- msys2: `pacman -Ss mingw-w64-x86_64-cmake mingw-w64-x86_64-physfs mingw-w64-x86_64-SDL mingw-w64-x86_64-SDL_mixer
+- msys2: `pacman -S mingw-w64-x86_64-cmake mingw-w64-x86_64-physfs mingw-w64-x86_64-SDL mingw-w64-x86_64-SDL_mixer
   mingw-w64-x86_64-libpng mingw-w64-x86_64-glew`
 
 - Debian/Ubuntu: `apt install cmake libphysfs-dev libsdl1.2-dev libsdl-mixer1.2-dev libpng-dev
   libglew-dev`
 
+- Fedora: `sudo dnf install cmake physfs-devel sdl12-compat-devel SDL_mixer-devel libpng-devel
+  glew-devel`
+
+- Arch Linux: `pacman -S cmake physfs sdl12-compat sdl_mixer libpng glew`
+
 - Use `cd` to go to the d1 or d2 directory
 
-- `cmake -B build`
+- `cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo`
 
 - `cmake --build build`
