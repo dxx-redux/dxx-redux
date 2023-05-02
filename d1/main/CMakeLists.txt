@@ -70,9 +70,9 @@ add_executable (d1x-redux
 include_directories(${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/arch/include)
 
 target_compile_definitions(d1x-redux PUBLIC
-    DXX_VERSION_MAJORi=0
-    DXX_VERSION_MINORi=58
-    DXX_VERSION_MICROi=1
+    DXX_VERSION_MAJORi=${PROJECT_VERSION_MAJOR}
+    DXX_VERSION_MINORi=${PROJECT_VERSION_MINOR}
+    DXX_VERSION_MICROi=$<IF:$<BOOL:${PROJECT_VERSION_MICRO}>,${PROJECT_VERSION_MICRO},0>
     )
 
 include(CheckTypeSize)
