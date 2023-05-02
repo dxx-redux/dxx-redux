@@ -7348,7 +7348,10 @@ void net_udp_send_extras ()
 static int show_game_rules_handler(window *wind, d_event *event, netgame_info *netgame)
 {
 	int k;
-	int w = FSPACX(280), h = FSPACY(170);
+	int w = FSPACX(280), h = FSPACY(182);
+	int y;
+	int label_color, value_color;
+	const char *ammo_style[] = {"Dupl", "Depl", "Drop", "Respawn"};
 	
 	switch (event->type)
 	{
@@ -7378,7 +7381,10 @@ static int show_game_rules_handler(window *wind, d_event *event, netgame_info *n
 			
 			grd_curcanv->cv_font = MEDIUM3_FONT;
 			
-			gr_set_fontcolor(gr_find_closest_color_current(29,29,47),-1);
+			label_color = gr_find_closest_color_current(29,29,47);
+			value_color = gr_find_closest_color_current(255,255,255);
+
+			gr_set_fontcolor(label_color,-1);
 			gr_string( 0x8000, FSPACY(15), "NETGAME INFO");
 			
 			grd_curcanv->cv_font = GAME_FONT;
@@ -7386,6 +7392,7 @@ static int show_game_rules_handler(window *wind, d_event *event, netgame_info *n
 			gr_printf( FSPACX( 25),FSPACY( 41), "Max Time:");
 			gr_printf( FSPACX( 25),FSPACY( 47), "Kill Goal:");
 			gr_printf( FSPACX( 25),FSPACY( 53), "Packets per sec.:");
+			gr_printf( FSPACX( 25),FSPACY( 59), "Homing Rate:");
 			gr_printf( FSPACX(155),FSPACY( 35), "Spawn Style:");
 			gr_printf( FSPACX(155),FSPACY( 41), "Marker camera views:");
 			gr_printf( FSPACX(155),FSPACY( 47), "Indestructible lights:");
@@ -7393,39 +7400,13 @@ static int show_game_rules_handler(window *wind, d_event *event, netgame_info *n
 			gr_printf( FSPACX(155),FSPACY( 59), "Show enemy names on hud:");
 			gr_printf( FSPACX(155),FSPACY( 65), "Show players on automap:");
 			gr_printf( FSPACX(155),FSPACY( 71), "No friendly Fire:");
-			gr_printf( FSPACX( 25),FSPACY( 80), "Allowed Objects");
-			gr_printf( FSPACX( 25),FSPACY( 90), "Laser Upgrade:");
-			gr_printf( FSPACX( 25),FSPACY( 96), "Super Laser:");
-			gr_printf( FSPACX( 25),FSPACY(102), "Quad Laser:");
-			gr_printf( FSPACX( 25),FSPACY(108), "Vulcan Cannon:");
-			gr_printf( FSPACX( 25),FSPACY(114), "Gauss Cannon:");
-			gr_printf( FSPACX( 25),FSPACY(120), "Spreadfire Cannon:");
-			gr_printf( FSPACX( 25),FSPACY(126), "Helix Cannon:");
-			gr_printf( FSPACX( 25),FSPACY(132), "Plasma Cannon:");
-			gr_printf( FSPACX( 25),FSPACY(138), "Phoenix Cannon:");
-			gr_printf( FSPACX( 25),FSPACY(144), "Fusion Cannon:");
-			gr_printf( FSPACX( 25),FSPACY(150), "Omega Cannon:");
-			gr_printf( FSPACX(170),FSPACY( 90), "Flash Missile:");
-			gr_printf( FSPACX(170),FSPACY( 96), "Homing Missile:");
-			gr_printf( FSPACX(170),FSPACY(102), "Guided Missile:");
-			gr_printf( FSPACX(170),FSPACY(108), "Proximity Bomb:");
-			gr_printf( FSPACX(170),FSPACY(114), "Smart Mine:");
-			gr_printf( FSPACX(170),FSPACY(120), "Smart Missile:");
-			gr_printf( FSPACX(170),FSPACY(126), "Mercury Missile:");
-			gr_printf( FSPACX(170),FSPACY(132), "Mega Missile:");
-			gr_printf( FSPACX(170),FSPACY(138), "Earthshaker Missile:");
-			gr_printf( FSPACX( 25),FSPACY(160), "Afterburner:");
-			gr_printf( FSPACX( 25),FSPACY(166), "Headlight:");
-			gr_printf( FSPACX( 25),FSPACY(172), "Energy->Shield Conv:");
-			gr_printf( FSPACX(170),FSPACY(160), "Invulnerability:");
-			gr_printf( FSPACX(170),FSPACY(166), "Cloaking Device:");
-			gr_printf( FSPACX(170),FSPACY(172), "Ammo Rack:");
 			
-			gr_set_fontcolor(BM_XRGB(255,255,255),-1);
+			gr_set_fontcolor(value_color,-1);
 			gr_printf( FSPACX(115),FSPACY( 35), "%i Min", netgame->control_invul_time/F1_0/60);
 			gr_printf( FSPACX(115),FSPACY( 41), "%i Min", netgame->PlayTimeAllowed*5);
 			gr_printf( FSPACX(115),FSPACY( 47), "%i", netgame->KillGoal*10);
 			gr_printf( FSPACX(115),FSPACY( 53), "%i", netgame->PacketsPerSec);
+			gr_printf( FSPACX(115),FSPACY( 59), "%i", netgame->HomingUpdateRate);
 			gr_printf( FSPACX(275),FSPACY( 35), netgame->SpawnStyle == SPAWN_STYLE_NO_INVUL ? "NoInv" : (
 												netgame->SpawnStyle == SPAWN_STYLE_SHORT_INVUL ? "Short" : (
 												netgame->SpawnStyle == SPAWN_STYLE_LONG_INVUL ? "Long" : "Preview")));
@@ -7435,32 +7416,82 @@ static int show_game_rules_handler(window *wind, d_event *event, netgame_info *n
 			gr_printf( FSPACX(275),FSPACY( 59), netgame->ShowEnemyNames?"ON":"OFF");
 			gr_printf( FSPACX(275),FSPACY( 65), netgame->game_flags & NETGAME_FLAG_SHOW_MAP?"ON":"OFF");
 			gr_printf( FSPACX(275),FSPACY( 71), netgame->NoFriendlyFire?"ON":"OFF");
-			gr_printf( FSPACX(130),FSPACY( 90), netgame->AllowedItems & NETFLAG_DOLASER?"YES":"NO");
-			gr_printf( FSPACX(130),FSPACY( 96), netgame->AllowedItems & NETFLAG_DOSUPERLASER?"YES":"NO");
-			gr_printf( FSPACX(130),FSPACY(102), netgame->AllowedItems & NETFLAG_DOQUAD?"YES":"NO");
-			gr_printf( FSPACX(130),FSPACY(108), netgame->AllowedItems & NETFLAG_DOVULCAN?"YES":"NO");
-			gr_printf( FSPACX(130),FSPACY(114), netgame->AllowedItems & NETFLAG_DOGAUSS?"YES":"NO");
-			gr_printf( FSPACX(130),FSPACY(120), netgame->AllowedItems & NETFLAG_DOSPREAD?"YES":"NO");
-			gr_printf( FSPACX(130),FSPACY(126), netgame->AllowedItems & NETFLAG_DOHELIX?"YES":"NO");
-			gr_printf( FSPACX(130),FSPACY(132), netgame->AllowedItems & NETFLAG_DOPLASMA?"YES":"NO");
-			gr_printf( FSPACX(130),FSPACY(138), netgame->AllowedItems & NETFLAG_DOPHOENIX?"YES":"NO");
-			gr_printf( FSPACX(130),FSPACY(144), netgame->AllowedItems & NETFLAG_DOFUSION?"YES":"NO");
-			gr_printf( FSPACX(130),FSPACY(150), netgame->AllowedItems & NETFLAG_DOOMEGA?"YES":"NO");
-			gr_printf( FSPACX(275),FSPACY( 90), netgame->AllowedItems & NETFLAG_DOFLASH?"YES":"NO");
-			gr_printf( FSPACX(275),FSPACY( 96), netgame->AllowedItems & NETFLAG_DOHOMING?"YES":"NO");
-			gr_printf( FSPACX(275),FSPACY(102), netgame->AllowedItems & NETFLAG_DOGUIDED?"YES":"NO");
-			gr_printf( FSPACX(275),FSPACY(108), netgame->AllowedItems & NETFLAG_DOPROXIM?"YES":"NO");
-			gr_printf( FSPACX(275),FSPACY(114), netgame->AllowedItems & NETFLAG_DOSMARTMINE?"YES":"NO");
-			gr_printf( FSPACX(275),FSPACY(120), netgame->AllowedItems & NETFLAG_DOSMART?"YES":"NO");
-			gr_printf( FSPACX(275),FSPACY(126), netgame->AllowedItems & NETFLAG_DOMERCURY?"YES":"NO");
-			gr_printf( FSPACX(275),FSPACY(132), netgame->AllowedItems & NETFLAG_DOMEGA?"YES":"NO");
-			gr_printf( FSPACX(275),FSPACY(138), netgame->AllowedItems & NETFLAG_DOSHAKER?"YES":"NO");
-			gr_printf( FSPACX(130),FSPACY(160), netgame->AllowedItems & NETFLAG_DOAFTERBURNER?"YES":"NO");
-			gr_printf( FSPACX(130),FSPACY(166), netgame->AllowedItems & NETFLAG_DOHEADLIGHT?"YES":"NO");
-			gr_printf( FSPACX(130),FSPACY(172), netgame->AllowedItems & NETFLAG_DOCONVERTER?"YES":"NO");
-			gr_printf( FSPACX(275),FSPACY(160), netgame->AllowedItems & NETFLAG_DOINVUL?"YES":"NO");
-			gr_printf( FSPACX(275),FSPACY(166), netgame->AllowedItems & NETFLAG_DOCLOAK?"YES":"NO");
-			gr_printf( FSPACX(275),FSPACY(172), netgame->AllowedItems & NETFLAG_DOAMMORACK?"YES":"NO");
+
+			y = 77;
+
+			gr_set_fontcolor(label_color,-1);
+			gr_printf( FSPACX( 25),FSPACY(y+ 0), "DXX-Retro Homing:");
+			gr_printf( FSPACX( 25),FSPACY(y+ 6), "Custom Mods:");
+			gr_printf( FSPACX( 25),FSPACY(y+12), "No Gauss Splash:");
+			gr_printf( FSPACX(155),FSPACY(y+ 0), "Reduced Flash:");
+			gr_printf( FSPACX(155),FSPACY(y+ 6), "Gauss Ammo Style:");
+
+			gr_set_fontcolor(value_color,-1);
+			gr_printf( FSPACX(115),FSPACY(y+ 0), netgame->ConstantHomingSpeed?"ON":"OFF");
+			gr_printf( FSPACX(115),FSPACY(y+ 6), netgame->AllowCustomModelsTextures?"ON":"OFF");
+			gr_printf( FSPACX(115),FSPACY(y+12), netgame->DisableGaussSplash?"ON":"OFF");
+			gr_printf( FSPACX(275),FSPACY(y+ 0), netgame->ReducedFlash?"ON":"OFF");
+			gr_printf( FSPACX(275),FSPACY(y+ 6), ammo_style[netgame->GaussAmmoStyle]);
+
+			y += 18 + 3;
+
+			gr_set_fontcolor(label_color,-1);
+			gr_printf( FSPACX( 25),FSPACY(y+ 0), "Allowed Objects");
+			gr_printf( FSPACX( 25),FSPACY(y+10), "Laser Upgrade:");
+			gr_printf( FSPACX( 25),FSPACY(y+16), "Super Laser:");
+			gr_printf( FSPACX( 25),FSPACY(y+22), "Quad Laser:");
+			gr_printf( FSPACX( 25),FSPACY(y+28), "Vulcan Cannon:");
+			gr_printf( FSPACX( 25),FSPACY(y+34), "Gauss Cannon:");
+			gr_printf( FSPACX( 25),FSPACY(y+40), "Spreadfire Cannon:");
+			gr_printf( FSPACX( 25),FSPACY(y+46), "Helix Cannon:");
+			gr_printf( FSPACX( 25),FSPACY(y+52), "Plasma Cannon:");
+			gr_printf( FSPACX( 25),FSPACY(y+58), "Phoenix Cannon:");
+			gr_printf( FSPACX( 25),FSPACY(y+64), "Fusion Cannon:");
+			gr_printf( FSPACX( 25),FSPACY(y+70), "Omega Cannon:");
+			gr_printf( FSPACX(170),FSPACY(y+10), "Flash Missile:");
+			gr_printf( FSPACX(170),FSPACY(y+16), "Homing Missile:");
+			gr_printf( FSPACX(170),FSPACY(y+22), "Guided Missile:");
+			gr_printf( FSPACX(170),FSPACY(y+28), "Proximity Bomb:");
+			gr_printf( FSPACX(170),FSPACY(y+34), "Smart Mine:");
+			gr_printf( FSPACX(170),FSPACY(y+40), "Smart Missile:");
+			gr_printf( FSPACX(170),FSPACY(y+46), "Mercury Missile:");
+			gr_printf( FSPACX(170),FSPACY(y+52), "Mega Missile:");
+			gr_printf( FSPACX(170),FSPACY(y+58), "Earthshaker Missile:");
+			gr_printf( FSPACX( 25),FSPACY(y+80), "Afterburner:");
+			gr_printf( FSPACX( 25),FSPACY(y+86), "Headlight:");
+			gr_printf( FSPACX( 25),FSPACY(y+92), "Energy->Shield Conv:");
+			gr_printf( FSPACX(170),FSPACY(y+80), "Invulnerability:");
+			gr_printf( FSPACX(170),FSPACY(y+86), "Cloaking Device:");
+			gr_printf( FSPACX(170),FSPACY(y+92), "Ammo Rack:");
+
+			gr_set_fontcolor(value_color,-1);
+			gr_printf( FSPACX(130),FSPACY(y+10), netgame->AllowedItems & NETFLAG_DOLASER?"YES":"NO");
+			gr_printf( FSPACX(130),FSPACY(y+16), netgame->AllowedItems & NETFLAG_DOSUPERLASER?"YES":"NO");
+			gr_printf( FSPACX(130),FSPACY(y+22), netgame->AllowedItems & NETFLAG_DOQUAD?"YES":"NO");
+			gr_printf( FSPACX(130),FSPACY(y+28), netgame->AllowedItems & NETFLAG_DOVULCAN?"YES":"NO");
+			gr_printf( FSPACX(130),FSPACY(y+34), netgame->AllowedItems & NETFLAG_DOGAUSS?"YES":"NO");
+			gr_printf( FSPACX(130),FSPACY(y+40), netgame->AllowedItems & NETFLAG_DOSPREAD?"YES":"NO");
+			gr_printf( FSPACX(130),FSPACY(y+46), netgame->AllowedItems & NETFLAG_DOHELIX?"YES":"NO");
+			gr_printf( FSPACX(130),FSPACY(y+52), netgame->AllowedItems & NETFLAG_DOPLASMA?"YES":"NO");
+			gr_printf( FSPACX(130),FSPACY(y+58), netgame->AllowedItems & NETFLAG_DOPHOENIX?"YES":"NO");
+			gr_printf( FSPACX(130),FSPACY(y+64), netgame->AllowedItems & NETFLAG_DOFUSION?"YES":"NO");
+			gr_printf( FSPACX(130),FSPACY(y+70), netgame->AllowedItems & NETFLAG_DOOMEGA?"YES":"NO");
+			gr_printf( FSPACX(275),FSPACY(y+10), netgame->AllowedItems & NETFLAG_DOFLASH?"YES":"NO");
+			gr_printf( FSPACX(275),FSPACY(y+16), netgame->AllowedItems & NETFLAG_DOHOMING?"YES":"NO");
+			gr_printf( FSPACX(275),FSPACY(y+22), netgame->AllowedItems & NETFLAG_DOGUIDED?"YES":"NO");
+			gr_printf( FSPACX(275),FSPACY(y+28), netgame->AllowedItems & NETFLAG_DOPROXIM?"YES":"NO");
+			gr_printf( FSPACX(275),FSPACY(y+34), netgame->AllowedItems & NETFLAG_DOSMARTMINE?"YES":"NO");
+			gr_printf( FSPACX(275),FSPACY(y+40), netgame->AllowedItems & NETFLAG_DOSMART?"YES":"NO");
+			gr_printf( FSPACX(275),FSPACY(y+46), netgame->AllowedItems & NETFLAG_DOMERCURY?"YES":"NO");
+			gr_printf( FSPACX(275),FSPACY(y+52), netgame->AllowedItems & NETFLAG_DOMEGA?"YES":"NO");
+			gr_printf( FSPACX(275),FSPACY(y+58), netgame->AllowedItems & NETFLAG_DOSHAKER?"YES":"NO");
+			gr_printf( FSPACX(130),FSPACY(y+80), netgame->AllowedItems & NETFLAG_DOAFTERBURNER?"YES":"NO");
+			gr_printf( FSPACX(130),FSPACY(y+86), netgame->AllowedItems & NETFLAG_DOHEADLIGHT?"YES":"NO");
+			gr_printf( FSPACX(130),FSPACY(y+92), netgame->AllowedItems & NETFLAG_DOCONVERTER?"YES":"NO");
+			gr_printf( FSPACX(275),FSPACY(y+80), netgame->AllowedItems & NETFLAG_DOINVUL?"YES":"NO");
+			gr_printf( FSPACX(275),FSPACY(y+86), netgame->AllowedItems & NETFLAG_DOCLOAK?"YES":"NO");
+			gr_printf( FSPACX(275),FSPACY(y+92), netgame->AllowedItems & NETFLAG_DOAMMORACK?"YES":"NO");
+
 			gr_set_current_canvas(NULL);
 			break;
 
