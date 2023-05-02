@@ -50,7 +50,7 @@ static inline PHYSFS_sint64 PHYSFSX_write(PHYSFS_File *handle, const void *buffe
 static inline int PHYSFSX_isDirectory(const char *fname)
 {
     PHYSFS_Stat statbuf;
-    return !PHYSFS_stat(fname, &statbuf) && (statbuf.filetype == PHYSFS_FILETYPE_DIRECTORY);
+    return PHYSFS_stat(fname, &statbuf) && (statbuf.filetype == PHYSFS_FILETYPE_DIRECTORY);
 }
 
 #define PHYSFS_isDirectory PHYSFSX_isDirectory
