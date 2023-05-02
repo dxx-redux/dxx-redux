@@ -153,21 +153,20 @@ void jukebox_load()
 	jukebox_unload();
 
 	// Check if it's an M3U file
-	if (!d_stricmp(&GameCfg.CMLevelMusicPath[strlen(GameCfg.CMLevelMusicPath) - 4], ".m3u"))
+	int path_len = strlen(GameCfg.CMLevelMusicPath);
+	if (path_len > 4 && !d_stricmp(&GameCfg.CMLevelMusicPath[path_len - 4], ".m3u"))
 		read_m3u();
 	else	// a directory
 	{
 		int new_path = 0;
-		char *p;
 		const char *sep = PHYSFS_getDirSeparator();
 		int i;
 
 		// stick a separator on the end if necessary.
-		if (strlen(GameCfg.CMLevelMusicPath) >= strlen(sep))
+		if (path_len >= strlen(sep))
 		{
-			p = GameCfg.CMLevelMusicPath + strlen(GameCfg.CMLevelMusicPath) - strlen(sep);
-			if (strcmp(p, sep))
-				strncat(GameCfg.CMLevelMusicPath, sep, PATH_MAX - 1 - strlen(GameCfg.CMLevelMusicPath));
+			if (strcmp(GameCfg.CMLevelMusicPath + path_len - strlen(sep), sep))
+				strncat(GameCfg.CMLevelMusicPath, sep, PATH_MAX - 1 - path_len);
 		}
 
 		// Read directory using PhysicsFS
@@ -246,7 +245,8 @@ int jukebox_play()
 
 	size_full_filename = strlen(GameCfg.CMLevelMusicPath)+strlen(music_filename)+1;
 	CALLOC(full_filename, char, size_full_filename);
-	if (!d_stricmp(&GameCfg.CMLevelMusicPath[strlen(GameCfg.CMLevelMusicPath) - 4], ".m3u"))	// if it's from an M3U playlist
+	int path_len = strlen(GameCfg.CMLevelMusicPath);
+	if (path_len > 4 && !d_stricmp(&GameCfg.CMLevelMusicPath[path_len - 4], ".m3u"))	// if it's from an M3U playlist
 		strcpy(full_filename, music_filename);
 	else											// if it's from a specified path
 		snprintf(full_filename, size_full_filename, "%s%s", GameCfg.CMLevelMusicPath, music_filename);
