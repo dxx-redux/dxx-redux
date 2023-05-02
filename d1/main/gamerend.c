@@ -134,7 +134,7 @@ void show_netplayerinfo()
 	gr_set_fontcolor(255,-1);
 
 	x=(SWIDTH/2)-FSPACX(120);
-	y=(SHEIGHT/2)-FSPACY(84);
+	y=(SHEIGHT/2)-FSPACY(90);
 
 	gr_settransblend(14, GR_BLEND_NORMAL);
 	gr_setcolor( BM_XRGB(0,0,0) );
@@ -212,13 +212,23 @@ void show_netplayerinfo()
 	y+=LINE_SPACING;
 	gr_printf(x,y,"total time: %i:%02i:%02i",Players[Player_num].hours_total,f2i(Players[Player_num].time_total) / 60 % 60,f2i(Players[Player_num].time_total) % 60);
 
+	char hom_string[16];
+	snprintf(hom_string, sizeof(hom_string), "Hom %d", Netgame.HomingUpdateRate);
+	draw_flag(hom_string, Netgame.HomingUpdateRate != 25,                          base_flags_left + word_spacing*0, y);
+	draw_flag("RetroHom", Netgame.ConstantHomingSpeed,                             base_flags_left + word_spacing*1, y);
+	draw_flag("CustMod",  Netgame.AllowCustomModelsTextures,                       base_flags_left + word_spacing*2, y);
 
-
-
-	set_font_newline(); 
+	set_font_newline();
 	y+=LINE_SPACING;
 	if (Netgame.KillGoal)
 		gr_printf(x,y,"Kill goal: %d",Netgame.KillGoal*10);
+
+	draw_flag("ReduFlas", Netgame.ReducedFlash,                                    base_flags_left + word_spacing*0, y);
+	const char *ammo_style[] = {"AmmoDupl", "AmmoDepl", "AmmoDrop", "AmmoSpaw"};
+	draw_flag(ammo_style[Netgame.GaussAmmoStyle], Netgame.GaussAmmoStyle != 1,    base_flags_left + word_spacing*1, y);
+
+	set_font_newline(); 
+	y+=LINE_SPACING;
 
 	gr_printf(base_flags_left, y, "Items: "); 
 	draw_flag("L", Netgame.AllowedItems & NETFLAG_DOLASER,     flags_x, y);  flags_x += letter_spacing; 
