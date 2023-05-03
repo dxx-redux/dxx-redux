@@ -138,7 +138,7 @@ void show_netplayerinfo()
 
 	gr_settransblend(14, GR_BLEND_NORMAL);
 	gr_setcolor( BM_XRGB(0,0,0) );
-	gr_rect((SWIDTH/2)-FSPACX(120),(SHEIGHT/2)-FSPACY(84),(SWIDTH/2)+FSPACX(120),(SHEIGHT/2)+FSPACY(84));
+	gr_rect((SWIDTH/2)-FSPACX(120),(SHEIGHT/2)-FSPACY(90),(SWIDTH/2)+FSPACX(120),(SHEIGHT/2)+FSPACY(90));
 	gr_settransblend(GR_FADE_OFF, GR_BLEND_NORMAL);
 
 	// general game information
