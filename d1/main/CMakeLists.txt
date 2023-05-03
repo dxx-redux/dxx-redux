@@ -112,6 +112,11 @@ if(WIN32)
         # MSVC will automatically generate a manifest using this method - which will cause a
         # collision - so we need to tell it not to.
         target_link_options(d1x-redux PRIVATE "/MANIFEST:NO")
+        if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+            # Enable Hot Reload for debug builds
+            target_link_options(${PROJECT_NAME} PRIVATE $<$<CONFIG:Debug>:/INCREMENTAL>)
+            target_compile_options(${PROJECT_NAME} PRIVATE $<$<CONFIG:Debug>:/ZI>)
+        endif()
     endif()
 
     install(FILES

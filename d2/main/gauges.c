@@ -2782,9 +2782,11 @@ void observer_show_time() {
 	int y = 5;
 
 	if (GameTime64 < 3600 * F1_0)
-		sprintf(time_str, "%02i:%02i", (int)(f2i(GameTime64) / 60 % 60), (int)(f2i(GameTime64) % 60));
+		snprintf(time_str, sizeof(time_str) / sizeof(time_str[0]), "%02i:%02i",
+			(int)(f2i(GameTime64) / 60 % 60), (int)(f2i(GameTime64) % 60));
 	else
-		sprintf(time_str, "%i:%02i:%02i", (int)(f2i(GameTime64) / 3600), (int)(f2i(GameTime64) / 60 % 60), (int)(f2i(GameTime64) % 60));
+		snprintf(time_str, sizeof(time_str) / sizeof(time_str[0]), "%i:%02i:%02i",
+			(int)(f2i(GameTime64) / 3600), (int)(f2i(GameTime64) / 60 % 60), (int)(f2i(GameTime64) % 60));
 
 	gr_set_curfont(MEDIUM3_FONT);
 	gr_get_string_size(time_str, &sw, &sh, &saw);
@@ -2796,7 +2798,8 @@ void observer_show_time() {
 		int w = sw;
 		int h = sh;
 
-		sprintf(decimal_str, ".%02i", (int)(f2i(GameTime64 * 100) % 100));
+		snprintf(decimal_str, sizeof(decimal_str) / sizeof(decimal_str[0]), ".%02i",
+			(int)(f2i(GameTime64 * 100) % 100));
 		while ((t = strchr(decimal_str, '1')) != NULL)
 			* t = '\x84';	//convert to wide '1'
 
@@ -2872,7 +2875,7 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 		y += sh + 3;
 	}
 	else {
-		sprintf(score, "%d", Players[pnum].net_kills_total);
+		snprintf(score, sizeof(score) / sizeof(score[0]), "%d", Players[pnum].net_kills_total);
 
 		gr_set_curfont(MEDIUM1_FONT);
 
@@ -2890,7 +2893,8 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 			// Shields
 			char shields[7];
 
-			sprintf(shields, "%0.1f%s", f2db(Players[pnum].shields), Players[pnum].shields_certain ? "" : "?");
+			snprintf(shields, sizeof(shields) / sizeof(shields[0]), "%0.1f%s",
+				f2db(Players[pnum].shields), Players[pnum].shields_certain ? "" : "?");
 
 			gr_set_fontcolor(color, -1);
 
@@ -2988,31 +2992,32 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 			char primary[8];
 			switch (Players[pnum].primary_weapon) {
 			case 0:
-				sprintf(primary, "%s %i", (Players[pnum].flags & PLAYER_FLAGS_QUAD_LASERS) ? "QUAD" : "LASER", Players[pnum].laser_level + 1);
+				snprintf(primary, sizeof(primary) / sizeof(primary[0]), "%s %i",
+					(Players[pnum].flags & PLAYER_FLAGS_QUAD_LASERS) ? "QUAD" : "LASER", Players[pnum].laser_level + 1);
 				break;
 			case 1:
-				sprintf(primary, "VUL");
+				snprintf(primary, sizeof(primary) / sizeof(primary[0]), "VUL");
 				break;
 			case 2:
-				sprintf(primary, "SPREAD");
+				snprintf(primary, sizeof(primary) / sizeof(primary[0]), "SPREAD");
 				break;
 			case 3:
-				sprintf(primary, "PLASMA");
+				snprintf(primary, sizeof(primary) / sizeof(primary[0]), "PLASMA");
 				break;
 			case 4:
-				sprintf(primary, "FUSION");
+				snprintf(primary, sizeof(primary) / sizeof(primary[0]), "FUSION");
 				break;
 			case 6:
-				sprintf(primary, "GAU");
+				snprintf(primary, sizeof(primary) / sizeof(primary[0]), "GAU");
 				break;
 			case 7:
-				sprintf(primary, "HELIX");
+				snprintf(primary, sizeof(primary) / sizeof(primary[0]), "HELIX");
 				break;
 			case 8:
-				sprintf(primary, "PHOENIX");
+				snprintf(primary, sizeof(primary) / sizeof(primary[0]), "PHOENIX");
 				break;
 			case 9:
-				sprintf(primary, "OMEGA");
+				snprintf(primary, sizeof(primary) / sizeof(primary[0]), "OMEGA");
 				break;
 			}
 
@@ -3032,7 +3037,7 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 			// Energy for everything else
 			else {
 				gr_set_fontcolor(BM_XRGB(25, 18, 6), -1);
-				sprintf(primary_ammo, "%i", (int)energy);
+				snprintf(primary_ammo, sizeof(primary_ammo) / sizeof(primary_ammo[0]), "%i", (int)energy);
 			}
 
 			gr_get_string_size(primary_ammo, &sw, &sh, &saw);
@@ -3046,34 +3051,34 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 			char secondary[7];
 			switch (Players[pnum].secondary_weapon) {
 			case 0:
-				sprintf(secondary, "CONC");
+				snprintf(secondary, sizeof(secondary) / sizeof(secondary[0]), "CONC");
 				break;
 			case 1:
-				sprintf(secondary, "HOMING");
+				snprintf(secondary, sizeof(secondary) / sizeof(secondary[0]), "HOMING");
 				break;
 			case 2:
-				sprintf(secondary, "PROX");
+				snprintf(secondary, sizeof(secondary) / sizeof(secondary[0]), "PROX");
 				break;
 			case 3:
-				sprintf(secondary, "SMART");
+				snprintf(secondary, sizeof(secondary) / sizeof(secondary[0]), "SMART");
 				break;
 			case 4:
-				sprintf(secondary, "MEGA");
+				snprintf(secondary, sizeof(secondary) / sizeof(secondary[0]), "MEGA");
 				break;
 			case 5:
-				sprintf(secondary, "FLASH");
+				snprintf(secondary, sizeof(secondary) / sizeof(secondary[0]), "FLASH");
 				break;
 			case 6:
-				sprintf(secondary, "GUIDED");
+				snprintf(secondary, sizeof(secondary) / sizeof(secondary[0]), "GUIDED");
 				break;
 			case 7:
-				sprintf(secondary, "SMINE");
+				snprintf(secondary, sizeof(secondary) / sizeof(secondary[0]), "SMINE");
 				break;
 			case 8:
-				sprintf(secondary, "MERC");
+				snprintf(secondary, sizeof(secondary) / sizeof(secondary[0]), "MERC");
 				break;
 			case 9:
-				sprintf(secondary, "SHAKER");
+				snprintf(secondary, sizeof(secondary) / sizeof(secondary[0]), "SHAKER");
 				break;
 			}
 
@@ -3084,7 +3089,8 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 
 			// Secondary ammo
 			char secondary_ammo[3];
-			sprintf(secondary_ammo, "%i", Players[pnum].secondary_ammo[Players[pnum].secondary_weapon]);
+			snprintf(secondary_ammo, sizeof(secondary_ammo) / sizeof(secondary_ammo[0]), "%i",
+				Players[pnum].secondary_ammo[Players[pnum].secondary_weapon]);
 
 			gr_get_string_size(secondary_ammo, &sw, &sh, &saw);
 			gr_printf(x + OBS_PLAYER_CARD_WIDTH - 1 - sw, y, secondary_ammo);
@@ -3119,8 +3125,7 @@ int observer_draw_player_card_in_slot(int pnum, int slot_num, int team_mode, int
 	int color;
 	if (Players[pnum].connected != CONNECT_PLAYING) {
 		color = BM_XRGB(12, 12, 12);
-	}
-	else {
+	} else {
 		int color_for_player = get_color_for_player(pnum, 0);
 		color = BM_XRGB(selected_player_rgb[color_for_player].r, selected_player_rgb[color_for_player].g, selected_player_rgb[color_for_player].b);
 	}
@@ -3130,17 +3135,13 @@ int observer_draw_player_card_in_slot(int pnum, int slot_num, int team_mode, int
 	if (grd_curcanv->cv_bitmap.bm_w < 2 * OBS_PLAYER_CARD_WIDTH_PADDED + OBS_TIME_WIDTH) {
 		num_columns = 2;
 		draw_below_time_text = 1;
-	}
-	else if (grd_curcanv->cv_bitmap.bm_w < 4 * OBS_PLAYER_CARD_WIDTH_PADDED + OBS_TIME_WIDTH) {
+	} else if (grd_curcanv->cv_bitmap.bm_w < 4 * OBS_PLAYER_CARD_WIDTH_PADDED + OBS_TIME_WIDTH) {
 		num_columns = 2;
-	}
-	else if (grd_curcanv->cv_bitmap.bm_w < 6 * OBS_PLAYER_CARD_WIDTH_PADDED + OBS_TIME_WIDTH) {
+	} else if (grd_curcanv->cv_bitmap.bm_w < 6 * OBS_PLAYER_CARD_WIDTH_PADDED + OBS_TIME_WIDTH) {
 		num_columns = 4;
-	}
-	else if (grd_curcanv->cv_bitmap.bm_w < 8 * OBS_PLAYER_CARD_WIDTH_PADDED + OBS_TIME_WIDTH) {
+	} else if (grd_curcanv->cv_bitmap.bm_w < 8 * OBS_PLAYER_CARD_WIDTH_PADDED + OBS_TIME_WIDTH) {
 		num_columns = 6;
-	}
-	else {
+	} else {
 		num_columns = 8;
 	}
 	int ideal_num_columns = team_mode ? (num_drawn_players * 2) : (num_drawn_players + 1) & ~1;
@@ -3148,15 +3149,12 @@ int observer_draw_player_card_in_slot(int pnum, int slot_num, int team_mode, int
 		num_columns = ideal_num_columns;
 
 	int column_num, row_num;
-	if (team_mode)
-	{
+	if (team_mode) {
 		column_num = (abs(slot_num) - 1) % (num_columns / 2);
 		if (slot_num > 0)
 			column_num += num_columns / 2;
 		row_num = (abs(slot_num) - 1) / (num_columns / 2);
-	}
-	else
-	{
+	} else {
 		column_num = slot_num % num_columns;
 		row_num = slot_num / num_columns;
 	}
@@ -3164,10 +3162,13 @@ int observer_draw_player_card_in_slot(int pnum, int slot_num, int team_mode, int
 	int x = (grd_curcanv->cv_bitmap.bm_w - num_columns * OBS_PLAYER_CARD_WIDTH_PADDED) / 2
 		+ OBS_PLAYER_CARD_WIDTH_PADDED * column_num + OBS_PLAYER_CARD_PADDING;
 	int y = obs_player_card_height * row_num;
-	if (draw_below_time_text)
-		y += 53;
-	else
+	if (draw_below_time_text) {
+		// Temporarily switch to time font for measurement
+		gr_set_curfont(MEDIUM3_FONT);
+		y += LINE_SPACING;
+	} else {
 		x += OBS_TIME_WIDTH * (2 * column_num / num_columns) - (OBS_TIME_WIDTH / 2);
+	}
 
 	obs_player_card_height = observer_draw_player_card(pnum, color, x, y);
 
@@ -3189,8 +3190,7 @@ int observer_show_player_cards() {
 		int team_position_blue = 0;
 		int team_position_red = 0;
 
-		for (int i = 0; i < n_players; i++)
-		{
+		for (int i = 0; i < n_players; i++) {
 			int pnum = player_list[i];
 
 			if (Netgame.host_is_obs && pnum == 0)
@@ -3204,8 +3204,7 @@ int observer_show_player_cards() {
 			if (card_max_y > player_cards_max_y)
 				player_cards_max_y = card_max_y;
 		}
-	}
-	else {
+	} else {
 		int pnum;
 		int drawn_players = n_players - (Netgame.host_is_obs ? 1 : 0);
 		bool found_host_as_obs = 0;
@@ -3420,11 +3419,11 @@ void observer_maybe_show_kill_graph() {
 			gridminy = grd_curcanv->cv_bitmap.bm_h - 10 - FSPACY(6);
 			gridmaxy = grd_curcanv->cv_bitmap.bm_h - 200;
 
-			sprintf(score, "%i", minscore);
+			snprintf(score, sizeof(score) / sizeof(score[0]), "%i", minscore);
 			gr_get_string_size(score, &sw, &sh, &aw);
 			gridminx = (grd_curcanv->cv_bitmap.bm_w - 1000) / 2 + 5 + sw;
 
-			sprintf(score, "%i", maxscore);
+			snprintf(score, sizeof(score) / sizeof(score[0]), "%i", maxscore);
 			gr_get_string_size(score, &sw, &sh, &aw);
 			gridminx2 = (grd_curcanv->cv_bitmap.bm_w - 1000) / 2 + 5 + sw;
 
@@ -3436,7 +3435,7 @@ void observer_maybe_show_kill_graph() {
 
 			for (int i = trunc((float)minscore / (float)scorescale); i <= maxscore; i += scorescale) {
 				y = gridminy - (int)((float)(gridminy - gridmaxy) * (((float)(i - minscore)) / (float)(maxscore - minscore)));
-				sprintf(score, "%i", i);
+				snprintf(score, sizeof(score) / sizeof(score[0]), "%i", i);
 				gr_get_string_size(score, &sw, &sh, &aw);
 				gr_set_fontcolor(BM_XRGB(31, 31, 31), -1);
 				gr_printf(gridminx - sw, y - sh / 2, "%s", score);
@@ -3447,7 +3446,7 @@ void observer_maybe_show_kill_graph() {
 			for (int i = 0; i2f(i) < GameTime64; i += timescale * 60) {
 				x = gridminx + (int)((float)(gridmaxx - gridminx) * (((float)i2f(i)) / (float)(GameTime64)));
 				if (i > 0) {
-					sprintf(time, "%i", i / 60);
+					snprintf(time, sizeof(time) / sizeof(time[0]), "%i", i / 60);
 					gr_get_string_size(time, &sw, &sh, &aw);
 					gr_set_fontcolor(BM_XRGB(31, 31, 31), -1);
 					gr_printf(x - sw / 2, gridminy + 1, "%s", time);
@@ -3462,8 +3461,7 @@ void observer_maybe_show_kill_graph() {
 					if (Game_mode & GM_TEAM) {
 						color = get_color_for_team(pnum, 0);
 						gr_setcolor(BM_XRGB(selected_player_rgb[color].r, selected_player_rgb[color].g, selected_player_rgb[color].b));
-					}
-					else {
+					} else {
 						color = get_color_for_player(pnum, 0);
 						gr_setcolor(BM_XRGB(selected_player_rgb[color].r, selected_player_rgb[color].g, selected_player_rgb[color].b));
 					}
@@ -3497,22 +3495,24 @@ void observer_maybe_show_kill_graph() {
 #endif
 	} else if (PlayerCfg.ObsShowBreakdown && GameTime64 < Show_graph_until + (PlayerCfg.ObsShowKillGraph ? i2f(15) : 0)) {
 		int drawn_players = n_players - (Netgame.host_is_obs ? 1 : 0);
-		int y = grd_curcanv->cv_bitmap.bm_h - 60;
+		int y = GHEIGHT - (LINE_SPACING * 2); // Make space for the demo indicator
 		int x;
+		int sw, sh, aw;
 		int color;
 		int pnum;
 		char reason[20];
+		char damage_info_text[40];
 
 		if (drawn_players <= 2) {
 			// Show top 3 damage done sources per pilot.
-			y -= (27 * 5);
+			y -= (LINE_SPACING * 5);
 
 			gr_set_fontcolor(BM_XRGB(0, 31, 0), -1);
 			gr_string(0x8000, y, "Top Damaging Weapons");
 
-			y += 27;
+			y += LINE_SPACING;
 
-			x = grd_curcanv->cv_bitmap.bm_w / 2 - 400;
+			x = (GWIDTH / 2) - FSPACX(60);
 
 			for (int i = 0; i < n_players; i++) {
 				int this_y = y;
@@ -3531,9 +3531,10 @@ void observer_maybe_show_kill_graph() {
 				}
 
 				gr_set_fontcolor(color, -1);
-				gr_printf(x, this_y, "%s", Players[pnum].callsign);
+				gr_get_string_size(Players[pnum].callsign, &sw, &sh, &aw);
+				gr_string(x - (sw / 2), this_y, Players[pnum].callsign);
 
-				this_y += 27;
+				this_y += LINE_SPACING;
 
 				if (First_damage_done_totals[pnum] != NULL) {
 					int j = 0;
@@ -3542,41 +3543,48 @@ void observer_maybe_show_kill_graph() {
 					while (j < 3 && ddt != NULL) {
 						switch (ddt->source_id) {
 							case SHIP_EXPLOSION_DAMAGE:
-								sprintf(reason, "Explosion");
+								snprintf(reason, sizeof(reason) / sizeof(reason[0]), "Explosion");
 								break;
 							case SHIP_COLLISION_DAMAGE:
-								sprintf(reason, "Ramming");
+								snprintf(reason, sizeof(reason) / sizeof(reason[0]), "Ramming");
 								break;
 							default:
-								sprintf(reason, "%s", weapon_id_to_name(ddt->source_id));
+								snprintf(reason, sizeof(reason) / sizeof(reason[0]), "%s",
+									weapon_id_to_name(ddt->source_id));
 								break;
 						}
 
-						gr_printf(x, this_y, "%s: %0.1f", reason, f2fl(ddt->total_damage));
-						this_y += 27;
+						// Center each column
+						snprintf(damage_info_text, sizeof(damage_info_text) / sizeof(damage_info_text[0]), "%s: %0.1f",
+							reason, f2fl(ddt->total_damage));
+						gr_get_string_size(damage_info_text, &sw, &sh, &aw);
+						gr_string(x - (sw / 2), this_y, damage_info_text);
+
+						this_y += LINE_SPACING;
 
 						j++;
 						ddt = ddt->next;
 					}
 				} else {
-					gr_string(x, this_y, "No Damage");
+					snprintf(damage_info_text, sizeof(damage_info_text) / sizeof(damage_info_text[0]), "No Damage");
+					gr_get_string_size(damage_info_text, &sw, &sh, &aw);
+					gr_string(x - (sw / 2), this_y, damage_info_text);
 				}
 
-				x += 405;
+				x += FSPACX(120);
 			}
 		} else {
 			// Show top 1 damage done source per pilot.
-			y -= (27 * 5);
+			y -= (LINE_SPACING * 5);
 
 			gr_set_fontcolor(BM_XRGB(0, 31, 0), -1);
 			gr_string(0x8000, y, "Top Damaging Weapon");
 
-			y += 27;
-
-			x = grd_curcanv->cv_bitmap.bm_w / 2 - 500;
+			y += LINE_SPACING;
 
 			int this_y = y;
 			int n_drawn = 0;
+			int column_num = 0;
 
 			for (int i = 0; i < n_players; i++) {
 				pnum = player_list[i];
@@ -3598,29 +3606,42 @@ void observer_maybe_show_kill_graph() {
 
 					switch (ddt->source_id) {
 						case SHIP_EXPLOSION_DAMAGE:
-							sprintf(reason, "Explosion");
+							snprintf(reason, sizeof(reason) / sizeof(reason[0]), "Explosion");
 							break;
 						case SHIP_COLLISION_DAMAGE:
-							sprintf(reason, "Ramming");
+							snprintf(reason, sizeof(reason) / sizeof(reason[0]), "Ramming");
 							break;
 						default:
-							sprintf(reason, "%s", weapon_id_to_name(ddt->source_id));
+							snprintf(reason, sizeof(reason) / sizeof(reason[0]), "%s",
+								weapon_id_to_name(ddt->source_id));
 							break;
 					}
 
-					gr_printf(x, this_y, "%s's %s: %0.1f", Players[pnum].callsign, reason, f2fl(ddt->total_damage));
+					snprintf(damage_info_text, sizeof(damage_info_text) / sizeof(damage_info_text[0]), "%s's %s: %0.1f",
+						Players[pnum].callsign, reason, f2fl(ddt->total_damage));
 				} else {
-					gr_printf(x, this_y, "%s: No Damage", Players[pnum].callsign);
+					snprintf(damage_info_text, sizeof(damage_info_text) / sizeof(damage_info_text[0]), "%s: No Damage",
+						Players[pnum].callsign);
 				}
+
+				if (column_num == 0) {
+					// First column is right-aligned
+					gr_get_string_size(damage_info_text, &sw, &sh, &aw);
+					x = (GWIDTH / 2) - FSPACX(5) - sw;
+				} else {
+					// Second column is left-aligned
+					x = (GWIDTH / 2) + FSPACX(5);
+				}
+
+				gr_string(x, this_y, damage_info_text);
 
 				n_drawn++;
 
-				if (n_drawn >= drawn_players / 2) {
-					n_drawn = 0 - MAX_PLAYERS;
-					x += 505;
+				if (n_drawn > drawn_players / 2 && column_num == 0) {
+					column_num = 1;
 					this_y = y;
 				} else {
-					this_y += 27;
+					this_y += LINE_SPACING;
 				}
 			}
 		}
@@ -3717,40 +3738,40 @@ int observer_maybe_show_streaks(int startY) {
 		if (((is_anarchy || is_team_anarchy) && Kill_streak[pnum] >= 3) || (is_bounty && pnum == Bounty_target)) {
 			status.type = GST_KILL_STREAK;
 			if (is_bounty) {
-				sprintf(status.text, "Bounty Kill Streak: %i", Kill_streak[pnum]);
-			}
-			else {
-				sprintf(status.text, "Kill Streak: %i", Kill_streak[pnum]);
+				snprintf(status.text, sizeof(status.text) / sizeof(status.text[0]), "Bounty Kill Streak: %i",
+					Kill_streak[pnum]);
+			} else {
+				snprintf(status.text, sizeof(status.text) / sizeof(status.text[0]), "Kill Streak: %i",
+					Kill_streak[pnum]);
 			}
 			add_player_status(pnum, status);
 			remove_player_status(pnum, GST_LAST_KILL);
 			remove_player_status(pnum, GST_LAST_DEATH);
-		}
-		else if ((is_anarchy || is_team_anarchy) && Last_kill[pnum] != NULL && ((diff = GameTime64 - Last_kill[pnum]->timestamp) >= i2f(60))) {
+		} else if ((is_anarchy || is_team_anarchy) && Last_kill[pnum] != NULL && ((diff = GameTime64 - Last_kill[pnum]->timestamp) >= i2f(60))) {
 			status.type = GST_LAST_KILL;
 			if (diff >= i2f(3600)) {
-				sprintf(status.text, "Last Kill: %i:%02i:%02i", (int)(diff / i2f(3600)), (int)(diff / i2f(60)) % 60, (int)(diff / i2f(1)) % 60);
-			}
-			else {
-				sprintf(status.text, "Last Kill: %02i:%02i", (int)(diff / i2f(60)) % 60, (int)(diff / i2f(1)) % 60);
+				snprintf(status.text, sizeof(status.text) / sizeof(status.text[0]), "Last Kill: %i:%02i:%02i",
+					(int)(diff / i2f(3600)), (int)(diff / i2f(60)) % 60, (int)(diff / i2f(1)) % 60);
+			} else {
+				snprintf(status.text, sizeof(status.text) / sizeof(status.text[0]), "Last Kill: %02i:%02i",
+					(int)(diff / i2f(60)) % 60, (int)(diff / i2f(1)) % 60);
 			}
 			add_player_status(pnum, status);
 			remove_player_status(pnum, GST_KILL_STREAK);
 			remove_player_status(pnum, GST_LAST_DEATH);
-		}
-		else if (n_players > 2 + (Netgame.host_is_obs ? 1 : 0) && Last_death[pnum] != NULL && ((diff = GameTime64 - Last_death[pnum]->timestamp) >= i2f(60))) {
+		} else if (n_players > 2 + (Netgame.host_is_obs ? 1 : 0) && Last_death[pnum] != NULL && ((diff = GameTime64 - Last_death[pnum]->timestamp) >= i2f(60))) {
 			status.type = GST_LAST_DEATH;
 			if (diff >= i2f(3600)) {
-				sprintf(status.text, "Last Death: %i:%02i:%02i", (int)(diff / i2f(3600)), (int)(diff / i2f(60)) % 60, (int)(diff / i2f(1)) % 60);
-			}
-			else {
-				sprintf(status.text, "Last Death: %02i:%02i", (int)(diff / i2f(60)) % 60, (int)(diff / i2f(1)) % 60);
+				snprintf(status.text, sizeof(status.text) / sizeof(status.text[0]), "Last Death: %i:%02i:%02i",
+					(int)(diff / i2f(3600)), (int)(diff / i2f(60)) % 60, (int)(diff / i2f(1)) % 60);
+			} else {
+				snprintf(status.text, sizeof(status.text) / sizeof(status.text[0]), "Last Death: %02i:%02i",
+					(int)(diff / i2f(60)) % 60, (int)(diff / i2f(1)) % 60);
 			}
 			add_player_status(pnum, status);
 			remove_player_status(pnum, GST_KILL_STREAK);
 			remove_player_status(pnum, GST_LAST_KILL);
-		}
-		else {
+		} else {
 			remove_player_status(pnum, GST_KILL_STREAK);
 			remove_player_status(pnum, GST_LAST_KILL);
 			remove_player_status(pnum, GST_LAST_DEATH);
@@ -3784,16 +3805,13 @@ int observer_maybe_show_streaks(int startY) {
 						// Both players have a previous event, figure out whose is later.
 						if (ev->prev->timestamp > opp_ev->prev->timestamp) {
 							ev = ev->prev;
-						}
-						else {
+						} else {
 							opp_ev = opp_ev->prev;
 						}
-					}
-					else if (ev->prev == NULL) {
+					} else if (ev->prev == NULL) {
 						// Only the opponent has a previous event.
 						opp_ev = opp_ev->prev;
-					}
-					else if (opp_ev->prev == NULL) {
+					} else if (opp_ev->prev == NULL) {
 						// Only the player has a previous event.
 						ev = ev->prev;
 					}
@@ -3816,18 +3834,19 @@ int observer_maybe_show_streaks(int startY) {
 
 					status.type = GST_RUN;
 					if (diff >= i2f(3600)) {
-						sprintf(status.text, "Run: %i-%i in %i:%02i:%02i", initial_score - last_ev->score, initial_opp_score - last_opp_ev->score, (int)(diff / i2f(3600)), (int)(diff / i2f(60)) % 60, (int)(diff / i2f(1)) % 60);
-					}
-					else {
-						sprintf(status.text, "Run: %i-%i in %02i:%02i", initial_score - last_ev->score, initial_opp_score - last_opp_ev->score, (int)(diff / i2f(60)) % 60, (int)(diff / i2f(1)) % 60);
+						snprintf(status.text, sizeof(status.text) / sizeof(status.text[0]), "Run: %i-%i in %i:%02i:%02i",
+							initial_score - last_ev->score, initial_opp_score - last_opp_ev->score,
+							(int)(diff / i2f(3600)), (int)(diff / i2f(60)) % 60, (int)(diff / i2f(1)) % 60);
+					} else {
+						snprintf(status.text, sizeof(status.text) / sizeof(status.text[0]), "Run: %i-%i in %02i:%02i",
+							initial_score - last_ev->score, initial_opp_score - last_opp_ev->score,
+							(int)(diff / i2f(60)) % 60, (int)(diff / i2f(1)) % 60);
 					}
 					add_player_status(pnum, status);
-				}
-				else {
+				} else {
 					remove_player_status(pnum, GST_RUN);
 				}
-			}
-			else {
+			} else {
 				remove_player_status(pnum, GST_RUN);
 			}
 		}
@@ -3843,12 +3862,12 @@ int observer_maybe_show_streaks(int startY) {
 	int color;
 
 	while (p_status != NULL) {
-		height += 27;
+		height += LINE_SPACING;
 
 		g_status = p_status->statuses;
 
 		while (g_status != NULL) {
-			height += 27;
+			height += LINE_SPACING;
 
 			g_status = g_status->next;
 		}
@@ -3885,7 +3904,7 @@ int observer_maybe_show_streaks(int startY) {
 		x = grd_curcanv->cv_bitmap.bm_w - w - 5;
 
 		gr_printf(x, y, "%s", Players[pnum].callsign);
-		y += 27;
+		y += LINE_SPACING;
 
 		color = get_color_for_player(pnum, 1);
 		gr_set_fontcolor(BM_XRGB(selected_player_rgb[color].r, selected_player_rgb[color].g, selected_player_rgb[color].b), -1);
@@ -3897,7 +3916,7 @@ int observer_maybe_show_streaks(int startY) {
 			x = grd_curcanv->cv_bitmap.bm_w - w - 5;
 
 			gr_printf(x, y, "%s", g_status->text);
-			y += 27;
+			y += LINE_SPACING;
 
 			g_status = g_status->next;
 		}
@@ -3929,7 +3948,8 @@ void observer_maybe_show_death_log(int y) {
 	gr_set_curfont(GAME_FONT);
 
 	while (kle != NULL && GameTime64 - kle->timestamp < i2f(5)) {
-		sprintf(killed, "%s", Players[kle->killed_id].callsign);
+		snprintf(killed, sizeof(killed) / sizeof(killed[0]), "%s",
+			Players[kle->killed_id].callsign);
 
 		color = get_color_for_player(kle->killed_id, 0);
 		killed_color = BM_XRGB(selected_player_rgb[color].r, selected_player_rgb[color].g, selected_player_rgb[color].b);
@@ -3937,21 +3957,21 @@ void observer_maybe_show_death_log(int y) {
 		switch (kle->killer_type) {
 		case OBJ_WALL:
 			// You can't die to a wall, but you can die to lava which is considered a wall.
-			sprintf(killer, "Lava");
+			snprintf(killer, sizeof(killer) / sizeof(killer[0]), "Lava");
 			killer_color = BM_XRGB(12, 12, 12);
 			reason[0] = '\0';
 			break;
 		case OBJ_ROBOT:
-			sprintf(killer, "Robot");
+			snprintf(killer, sizeof(killer) / sizeof(killer[0]), "Robot");
 			killer_color = BM_XRGB(12, 12, 12);
 			reason[0] = '\0';
 			break;
 		case OBJ_PLAYER:
 			if (kle->killer_id == kle->killed_id) {
 				killer[0] = '\0';
-			}
-			else {
-				sprintf(killer, "%s", Players[kle->killer_id].callsign);
+			} else {
+				snprintf(killer, sizeof(killer) / sizeof(killer[0]), "%s",
+					Players[kle->killer_id].callsign);
 				color = get_color_for_player(kle->killer_id, 0);
 				killer_color = BM_XRGB(selected_player_rgb[color].r, selected_player_rgb[color].g, selected_player_rgb[color].b);
 			}
@@ -3960,25 +3980,25 @@ void observer_maybe_show_death_log(int y) {
 			case DAMAGE_WEAPON:
 			case DAMAGE_BLAST:
 				if (kle->source_id == SHIP_EXPLOSION_DAMAGE) {
-					sprintf(reason, "Explosion");
-				}
-				else {
-					sprintf(reason, "%s", weapon_id_to_name(kle->source_id));
+					snprintf(reason, sizeof(reason) / sizeof(reason[0]), "Explosion");
+				} else {
+					snprintf(reason, sizeof(reason) / sizeof(reason[0]), "%s",
+						weapon_id_to_name(kle->source_id));
 				}
 				break;
 			case DAMAGE_COLLISION:
-				sprintf(reason, "Ramming");
+				snprintf(reason, sizeof(reason) / sizeof(reason[0]), "Ramming");
 				break;
 			case DAMAGE_LAVA:
-				sprintf(reason, "Lava");
+				snprintf(reason, sizeof(reason) / sizeof(reason[0]), "Lava");
 				break;
 			case DAMAGE_OVERCHARGE:
-				sprintf(reason, "Overcharge");
+				snprintf(reason, sizeof(reason) / sizeof(reason[0]), "Overcharge");
 				break;
 			}
 			break;
 		case OBJ_CNTRLCEN:
-			sprintf(killer, "Reactor");
+			snprintf(killer, sizeof(killer) / sizeof(killer[0]), "Reactor");
 			killer_color = BM_XRGB(12, 12, 12);
 			reason[0] = '\0';
 			break;
@@ -4019,7 +4039,7 @@ void observer_maybe_show_death_log(int y) {
 		}
 
 		kle = kle->next;
-		y += FSPACY(6);
+		y += LINE_SPACING;
 	}
 
 	if (PlayerCfg.ObsShowDeathSummary) {
@@ -4040,13 +4060,14 @@ void observer_maybe_show_death_log(int y) {
 			color = get_color_for_player(kle->killed_id, 0);
 			gr_set_fontcolor(BM_XRGB(selected_player_rgb[color].r, selected_player_rgb[color].g, selected_player_rgb[color].b), -1);
 
-			sprintf(damage_for, "Top damage for %s:", Players[kle->killed_id].callsign);
+			snprintf(damage_for, sizeof(damage_for) / sizeof(damage_for[0]), "Top damage for %s:",
+				Players[kle->killed_id].callsign);
 
 			x = grd_curcanv->cv_bitmap.bm_w - 5;
 			gr_get_string_size(damage_for, &sw, &sh, &aw);
 			x -= sw;
 			gr_printf(x, y, damage_for);
-			y += FSPACY(6);
+			y += LINE_SPACING;
 
 			dtt = First_damage_taken_previous_totals[kle->killed_id];
 			int i = 0;
@@ -4055,62 +4076,63 @@ void observer_maybe_show_death_log(int y) {
 				switch (dtt->killer_type) {
 				case OBJ_WALL:
 					if (dtt->damage_type == DAMAGE_LAVA) {
-						sprintf(killer, "Lava");
-					}
-					else {
-						sprintf(killer, "Wall");
+						snprintf(killer, sizeof(killer) / sizeof(killer[0]), "Lava");
+					} else {
+						snprintf(killer, sizeof(killer) / sizeof(killer[0]), "Wall");
 					}
 					reason[0] = '\0';
 					break;
 				case OBJ_ROBOT:
-					sprintf(killer, "Robot");
+					snprintf(killer, sizeof(killer) / sizeof(killer[0]), "Robot");
 					reason[0] = '\0';
 					break;
 				case OBJ_PLAYER:
-					sprintf(killer, "%s", Players[dtt->killer_id].callsign);
+					snprintf(killer, sizeof(killer) / sizeof(killer[0]), "%s",
+						Players[dtt->killer_id].callsign);
 
 					switch (dtt->damage_type) {
 					case DAMAGE_WEAPON:
 					case DAMAGE_BLAST:
 						if (dtt->source_id == SHIP_EXPLOSION_DAMAGE) {
-							sprintf(reason, "Explosion");
-						}
-						else {
-							sprintf(reason, "%s", weapon_id_to_name(dtt->source_id));
+							snprintf(reason, sizeof(reason) / sizeof(reason[0]), "Explosion");
+						} else {
+							snprintf(reason, sizeof(reason) / sizeof(reason[0]), "%s",
+								weapon_id_to_name(dtt->source_id));
 						}
 						break;
 					case DAMAGE_COLLISION:
-						sprintf(reason, "Ramming");
+						snprintf(reason, sizeof(reason) / sizeof(reason[0]), "Ramming");
 						break;
 					case DAMAGE_LAVA:
-						sprintf(reason, "Lava");
+						snprintf(reason, sizeof(reason) / sizeof(reason[0]), "Lava");
 						break;
 					case DAMAGE_OVERCHARGE:
-						sprintf(reason, "Overcharge");
+						snprintf(reason, sizeof(reason) / sizeof(reason[0]), "Overcharge");
 						break;
 					}
 					break;
 				case OBJ_CNTRLCEN:
-					sprintf(killer, "Reactor");
+					snprintf(killer, sizeof(killer) / sizeof(killer[0]), "Reactor");
 					reason[0] = '\0';
 					break;
 				}
 
 				if (killer[0] == '\0') {
-					sprintf(damage_for, "%s %0.1f", reason, f2fl(dtt->total_damage));
-				}
-				else if (reason[0] == '\0') {
-					sprintf(damage_for, "%s %0.1f", killer, f2fl(dtt->total_damage));
-				}
-				else {
-					sprintf(damage_for, "%s's %s %0.1f", killer, reason, f2fl(dtt->total_damage));
+					snprintf(damage_for, sizeof(damage_for) / sizeof(damage_for[0]), "%s %0.1f",
+						reason, f2fl(dtt->total_damage));
+				} else if (reason[0] == '\0') {
+					snprintf(damage_for, sizeof(damage_for) / sizeof(damage_for[0]), "%s %0.1f",
+						killer, f2fl(dtt->total_damage));
+				} else {
+					snprintf(damage_for, sizeof(damage_for) / sizeof(damage_for[0]), "%s's %s %0.1f",
+						killer, reason, f2fl(dtt->total_damage));
 				}
 
 				x = grd_curcanv->cv_bitmap.bm_w - 5;
 				gr_get_string_size(damage_for, &sw, &sh, &aw);
 				x -= sw;
 				gr_printf(x, y, damage_for);
-				y += FSPACY(6);
+				y += LINE_SPACING;
 
 				dtt = dtt->next;
 				i++;
