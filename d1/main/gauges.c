@@ -2802,20 +2802,104 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 	return y - starty + 3;
 }
 
+#define OBS_PLAYER_CARD_PADDING FSPACX(3)
+#define OBS_PLAYER_CARD_WIDTH_PADDED (OBS_PLAYER_CARD_WIDTH + 2 * OBS_PLAYER_CARD_PADDING)
+
+int observer_draw_player_card_in_slot(int pnum, int slot_num, int team_mode, int num_drawn_players)
+{
+	static int obs_player_card_height = 0;
+
+	int color;
+	if (Players[pnum].connected != CONNECT_PLAYING) {
+		color = BM_XRGB(12, 12, 12);
+	}
+	else {
+		int color_for_player = get_color_for_player(pnum, 0);
+		color = BM_XRGB(selected_player_rgb[color_for_player].r, selected_player_rgb[color_for_player].g, selected_player_rgb[color_for_player].b);
+	}
+
+	int num_columns;
+	int draw_below_time_text = 0;
+	if (grd_curcanv->cv_bitmap.bm_w < 2 * OBS_PLAYER_CARD_WIDTH_PADDED + OBS_TIME_WIDTH) {
+		num_columns = 2;
+		draw_below_time_text = 1;
+	}
+	else if (grd_curcanv->cv_bitmap.bm_w < 4 * OBS_PLAYER_CARD_WIDTH_PADDED + OBS_TIME_WIDTH) {
+		num_columns = 2;
+	}
+	else if (grd_curcanv->cv_bitmap.bm_w < 6 * OBS_PLAYER_CARD_WIDTH_PADDED + OBS_TIME_WIDTH) {
+		num_columns = 4;
+	}
+	else if (grd_curcanv->cv_bitmap.bm_w < 8 * OBS_PLAYER_CARD_WIDTH_PADDED + OBS_TIME_WIDTH) {
+		num_columns = 6;
+	}
+	else {
+		num_columns = 8;
+	}
+	int ideal_num_columns = team_mode ? (num_drawn_players * 2) : (num_drawn_players + 1) & ~1;
+	if (num_columns > ideal_num_columns)
+		num_columns = ideal_num_columns;
+
+	int column_num, row_num;
+	if (team_mode)
+	{
+		column_num = (abs(slot_num) - 1) % (num_columns / 2);
+		if (slot_num > 0)
+			column_num += num_columns / 2;
+		row_num = (abs(slot_num) - 1) / (num_columns / 2);
+	}
+	else
+	{
+		column_num = slot_num % num_columns;
+		row_num = slot_num / num_columns;
+	}
+
+	int x = (grd_curcanv->cv_bitmap.bm_w - num_columns * OBS_PLAYER_CARD_WIDTH_PADDED) / 2
+		+ OBS_PLAYER_CARD_WIDTH_PADDED * column_num + OBS_PLAYER_CARD_PADDING;
+	int y = obs_player_card_height * row_num;
+	if (draw_below_time_text)
+		y += 53;
+	else
+		x += OBS_TIME_WIDTH * (2 * column_num / num_columns) - (OBS_TIME_WIDTH / 2);
+
+	obs_player_card_height = observer_draw_player_card(pnum, color, x, y);
+
+	return y + obs_player_card_height;
+}
+
 int observer_show_player_cards() {
-    if(Netgame.BlackAndWhitePyros)
+	int player_cards_max_y = 0;
+
+	if (Netgame.BlackAndWhitePyros)
 		selected_player_rgb = player_rgb_alt;
 	else
 		selected_player_rgb = player_rgb;
 
 	if ((Game_mode & GM_MULTI) && (Game_mode & GM_TEAM)) {
 		// Show team one to the left, team two to the right when possible.
-		// TODO
-	} else {
+		int num_players_blue = get_team_size(TEAM_BLUE);
+		int num_players_red = get_team_size(TEAM_RED);
+		int team_position_blue = 0;
+		int team_position_red = 0;
+
+		for (int i = 0; i < n_players; i++)
+		{
+			int pnum = player_list[i];
+
+			if (Netgame.host_is_obs && pnum == 0)
+				continue;
+
+			int card_max_y;
+			if (get_team(pnum) == TEAM_BLUE)
+				card_max_y = observer_draw_player_card_in_slot(pnum, --team_position_blue, 1, num_players_blue);
+			else
+				card_max_y = observer_draw_player_card_in_slot(pnum, ++team_position_red, 1, num_players_red);
+			if (card_max_y > player_cards_max_y)
+				player_cards_max_y = card_max_y;
+		}
+	}
+	else {
 		int pnum;
-		int color;
-		int x, y = 0;
-		int obs_player_card_height = 0;
 		int drawn_players = n_players - (Netgame.host_is_obs ? 1 : 0);
 		bool found_host_as_obs = 0;
 
@@ -2828,54 +2912,15 @@ int observer_show_player_cards() {
 				continue;
 			}
 
-			if (Players[pnum].connected != CONNECT_PLAYING) {
-				color = BM_XRGB(12, 12, 12);
-			} else {
-				int color_for_player = get_color_for_player(pnum, 0);
-				color = BM_XRGB(selected_player_rgb[color_for_player].r, selected_player_rgb[color_for_player].g, selected_player_rgb[color_for_player].b);
-			}
-
 			int position = i - (found_host_as_obs ? 1 : 0);
 
-			if (grd_curcanv->cv_bitmap.bm_w < 2 * OBS_PLAYER_CARD_WIDTH + OBS_TIME_WIDTH) {
-				x = grd_curcanv->cv_bitmap.bm_w / 2 - OBS_PLAYER_CARD_WIDTH + OBS_PLAYER_CARD_WIDTH * (position % 2);
-				y = 53 + obs_player_card_height * (position / 2);
-			} else if (grd_curcanv->cv_bitmap.bm_w < 4 * OBS_PLAYER_CARD_WIDTH + OBS_TIME_WIDTH) {
-				x = grd_curcanv->cv_bitmap.bm_w / 2 - OBS_TIME_WIDTH / 2 - OBS_PLAYER_CARD_WIDTH + (OBS_PLAYER_CARD_WIDTH + OBS_TIME_WIDTH) * (position % 2);
-				y = 0 + obs_player_card_height * (position / 2);
-			} else if (grd_curcanv->cv_bitmap.bm_w < 6 * OBS_PLAYER_CARD_WIDTH + OBS_TIME_WIDTH) {
-				if (drawn_players < 3) {
-					position += 1;
-				}
-				x = grd_curcanv->cv_bitmap.bm_w / 2 - OBS_TIME_WIDTH / 2 - 2 * OBS_PLAYER_CARD_WIDTH + OBS_PLAYER_CARD_WIDTH * (position % 4) + OBS_TIME_WIDTH * ((position % 4) / 2);
-				y = 0 + obs_player_card_height * (position / 4);
-			} else if (grd_curcanv->cv_bitmap.bm_w < 8 * OBS_PLAYER_CARD_WIDTH + OBS_TIME_WIDTH) {
-				if (drawn_players < 3) {
-					position += 2;
-				} else if (drawn_players < 5) {
-					position += 1;
-				}
-				x = grd_curcanv->cv_bitmap.bm_w / 2 - OBS_TIME_WIDTH / 2 - 3 * OBS_PLAYER_CARD_WIDTH + OBS_PLAYER_CARD_WIDTH * (position % 6) + OBS_TIME_WIDTH * ((position % 6) / 3);
-				y = 0 + obs_player_card_height * (position / 6);
-			} else {
-				if (drawn_players < 3) {
-					position += 3;
-				} else if (drawn_players < 5) {
-					position += 2;
-				} else if (drawn_players < 7) {
-					position += 1;
-				}
-				x = grd_curcanv->cv_bitmap.bm_w / 2 - OBS_TIME_WIDTH / 2 - 4 * OBS_PLAYER_CARD_WIDTH + OBS_PLAYER_CARD_WIDTH * (position % 8) + OBS_TIME_WIDTH * ((position % 8) / 4);
-				y = 0 + obs_player_card_height * (position / 8);
-			}
-
-			obs_player_card_height = observer_draw_player_card(pnum, color, x, y);
+			int card_max_y = observer_draw_player_card_in_slot(pnum, position, 0, drawn_players);
+			if (card_max_y > player_cards_max_y)
+				player_cards_max_y = card_max_y;
 		}
-
-		return y + obs_player_card_height;
 	}
 
-	return 0;
+	return player_cards_max_y;
 }
 
 void observer_maybe_show_team_score() {

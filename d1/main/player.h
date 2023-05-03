@@ -58,6 +58,10 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 
 #define PLAYER_STRUCT_VERSION 	16		//increment this every time player struct changes
 
+// defines for teams
+#define TEAM_BLUE   0
+#define TEAM_RED    1
+
 //When this structure changes, increment the constant SAVE_FILE_VERSION
 //in playsave.c
 typedef struct player {

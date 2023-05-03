@@ -285,6 +285,7 @@ void multi_reset_stuff(void);
 void multi_send_data(unsigned char *buf, int len, int priority);
 void multi_send_obs_data(unsigned char *buf, int len);
 int get_team(int pnum);
+int get_team_size(int team_num);
 int multi_maybe_disable_friendly_fire(object *killer);
 void multi_initiate_save_game();
 void multi_initiate_restore_game();

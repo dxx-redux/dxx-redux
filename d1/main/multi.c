@@ -820,6 +820,19 @@ get_team(int pnum)
 		return 0;
 }
 
+int get_team_size(int team_num)
+{
+	int team_size = 0;
+	for (int i = 0; i < Netgame.max_numplayers; i++)
+	{
+		if (is_observer() && Netgame.host_is_obs && i == 0)
+			continue;
+		if (get_team(i) == team_num)
+			team_size++;
+	}
+	return team_size;
+}
+
 void
 multi_new_game(void)
 {
