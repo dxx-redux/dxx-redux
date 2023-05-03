@@ -3190,22 +3190,24 @@ void observer_maybe_show_kill_graph() {
 #endif
 	} else if (PlayerCfg.ObsShowBreakdown && GameTime64 < Show_graph_until + (PlayerCfg.ObsShowKillGraph ? i2f(15) : 0)) {
         int drawn_players = n_players - (Netgame.host_is_obs ? 1 : 0);
-    	int y = grd_curcanv->cv_bitmap.bm_h - 60;
+		int y = GHEIGHT - (LINE_SPACING * 2); // Make space for the demo indicator
         int x;
+		int sw, sh, aw;
         int color;
         int pnum;
     	char reason[20];
+		char damage_info_text[40];
 
         if (drawn_players <= 2) {
             // Show top 3 damage done sources per pilot.
-            y -= (27 * 5);
+			y -= (LINE_SPACING * 5);
 
             gr_set_fontcolor(BM_XRGB(0, 31, 0), -1);
 			gr_string(0x8000, y, "Top Damaging Weapons");
 
-            y += 27;
+			y += LINE_SPACING;
 
-            x = grd_curcanv->cv_bitmap.bm_w / 2 - 400;
+			x = (GWIDTH / 2) - FSPACX(60);
 
             for (int i = 0; i < n_players; i++) {
                 int this_y = y;
@@ -3224,9 +3226,10 @@ void observer_maybe_show_kill_graph() {
                 }
 
                 gr_set_fontcolor(color, -1);
-                gr_printf(x, this_y, "%s", Players[pnum].callsign);
+				gr_get_string_size(Players[pnum].callsign, &sw, &sh, &aw);
+				gr_string(x - (sw / 2), this_y, Players[pnum].callsign);
 
-                this_y += 27;
+				this_y += LINE_SPACING;
 
                 if (First_damage_done_totals[pnum] != NULL) {
                     int j = 0;
@@ -3245,31 +3248,36 @@ void observer_maybe_show_kill_graph() {
                                 break;
                         }
 
-                        gr_printf(x, this_y, "%s: %0.1f", reason, f2fl(ddt->total_damage));
-                        this_y += 27;
+						// Center each column
+						sprintf(damage_info_text, "%s: %0.1f", reason, f2fl(ddt->total_damage));
+						gr_get_string_size(damage_info_text, &sw, &sh, &aw);
+						gr_string(x - (sw / 2), this_y, damage_info_text);
+
+						this_y += LINE_SPACING;
 
                         j++;
                         ddt = ddt->next;
                     }
                 } else {
-                    gr_string(x, this_y, "No Damage");
+					sprintf(damage_info_text, "No Damage");
+					gr_get_string_size(damage_info_text, &sw, &sh, &aw);
+					gr_string(x - (sw / 2), this_y, damage_info_text);
                 }
 
-                x += 405;
+				x += FSPACX(120);
             }
         } else {
             // Show top 1 damage done source per pilot.
-            y -= (27 * 5);
+			y -= (LINE_SPACING * 5);
 
             gr_set_fontcolor(BM_XRGB(0, 31, 0), -1);
 			gr_string(0x8000, y, "Top Damaging Weapon");
 
             y += 27;
 
-            x = grd_curcanv->cv_bitmap.bm_w / 2 - 500;
-
             int this_y = y;
             int n_drawn = 0;
+			int column_num = 0;
 
             for (int i = 0; i < n_players; i++) {
                 pnum = player_list[i];
@@ -3301,20 +3309,33 @@ void observer_maybe_show_kill_graph() {
                             break;
                     }
 
-                    gr_printf(x, this_y, "%s's %s: %0.1f", Players[pnum].callsign, reason, f2fl(ddt->total_damage));
+					sprintf(damage_info_text, "%s's %s: %0.1f", Players[pnum].callsign, reason, f2fl(ddt->total_damage));
                 } else {
-                    gr_printf(x, this_y, "%s: No Damage", Players[pnum].callsign);
+					sprintf(damage_info_text, "%s: No Damage", Players[pnum].callsign);
                 }
+
+				if (column_num == 0)
+				{
+					// First column is right-aligned
+					gr_get_string_size(damage_info_text, &sw, &sh, &aw);
+					x = (GWIDTH / 2) - FSPACX(5) - sw;
+				}
+				else
+				{
+					// Second column is left-aligned
+					x = (GWIDTH / 2) + FSPACX(5);
+				}
+
+				gr_string(x, this_y, damage_info_text);
 
                 n_drawn++;
 
-                if (n_drawn >= drawn_players / 2) {
-                    n_drawn = 0 - MAX_PLAYERS;
-                    x += 505;
-                    this_y = y;
-                } else {
-                    this_y += 27;
-                }
+				if (n_drawn > drawn_players / 2 && column_num == 0) {
+					column_num = 1;
+					this_y = y;
+				} else {
+					this_y += LINE_SPACING;
+				}
             }
         }
     }
@@ -3524,12 +3545,12 @@ int observer_maybe_show_streaks(int startY) {
 	int color;
 
 	while (p_status != NULL) {
-		height += 27;
+		height += LINE_SPACING;
 
 		g_status = p_status->statuses;
 
 		while (g_status != NULL) {
-			height += 27;
+			height += LINE_SPACING;
 
 			g_status = g_status->next;
 		}
@@ -3566,7 +3587,7 @@ int observer_maybe_show_streaks(int startY) {
 		x = grd_curcanv->cv_bitmap.bm_w - w - 5;
 
 		gr_printf(x, y, "%s", Players[pnum].callsign);
-		y += 27;
+		y += LINE_SPACING;
 
 		color = get_color_for_player(pnum, 1);
 		gr_set_fontcolor(BM_XRGB(selected_player_rgb[color].r,selected_player_rgb[color].g,selected_player_rgb[color].b), -1);
@@ -3578,7 +3599,7 @@ int observer_maybe_show_streaks(int startY) {
 			x = grd_curcanv->cv_bitmap.bm_w - w - 5;
 
 			gr_printf(x, y, "%s", g_status->text);
-			y += 27;
+			y += LINE_SPACING;
 
 			g_status = g_status->next;
 		}
@@ -3698,7 +3719,7 @@ void observer_maybe_show_death_log(int y) {
 		}
 
 		kle = kle->next;
-		y += FSPACY(6);
+		y += LINE_SPACING;
 	}
     
     if (PlayerCfg.ObsShowDeathSummary) {
@@ -3725,7 +3746,7 @@ void observer_maybe_show_death_log(int y) {
             gr_get_string_size(damage_for, &sw, &sh, &aw);
             x -= sw;
             gr_printf(x, y, damage_for);
-            y += FSPACY(6);
+            y += LINE_SPACING;
 
             dtt = First_damage_taken_previous_totals[kle->killed_id];
             int i = 0;
@@ -3785,7 +3806,7 @@ void observer_maybe_show_death_log(int y) {
                 gr_get_string_size(damage_for, &sw, &sh, &aw);
                 x -= sw;
                 gr_printf(x, y, damage_for);
-                y += FSPACY(6);
+                y += LINE_SPACING;
 
                 dtt = dtt->next;
                 i++;
