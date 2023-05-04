@@ -295,6 +295,11 @@ int xmodel_show_if_loaded(int modelnum, vms_vector *pos, vms_matrix *orient, int
 	int xmodelnum = xmodel_xlate[modelnum];
 	if (xmodelnum == -1 || !xmodels[xmodelnum])
 		return 0;
-	xmodel_show_at(xmodels[xmodelnum], pos, orient, mpcolor, light);
+	xmodel_show_at(xmodels[xmodelnum], pos, orient, xmodelnum == model_pyrogl ? mpcolor : -1, light);
 	return 1;
+}
+
+int xmodel_exists(int modelnum) {
+	int xmodelnum = xmodel_xlate[modelnum];
+	return xmodelnum != -1 && xmodels[xmodelnum];
 }
