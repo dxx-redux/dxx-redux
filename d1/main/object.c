@@ -66,6 +66,9 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "gameseq.h"
 #include "playsave.h" 
 #include "timer.h"
+#ifdef OGL
+#include "xmodel.h"
+#endif
 
 #ifdef EDITOR
 #include "editor/editor.h"
@@ -446,7 +449,11 @@ void draw_polygon_object(object *obj)
 			bitmap_index * alt_textures = NULL;
 			if ( obj->rtype.pobj_info.alt_textures > 0 )
 				alt_textures = multi_player_textures[obj->rtype.pobj_info.alt_textures-1];
-			if (obj->type == OBJ_WEAPON && (Weapon_info[obj->id].model_num_inner > -1 )) {
+			#ifdef OGL
+			if (obj->type == OBJ_WEAPON && (Weapon_info[obj->id].model_num_inner > -1) &&
+				(((Game_mode & GM_MULTI) && !Netgame.AllowCustomModelsTextures) ||
+					!xmodel_exists(obj->rtype.pobj_info.model_num)) &&
+				!GameCfg.ClassicDepth) {
 				fix dist_to_eye = vm_vec_dist_quick(&Viewer->pos, &obj->pos);
 				gr_settransblend(GR_FADE_OFF, GR_BLEND_ADDITIVE_A);
 				if (dist_to_eye < Simple_model_threshhold_scale * F1_0*2)
@@ -459,6 +466,7 @@ void draw_polygon_object(object *obj)
 							   engine_glow_value,
 							   alt_textures);
 			}
+			#endif
 
 			draw_polygon_model(&obj->pos,
 					   &obj->orient,
@@ -468,10 +476,14 @@ void draw_polygon_object(object *obj)
 					   engine_glow_value,
 					   alt_textures);
 
+			if (
 #ifndef OGL // in software rendering must draw inner model last
-			if (obj->type == OBJ_WEAPON && (Weapon_info[obj->id].model_num_inner > -1 )) {
+				1
+#else
+				GameCfg.ClassicDepth &&
+#endif
+				obj->type == OBJ_WEAPON && (Weapon_info[obj->id].model_num_inner > -1 )) {
 				fix dist_to_eye = vm_vec_dist_quick(&Viewer->pos, &obj->pos);
-				gr_settransblend(GR_FADE_OFF, GR_BLEND_ADDITIVE_A);
 				if (dist_to_eye < Simple_model_threshhold_scale * F1_0*2)
 					draw_polygon_model(&obj->pos,
 							   &obj->orient,
@@ -482,7 +494,6 @@ void draw_polygon_object(object *obj)
 							   engine_glow_value,
 							   alt_textures);
 			}
-#endif
 
 			if (obj->type == OBJ_WEAPON && (Weapon_info[obj->id].model_num_inner > -1 ))
 				gr_settransblend(GR_FADE_OFF, GR_BLEND_NORMAL);
