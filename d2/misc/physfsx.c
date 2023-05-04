@@ -11,7 +11,8 @@
 #if defined(__MACH__) && defined(__APPLE__)
 #include <sys/mount.h>
 #include <unistd.h>	// for chdir hack
-#include <HIServices/Processes.h>
+#include <CoreServices/CoreServices.h>
+#include <ApplicationServices/ApplicationServices.h>
 #endif
 
 #include "physfsx.h"

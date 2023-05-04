@@ -300,7 +300,7 @@ jmp_buf LeaveEvents;
 int main(int argc, char *argv[])
 {
 	mem_init();
-#if defined(__LINUX__) || defined(__APPLE__)
+#if defined(__LINUX__)
 	error_init(NULL);
 #else
 	error_init(msgbox_error);
@@ -338,7 +338,8 @@ int main(int argc, char *argv[])
 			      "\t" SHAREPATH "\n"
 #else
 #define DXX_HOGFILE_PROGRAM_DATA_DIRECTORY	\
-				  "\tDirectory containing D" DXX_NAME_NUMBER "X\n"
+				  "\tDirectory containing D" DXX_NAME_NUMBER "X-Redux\n" \
+				  "\t~/Library/Preferences/D" DXX_NAME_NUMBER "X-Rebirth/Data\n"
 #endif
 #if (defined(__APPLE__) && defined(__MACH__)) || defined(macintosh)
 #define DXX_HOGFILE_APPLICATION_BUNDLE	\

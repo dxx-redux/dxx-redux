@@ -86,10 +86,9 @@ if(WIN32)
     add_dependencies(d1x-redux arch_win32)
 endif()
 
-if(__APPLE__)
-    add_subdirectory(arch/carbon)
+if(APPLE)
     add_subdirectory(arch/cocoa)
-    add_dependencies(d1x-redux arch_carbon arch_cocoa)
+    add_dependencies(d1x-redux arch_cocoa)
 endif()
 
 if(OPENGL)
