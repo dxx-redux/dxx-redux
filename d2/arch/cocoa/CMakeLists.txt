@@ -1,5 +1,5 @@
 add_library(arch_cocoa STATIC
-    SDLMain.m
+    messagebox.m
     )
 
 include_directories(../../include ../include ../../main)
