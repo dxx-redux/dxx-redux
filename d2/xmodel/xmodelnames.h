@@ -47,7 +47,6 @@ enum modelnums {
 	model_flare = -1,
 	model_botlas3_outer = -1,
 	model_botlas3_inner = -1,
-	model_fusion_outer = -1,
 	model_fusion_inner = -1,
 	model_botlas1_outer = -1,
 	model_botlas1_inner = -1,
@@ -130,6 +129,7 @@ enum modelnums {
 	model_homer,
 	model_smartmsl,
 	model_mega,
+	model_fusion_outer,
 };
 
 const char *xmodelnames[] = {
@@ -137,7 +137,8 @@ const char *xmodelnames[] = {
 	"concussion.ase",
 	"homer.ase",
 	"smartmsl.ase",
-	"mega.ase"
+	"mega.ase",
+	"fusion.ase",
 };
 
 #define NUM_XMODELS ((int)(sizeof(xmodelnames) / sizeof(xmodelnames[0])))

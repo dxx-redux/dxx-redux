@@ -17,6 +17,7 @@ void xmodel_free_all();
 void xmodel_load_gl_all();
 void xmodel_free_gl_all();
 int xmodel_show_if_loaded(int modelnum, vms_vector *pos, vms_matrix *orient, int mpcolor, g3s_lrgb *light);
+int xmodel_exists(int modelnum);
 
 #ifdef __cplusplus
 }
