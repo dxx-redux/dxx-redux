@@ -109,7 +109,12 @@ void show_framerate()
 		fps_count = 0;
 		fps_time = timer_query();
 	}
-	gr_printf(SWIDTH-(GameArg.SysMaxFPS>999?FSPACX(43):FSPACX(37)),y,"FPS: %i",fps_rate);
+	if (Newdemo_state == ND_STATE_PLAYBACK) {
+		extern fix nd_recorded_time;
+		int demo_rate = nd_recorded_time ? F1_0 / nd_recorded_time : 0;
+		gr_printf(SWIDTH-(GameArg.SysMaxFPS>999?FSPACX(43+2*6):FSPACX(37+2*6)),y,"FPS: %i/%i",fps_rate, demo_rate);
+	} else
+		gr_printf(SWIDTH-(GameArg.SysMaxFPS>999?FSPACX(43):FSPACX(37)),y,"FPS: %i",fps_rate);
 }
 
 void set_font_present() { gr_set_fontcolor(BM_XRGB(25,25,25),-1); }

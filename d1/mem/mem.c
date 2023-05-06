@@ -39,7 +39,7 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 
 static void *MallocBase[MAX_INDEX];
 static unsigned int MallocSize[MAX_INDEX];
-static unsigned char Present[MAX_INDEX];
+//static unsigned char Present[MAX_INDEX];
 static char * Filename[MAX_INDEX];
 static char * Varname[MAX_INDEX];
 static int LineNum[MAX_INDEX];
@@ -68,7 +68,7 @@ void mem_init()
 		free_list[i] = i;
 		MallocBase[i] = 0;
 		MallocSize[i] = 0;
-		Present[i] = 0;
+		//Present[i] = 0;
 		Filename[i] = NULL;
 		Varname[i] = NULL;
 		LineNum[i] = 0;
@@ -143,7 +143,7 @@ void * mem_malloc( unsigned int size, char * var, char * filename, int line, int
 	Varname[id] = var;
 	Filename[id] = filename;
 	LineNum[id] = line;
-	Present[id]    = 1;
+	//Present[id]    = 1;
 
 	pc = (char *)ptr;
 
@@ -161,10 +161,21 @@ void * mem_malloc( unsigned int size, char * var, char * filename, int line, int
 
 int mem_find_id( void * buffer )
 {
-	int i;
+	int i, ib;
+
+	if (!buffer)
+		return -1;
+
+	if (num_blocks > 8)
+		for (ib=0; ib < 8; ib++ ) {
+			i = free_list[num_blocks - ib];
+			//if (Present[i]==1)
+				if (MallocBase[i] == buffer )
+					return i;
+		}
 
 	for (i=0; i<=LargestIndex; i++ )
-	  if (Present[i]==1)
+	  //if (Present[i]==1)
 	    if (MallocBase[i] == buffer )
 	      return i;
 
@@ -243,7 +254,7 @@ void mem_free( void * buffer )
 
 	free( buffer );
 
-	Present[id] = 0;
+	//Present[id] = 0;
 	MallocBase[id] = 0;
 	MallocSize[id] = 0;
 
@@ -301,7 +312,7 @@ void mem_display_blocks()
 	numleft = 0;
 	for (i=0; i<=LargestIndex; i++ )
 	{
-		if (Present[i]==1 &&  (!out_of_memory))
+		if (MallocBase[i] &&  (!out_of_memory))
 		{
 			numleft++;
 			if (GameArg.DbgShowMemInfo)	{
@@ -324,7 +335,7 @@ void mem_validate_heap()
 	int i;
 	
 	for (i=0; i<LargestIndex; i++  )
-		if (Present[i]==1 )
+		if (MallocBase[i] )
 			mem_check_integrity( i );
 }
 
@@ -336,7 +347,7 @@ void mem_print_all()
 	ef = PHYSFSX_openWriteBuffered( "DESCENT.MEM" );
 	
 	for (i=0; i<LargestIndex; i++  )
-		if (Present[i]==1 )	{
+		if (MallocBase[i] )	{
 			size += MallocSize[i];
 			PHYSFSX_printf( ef, "%12d bytes in %s declared in %s, line %d\n", MallocSize[i], Varname[i], Filename[i], LineNum[i]  );
 		}
