@@ -46,4 +46,7 @@ extern void write_game_text_file(char *filename);
 
 extern int Errors_in_mine;
 
+void set_load_error(const char *msg, ...);
+const char *get_load_error(void);
+
 #endif /* _GAMESAVE_H */

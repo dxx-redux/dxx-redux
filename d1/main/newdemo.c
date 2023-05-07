@@ -2586,16 +2586,23 @@ int newdemo_read_frame_information(int rewrite)
 			if ( (loaded_level < Last_secret_level) || (loaded_level > Last_level - 1) ) {
 				nm_messagebox( NULL, 1, TXT_OK, TXT_NO_DESTSAT_LVL );
 				free_mission();
+				start_time();
 				return -1;
 			}
 #else
 			if ((loaded_level < Last_secret_level) || (loaded_level > Last_level)) {
 				nm_messagebox( NULL, 1, TXT_OK, "%s\n%s\n%s", TXT_CANT_PLAYBACK, TXT_LEVEL_CANT_LOAD, TXT_DEMO_OLD_CORRUPT );
 				free_mission();
+				start_time();
 				return -1;
 			}
 #endif
-			LoadLevel((int)loaded_level,1);
+			if (LoadLevel((int)loaded_level,1)) {
+				free_mission();
+				start_time();
+				return -1;
+			}
+
 			nd_playback_v_cntrlcen_destroyed = 0;
 
 			reset_palette_add();                // get palette back to normal
@@ -2682,7 +2689,11 @@ void newdemo_goto_end(int to_rewrite)
 		}
 		if (level != Current_level_num)
 		{
-			LoadLevel(level,1);
+			if (LoadLevel(level,1)) {
+				free_mission();
+				newdemo_stop_playback();
+				return;
+			}
 		}
 	}
 	else
@@ -3462,8 +3473,13 @@ void newdemo_start_playback(char * filename)
 	HUD_clear_messages();
 	if (!Game_wind)
 		hide_menus();
-	newdemo_playback_one_frame();       // this one loads new level
-	newdemo_playback_one_frame();       // get all of the objects to renderb game
+	newdemo_playback_one_frame();           // this one loads new level
+	if (Newdemo_state != ND_STATE_NORMAL)
+		newdemo_playback_one_frame();       // get all of the objects to renderb game
+	if (Newdemo_state == ND_STATE_NORMAL) { // playback failed
+		show_menus();
+		return;
+	}
 	if (!Game_wind)
 		Game_wind = game_setup();							// create game environment
 }
