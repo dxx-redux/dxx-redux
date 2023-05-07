@@ -26,7 +26,7 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 
 //#include "vclip.h"
 
-#define MAX_WALLS					175	// Maximum number of walls
+#define MAX_WALLS					254	// Maximum number of walls
 #define MAX_WALL_ANIMS			30		// Maximum different types of doors
 #define MAX_DOORS					50		// Maximum number of open doors
 // not used -> #define MAX_DOOR_ANIMS			20		// Maximum different types of doors
