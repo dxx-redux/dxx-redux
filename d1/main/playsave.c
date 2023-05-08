@@ -1237,10 +1237,100 @@ int write_player_file()
 	return errno_ret;
 }
 
+// modifies line buffer
+// returns 1 if parsed, 0 if not
+int parse_netgame_line(char *line, struct netgame_info *ng)
+{
+	const char *token, *value;
+	char *ptr = line;
+	while (isspace(*ptr))
+		ptr++;
+	if (!*ptr)
+		return 0;
+	token = strtok(ptr, "=");
+	value = strtok(NULL, "=");
+	if (!value)
+		value = "";
+	if (!strcmp(token, "game_name"))
+	{
+		char * p;
+		strncpy( ng->game_name, value, NETGAME_NAME_LEN+1 );
+		p = strchr( ng->game_name, '\n');
+		if ( p ) *p = 0;
+	}
+	else if (!strcmp(token, "gamemode"))
+		ng->gamemode = strtol(value, NULL, 10);
+	else if (!strcmp(token, "RefusePlayers"))
+		ng->RefusePlayers = strtol(value, NULL, 10);
+	else if (!strcmp(token, "difficulty"))
+		ng->difficulty = strtol(value, NULL, 10);
+	else if (!strcmp(token, "maxplayers"))
+		ng->max_numplayers = strtol(value, NULL, 10);
+	else if (!strcmp(token, "maxobservers"))
+		ng->max_numobservers = strtol(value, NULL, 10);
+	else if (!strcmp(token, "game_flags"))
+		ng->game_flags = strtol(value, NULL, 10);
+	else if (!strcmp(token, "AllowedItems"))
+		ng->AllowedItems = strtol(value, NULL, 10);
+	else if (!strcmp(token, "ShowEnemyNames"))
+		ng->ShowEnemyNames = strtol(value, NULL, 10);
+	else if (!strcmp(token, "BrightPlayers"))
+		ng->BrightPlayers = strtol(value, NULL, 10);
+	else if (!strcmp(token, "SpawnStyle"))
+		ng->SpawnStyle = strtol(value, NULL, 10);
+	else if (!strcmp(token, "GaussAmmoStyle"))
+		ng->GaussAmmoStyle = strtol(value, NULL, 10);
+	else if (!strcmp(token, "KillGoal"))
+		ng->KillGoal = strtol(value, NULL, 10);
+	else if (!strcmp(token, "PlayTimeAllowed"))
+		ng->PlayTimeAllowed = strtol(value, NULL, 10);
+	else if (!strcmp(token, "control_invul_time"))
+		ng->control_invul_time = strtol(value, NULL, 10);
+	else if (!strcmp(token, "PacketsPerSec"))
+		ng->PacketsPerSec = strtol(value, NULL, 10);
+	else if (!strcmp(token, "ShortPackets"))
+		ng->ShortPackets = strtol(value, NULL, 10);
+	else if (!strcmp(token, "NoFriendlyFire"))
+		ng->NoFriendlyFire = strtol(value, NULL, 10);
+	else if (!strcmp(token, "RetroProtocol"))
+		ng->RetroProtocol = strtol(value, NULL, 10);
+	else if (!strcmp(token, "RespawnConcs"))
+		ng->RespawnConcs = strtol(value, NULL, 10);
+	//else if (!strcmp(token, "DarkSmartBlobs"))
+	//	ng->DarkSmartBlobs = strtol(value, NULL, 10);
+	else if (!strcmp(token, "LowVulcan"))
+		ng->LowVulcan = strtol(value, NULL, 10);
+	else if (!strcmp(token, "AllowPreferredColors"))
+		ng->AllowPreferredColors = strtol(value, NULL, 10);
+	else if (!strcmp(token, "AllowColoredLighting"))
+		ng->AllowColoredLighting = strtol(value, NULL, 10);
+	else if (!strcmp(token, "FairColors"))
+		ng->FairColors = strtol(value, NULL, 10);
+	else if (!strcmp(token, "BlackAndWhitePyros"))
+		ng->BlackAndWhitePyros = strtol(value, NULL, 10);
+	else if (!strcmp(token, "ObsDelay"))
+		ng->obs_delay = strtol(value, NULL, 10);
+	else if (!strcmp(token, "HomingUpdateRate"))
+		ng->HomingUpdateRate = strtol(value, NULL, 10);
+	else if (!strcmp(token, "ConstantHomingSpeed"))
+		ng->ConstantHomingSpeed = strtol(value, NULL, 10);
+	else if (!strcmp(token, "AllowCustomModelsTextures"))
+		ng->AllowCustomModelsTextures = strtol(value, NULL, 10);
+	else if (!strcmp(token, "ReducedFlash"))
+		ng->ReducedFlash = strtol(value, NULL, 10);
+#ifdef USE_TRACKER
+	else if (!strcmp(token, "Tracker"))
+		ng->Tracker = strtol(value, NULL, 10);
+#endif
+	else
+		return 0;
+	return 1;
+}
+
 // read stored values from ngp file to netgame_info
 void read_netgame_profile(netgame_info *ng)
 {
-	char filename[PATH_MAX], line[50], *token, *value, *ptr;
+	char filename[PATH_MAX], line[50];
 	PHYSFS_file *file;
 
 	memset(filename, '\0', PATH_MAX);
@@ -1257,106 +1347,15 @@ void read_netgame_profile(netgame_info *ng)
 	// NOTE that we do not set any defaults here or even initialize netgame_info. For flexibility, leave that to the function calling this.
 	while (!PHYSFS_eof(file))
 	{
-		memset(line, 0, 50);
 		PHYSFSX_gets(file, line);
-		ptr = &(line[0]);
-		while (isspace(*ptr))
-			ptr++;
-		if (*ptr != '\0') {
-			token = strtok(ptr, "=");
-			value = strtok(NULL, "=");
-			if (!value)
-				value = "";
-			if (!strcmp(token, "game_name"))
-			{
-				char * p;
-				strncpy( ng->game_name, value, NETGAME_NAME_LEN+1 );
-				p = strchr( ng->game_name, '\n');
-				if ( p ) *p = 0;
-			}
-			else if (!strcmp(token, "gamemode"))
-				ng->gamemode = strtol(value, NULL, 10);
-			else if (!strcmp(token, "RefusePlayers"))
-				ng->RefusePlayers = strtol(value, NULL, 10);
-			else if (!strcmp(token, "difficulty"))
-				ng->difficulty = strtol(value, NULL, 10);
-			else if (!strcmp(token, "maxplayers"))
-				ng->max_numplayers = strtol(value, NULL, 10);
-			else if (!strcmp(token, "maxobservers"))
-				ng->max_numobservers = strtol(value, NULL, 10);			
-			else if (!strcmp(token, "game_flags"))
-				ng->game_flags = strtol(value, NULL, 10);
-			else if (!strcmp(token, "AllowedItems"))
-				ng->AllowedItems = strtol(value, NULL, 10);
-			else if (!strcmp(token, "ShowEnemyNames"))
-				ng->ShowEnemyNames = strtol(value, NULL, 10);
-			else if (!strcmp(token, "BrightPlayers"))
-				ng->BrightPlayers = strtol(value, NULL, 10);
-			else if (!strcmp(token, "SpawnStyle"))
-				ng->SpawnStyle = strtol(value, NULL, 10);		
-			else if (!strcmp(token, "GaussAmmoStyle"))
-				ng->GaussAmmoStyle = strtol(value, NULL, 10);
-			else if (!strcmp(token, "KillGoal"))
-				ng->KillGoal = strtol(value, NULL, 10);
-			else if (!strcmp(token, "PlayTimeAllowed"))
-				ng->PlayTimeAllowed = strtol(value, NULL, 10);
-			else if (!strcmp(token, "control_invul_time"))
-				ng->control_invul_time = strtol(value, NULL, 10);
-			else if (!strcmp(token, "PacketsPerSec"))
-				ng->PacketsPerSec = strtol(value, NULL, 10);
-			else if (!strcmp(token, "ShortPackets"))
-				ng->ShortPackets = strtol(value, NULL, 10);
-			else if (!strcmp(token, "NoFriendlyFire"))
-				ng->NoFriendlyFire = strtol(value, NULL, 10);
-			else if (!strcmp(token, "RetroProtocol"))
-				ng->RetroProtocol = strtol(value, NULL, 10);
-			else if (!strcmp(token, "RespawnConcs"))
-				ng->RespawnConcs = strtol(value, NULL, 10);	
-			//else if (!strcmp(token, "DarkSmartBlobs"))
-			//	ng->DarkSmartBlobs = strtol(value, NULL, 10);
-			else if (!strcmp(token, "LowVulcan"))
-				ng->LowVulcan = strtol(value, NULL, 10);
-			else if (!strcmp(token, "AllowPreferredColors"))
-				ng->AllowPreferredColors = strtol(value, NULL, 10);		
-			else if (!strcmp(token, "AllowColoredLighting"))
-				ng->AllowColoredLighting = strtol(value, NULL, 10);			
-			else if (!strcmp(token, "FairColors"))
-				ng->FairColors = strtol(value, NULL, 10);	
-			else if (!strcmp(token, "BlackAndWhitePyros"))
-				ng->BlackAndWhitePyros = strtol(value, NULL, 10);		
-			else if (!strcmp(token, "ObsDelay"))
-				ng->obs_delay = strtol(value, NULL, 10);																	
-			else if (!strcmp(token, "HomingUpdateRate"))
-				ng->HomingUpdateRate = strtol(value, NULL, 10);
-			else if (!strcmp(token, "ConstantHomingSpeed"))
-				ng->ConstantHomingSpeed = strtol(value, NULL, 10);
-			else if (!strcmp(token, "AllowCustomModelsTextures"))
-				ng->AllowCustomModelsTextures = strtol(value, NULL, 10);
-			else if (!strcmp(token, "ReducedFlash"))
-				ng->ReducedFlash = strtol(value, NULL, 10);
-#ifdef USE_TRACKER
-			else if (!strcmp(token, "Tracker"))
-				ng->Tracker = strtol(value, NULL, 10);
-#endif
-		}
+		parse_netgame_line(line, ng);
 	}
 
 	PHYSFS_close(file);
 }
 
-// write values from netgame_info to ngp file
-void write_netgame_profile(netgame_info *ng)
+void write_netgame_settings(PHYSFS_file *file, netgame_info *ng)
 {
-	char filename[PATH_MAX];
-	PHYSFS_file *file;
-
-	memset(filename, '\0', PATH_MAX);
-	snprintf(filename, PATH_MAX, GameArg.SysUsePlayersDir? "Players/%.8s.ngp" : "%.8s.ngp", Players[Player_num].callsign);
-	file = PHYSFSX_openWriteBuffered(filename);
-
-	if (!file)
-		return;
-
 	PHYSFSX_printf(file, "game_name=%s\n", ng->game_name);
 	PHYSFSX_printf(file, "gamemode=%i\n", ng->gamemode);
 	PHYSFSX_printf(file, "RefusePlayers=%i\n", ng->RefusePlayers);
@@ -1394,6 +1393,22 @@ void write_netgame_profile(netgame_info *ng)
 	PHYSFSX_printf(file, "Tracker=0\n");
 #endif
 	PHYSFSX_printf(file, "ngp version=%s\n",VERSION);
+}
+
+// write values from netgame_info to ngp file
+void write_netgame_profile(netgame_info *ng)
+{
+	char filename[PATH_MAX];
+	PHYSFS_file *file;
+
+	memset(filename, '\0', PATH_MAX);
+	snprintf(filename, PATH_MAX, GameArg.SysUsePlayersDir? "Players/%.8s.ngp" : "%.8s.ngp", Players[Player_num].callsign);
+	file = PHYSFSX_openWriteBuffered(filename);
+
+	if (!file)
+		return;
+
+	write_netgame_settings(file, ng);
 
 	PHYSFS_close(file);
 }
