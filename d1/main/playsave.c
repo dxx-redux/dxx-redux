@@ -1308,6 +1308,12 @@ int parse_netgame_line(char *line, struct netgame_info *ng)
 		ng->FairColors = strtol(value, NULL, 10);
 	else if (!strcmp(token, "BlackAndWhitePyros"))
 		ng->BlackAndWhitePyros = strtol(value, NULL, 10);
+	else if (!strcmp(token, "PrimaryDupFactor"))
+		ng->PrimaryDupFactor = strtol(value, NULL, 10);
+	else if (!strcmp(token, "SecondaryDupFactor"))
+		ng->SecondaryDupFactor = strtol(value, NULL, 10);
+	else if (!strcmp(token, "SecondaryCapFactor"))
+		ng->SecondaryCapFactor = strtol(value, NULL, 10);
 	else if (!strcmp(token, "ObsDelay"))
 		ng->obs_delay = strtol(value, NULL, 10);
 	else if (!strcmp(token, "HomingUpdateRate"))
@@ -1382,6 +1388,9 @@ void write_netgame_settings(PHYSFS_file *file, netgame_info *ng)
 	PHYSFSX_printf(file, "AllowColoredLighting=%i\n", ng->AllowColoredLighting);
 	PHYSFSX_printf(file, "FairColors=%i\n", ng->FairColors);
 	PHYSFSX_printf(file, "BlackAndWhitePyros=%i\n", ng->BlackAndWhitePyros);
+	PHYSFSX_printf(file, "PrimaryDupFactor=%i\n", ng->PrimaryDupFactor);
+	PHYSFSX_printf(file, "SecondaryDupFactor=%i\n", ng->SecondaryDupFactor);
+	PHYSFSX_printf(file, "SecondaryCapFactor=%i\n", ng->SecondaryCapFactor);
 	PHYSFSX_printf(file, "ObsDelay=%i\n", ng->obs_delay);
 	PHYSFSX_printf(file, "HomingUpdateRate=%i\n", ng->HomingUpdateRate);
 	PHYSFSX_printf(file, "ConstantHomingSpeed=%i\n", ng->ConstantHomingSpeed);
