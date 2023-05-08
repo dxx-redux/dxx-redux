@@ -11,7 +11,7 @@ build_app() {
     zipfilename="${prettyname}-win-${GIT_HASH}.zip"
     outdir="${prettyname}"
     tmpdir="packagetemp"
-    inipath="${name:0:2}/${name:0:3}.ini"
+    inipath="${name:0:2}/${name:0:3}-default.ini"
     
     # Have to bundle in separate directory because of case-insensitivity clashes
     mkdir ${tmpdir}
