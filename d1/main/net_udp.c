@@ -52,6 +52,7 @@
 #include "byteswap.h"
 #include "config.h"
 #include "vers_id.h"
+#include "mppreset.h"
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -4101,7 +4102,7 @@ int net_udp_more_options_handler( newmenu *menu, d_event *event, void *userdata 
 
 typedef struct param_opt
 {
-	int start_game, name, level, mode, mode_end, moreopts;
+	int start_game, name, level, mode, mode_end, moreopts, load_preset, save_preset;
 	int closed, refuse, maxnet, maxobs, obsdelay, obsmin, anarchy, team_anarchy, robot_anarchy, coop, bounty;
 } param_opt;
 
@@ -4239,6 +4240,8 @@ int net_udp_game_param_handler( newmenu *menu, d_event *event, param_opt *opt )
 			else
 				Netgame.game_flags &= ~NETGAME_FLAG_CLOSED;
 			Netgame.RefusePlayers=menus[opt->refuse].value;
+			Netgame.obs_delay = menus[opt->obsdelay].value;
+			Netgame.obs_min = menus[opt->obsmin].value;
 			break;
 			
 		case EVENT_NEWMENU_SELECTED:
@@ -4261,6 +4264,12 @@ int net_udp_game_param_handler( newmenu *menu, d_event *event, param_opt *opt )
 
 			if (citem==opt->start_game)
 				return !net_udp_start_game();
+			if (citem==opt->load_preset) {
+				mp_preset_load();
+				return 0; // reload menu to show new settings
+			}
+			if (citem==opt->save_preset)
+				mp_preset_save();
 			return 1;
 			
 		default:
@@ -4270,12 +4279,53 @@ int net_udp_game_param_handler( newmenu *menu, d_event *event, param_opt *opt )
 	return 0;
 }
 
+void net_udp_set_defaults()
+{
+	Netgame.gamemode = 0;
+	Netgame.game_flags = 0;
+	Netgame.max_numplayers = MAX_PLAYERS;
+	Netgame.max_numobservers = 0;
+	Netgame.KillGoal=0;
+	Netgame.PlayTimeAllowed=0;
+	Netgame.RefusePlayers=0;
+	sprintf( Netgame.game_name, "%s%s", Players[Player_num].callsign, TXT_S_GAME );
+	Netgame.difficulty=PlayerCfg.DefaultDifficulty;
+	Netgame.PacketsPerSec=20;
+	Netgame.ShortPackets=0;
+	Netgame.BrightPlayers = 1;
+	Netgame.SpawnStyle = SPAWN_STYLE_PREVIEW;
+	Netgame.AllowedItems = 0;
+	Netgame.AllowedItems |= NETFLAG_DOPOWERUP;
+	Netgame.PacketLossPrevention = 1;
+	Netgame.NoFriendlyFire = 0;
+	Netgame.RetroProtocol = 1;
+	Netgame.RespawnConcs = 0;
+	Netgame.AllowColoredLighting = 0;
+	Netgame.FairColors = 0;
+	Netgame.BlackAndWhitePyros = 1;
+	Netgame.PrimaryDupFactor = 0;
+	Netgame.SecondaryDupFactor = 0;
+	Netgame.SecondaryCapFactor = 0;
+	Netgame.DarkSmartBlobs = 0;
+	Netgame.LowVulcan = 0;
+	Netgame.AllowPreferredColors = 1; 
+	Netgame.HomingUpdateRate = 25;
+	Netgame.ConstantHomingSpeed = 0;
+	Netgame.AllowCustomModelsTextures = 0;
+	Netgame.ReducedFlash = 0;
+	Netgame.GaussAmmoStyle = GAUSS_STYLE_DEPLETING;
+
+#ifdef USE_TRACKER
+	Netgame.Tracker = 1;
+#endif
+}
+
 int net_udp_setup_game()
 {
 	int i;
 	int optnum;
 	param_opt opt;
-	newmenu_item m[24];
+	newmenu_item m[26];
 	char slevel[5];
 	char level_text[32];
 	char srmaxnet[50];
@@ -4292,38 +4342,11 @@ int net_udp_setup_game()
 		if (i!=Player_num)
 			Players[i].callsign[0]=0;
 
-	Netgame.max_numplayers = MAX_PLAYERS;
-	Netgame.KillGoal=0;
-	Netgame.PlayTimeAllowed=0;
-	Netgame.RefusePlayers=0;
-	sprintf( Netgame.game_name, "%s%s", Players[Player_num].callsign, TXT_S_GAME );
-	Netgame.difficulty=PlayerCfg.DefaultDifficulty;
-	Netgame.PacketsPerSec=20;
-	Netgame.ShortPackets=0;
+	net_udp_set_defaults();
 	if (GameArg.MplUdpMyPort != 0)
 		snprintf (UDP_MyPort, sizeof(UDP_MyPort), "%d", GameArg.MplUdpMyPort);
 	else
 		snprintf (UDP_MyPort, sizeof(UDP_MyPort), "%d", UDP_PORT_DEFAULT);
-	Netgame.BrightPlayers = 1;
-	Netgame.SpawnStyle = SPAWN_STYLE_PREVIEW;
-	Netgame.AllowedItems = 0;
-	Netgame.AllowedItems |= NETFLAG_DOPOWERUP;
-	Netgame.PacketLossPrevention = 1;
-	Netgame.NoFriendlyFire = 0;
-	Netgame.RetroProtocol = 1;
-	Netgame.BlackAndWhitePyros = 1;
-	Netgame.DarkSmartBlobs = 0;
-	Netgame.LowVulcan = 0;
-	Netgame.AllowPreferredColors = 1; 
-	Netgame.HomingUpdateRate = 25;
-	Netgame.ConstantHomingSpeed = 0;
-	Netgame.AllowCustomModelsTextures = 0;
-	Netgame.ReducedFlash = 0;
-	Netgame.GaussAmmoStyle = GAUSS_STYLE_DEPLETING;
-
-#ifdef USE_TRACKER
-	Netgame.Tracker = 1;
-#endif
 
 	read_netgame_profile(&Netgame);
 
@@ -4335,78 +4358,87 @@ int net_udp_setup_game()
 
 	sprintf( slevel, "1" ); Netgame.levelnum = 1;
 
-	optnum = 0;
-	opt.start_game=optnum;
-	m[optnum].type = NM_TYPE_MENU;  m[optnum].text = "Start Game"; optnum++;
-	m[optnum].type = NM_TYPE_TEXT; m[optnum].text = TXT_DESCRIPTION; optnum++;
+	i = 0;
+	for (;;) {
+		optnum = 0;
+		opt.start_game=optnum;
+		m[optnum].type = NM_TYPE_MENU;  m[optnum].text = "Start Game"; optnum++;
+		m[optnum].type = NM_TYPE_TEXT; m[optnum].text = TXT_DESCRIPTION; optnum++;
 
-	opt.name = optnum;
-	m[optnum].type = NM_TYPE_INPUT; m[optnum].text = Netgame.game_name; m[optnum].text_len = NETGAME_NAME_LEN; optnum++;
+		opt.name = optnum;
+		m[optnum].type = NM_TYPE_INPUT; m[optnum].text = Netgame.game_name; m[optnum].text_len = NETGAME_NAME_LEN; optnum++;
 
-	sprintf(level_text, "%s (1-%d)", TXT_LEVEL_, Last_level);
-	if (Last_secret_level < -1)
-		sprintf(level_text+strlen(level_text)-1, ", S1-S%d)", -Last_secret_level);
-	else if (Last_secret_level == -1)
-		sprintf(level_text+strlen(level_text)-1, ", S1)");
+		sprintf(level_text, "%s (1-%d)", TXT_LEVEL_, Last_level);
+		if (Last_secret_level < -1)
+			sprintf(level_text+strlen(level_text)-1, ", S1-S%d)", -Last_secret_level);
+		else if (Last_secret_level == -1)
+			sprintf(level_text+strlen(level_text)-1, ", S1)");
 
-	Assert(strlen(level_text) < 32);
+		Assert(strlen(level_text) < 32);
 
-	m[optnum].type = NM_TYPE_TEXT; m[optnum].text = level_text; optnum++;
+		m[optnum].type = NM_TYPE_TEXT; m[optnum].text = level_text; optnum++;
 
-	opt.level = optnum;
-	m[optnum].type = NM_TYPE_INPUT; m[optnum].text = slevel; m[optnum].text_len=4; optnum++;
-	m[optnum].type = NM_TYPE_TEXT; m[optnum].text = TXT_OPTIONS; optnum++;
+		opt.level = optnum;
+		m[optnum].type = NM_TYPE_INPUT; m[optnum].text = slevel; m[optnum].text_len=4; optnum++;
+		m[optnum].type = NM_TYPE_TEXT; m[optnum].text = TXT_OPTIONS; optnum++;
 
-	opt.mode = optnum;
-	m[optnum].type = NM_TYPE_RADIO; m[optnum].text = TXT_ANARCHY; m[optnum].value=(Netgame.gamemode == NETGAME_ANARCHY); m[optnum].group=0; opt.anarchy=optnum; optnum++;
-	m[optnum].type = NM_TYPE_RADIO; m[optnum].text = TXT_TEAM_ANARCHY; m[optnum].value=(Netgame.gamemode == NETGAME_TEAM_ANARCHY); m[optnum].group=0; opt.team_anarchy=optnum; optnum++;
-	m[optnum].type = NM_TYPE_RADIO; m[optnum].text = TXT_ANARCHY_W_ROBOTS; m[optnum].value=(Netgame.gamemode == NETGAME_ROBOT_ANARCHY); m[optnum].group=0; opt.robot_anarchy=optnum; optnum++;
-	m[optnum].type = NM_TYPE_RADIO; m[optnum].text = TXT_COOPERATIVE; m[optnum].value=(Netgame.gamemode == NETGAME_COOPERATIVE); m[optnum].group=0; opt.coop=optnum; optnum++;
-	m[optnum].type = NM_TYPE_RADIO; m[optnum].text = "Bounty"; m[optnum].value = ( Netgame.gamemode & NETGAME_BOUNTY ); m[optnum].group = 0; opt.mode_end=opt.bounty=optnum; optnum++;
+		opt.mode = optnum;
+		m[optnum].type = NM_TYPE_RADIO; m[optnum].text = TXT_ANARCHY; m[optnum].value=(Netgame.gamemode == NETGAME_ANARCHY); m[optnum].group=0; opt.anarchy=optnum; optnum++;
+		m[optnum].type = NM_TYPE_RADIO; m[optnum].text = TXT_TEAM_ANARCHY; m[optnum].value=(Netgame.gamemode == NETGAME_TEAM_ANARCHY); m[optnum].group=0; opt.team_anarchy=optnum; optnum++;
+		m[optnum].type = NM_TYPE_RADIO; m[optnum].text = TXT_ANARCHY_W_ROBOTS; m[optnum].value=(Netgame.gamemode == NETGAME_ROBOT_ANARCHY); m[optnum].group=0; opt.robot_anarchy=optnum; optnum++;
+		m[optnum].type = NM_TYPE_RADIO; m[optnum].text = TXT_COOPERATIVE; m[optnum].value=(Netgame.gamemode == NETGAME_COOPERATIVE); m[optnum].group=0; opt.coop=optnum; optnum++;
+		m[optnum].type = NM_TYPE_RADIO; m[optnum].text = "Bounty"; m[optnum].value = ( Netgame.gamemode & NETGAME_BOUNTY ); m[optnum].group = 0; opt.mode_end=opt.bounty=optnum; optnum++;
 
-	m[optnum].type = NM_TYPE_TEXT; m[optnum].text = ""; optnum++;
+		m[optnum].type = NM_TYPE_TEXT; m[optnum].text = ""; optnum++;
 
-	m[optnum].type = NM_TYPE_RADIO; m[optnum].text = "Open game"; m[optnum].group=1; m[optnum].value=(!Netgame.RefusePlayers && !Netgame.game_flags & NETGAME_FLAG_CLOSED); optnum++;
-	opt.closed = optnum;
-	m[optnum].type = NM_TYPE_RADIO; m[optnum].text = TXT_CLOSED_GAME; m[optnum].group=1; m[optnum].value=Netgame.game_flags & NETGAME_FLAG_CLOSED; optnum++;
-	opt.refuse = optnum;
-	m[optnum].type = NM_TYPE_RADIO; m[optnum].text = "Restricted Game              "; m[optnum].group=1; m[optnum].value=Netgame.RefusePlayers; optnum++;
+		m[optnum].type = NM_TYPE_RADIO; m[optnum].text = "Open game"; m[optnum].group=1; m[optnum].value=(!Netgame.RefusePlayers && !Netgame.game_flags & NETGAME_FLAG_CLOSED); optnum++;
+		opt.closed = optnum;
+		m[optnum].type = NM_TYPE_RADIO; m[optnum].text = TXT_CLOSED_GAME; m[optnum].group=1; m[optnum].value=Netgame.game_flags & NETGAME_FLAG_CLOSED; optnum++;
+		opt.refuse = optnum;
+		m[optnum].type = NM_TYPE_RADIO; m[optnum].text = "Restricted Game              "; m[optnum].group=1; m[optnum].value=Netgame.RefusePlayers; optnum++;
 
-	if( (Netgame.max_numobservers > 0) && (Netgame.max_numplayers > 7)) {
-		Netgame.max_numplayers = 7;
+		if( (Netgame.max_numobservers > 0) && (Netgame.max_numplayers > 7)) {
+			Netgame.max_numplayers = 7;
+		}
+
+		opt.maxnet = optnum;
+		sprintf( srmaxnet, "Maximum players: %d", Netgame.max_numplayers);
+		m[optnum].type = NM_TYPE_SLIDER; m[optnum].value=Netgame.max_numplayers-2; m[optnum].text= srmaxnet; m[optnum].min_value=0; 
+		m[optnum].max_value=Netgame.max_numplayers-2; optnum++;
+
+		opt.maxobs = optnum;
+		sprintf( srmaxobs, "Maximum observers: %d", Netgame.max_numobservers);
+		m[optnum].type = NM_TYPE_SLIDER; m[optnum].value=Netgame.max_numobservers/2; m[optnum].text= srmaxobs; m[optnum].min_value=0; 
+		m[optnum].max_value=MAX_OBSERVERS/2; optnum++;	
+
+		opt.obsdelay = optnum;
+		sprintf( srbdelay, "Broadcast delay %d seconds", OBSERVER_DELAY);
+		m[optnum].type = NM_TYPE_CHECK; m[optnum].text = srbdelay; m[optnum].value = Netgame.obs_delay;
+		optnum++;
+
+		opt.obsmin = optnum;
+		m[optnum].type = NM_TYPE_CHECK; m[optnum].text = "Minimal Observer Info"; m[optnum].value = 0;
+		optnum++;
+		
+		opt.moreopts = optnum;
+		m[optnum].type = NM_TYPE_MENU;  m[optnum].text = "Advanced options"; optnum++;
+
+		opt.load_preset=optnum;
+		m[optnum].type = NM_TYPE_MENU;  m[optnum].text = "Load Preset"; optnum++;
+
+		opt.save_preset=optnum;
+		m[optnum].type = NM_TYPE_MENU;  m[optnum].text = "Save Preset"; optnum++;
+
+		Assert(optnum <= SDL_arraysize(m));
+
+		i = newmenu_do1( NULL, TXT_NETGAME_SETUP, optnum, m, (int (*)( newmenu *, d_event *, void * ))net_udp_game_param_handler, &opt, i );
+
+		if (i != opt.load_preset)
+			break;
 	}
-
-	opt.maxnet = optnum;
-	sprintf( srmaxnet, "Maximum players: %d", Netgame.max_numplayers);
-	m[optnum].type = NM_TYPE_SLIDER; m[optnum].value=Netgame.max_numplayers-2; m[optnum].text= srmaxnet; m[optnum].min_value=0; 
-	m[optnum].max_value=Netgame.max_numplayers-2; optnum++;
-
-	opt.maxobs = optnum;
-	sprintf( srmaxobs, "Maximum observers: %d", Netgame.max_numobservers);
-	m[optnum].type = NM_TYPE_SLIDER; m[optnum].value=Netgame.max_numobservers/2; m[optnum].text= srmaxobs; m[optnum].min_value=0; 
-	m[optnum].max_value=MAX_OBSERVERS/2; optnum++;	
-
-	opt.obsdelay = optnum;
-	sprintf( srbdelay, "Broadcast delay %d seconds", OBSERVER_DELAY);
-	m[optnum].type = NM_TYPE_CHECK; m[optnum].text = srbdelay; m[optnum].value = Netgame.obs_delay;
-	optnum++;
-
-	opt.obsmin = optnum;
-	m[optnum].type = NM_TYPE_CHECK; m[optnum].text = "Minimal Observer Info"; m[optnum].value = 0;
-	optnum++;
-	
-	opt.moreopts = optnum;
-	m[optnum].type = NM_TYPE_MENU;  m[optnum].text = "Advanced options"; optnum++;
-
-	Assert(optnum <= SDL_arraysize(m));
-
-	i = newmenu_do1( NULL, TXT_NETGAME_SETUP, optnum, m, (int (*)( newmenu *, d_event *, void * ))net_udp_game_param_handler, &opt, opt.start_game );
 
 	if (i < 0)
 		net_udp_close();
-
-	Netgame.obs_delay = m[opt.obsdelay].value;
-	Netgame.obs_min = m[opt.obsmin].value;
 
 	write_netgame_profile(&Netgame);
 

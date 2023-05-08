@@ -38,6 +38,7 @@ add_executable (d1x-redux
     mglobal.c
     mission.c
     morph.c
+    mppreset.c
     multi.c
     multibot.c
     newdemo.c

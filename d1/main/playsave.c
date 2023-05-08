@@ -1351,11 +1351,8 @@ void read_netgame_profile(netgame_info *ng)
 
 
 	// NOTE that we do not set any defaults here or even initialize netgame_info. For flexibility, leave that to the function calling this.
-	while (!PHYSFS_eof(file))
-	{
-		PHYSFSX_gets(file, line);
+	while ((PHYSFSX_fgets(line, sizeof(line), file)))
 		parse_netgame_line(line, ng);
-	}
 
 	PHYSFS_close(file);
 }

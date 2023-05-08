@@ -153,4 +153,9 @@ void plyr_save_stats();
 void read_netgame_profile(netgame_info *ng);
 void write_netgame_profile(netgame_info *ng);
 
+// modifies line buffer
+// returns 1 if parsed, 0 if not
+int parse_netgame_line(char *line, struct netgame_info *ng);
+void write_netgame_settings(PHYSFS_file *file, netgame_info *ng);
+
 #endif
