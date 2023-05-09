@@ -4305,7 +4305,7 @@ int net_udp_setup_game()
 	else
 		snprintf (UDP_MyPort, sizeof(UDP_MyPort), "%d", UDP_PORT_DEFAULT);
 	Netgame.BrightPlayers = 1;
-	Netgame.SpawnStyle = SPAWN_STYLE_PREVIEW;
+	Netgame.SpawnStyle = SPAWN_STYLE_NO_INVUL;
 	Netgame.AllowedItems = 0;
 	Netgame.AllowedItems |= NETFLAG_DOPOWERUP;
 	Netgame.PacketLossPrevention = 1;
