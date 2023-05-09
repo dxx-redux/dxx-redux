@@ -6118,6 +6118,8 @@ void multi_send_damage(fix damage, fix shields, ubyte killer_type, ubyte killer_
 	// Sending damage to the host isn't interesting if there cannot be any observers.
 	if (Netgame.max_numobservers == 0 && !Netgame.host_is_obs) { return; }
 
+	if (Player_is_dead || ConsoleObject->flags & OF_SHOULD_BE_DEAD) { return; }
+
 	// Calculate new shields amount.
 	if (shields < damage)
 		shields = 0;
