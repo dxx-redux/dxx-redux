@@ -2835,8 +2835,8 @@ void observer_show_time() {
 	}
 }
 
-#define OBS_PLAYER_CARD_WIDTH 212
-#define OBS_TIME_WIDTH 224
+#define OBS_PLAYER_CARD_WIDTH ((int)FSPACX(50) + 2)
+#define OBS_TIME_WIDTH ((int)FSPACX(80))
 
 int observer_draw_player_card(int pnum, int color, int x, int y) {
 #ifdef OGL
@@ -2912,6 +2912,7 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 
 		if (PlayerCfg.ObsShowScoreboardShieldBar) {
 			// Shield display
+			int shield_bar_height = FSPACY(2.25);
 			double shield_count = f2db(Players[pnum].shields);
 			double delta = f2db(Players[pnum].shields_delta);
 			fix pulse = GameTime64 & 0x1ffff;
@@ -2929,36 +2930,41 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 			// Fill bar with color
 			if (shield_count > 0) {
 				gr_setcolor(color);
-				gr_urect(x + 2, y, x + OBS_PLAYER_CARD_WIDTH - 2, y + 9);
+				gr_urect(x + 2, y, x + OBS_PLAYER_CARD_WIDTH - 2, y + shield_bar_height);
 			}
 
 			// Replace empty with dark grey, or pulsing red if under 30 shields.
 			if (shield_count < 100.0) {
 				int grey_color = (shield_count > 0 && shield_count < 30 ? BM_XRGB(6 + (int)(10 * pulse_strength), 6, 6) : BM_XRGB(6, 6, 6));
 				gr_setcolor(grey_color);
-				gr_urect(x + 2 + (int)(shield_count * ((double)OBS_PLAYER_CARD_WIDTH - 4.0) / 100.0), y, x + OBS_PLAYER_CARD_WIDTH - 2, y + 9);
+				gr_urect(x + 2 + (int)(shield_count * ((double)OBS_PLAYER_CARD_WIDTH - 4.0) / 100.0), y, x + OBS_PLAYER_CARD_WIDTH - 2, y + shield_bar_height);
 			}
 
-			if (Players[pnum].shields_delta != 0 && (Players[Player_num].hours_total - Players[pnum].shields_time_hours == 1 && i2f(3600) + Players[Player_num].time_total - Players[pnum].shields_time < i2f(2) || Players[Player_num].time_total - Players[pnum].shields_time < i2f(2))) {
+			if (Players[pnum].shields_delta != 0 &&
+				(Players[Player_num].hours_total - Players[pnum].shields_time_hours == 1 &&
+					i2f(3600) + Players[Player_num].time_total - Players[pnum].shields_time < i2f(2) ||
+					Players[Player_num].time_total - Players[pnum].shields_time < i2f(2))) {
 				if (shield_count > 0 && shield_count < 100 && delta < 0) {
 					// Replace recent damage with red, unless at 0.
 					gr_setcolor(BM_XRGB(31, 6, 6));
-					gr_urect(x + 2 + (int)(shield_count * ((double)OBS_PLAYER_CARD_WIDTH - 4.0) / 100.0), y, min(x + 2 + (int)((shield_count - delta) * ((double)OBS_PLAYER_CARD_WIDTH - 4.0) / 100.0), x + OBS_PLAYER_CARD_WIDTH - 2), y + 9);
+					gr_urect(x + 2 + (int)(shield_count * ((double)OBS_PLAYER_CARD_WIDTH - 4.0) / 100.0), y,
+						min(x + 2 + (int)((shield_count - delta) * ((double)OBS_PLAYER_CARD_WIDTH - 4.0) / 100.0), x + OBS_PLAYER_CARD_WIDTH - 2), y + shield_bar_height);
 				}
 				else if (shield_count < 100 - delta && delta > 0) {
 					// Replace recent healing with green.
 					gr_setcolor(BM_XRGB(6, 6, 31));
-					gr_urect(x + 2 + (int)((shield_count - delta) * ((double)OBS_PLAYER_CARD_WIDTH - 4.0) / 100.0), y, min(x + 2 + (int)(shield_count * ((double)OBS_PLAYER_CARD_WIDTH - 4.0) / 100.0), x + OBS_PLAYER_CARD_WIDTH - 2), y + 9);
+					gr_urect(x + 2 + (int)((shield_count - delta) * ((double)OBS_PLAYER_CARD_WIDTH - 4.0) / 100.0), y,
+						min(x + 2 + (int)(shield_count * ((double)OBS_PLAYER_CARD_WIDTH - 4.0) / 100.0), x + OBS_PLAYER_CARD_WIDTH - 2), y + shield_bar_height);
 				}
 			}
 
 			// Divide bar into segments
 			for (int seg = 1; seg < 10; seg++) {
 				gr_setcolor(BM_XRGB(0, 0, 0));
-				gr_uline(i2f(x + 1 + 21 * seg), i2f(y), i2f(x + 1 + 21 * seg), i2f(y + 10));
+				gr_uline(i2f(x + 1 + (int)FSPACX(5) * seg), i2f(y), i2f(x + 1 + (int)FSPACX(5) * seg), i2f(y + shield_bar_height + 1));
 			}
 
-			y += 11;
+			y += shield_bar_height + 2;
 		}
 
 		double energy = f2db(Players[pnum].energy);
@@ -2969,22 +2975,25 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 				y += 2;
 			}
 
+			int energy_bar_height = FSPACY(0.75);
+			int ammo_bar_height = FSPACY(0.5);
+
 			// Energy display
 			if (energy > 0) {
 				gr_setcolor(BM_XRGB(25, 18, 6));
-				gr_urect(x + 2, y, min(x + 2 + (int)(energy * ((double)OBS_PLAYER_CARD_WIDTH - 4.0) / 100.0), x + OBS_PLAYER_CARD_WIDTH - 2), y + 3);
+				gr_urect(x + 2, y, min(x + 2 + (int)(energy * ((double)OBS_PLAYER_CARD_WIDTH - 4.0) / 100.0), x + OBS_PLAYER_CARD_WIDTH - 2), y + energy_bar_height);
 			}
 
-			y += 5;
+			y += energy_bar_height + 2;
 
 			// Ammo display
 			if (ammo > 0) {
 				double player_max_ammo = (Players[pnum].flags & PLAYER_FLAGS_AMMO_RACK) ? 40000.0 : 20000.0;
 				gr_setcolor(BM_XRGB(25, 25, 25));
-				gr_urect(x + 2, y, min(x + 2 + (int)(ammo * ((double)OBS_PLAYER_CARD_WIDTH - 4.0) / player_max_ammo), x + OBS_PLAYER_CARD_WIDTH - 2), y + 2);
+				gr_urect(x + 2, y, min(x + 2 + (int)(ammo * ((double)OBS_PLAYER_CARD_WIDTH - 4.0) / player_max_ammo), x + OBS_PLAYER_CARD_WIDTH - 2), y + ammo_bar_height);
 			}
 
-			y += 4;
+			y += ammo_bar_height + 2;
 		}
 
 		if (PlayerCfg.ObsShowPrimary) {
@@ -3105,7 +3114,7 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 		gr_line(i2f(x), i2f(starty + 3), i2f(x), i2f(y));
 		gr_line(i2f(x + OBS_PLAYER_CARD_WIDTH), i2f(starty + 3), i2f(x + OBS_PLAYER_CARD_WIDTH), i2f(y));
 		gr_line(i2f(x), i2f(starty + 3), i2f(x + OBS_PLAYER_CARD_WIDTH), i2f(starty + 3));
-		gr_line(i2f(x), i2f(y), i2f(x + OBS_PLAYER_CARD_WIDTH), i2f(y));
+		gr_line(i2f(x), i2f(y), i2f(x + OBS_PLAYER_CARD_WIDTH + 1), i2f(y));
 	}
 
 #ifdef OGL
