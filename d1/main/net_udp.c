@@ -326,7 +326,7 @@ void net_log_log(char tx, const void* msg, int len, const struct sockaddr *addre
 		} else {
 			PHYSFSX_printf(netlog_fp, "%d.%06d Rx ",  usec/1000000L, usec%1000000L); 
 		}
-		char* cmsg = (char*) msg; 
+		ubyte* cmsg = (ubyte*) msg; 
 
 		PHYSFSX_printf(netlog_fp, "%d bytes  %s:%d  %s (%d)\n", len, ip, port, msg_name(cmsg[0]), cmsg[0]); 
 
