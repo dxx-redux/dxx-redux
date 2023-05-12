@@ -2,7 +2,7 @@
 # project specific logic here.
 #
 cmake_minimum_required (VERSION 3.21)
-project(d1x-redux VERSION 0.5)
+project(d1x-redux VERSION 0.6)
 
 option(OPENGL "Build with OpenGL support [default: ON]" ON)
 option(SDLMIXER "Build with SDL_Mixer support for sound and music (includes external music support) [default: ON]" ON)
