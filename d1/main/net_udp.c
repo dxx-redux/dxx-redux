@@ -3115,9 +3115,6 @@ int net_udp_process_game_info(ubyte *data, int data_len, struct _sockaddr game_a
 		recv_game.program_iver[1] = GET_INTEL_SHORT(&(data[len]));			len += 2;
 		recv_game.program_iver[2] = GET_INTEL_SHORT(&(data[len]));			len += 2;
 		
-		if ((recv_game.program_iver[0] != DXX_VERSION_MAJORi) || (recv_game.program_iver[1] != DXX_VERSION_MINORi) || (recv_game.program_iver[2] != DXX_VERSION_MICROi))
-			return 0;
-
 		recv_game.GameID = GET_INTEL_INT(&(data[len]));					len += 4;
 		memcpy(&recv_game.game_name, &(data[len]), NETGAME_NAME_LEN+1);			len += (NETGAME_NAME_LEN+1);
 		memcpy(&recv_game.mission_title, &(data[len]), MISSION_NAME_LEN+1);		len += (MISSION_NAME_LEN+1);
