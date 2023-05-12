@@ -1,9 +1,6 @@
 // Holds the main init and de-init functions for arch-related program parts
 
 #include <SDL.h>
-#ifdef __MINGW32__
-#include <windows.h>
-#endif
 #include "songs.h"
 #include "key.h"
 #include "digi.h"
@@ -40,11 +37,6 @@ void arch_close(void)
 void arch_init(void)
 {
 	int t;
-
-#ifdef __MINGW32__
-	// Load optional dll to log crashes
-	LoadLibraryA("mingw-backtrace.dll");
-#endif
 
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
 		Error("SDL library initialisation failed: %s.",SDL_GetError());
