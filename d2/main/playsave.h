@@ -142,4 +142,7 @@ int get_highest_level(void);
 void read_netgame_profile(netgame_info *ng);
 void write_netgame_profile(netgame_info *ng);
 
+int read_netgame_settings_file(const char *filename, netgame_info *ng, int no_name);
+int write_netgame_settings_file(const char *filename, netgame_info *ng, int no_name);
+
 #endif /* _PLAYSAVE_H */
