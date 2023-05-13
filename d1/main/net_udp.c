@@ -216,6 +216,11 @@ fix64 last_direct_attempt[MAX_PLAYERS][MAX_PLAYERS];
 
 void clean_pdata(fix64 now); 
 
+#define PRESET_EXT ".ngs"
+#define GAME_PARAM_CHOICE_SHOW_AGAIN -3
+int load_preset(newmenu *menu_settings);
+void save_preset(void);
+
 char* msg_name(int type)
 {
 	switch(type)
@@ -4106,7 +4111,7 @@ int net_udp_more_options_handler( newmenu *menu, d_event *event, void *userdata 
 
 typedef struct param_opt
 {
-	int start_game, name, level, mode, mode_end, moreopts;
+	int start_game, load_preset, save_preset, name, level, mode, mode_end, moreopts;
 	int closed, refuse, maxnet, maxobs, obsdelay, obsmin, anarchy, team_anarchy, robot_anarchy, coop, bounty;
 } param_opt;
 
@@ -4244,6 +4249,8 @@ int net_udp_game_param_handler( newmenu *menu, d_event *event, param_opt *opt )
 			else
 				Netgame.game_flags &= ~NETGAME_FLAG_CLOSED;
 			Netgame.RefusePlayers=menus[opt->refuse].value;
+			Netgame.obs_delay = menus[opt->obsdelay].value;
+			Netgame.obs_min = menus[opt->obsmin].value;
 			break;
 			
 		case EVENT_NEWMENU_SELECTED:
@@ -4266,6 +4273,17 @@ int net_udp_game_param_handler( newmenu *menu, d_event *event, param_opt *opt )
 
 			if (citem==opt->start_game)
 				return !net_udp_start_game();
+
+			if (citem==opt->load_preset) {
+				load_preset(menu);
+				return 1;
+			}
+
+			if (citem==opt->save_preset) {
+				save_preset();
+				return 1;
+			}
+
 			return 1;
 			
 		default:
@@ -4320,6 +4338,105 @@ void netgame_set_defaults(void)
 #endif
 }
 
+int load_preset_menu_handler( listbox *lb, d_event *event, void *userdata )
+{
+	char **items = listbox_get_items(lb);
+	int citem = listbox_get_citem(lb);
+	char filename[PATH_MAX];
+
+	switch (event->type)
+	{
+		case EVENT_KEY_COMMAND:
+			if (event_key_get(event) == KEY_CTRLED+KEY_R) {
+				netgame_set_defaults();
+				window_close(listbox_get_window(lb));
+				newmenu_set_rval((newmenu *)userdata, GAME_PARAM_CHOICE_SHOW_AGAIN);
+				window_close(newmenu_get_window((newmenu *)userdata));
+				return 0;
+			}
+			if (event_key_get(event) == KEY_CTRLED+KEY_D && citem >= 0) {
+				if (nm_messagebox(NULL, 2, TXT_YES, TXT_NO, "Delete preset %s?", items[citem]) != 0)
+					return 1;
+				snprintf(filename, sizeof(filename), "%s%s", items[citem], PRESET_EXT);
+				if (PHYSFS_delete(filename))
+					listbox_delete_item(lb, citem);
+				else
+					nm_messagebox(NULL, 1, TXT_OK, "Couldn't delete preset %s", items[citem]);
+				return 1;
+			}
+			break;
+
+		case EVENT_NEWMENU_SELECTED:
+			if (citem < 0)
+				return 0;		// shouldn't happen
+
+			netgame_set_defaults();
+			snprintf(filename, sizeof(filename), "%s%s", items[citem], PRESET_EXT);
+			if (read_netgame_settings_file(filename, &Netgame, 1)) {
+				nm_messagebox(NULL, 1, TXT_OK, "Failed to read preset file\n%s", filename);
+				return 1;
+			}
+			newmenu_set_rval((newmenu *)userdata, GAME_PARAM_CHOICE_SHOW_AGAIN);
+			window_close(newmenu_get_window((newmenu *)userdata));
+			return 0;
+
+		case EVENT_WINDOW_CLOSE:
+			PHYSFS_freeList(items);
+			break;
+
+		default:
+			break;
+	}
+
+	return 0;
+}
+
+int load_preset(newmenu *menu_settings)
+{
+	char **list, **newlist, *p;
+	static const char *const types[] = { PRESET_EXT, NULL };
+	int NumItems;
+
+	list = PHYSFSX_findFiles("", types);
+	if (!list)
+		return 0;	// memory error
+
+	for (NumItems = 0; list[NumItems] != NULL; NumItems++) {
+		if ((p = strrchr(list[NumItems], '.')))
+			*p = 0;
+	}
+
+	// Sort by name
+	qsort(list, NumItems, sizeof(char *), (int (*)( const void *, const void * ))string_array_sort_func);
+
+	newmenu_listbox1("Select preset\nCtrl+D to delete\nCtrl+R for defaults", NumItems, list, 1, 0, load_preset_menu_handler, menu_settings);
+
+	return 1;
+}
+
+void save_preset()
+{
+	static char name[PATH_MAX - 4];
+	char filename[PATH_MAX];
+	newmenu_item m[1];
+	int menu_ret;
+	int len;
+
+	m[0].type=NM_TYPE_INPUT; m[0].text_len = sizeof(name) - 1; m[0].text = name;
+	menu_ret = newmenu_do( NULL, "Save preset as", 1, m, NULL, NULL );
+	if (menu_ret == -1)
+		return;
+
+	snprintf(filename, sizeof(filename), "%s%s", name, PRESET_EXT);
+
+	if (PHYSFS_exists(filename) &&
+		nm_messagebox(NULL, 2, TXT_YES, TXT_NO, "Preset %s already exists.\nOverwrite?", name) != 0)
+		return;
+
+	if (write_netgame_settings_file(filename, &Netgame, 1))
+		nm_messagebox(NULL, 1, TXT_OK, "Failed to write preset file\n%s", filename);
+}
+
 int net_udp_setup_game()
 {
 	int i;
@@ -4331,6 +4448,8 @@ int net_udp_setup_game()
 	char srmaxnet[50];
 	char srmaxobs[50];
 	char srbdelay[50];
+	int numplayers_limit;
+	int choice;
 
 	net_udp_init();
 
@@ -4360,82 +4479,93 @@ int net_udp_setup_game()
 
 	sprintf( slevel, "1" ); Netgame.levelnum = 1;
 
-	optnum = 0;
-	opt.start_game=optnum;
-	m[optnum].type = NM_TYPE_MENU;  m[optnum].text = "Start Game"; optnum++;
-	m[optnum].type = NM_TYPE_TEXT; m[optnum].text = TXT_DESCRIPTION; optnum++;
+	choice = 0;
+	for (;;) {
+		optnum = 0;
+		opt.start_game=optnum;
+		m[optnum].type = NM_TYPE_MENU;  m[optnum].text = "Start Game"; optnum++;
 
-	opt.name = optnum;
-	m[optnum].type = NM_TYPE_INPUT; m[optnum].text = Netgame.game_name; m[optnum].text_len = NETGAME_NAME_LEN; optnum++;
+		opt.load_preset=optnum;
+		m[optnum].type = NM_TYPE_MENU;  m[optnum].text = "Load Preset"; optnum++;
 
-	sprintf(level_text, "%s (1-%d)", TXT_LEVEL_, Last_level);
-	if (Last_secret_level < -1)
-		sprintf(level_text+strlen(level_text)-1, ", S1-S%d)", -Last_secret_level);
-	else if (Last_secret_level == -1)
-		sprintf(level_text+strlen(level_text)-1, ", S1)");
+		opt.save_preset=optnum;
+		m[optnum].type = NM_TYPE_MENU;  m[optnum].text = "Save Preset"; optnum++;
 
-	Assert(strlen(level_text) < 32);
+		m[optnum].type = NM_TYPE_TEXT; m[optnum].text = TXT_DESCRIPTION; optnum++;
 
-	m[optnum].type = NM_TYPE_TEXT; m[optnum].text = level_text; optnum++;
+		opt.name = optnum;
+		m[optnum].type = NM_TYPE_INPUT; m[optnum].text = Netgame.game_name; m[optnum].text_len = NETGAME_NAME_LEN; optnum++;
 
-	opt.level = optnum;
-	m[optnum].type = NM_TYPE_INPUT; m[optnum].text = slevel; m[optnum].text_len=4; optnum++;
-	m[optnum].type = NM_TYPE_TEXT; m[optnum].text = TXT_OPTIONS; optnum++;
+		sprintf(level_text, "%s (1-%d)", TXT_LEVEL_, Last_level);
+		if (Last_secret_level < -1)
+			sprintf(level_text+strlen(level_text)-1, ", S1-S%d)", -Last_secret_level);
+		else if (Last_secret_level == -1)
+			sprintf(level_text+strlen(level_text)-1, ", S1)");
 
-	opt.mode = optnum;
-	m[optnum].type = NM_TYPE_RADIO; m[optnum].text = TXT_ANARCHY; m[optnum].value=(Netgame.gamemode == NETGAME_ANARCHY); m[optnum].group=0; opt.anarchy=optnum; optnum++;
-	m[optnum].type = NM_TYPE_RADIO; m[optnum].text = TXT_TEAM_ANARCHY; m[optnum].value=(Netgame.gamemode == NETGAME_TEAM_ANARCHY); m[optnum].group=0; opt.team_anarchy=optnum; optnum++;
-	m[optnum].type = NM_TYPE_RADIO; m[optnum].text = TXT_ANARCHY_W_ROBOTS; m[optnum].value=(Netgame.gamemode == NETGAME_ROBOT_ANARCHY); m[optnum].group=0; opt.robot_anarchy=optnum; optnum++;
-	m[optnum].type = NM_TYPE_RADIO; m[optnum].text = TXT_COOPERATIVE; m[optnum].value=(Netgame.gamemode == NETGAME_COOPERATIVE); m[optnum].group=0; opt.coop=optnum; optnum++;
-	m[optnum].type = NM_TYPE_RADIO; m[optnum].text = "Bounty"; m[optnum].value = ( Netgame.gamemode & NETGAME_BOUNTY ); m[optnum].group = 0; opt.mode_end=opt.bounty=optnum; optnum++;
+		Assert(strlen(level_text) < 32);
 
-	m[optnum].type = NM_TYPE_TEXT; m[optnum].text = ""; optnum++;
+		m[optnum].type = NM_TYPE_TEXT; m[optnum].text = level_text; optnum++;
 
-	m[optnum].type = NM_TYPE_RADIO; m[optnum].text = "Open game"; m[optnum].group=1; m[optnum].value=(!Netgame.RefusePlayers && !Netgame.game_flags & NETGAME_FLAG_CLOSED); optnum++;
-	opt.closed = optnum;
-	m[optnum].type = NM_TYPE_RADIO; m[optnum].text = TXT_CLOSED_GAME; m[optnum].group=1; m[optnum].value=Netgame.game_flags & NETGAME_FLAG_CLOSED; optnum++;
-	opt.refuse = optnum;
-	m[optnum].type = NM_TYPE_RADIO; m[optnum].text = "Restricted Game              "; m[optnum].group=1; m[optnum].value=Netgame.RefusePlayers; optnum++;
+		opt.level = optnum;
+		m[optnum].type = NM_TYPE_INPUT; m[optnum].text = slevel; m[optnum].text_len=4; optnum++;
+		m[optnum].type = NM_TYPE_TEXT; m[optnum].text = TXT_OPTIONS; optnum++;
 
-	numplayers_limit = Netgame.gamemode == NETGAME_COOPERATIVE ? 4 : Netgame.max_numobservers ? 7 : 8;
-	if (Netgame.max_numplayers > numplayers_limit)
-		Netgame.max_numplayers = numplayers_limit;
+		opt.mode = optnum;
+		m[optnum].type = NM_TYPE_RADIO; m[optnum].text = TXT_ANARCHY; m[optnum].value=(Netgame.gamemode == NETGAME_ANARCHY); m[optnum].group=0; opt.anarchy=optnum; optnum++;
+		m[optnum].type = NM_TYPE_RADIO; m[optnum].text = TXT_TEAM_ANARCHY; m[optnum].value=(Netgame.gamemode == NETGAME_TEAM_ANARCHY); m[optnum].group=0; opt.team_anarchy=optnum; optnum++;
+		m[optnum].type = NM_TYPE_RADIO; m[optnum].text = TXT_ANARCHY_W_ROBOTS; m[optnum].value=(Netgame.gamemode == NETGAME_ROBOT_ANARCHY); m[optnum].group=0; opt.robot_anarchy=optnum; optnum++;
+		m[optnum].type = NM_TYPE_RADIO; m[optnum].text = TXT_COOPERATIVE; m[optnum].value=(Netgame.gamemode == NETGAME_COOPERATIVE); m[optnum].group=0; opt.coop=optnum; optnum++;
+		m[optnum].type = NM_TYPE_RADIO; m[optnum].text = "Bounty"; m[optnum].value = ( Netgame.gamemode & NETGAME_BOUNTY ); m[optnum].group = 0; opt.mode_end=opt.bounty=optnum; optnum++;
 
-	opt.maxnet = optnum;
-	sprintf( srmaxnet, "Maximum players: %d", Netgame.max_numplayers);
-	m[optnum].type = NM_TYPE_SLIDER; m[optnum].value=Netgame.max_numplayers-2; m[optnum].text= srmaxnet; m[optnum].min_value=0; 
-	m[optnum].max_value=numplayers_limit-2; optnum++;
+		m[optnum].type = NM_TYPE_TEXT; m[optnum].text = ""; optnum++;
 
-	opt.maxobs = optnum;
-	sprintf( srmaxobs, "Maximum observers: %d", Netgame.max_numobservers);
-	m[optnum].type = NM_TYPE_SLIDER; m[optnum].value=Netgame.max_numobservers/2; m[optnum].text= srmaxobs; m[optnum].min_value=0; 
-	m[optnum].max_value=MAX_OBSERVERS/2; optnum++;	
+		m[optnum].type = NM_TYPE_RADIO; m[optnum].text = "Open game"; m[optnum].group=1; m[optnum].value=(!Netgame.RefusePlayers && !Netgame.game_flags & NETGAME_FLAG_CLOSED); optnum++;
+		opt.closed = optnum;
+		m[optnum].type = NM_TYPE_RADIO; m[optnum].text = TXT_CLOSED_GAME; m[optnum].group=1; m[optnum].value=Netgame.game_flags & NETGAME_FLAG_CLOSED; optnum++;
+		opt.refuse = optnum;
+		m[optnum].type = NM_TYPE_RADIO; m[optnum].text = "Restricted Game              "; m[optnum].group=1; m[optnum].value=Netgame.RefusePlayers; optnum++;
 
-	opt.obsdelay = optnum;
-	sprintf( srbdelay, "Broadcast delay %d seconds", OBSERVER_DELAY);
-	m[optnum].type = NM_TYPE_CHECK; m[optnum].text = srbdelay; m[optnum].value = Netgame.obs_delay;
-	optnum++;
+		numplayers_limit = Netgame.gamemode == NETGAME_COOPERATIVE ? 4 : Netgame.max_numobservers ? 7 : 8;
+		if (Netgame.max_numplayers > numplayers_limit)
+			Netgame.max_numplayers = numplayers_limit;
 
-	opt.obsmin = optnum;
-	m[optnum].type = NM_TYPE_CHECK; m[optnum].text = "Minimal Observer Info"; m[optnum].value = Netgame.obs_min;
-	optnum++;
-	
-	opt.moreopts = optnum;
-	m[optnum].type = NM_TYPE_MENU;  m[optnum].text = "Advanced options"; optnum++;
+		opt.maxnet = optnum;
+		sprintf( srmaxnet, "Maximum players: %d", Netgame.max_numplayers);
+		m[optnum].type = NM_TYPE_SLIDER; m[optnum].value=Netgame.max_numplayers-2; m[optnum].text= srmaxnet; m[optnum].min_value=0;
+		m[optnum].max_value=numplayers_limit-2; optnum++;
 
-	Assert(optnum <= SDL_arraysize(m));
+		opt.maxobs = optnum;
+		sprintf( srmaxobs, "Maximum observers: %d", Netgame.max_numobservers);
+		m[optnum].type = NM_TYPE_SLIDER; m[optnum].value=Netgame.max_numobservers/2; m[optnum].text= srmaxobs; m[optnum].min_value=0;
+		m[optnum].max_value=MAX_OBSERVERS/2; optnum++;
 
-	i = newmenu_do1( NULL, TXT_NETGAME_SETUP, optnum, m, (int (*)( newmenu *, d_event *, void * ))net_udp_game_param_handler, &opt, opt.start_game );
+		opt.obsdelay = optnum;
+		sprintf( srbdelay, "Broadcast delay %d seconds", OBSERVER_DELAY);
+		m[optnum].type = NM_TYPE_CHECK; m[optnum].text = srbdelay; m[optnum].value = Netgame.obs_delay;
+		optnum++;
 
-	if (i < 0)
+		opt.obsmin = optnum;
+		m[optnum].type = NM_TYPE_CHECK; m[optnum].text = "Minimal Observer Info"; m[optnum].value = Netgame.obs_min;
+		optnum++;
+
+		opt.moreopts = optnum;
+		m[optnum].type = NM_TYPE_MENU;  m[optnum].text = "Advanced options"; optnum++;
+
+		Assert(optnum <= SDL_arraysize(m));
+
+		choice = newmenu_do1( NULL, TXT_NETGAME_SETUP, optnum, m, (int (*)( newmenu *, d_event *, void * ))net_udp_game_param_handler, &opt, choice );
+
+		if (choice != GAME_PARAM_CHOICE_SHOW_AGAIN)
+			break;
+		choice = opt.load_preset;
+	}
+
+	if (choice < 0)
 		net_udp_close();
-
-	Netgame.obs_delay = m[opt.obsdelay].value;
-	Netgame.obs_min = m[opt.obsmin].value;
 
 	write_netgame_profile(&Netgame);
 
-	return i >= 0;
+	return choice >= 0;
 }
 
 void net_udp_reset_connection_statuses() {
