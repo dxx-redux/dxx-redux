@@ -4289,7 +4289,14 @@ int net_udp_setup_game()
 		if (i!=Player_num)
 			Players[i].callsign[0]=0;
 
+	Netgame.gamemode = 0;
 	Netgame.max_numplayers = MAX_PLAYERS;
+	Netgame.max_numobservers = 0;
+	Netgame.obs_delay = 0;
+	Netgame.obs_min = 0;
+	Netgame.host_is_obs = 0;
+	Netgame.game_flags = 0;
+	Netgame.control_invul_time = 0;
 	Netgame.KillGoal=0;
 	Netgame.PlayTimeAllowed=0;
 	Netgame.RefusePlayers=0;
@@ -4301,6 +4308,7 @@ int net_udp_setup_game()
 		snprintf (UDP_MyPort, sizeof(UDP_MyPort), "%d", GameArg.MplUdpMyPort);
 	else
 		snprintf (UDP_MyPort, sizeof(UDP_MyPort), "%d", UDP_PORT_DEFAULT);
+	Netgame.ShowEnemyNames = 0;
 	Netgame.BrightPlayers = 1;
 	Netgame.SpawnStyle = SPAWN_STYLE_NO_INVUL;
 	Netgame.AllowedItems = 0;
@@ -4308,7 +4316,13 @@ int net_udp_setup_game()
 	Netgame.PacketLossPrevention = 1;
 	Netgame.NoFriendlyFire = 0;
 	Netgame.RetroProtocol = 1;
+	Netgame.RespawnConcs = 0;
+	Netgame.AllowColoredLighting = 0;
+	Netgame.FairColors = 0;
 	Netgame.BlackAndWhitePyros = 1;
+	Netgame.PrimaryDupFactor = 0;
+	Netgame.SecondaryDupFactor = 0;
+	Netgame.SecondaryCapFactor = 0;
 	Netgame.DarkSmartBlobs = 0;
 	Netgame.LowVulcan = 0;
 	Netgame.AllowPreferredColors = 1; 
