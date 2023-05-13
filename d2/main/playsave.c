@@ -1074,18 +1074,26 @@ int get_lifetime_checksum (int a,int b)
 // read stored values from ngp file to netgame_info
 void read_netgame_profile(netgame_info *ng)
 {
-	char filename[PATH_MAX], line[50], *token, *value, *ptr;
+	char filename[PATH_MAX];
 	PHYSFS_file *file;
 
 	memset(filename, '\0', PATH_MAX);
 	snprintf(filename, PATH_MAX, GameArg.SysUsePlayersDir? "Players/%.8s.ngp" : "%.8s.ngp", Players[Player_num].callsign);
 	if (!PHYSFSX_exists(filename,0))
 		return;
+	read_netgame_settings_file(filename, ng, 0);
+}
+
+// returns 0 if ok or errno if failed
+int read_netgame_settings_file(const char *filename, netgame_info *ng, int no_name)
+{
+	char line[50], *token, *value, *ptr;
+	PHYSFS_file *file;
 
 	file = PHYSFSX_openReadBuffered(filename);
 
 	if (!file)
-		return;
+		return errno;
 
 	// NOTE that we do not set any defaults here or even initialize netgame_info. For flexibility, leave that to the function calling this.
 	while (!PHYSFS_eof(file))
@@ -1100,7 +1108,7 @@ void read_netgame_profile(netgame_info *ng)
 			value = strtok(NULL, "=");
 			if (!value)
 				value = "";
-			if (!strcmp(token, "game_name"))
+			if (!strcmp(token, "game_name") && !no_name)
 			{
 				char * p;
 				strncpy( ng->game_name, value, NETGAME_NAME_LEN+1 );
@@ -1193,6 +1201,8 @@ void read_netgame_profile(netgame_info *ng)
 	}
 
 	PHYSFS_close(file);
+
+	return 0;
 }
 
 // write values from netgame_info to ngp file
@@ -1203,12 +1213,21 @@ void write_netgame_profile(netgame_info *ng)
 
 	memset(filename, '\0', PATH_MAX);
 	snprintf(filename, PATH_MAX, GameArg.SysUsePlayersDir? "Players/%.8s.ngp" : "%.8s.ngp", Players[Player_num].callsign);
+	write_netgame_settings_file(filename, ng, 0);
+}
+
+// returns 0 if ok or errno if failed
+int write_netgame_settings_file(const char *filename, netgame_info *ng, int no_name)
+{
+	PHYSFS_file *file;
+
 	file = PHYSFSX_openWriteBuffered(filename);
 
 	if (!file)
-		return;
+		return errno;
 
-	PHYSFSX_printf(file, "game_name=%s\n", ng->game_name);
+	if (!no_name)
+		PHYSFSX_printf(file, "game_name=%s\n", ng->game_name);
 	PHYSFSX_printf(file, "gamemode=%i\n", ng->gamemode);
 	PHYSFSX_printf(file, "RefusePlayers=%i\n", ng->RefusePlayers);
 	PHYSFSX_printf(file, "difficulty=%i\n", ng->difficulty);
@@ -1257,4 +1276,6 @@ void write_netgame_profile(netgame_info *ng)
 	PHYSFSX_printf(file, "ngp version=%s\n",VERSION);
 
 	PHYSFS_close(file);
+
+	return 0;
 }
