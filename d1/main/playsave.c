@@ -1280,9 +1280,9 @@ void read_netgame_profile(netgame_info *ng)
 				ng->RefusePlayers = strtol(value, NULL, 10);
 			else if (!strcmp(token, "difficulty"))
 				ng->difficulty = strtol(value, NULL, 10);
-			else if (!strcmp(token, "maxplayers"))
+			else if (!strcmp(token, "max_numplayers"))
 				ng->max_numplayers = strtol(value, NULL, 10);
-			else if (!strcmp(token, "maxobservers"))
+			else if (!strcmp(token, "max_numobservers"))
 				ng->max_numobservers = strtol(value, NULL, 10);			
 			else if (!strcmp(token, "game_flags"))
 				ng->game_flags = strtol(value, NULL, 10);
@@ -1324,8 +1324,16 @@ void read_netgame_profile(netgame_info *ng)
 				ng->FairColors = strtol(value, NULL, 10);	
 			else if (!strcmp(token, "BlackAndWhitePyros"))
 				ng->BlackAndWhitePyros = strtol(value, NULL, 10);		
-			else if (!strcmp(token, "ObsDelay"))
+			else if (!strcmp(token, "PrimaryDupFactor"))
+				ng->PrimaryDupFactor = strtol(value, NULL, 10);
+			else if (!strcmp(token, "SecondaryDupFactor"))
+				ng->SecondaryDupFactor = strtol(value, NULL, 10);
+			else if (!strcmp(token, "SecondaryCapFactor"))
+				ng->SecondaryCapFactor = strtol(value, NULL, 10);
+			else if (!strcmp(token, "obs_delay"))
 				ng->obs_delay = strtol(value, NULL, 10);																	
+			else if (!strcmp(token, "obs_min"))
+				ng->obs_min = strtol(value, NULL, 10);
 			else if (!strcmp(token, "HomingUpdateRate"))
 				ng->HomingUpdateRate = strtol(value, NULL, 10);
 			else if (!strcmp(token, "ConstantHomingSpeed"))
@@ -1361,8 +1369,8 @@ void write_netgame_profile(netgame_info *ng)
 	PHYSFSX_printf(file, "gamemode=%i\n", ng->gamemode);
 	PHYSFSX_printf(file, "RefusePlayers=%i\n", ng->RefusePlayers);
 	PHYSFSX_printf(file, "difficulty=%i\n", ng->difficulty);
-	PHYSFSX_printf(file, "numplayers=%i\n", ng->max_numplayers);
-	PHYSFSX_printf(file, "maxobservers=%i\n", ng->max_numobservers);
+	PHYSFSX_printf(file, "max_numplayers=%i\n", ng->max_numplayers);
+	PHYSFSX_printf(file, "max_numobservers=%i\n", ng->max_numobservers);
 	PHYSFSX_printf(file, "game_flags=%i\n", ng->game_flags);
 	PHYSFSX_printf(file, "AllowedItems=%i\n", ng->AllowedItems);
 	PHYSFSX_printf(file, "ShowEnemyNames=%i\n", ng->ShowEnemyNames);
@@ -1383,7 +1391,11 @@ void write_netgame_profile(netgame_info *ng)
 	PHYSFSX_printf(file, "AllowColoredLighting=%i\n", ng->AllowColoredLighting);
 	PHYSFSX_printf(file, "FairColors=%i\n", ng->FairColors);
 	PHYSFSX_printf(file, "BlackAndWhitePyros=%i\n", ng->BlackAndWhitePyros);
-	PHYSFSX_printf(file, "ObsDelay=%i\n", ng->obs_delay);
+	PHYSFSX_printf(file, "PrimaryDupFactor=%i\n", ng->PrimaryDupFactor);
+	PHYSFSX_printf(file, "SecondaryDupFactor=%i\n", ng->SecondaryDupFactor);
+	PHYSFSX_printf(file, "SecondaryCapFactor=%i\n", ng->SecondaryCapFactor);
+	PHYSFSX_printf(file, "obs_delay=%i\n", ng->obs_delay);
+	PHYSFSX_printf(file, "obs_min=%i\n", ng->obs_min);
 	PHYSFSX_printf(file, "HomingUpdateRate=%i\n", ng->HomingUpdateRate);
 	PHYSFSX_printf(file, "ConstantHomingSpeed=%i\n", ng->ConstantHomingSpeed);
 	PHYSFSX_printf(file, "AllowCustomModelsTextures=%i\n", ng->AllowCustomModelsTextures);
