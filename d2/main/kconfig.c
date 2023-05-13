@@ -305,7 +305,7 @@ kc_item kc_d2x[NUM_D2X_CONTROLS] = {
 	{ 11, 15, 93,258, 26,  8, 14, 10, 12,"PLASMA/PHOENIX CANNON", BT_MOUSE_BUTTON, 255, NULL, 0, &Controls.select_weapon_count },
 	{ 12, 15,101,142, 26,  9, 15, 11, 13,"FUSION/OMEGA CANNON", BT_KEY, 255, NULL, 0, &Controls.select_weapon_count },
 	{ 13, 15,101,200, 26, 10, 16, 12, 14,"FUSION/OMEGA CANNON", BT_JOY_BUTTON, 255, NULL, 0, &Controls.select_weapon_count },
-	{ 14, 15,101,258, 26, 11, 17, 13, 15,"FUSION/OMEGA CANNON", BT_JOY_BUTTON, 255, NULL, 0, &Controls.select_weapon_count },
+	{ 14, 15,101,258, 26, 11, 17, 13, 15,"FUSION/OMEGA CANNON", BT_MOUSE_BUTTON, 255, NULL, 0, &Controls.select_weapon_count },
 	{ 15, 15,109,142, 26, 12, 18, 14, 16,"CONCUSSION/FLASH MISSILE", BT_KEY, 255, NULL, 0, &Controls.select_weapon_count },
 	{ 16, 15,109,200, 26, 13, 19, 15, 17,"CONCUSSION/FLASH MISSILE", BT_JOY_BUTTON, 255, NULL, 0, &Controls.select_weapon_count },
 	{ 17, 15,109,258, 26, 14, 20, 16, 18,"CONCUSSION/FLASH MISSILE", BT_MOUSE_BUTTON, 255, NULL, 0, &Controls.select_weapon_count },
