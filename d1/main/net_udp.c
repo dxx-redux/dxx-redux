@@ -4075,6 +4075,14 @@ int net_udp_more_options_handler( newmenu *menu, d_event *event, void *userdata 
 			{
 				Netgame.HomingUpdateRate=menus[opt_homing_update_rate].value + 20;
 				sprintf( menus[opt_homing_update_rate].text, "Homing Update Rate: %d", Netgame.HomingUpdateRate);
+			} else if (citem == opt_spawn_no_invul) {
+				Netgame.SpawnStyle = SPAWN_STYLE_NO_INVUL;
+			} else if (citem == opt_spawn_short_invul) {
+				Netgame.SpawnStyle = SPAWN_STYLE_SHORT_INVUL;
+			} else if (citem == opt_spawn_long_invul) {
+				Netgame.SpawnStyle = SPAWN_STYLE_LONG_INVUL;
+			} else if (citem == opt_spawn_preview) {
+				Netgame.SpawnStyle = SPAWN_STYLE_PREVIEW;
 			} else if (citem == opt_gauss_duplicating) {
 				Netgame.GaussAmmoStyle = GAUSS_STYLE_DUPLICATING;
 			}  else if (citem == opt_gauss_depleting) {
