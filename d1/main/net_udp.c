@@ -4275,29 +4275,8 @@ int net_udp_game_param_handler( newmenu *menu, d_event *event, param_opt *opt )
 	return 0;
 }
 
-int net_udp_setup_game()
+void netgame_set_defaults(void)
 {
-	int i;
-	int optnum;
-	param_opt opt;
-	newmenu_item m[24];
-	char slevel[5];
-	char level_text[32];
-	char srmaxnet[50];
-	char srmaxobs[50];
-	char srbdelay[50];
-	int numplayers_limit;
-
-	net_udp_init();
-
-	net_udp_reset_connection_statuses();
-
-	change_playernum_to(0);
-
-	for (i=0;i<MAX_PLAYERS;i++)
-		if (i!=Player_num)
-			Players[i].callsign[0]=0;
-
 	Netgame.gamemode = 0;
 	Netgame.max_numplayers = MAX_PLAYERS;
 	Netgame.max_numobservers = 0;
@@ -4309,14 +4288,9 @@ int net_udp_setup_game()
 	Netgame.KillGoal=0;
 	Netgame.PlayTimeAllowed=0;
 	Netgame.RefusePlayers=0;
-	sprintf( Netgame.game_name, "%s%s", Players[Player_num].callsign, TXT_S_GAME );
 	Netgame.difficulty=PlayerCfg.DefaultDifficulty;
 	Netgame.PacketsPerSec=20;
 	Netgame.ShortPackets=0;
-	if (GameArg.MplUdpMyPort != 0)
-		snprintf (UDP_MyPort, sizeof(UDP_MyPort), "%d", GameArg.MplUdpMyPort);
-	else
-		snprintf (UDP_MyPort, sizeof(UDP_MyPort), "%d", UDP_PORT_DEFAULT);
 	Netgame.ShowEnemyNames = 0;
 	Netgame.BrightPlayers = 1;
 	Netgame.SpawnStyle = SPAWN_STYLE_NO_INVUL;
@@ -4344,6 +4318,37 @@ int net_udp_setup_game()
 #ifdef USE_TRACKER
 	Netgame.Tracker = 1;
 #endif
+}
+
+int net_udp_setup_game()
+{
+	int i;
+	int optnum;
+	param_opt opt;
+	newmenu_item m[24];
+	char slevel[5];
+	char level_text[32];
+	char srmaxnet[50];
+	char srmaxobs[50];
+	char srbdelay[50];
+
+	net_udp_init();
+
+	net_udp_reset_connection_statuses();
+
+	change_playernum_to(0);
+
+	for (i=0;i<MAX_PLAYERS;i++)
+		if (i!=Player_num)
+			Players[i].callsign[0]=0;
+
+	sprintf( Netgame.game_name, "%s%s", Players[Player_num].callsign, TXT_S_GAME );
+	if (GameArg.MplUdpMyPort != 0)
+		snprintf (UDP_MyPort, sizeof(UDP_MyPort), "%d", GameArg.MplUdpMyPort);
+	else
+		snprintf (UDP_MyPort, sizeof(UDP_MyPort), "%d", UDP_PORT_DEFAULT);
+
+	netgame_set_defaults();
 
 	read_netgame_profile(&Netgame);
 
