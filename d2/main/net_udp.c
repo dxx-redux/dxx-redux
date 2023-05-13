@@ -4340,6 +4340,7 @@ int net_udp_setup_game()
 	char srmaxnet[50];
 	char srmaxobs[50];
 	char srbdelay[50];
+	int numplayers_limit;
 
 	net_udp_init();
 
@@ -4459,14 +4460,14 @@ int net_udp_setup_game()
 	opt.refuse = optnum;
 	m[optnum].type = NM_TYPE_RADIO; m[optnum].text = "Restricted Game              "; m[optnum].group=1; m[optnum].value=Netgame.RefusePlayers; optnum++;
 
-	if( (Netgame.max_numobservers > 0) && (Netgame.max_numplayers > 7)) {
-		Netgame.max_numplayers = 7;
-	}
+	numplayers_limit = Netgame.gamemode == NETGAME_COOPERATIVE ? 4 : Netgame.max_numobservers ? 7 : 8;
+	if (Netgame.max_numplayers > numplayers_limit)
+		Netgame.max_numplayers = numplayers_limit;
 
 	opt.maxnet = optnum;
 	sprintf( srmaxnet, "Maximum players: %d", Netgame.max_numplayers);
 	m[optnum].type = NM_TYPE_SLIDER; m[optnum].value=Netgame.max_numplayers-2; m[optnum].text= srmaxnet; m[optnum].min_value=0; 
-	m[optnum].max_value=Netgame.max_numplayers-2; optnum++;
+	m[optnum].max_value=numplayers_limit-2; optnum++;
 
 	opt.maxobs = optnum;
 	sprintf( srmaxobs, "Maximum observers: %d", Netgame.max_numobservers);
