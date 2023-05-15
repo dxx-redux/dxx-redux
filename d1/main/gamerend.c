@@ -107,7 +107,9 @@ void show_framerate()
 	{
 		fps_rate = fps_count;
 		fps_count = 0;
-		fps_time = timer_query();
+		fps_time += F1_0;
+		if (timer_query() >= fps_time + F1_0) // frame took unexpectedly long
+			fps_time = timer_query();
 	}
 	if (Newdemo_state == ND_STATE_PLAYBACK) {
 		extern fix nd_recorded_time;
