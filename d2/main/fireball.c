@@ -69,6 +69,11 @@ object *object_create_explosion_sub(object *objp, short segnum, vms_vector * pos
 {
 	int objnum;
 	object *obj;
+	int obj_type = objp ? objp->type : OBJ_WALL;
+
+	// workaround for missing type checks in original code
+	if (obj_type != OBJ_WEAPON && obj_type != OBJ_PLAYER)
+		objp = NULL;
 
 	objnum = obj_create( OBJ_FIREBALL,vclip_type,segnum,position,&vmd_identity_matrix,size,
 					CT_EXPLOSION,MT_NONE,RT_FIREBALL);
@@ -272,6 +277,12 @@ object *object_create_explosion_sub(object *objp, short segnum, vms_vector * pos
 										con_printf(CON_NORMAL, "You took %.1f damage from %s's %s blast, shields now %.1f\n", f2fl(damage), killer_name, weapon_name, f2fl(Players[Player_num].shields - damage));
 
 										multi_send_damage(damage, obj0p->shields, killer->type, killer->id, DAMAGE_BLAST, objp);
+									} else if ((obj0p->id == Player_num) && (! Player_is_dead)) {
+										con_printf(CON_NORMAL, "You took %.1f damage from a %s blast, shields now %.1f\n",
+											obj_type == OBJ_WALL ? "wall" : obj_type == OBJ_ROBOT ? "robot" : "unknown",
+											f2fl(damage), f2fl(Players[Player_num].shields - damage));
+
+										multi_send_damage(damage, obj0p->shields, obj_type, 0, DAMAGE_BLAST, objp);
 									}
 
 									apply_damage_to_player(obj0p, killer, damage, 0 );
@@ -1339,7 +1350,7 @@ void do_explosion_sequence(object *obj)
 		vclip_num = get_explosion_vclip(del_obj,1);
 
 		if (del_obj->type == OBJ_ROBOT && Robot_info[del_obj->id].badass)
-			expl_obj = object_create_badass_explosion( NULL, del_obj->segnum, spawn_pos, fixmul(del_obj->size, EXPLOSION_SCALE), vclip_num, F1_0*Robot_info[del_obj->id].badass, i2f(4)*Robot_info[del_obj->id].badass, i2f(35)*Robot_info[del_obj->id].badass, -1 );
+			expl_obj = object_create_badass_explosion( del_obj, del_obj->segnum, spawn_pos, fixmul(del_obj->size, EXPLOSION_SCALE), vclip_num, F1_0*Robot_info[del_obj->id].badass, i2f(4)*Robot_info[del_obj->id].badass, i2f(35)*Robot_info[del_obj->id].badass, -1 );
 		else
 			expl_obj = object_create_explosion( del_obj->segnum, spawn_pos, fixmul(del_obj->size, EXPLOSION_SCALE), vclip_num );
 
