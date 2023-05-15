@@ -28,5 +28,8 @@ void timer_update();
 fix64 timer_query();
 void timer_delay(fix seconds);
 void timer_delay2(int fps);
+int64_t timer_query_usec(void);
+void timer_delay_usec(int64_t usec);
+void timer_init(void);
 
 #endif
