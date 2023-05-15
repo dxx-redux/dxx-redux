@@ -3659,8 +3659,8 @@ void observer_maybe_show_death_log(int y) {
 
 		switch (kle->killer_type) {
 			case OBJ_WALL:
-				// You can't die to a wall, but you can die to lava which is considered a wall.
-				snprintf(killer, sizeof(killer) / sizeof(killer[0]), "Lava");
+				// You can die to a blastable wall and to lava which is considered a wall.
+				snprintf(killer, sizeof(killer) / sizeof(killer[0]), kle->damage_type == DAMAGE_LAVA ? "Lava" : "Wall");
 				killer_color = BM_XRGB(12, 12, 12);
 				reason[0] = '\0';
 				break;

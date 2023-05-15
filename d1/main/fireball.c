@@ -59,6 +59,11 @@ object *object_create_explosion_sub(object *objp, short segnum, vms_vector * pos
 {
 	int objnum;
 	object *obj;
+	int obj_type = objp ? objp->type : OBJ_WALL;
+
+	// workaround for missing type checks in original code
+	if (obj_type != OBJ_WEAPON && obj_type != OBJ_PLAYER)
+		objp = NULL;
 
 	objnum = obj_create( OBJ_FIREBALL,vclip_type,segnum,position,&vmd_identity_matrix,size,
 					CT_EXPLOSION,MT_NONE,RT_FIREBALL);
@@ -189,6 +194,12 @@ object *object_create_explosion_sub(object *objp, short segnum, vms_vector * pos
 										con_printf(CON_NORMAL, "You took %.1f damage from %s's %s blast, shields now %.1f\n", f2fl(damage), killer_name, weapon_name, f2fl(Players[Player_num].shields - damage));
 										
 										multi_send_damage(damage, obj0p->shields, killer->type, killer->id, DAMAGE_BLAST, objp);
+									} else if ((obj0p->id == Player_num) && (! Player_is_dead)) {
+										con_printf(CON_NORMAL, "You took %.1f damage from a %s blast, shields now %.1f\n",
+											obj_type == OBJ_WALL ? "wall" : obj_type == OBJ_ROBOT ? "robot" : "unknown",
+											f2fl(damage), f2fl(Players[Player_num].shields - damage));
+
+										multi_send_damage(damage, obj0p->shields, obj_type, 0, DAMAGE_BLAST, objp);
 									}
 
 									apply_damage_to_player(obj0p, killer, damage, 0 );
