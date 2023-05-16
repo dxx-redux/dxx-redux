@@ -1701,6 +1701,7 @@ void build_segment_list(int start_seg_num, int window_num)
 	int	lcnt,scnt,ecnt;
 	int	l,c;
 	int	ch;
+	int	obs = is_observer();
 
 	memset(visited, 0, sizeof(visited[0])*(Highest_segment_index+1));
 	memset(render_pos, -1, sizeof(render_pos[0])*(Highest_segment_index+1));
@@ -1728,6 +1729,7 @@ void build_segment_list(int start_seg_num, int window_num)
 	//build list
 
 	for (l=0;l<Render_depth;l++) {
+		int reprocess = 0;
 
 		//while (scnt < ecnt) {
 		for (scnt=0;scnt < ecnt;scnt++) {
@@ -1762,9 +1764,9 @@ void build_segment_list(int start_seg_num, int window_num)
 
 				// Only add side if it doesn't block rendering of the child segment
 				// (in observer mode, add side as long as it has a child)
-				if ((wid & WID_RENDPAST_FLAG) || (is_observer() && (ch >= 0))) {
+				if ((wid & WID_RENDPAST_FLAG) || (obs && (ch >= 0))) {
 					// Skip sides that are behind the camera (except in observer mode)
-					if (!is_observer()) {
+					if (!obs) {
 						const sbyte *sv = Side_to_verts[c];
 						ubyte codes_and=0xff;
 						int i;
@@ -1828,11 +1830,11 @@ void build_segment_list(int start_seg_num, int window_num)
 
 					}
 
-					if (is_observer() || no_proj_flag || (!codes_and_3d && !codes_and_2d)) {	//maybe add this segment
+					if (obs || no_proj_flag || (!codes_and_3d && !codes_and_2d)) {	//maybe add this segment
 						int rp = render_pos[ch];
 						rect* new_w = &render_windows[lcnt];
 
-						if (is_observer() || no_proj_flag) * new_w = *check_w;
+						if (obs || no_proj_flag) *new_w = *check_w;
 						else {
 							new_w->left = max(check_w->left, min_x);
 							new_w->right = min(check_w->right, max_x);
@@ -1854,8 +1856,10 @@ void build_segment_list(int start_seg_num, int window_num)
 								new_w->bot = max(new_w->bot, render_windows[rp].bot);
 
 								Render_list[lcnt] = -1;
-								render_windows[rp] = *new_w; //get updated window
-								processed[rp] = 0; //force reprocess
+
+								render_windows[rp] = *new_w;		//get updated window
+								processed[rp] = 0;		//force reprocess
+								reprocess = 1;
 							}
 
 							goto no_add;
@@ -1873,6 +1877,9 @@ no_add:
 				}
 			}
 		}
+
+		if (lcnt == ecnt && !reprocess) // no changes
+			break;
 
 		scnt = ecnt;
 		ecnt = lcnt;
