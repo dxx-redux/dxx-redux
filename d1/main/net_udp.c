@@ -7585,7 +7585,7 @@ static int show_game_info_handler(newmenu *menu, d_event *event, netgame_info *n
 	if (event->type != EVENT_NEWMENU_SELECTED)
 		return 0;
 	
-	if (newmenu_get_citem(menu) != 2)
+	if (newmenu_get_citem(menu) != newmenu_get_nitems(menu) - 1)
 		return 0;
 
 	net_udp_show_game_rules(netgame);
@@ -7598,6 +7598,7 @@ int net_udp_show_game_info()
 	char rinfo[512],*info=rinfo;
 	int c;
 	netgame_info *netgame = &Netgame;
+	int can_observe;
 
 	memset(info,0,sizeof(char)*256);
 
@@ -7622,11 +7623,16 @@ int net_udp_show_game_info()
 	info+=sprintf (info,"\nGame Mode: %s",gamemode < (sizeof(GMNames) / sizeof(GMNames[0])) ? GMNames[gamemode] : "INVALID");
 	info+=sprintf (info,"\nPlayers: %i/%i",netgame->numplayers,netgame->max_numplayers);
 
-	c=nm_messagebox1("WELCOME", (int (*)(newmenu *, d_event *, void *))show_game_info_handler, netgame, 3, "JOIN GAME", "OBSERVE", "GAME INFO", rinfo);
+	can_observe=netgame->max_numplayers != MAX_PLAYERS && netgame->RetroProtocol;
+
+	if (can_observe)
+		c=nm_messagebox1("WELCOME", (int (*)(newmenu *, d_event *, void *))show_game_info_handler, netgame, 3, "JOIN GAME", "OBSERVE", "GAME INFO", rinfo);
+	else
+		c=nm_messagebox1("WELCOME", (int (*)(newmenu *, d_event *, void *))show_game_info_handler, netgame, 2, "JOIN GAME", "GAME INFO", rinfo);
 
 	if (c==0)
 		return 1;
-	if(c==1)
+	if(c==1 && can_observe)
 		return 2; 
 	//else if (c==1)
 	// handled in above callback
