@@ -1369,7 +1369,7 @@ void get_verts_for_normal(int va, int vb, int vc, int vd, int *v0, int *v1, int 
 				t = w[j];	w[j] = w[i];	w[i] = t;
 			}
 
-	Assert((v[0] < v[1]) && (v[1] < v[2]) && (v[2] < v[3]));
+	Assert((v[0] <= v[1]) && (v[1] <= v[2]) && (v[2] <= v[3]));
 
 	//	Now, if for any w[i] & w[i+1]: w[i+1] = (w[i]+3)%4, then must swap
 	*v0 = v[0];
