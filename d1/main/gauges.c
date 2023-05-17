@@ -3959,7 +3959,7 @@ void show_HUD_names()
 					y = player_point.p3_sy;
 					dy = -fixmuldiv(fixmul(Objects[objnum].size,Matrix_scale.y),i2f(grd_curcanv->cv_bitmap.bm_h)/2,player_point.p3_z);
 					dx = fixmul(dy,grd_curscreen->sc_aspect);
-					color_num = (Game_mode & GM_TEAM)?get_team(pnum):Netgame.players[pnum].color;//pnum;
+					color_num = get_color_for_player(pnum, 0);
 					memset(&s, '\0', CALLSIGN_LEN+20);
 					/* Set the text to show */
 					if( Game_mode & GM_BOUNTY && pnum == Bounty_target )
