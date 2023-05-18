@@ -211,6 +211,19 @@ int N_save_pof_names=25;
 #define MAX_POLYGON_MODELS_NEW 167
 char Save_pof_names[MAX_POLYGON_MODELS_NEW][FILENAME_LEN];
 
+static char load_error[256];
+
+void set_load_error(const char *msg, ...) {
+	va_list vp;
+	va_start(vp, msg);
+	vsnprintf(load_error, sizeof(load_error), msg, vp);
+	va_end(vp);
+}
+
+const char *get_load_error(void) {
+	return load_error;
+}
+
 static int convert_vclip(int vc) {
 	if (vc < 0)
 		return vc;
@@ -740,13 +753,17 @@ int load_game_data(PHYSFS_file *LoadFile)
 #endif
 
 	// Check signature
-	if (PHYSFSX_readShort(LoadFile) != 0x6705)
+	if (PHYSFSX_readShort(LoadFile) != 0x6705) {
+		set_load_error("Invalid game data signature");
 		return -1;
+	}
 
 	// Read and check version number
 	game_top_fileinfo_version = PHYSFSX_readShort(LoadFile);
-	if (game_top_fileinfo_version < GAME_COMPATIBLE_VERSION )
+	if (game_top_fileinfo_version < GAME_COMPATIBLE_VERSION ) {
+		set_load_error("Too old game data version");
 		return -1;
+	}
 
 	// We skip some parts of the former game_top_fileinfo
 	PHYSFSX_fseek(LoadFile, 31, SEEK_CUR);
@@ -755,11 +772,26 @@ int load_game_data(PHYSFS_file *LoadFile)
 	gs_num_objects = PHYSFSX_readInt(LoadFile);
 	PHYSFSX_fseek(LoadFile, 8, SEEK_CUR);
 
+	if (gs_num_objects > MAX_OBJECTS) {
+		set_load_error("Too many objects");
+		return -1;
+	}
+
 	Num_walls = PHYSFSX_readInt(LoadFile);
 	PHYSFSX_fseek(LoadFile, 20, SEEK_CUR);
 
+	if (Num_walls > MAX_WALLS) {
+		set_load_error("Too many walls");
+		return -1;
+	}
+
 	Num_triggers = PHYSFSX_readInt(LoadFile);
 	PHYSFSX_fseek(LoadFile, 24, SEEK_CUR);
+
+	if (Num_triggers > MAX_TRIGGERS) {
+		set_load_error("Too many triggers");
+		return -1;
+	}
 
 	trig_size = PHYSFSX_readInt(LoadFile);
 	Assert(trig_size == sizeof(ControlCenterTriggers));
@@ -768,6 +800,11 @@ int load_game_data(PHYSFS_file *LoadFile)
 
 	Num_robot_centers = PHYSFSX_readInt(LoadFile);
 	PHYSFSX_fseek(LoadFile, 4, SEEK_CUR);
+
+	if (Num_robot_centers > MAX_ROBOT_CENTERS) {
+		set_load_error("Too many materialization centers");
+		return -1;
+	}
 
 	if (game_top_fileinfo_version >= 31) //load mine filename
 		// read newline-terminated string, not sure what version this changed.
@@ -1180,17 +1217,17 @@ int load_level(const char * filename_passed)
 	if (Current_mission && !d_stricmp("Descent: First Strike",Current_mission_longname) && !d_stricmp("level19.rdl",filename) && PHYSFS_fileLength(LoadFile) == 136706)
 		Vertices[1905].z =-385*F1_0;
 
-	if (mine_err == -1) {   //error!!
-		PHYSFS_close(LoadFile);
-		return 2;
+	if (mine_err != -1) {
+		PHYSFSX_fseek(LoadFile,gamedata_offset,SEEK_SET);
+		game_err = load_game_data(LoadFile);
 	}
 
-	PHYSFSX_fseek(LoadFile,gamedata_offset,SEEK_SET);
-	game_err = load_game_data(LoadFile);
-
-	if (game_err == -1) {   //error!!
+	if (mine_err == -1 || game_err == -1) {   //error!!
 		PHYSFS_close(LoadFile);
-		return 3;
+		nm_messagebox("ERROR", 1, "Ok",
+				"Cannot load level:\n%s",
+				get_load_error());
+		return mine_err == -1 ? 2 : 3;
 	}
 
 	(void)hostagetext_offset;

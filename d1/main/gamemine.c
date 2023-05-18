@@ -123,12 +123,16 @@ int load_mine_data(PHYSFS_file *LoadFile)
 	if (PHYSFS_read( LoadFile, &mine_top_fileinfo, sizeof(mine_top_fileinfo), 1 )!=1)
 		Error( "Error reading mine_top_fileinfo in gamemine.c" );
 
-	if (mine_top_fileinfo.fileinfo_signature != 0x2884)
+	if (mine_top_fileinfo.fileinfo_signature != 0x2884) {
+		set_load_error("Invalid mine data signature");
 		return -1;
+	}
 
 	// Check version number
-	if (mine_top_fileinfo.fileinfo_version < COMPATIBLE_VERSION )
+	if (mine_top_fileinfo.fileinfo_version < COMPATIBLE_VERSION ) {
+		set_load_error("Mine data version too old");
 		return -1;
+	}
 
 	// Now, Read in the fileinfo
 	if (PHYSFSX_fseek( LoadFile, mine_start, SEEK_SET ))
@@ -521,12 +525,22 @@ int load_mine_data_compiled(PHYSFS_file *LoadFile)
 	else
 		Num_vertices = PHYSFSX_readInt(LoadFile);
 	Assert( Num_vertices <= MAX_VERTICES );
+	if (Num_vertices > MAX_VERTICES) {
+		set_load_error("Too many vertices");
+		return -1;
+	}
+
 	
 	if (New_file_format_load)
 		Num_segments = PHYSFSX_readShort(LoadFile);
 	else
 		Num_segments = PHYSFSX_readInt(LoadFile);
 	Assert( Num_segments <= MAX_SEGMENTS );
+	if (Num_segments > MAX_SEGMENTS) {
+		set_load_error("Too many segments");
+		return -1;
+	}
+
 	
 	for (i = 0; i < Num_vertices; i++)
 		PHYSFSX_readVector( &(Vertices[i]), LoadFile);
@@ -634,6 +648,10 @@ int load_mine_data_compiled(PHYSFS_file *LoadFile)
 	for (i=0; i<Num_segments; i++) {
 		if (Gamesave_current_version > 5)
 			segment2_read(&Segments[i], LoadFile);
+		if (Segments[i].special != SEGMENT_IS_NOTHING && Num_fuelcenters == MAX_NUM_FUELCENS) {
+			set_load_error("Too many special segments");
+			return -1;
+		}
 		fuelcen_activate( &Segments[i], Segments[i].special );
 	}
 	
