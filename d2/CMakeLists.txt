@@ -4,7 +4,7 @@
 cmake_minimum_required (VERSION 3.21)
 project(
     d2x-redux
-    VERSION 0.6
+    VERSION 0.7
     LANGUAGES C CXX
     )
 

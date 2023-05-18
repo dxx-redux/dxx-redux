@@ -1,0 +1,42 @@
+2023-05-18 Redux 0.7
+- Add load/save multiplayer settings preset
+- Fix below ship player name color with Show Custom Ship Colors disabled
+- Show exploding wall/robot damage in observer mode and gamelog.txt
+- Fix mouse bind for fusion selection
+- Fix saving spawn style setting in D1
+
+2023-05-12 Redux 0.6
+- Observer mode layout improvements for less usual resolutions
+- Fix for extra ramming kills in observer kill feed
+- Default Spawn Style in D1 changed to No Invuln
+- Support levels with higher wall/reactor counts in D1
+- Renamed ini files to prevent overwriting existing settings
+- Show games from other versions in game list
+
+2023-05-03 Redux 0.5
+- Improved observer UI text position/scaling
+- Show new game settings on game info/pause screens
+- Fixed rejoin delay after observing
+- Support HiDPI by default
+- Fixed jukebox browse button/flac support
+- Add new shields to damage lines in gamelog.txt
+- Show debug information on crash
+
+2023-04-26 Redux 0.4
+- Observer join crash hopefully now fixed
+- DXX-Retro Homing Speed option renamed
+- Fix for custom door rendering
+- Fix for the current observers list
+
+2023-04-24 Redux 0.3
+- Fix candidate for observer join bug
+- Fix observer font
+- Fix chat when there is an observer
+- Fix erroneous transparent parts of textures
+
+2023-04-22 Redux 0.2
+- Default to classic homing speed
+- Renamed to Redux
+
+2023-04-20 x7test 0.1
+- Merge of sirius/1.4X7 and Retro-ar4b4, without NAT hole punching.
