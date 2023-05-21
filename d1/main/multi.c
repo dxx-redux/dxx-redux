@@ -1518,8 +1518,6 @@ multi_leave_game(void)
 	}
 
 	plyr_save_stats();
-
-	reset_observatory_stats();
 }
 		
 void 

@@ -1556,8 +1556,6 @@ multi_leave_game(void)
 				break;
 		}
 	}
-
-	reset_observatory_stats();
 }
 
 void

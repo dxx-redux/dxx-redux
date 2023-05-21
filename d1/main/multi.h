@@ -668,4 +668,6 @@ extern kill_log_event* Kill_log;
 // Adds a damage stat for observatory UI.
 void add_observatory_damage_stat(int player_num, fix shields_delta, fix new_shields, fix old_shields, ubyte killer_type, ubyte killer_id, ubyte damage_type, ubyte source_id);
 
+void reset_observatory_stats();
+
 #endif /* _MULTI_H */
