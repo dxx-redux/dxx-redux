@@ -12,6 +12,17 @@ else
     version=$(git rev-parse --short HEAD)
 fi
 
+find_lib() {
+    exe="$1"
+    lib="$2"
+    dirlist=$(otool -l "$exe"|awk '/^ *cmd LC_RPATH/{rp=1} /^Load command/{rp=0} rp&&/^ *path /{print $2}')
+    for dir in $dirlist; do
+        for file in "$dir"/$lib; do 
+            if [ -f "$file" ]; then echo $file; fi
+        done
+     done
+}
+
 build_app() {
     builddir="$1"
     name="$2"
@@ -30,7 +41,12 @@ build_app() {
     cp -p $srcdir/arch/cocoa/${name}.icns $contents/Resources
     echo -n "APPL${appltag}" > $contents/PkgInfo
 
-    dylibbundler -od -b -x $contents/MacOS/$name -d $contents/libs
+    dylibbundler -ns -od -b -x $contents/MacOS/$name -d $contents/libs
+
+    # SDL2 is loaded dynamically by sdl12-compat
+    sdl2=libSDL2-2.0.0.dylib
+    cp -p $(find_lib $builddir/$name $sdl2) $contents/libs
+    dylibbundler -ns -of -b -x $contents/libs/$sdl2 -d $contents/libs
 
     # zip up and output to top level dir
     zip -r -X ${zipfilename} ${prettyname}.app
