@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=D2X-Redux
+Comment=D2X-Redux source port of Descent 2: Counterstrike from 1996...
+Exec=d2x-redux
+Icon=d2x-redux
+Terminal=false
+Type=Application
+Categories=Game;ActionGame;
+StartupNotify=false
+

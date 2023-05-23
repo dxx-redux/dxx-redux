@@ -1,0 +1,45 @@
+name: Package - Linux
+
+on:
+  #push:
+  #  branches: [ master ]
+
+  #pull_request:
+  #  branches: [ master ]
+
+  workflow_dispatch:
+
+jobs:
+  linux:
+    name: Linux AppImages
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Clone Repository
+        uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install gcc-10 g++-10
+          sudo apt-get install -y cmake libphysfs-dev libsdl1.2-dev libsdl-mixer1.2-dev libpng-dev libglew-dev
+
+      - name: Configure D1
+        run: cmake -S d1 -B buildd1 -DCMAKE_BUILD_TYPE=RelWithDebInfo
+
+      - name: Build D1
+        run: cmake --build buildd1
+
+      - name: Configure D2
+        run: cmake -S d2 -B buildd2 -DCMAKE_BUILD_TYPE=RelWithDebInfo
+
+      - name: Build D2
+        run: cmake --build buildd2
+
+      - name: Package AppImage
+        run: ./contrib/packaging/linux/build_package.sh
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: linux
+          path: '*.AppImage'
