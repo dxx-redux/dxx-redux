@@ -19,10 +19,7 @@
         "CMAKE_TOOLCHAIN_FILE": {
           "value": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
           "type": "FILEPATH"
-        },
-        // SDL_mixer v1 is not currently available in vcpkg. To enable this, you will need to set
-        // SDL_MIXER_INCLUDE_DIR and SDL_MIXER_LIBRARY
-        "SDLMIXER": false
+        }
       },
       "condition": {
         "type": "equals",
