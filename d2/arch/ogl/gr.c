@@ -654,6 +654,8 @@ int gr_set_mode(u_int32_t mode)
 	gr_init_canvas(&grd_curscreen->sc_canvas, d_realloc(gr_bm_data,w*h), BM_OGL, w, h);
 	gr_set_current_canvas(NULL);
 
+	sdl_video_flags = (sdl_video_flags & ~SDL_NOFRAME) | (GameCfg.BorderlessWindow ? SDL_NOFRAME : 0);
+
 	ogl_init_window(w,h);//platform specific code
 	ogl_get_verinfo();
 	OGL_VIEWPORT(0,0,w,h);

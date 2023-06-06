@@ -903,12 +903,13 @@ int gcd(int a, int b)
 void change_res()
 {
 	u_int32_t modes[50], new_mode = 0;
-	int i = 0, mc = 0, num_presets = 0, citem = -1, opt_cval = -1, opt_fullscr = -1;
+	int i = 0, mc = 0, num_presets = 0, citem = -1, opt_cval = -1, opt_fullscr = -1, opt_borderless = -1;
+	int cur_borderless, new_borderless;
 
 	num_presets = gr_list_modes( modes );
 
 	{
-	newmenu_item m[50+8];
+	newmenu_item m[50+9];
 	char restext[50][12], crestext[12], casptext[12];
 
 	for (i = 0; i <= num_presets-1; i++)
@@ -938,6 +939,11 @@ void change_res()
 	opt_fullscr = mc;
 	m[mc].type = NM_TYPE_CHECK; m[mc].text = "Fullscreen"; m[mc].value = gr_check_fullscreen(); mc++;
 
+	opt_borderless = mc;
+	m[mc].type = NM_TYPE_CHECK; m[mc].text = "Borderless window"; m[mc].value = GameCfg.BorderlessWindow; mc++;
+
+	Assert(mc <= SDL_arraysize(m));
+
 	// create the menu
 	newmenu_do1(NULL, "Screen Resolution", mc, m, NULL, NULL, 0);
 
@@ -947,6 +953,9 @@ void change_res()
 	for (i = 0; i <= mc; i++)
 		if ((m[i].type == NM_TYPE_RADIO) && (m[i].group==0) && (m[i].value == 1))
 			break;
+
+	cur_borderless = GameCfg.BorderlessWindow;
+	new_borderless = GameCfg.BorderlessWindow = m[opt_borderless].value;
 
 	// now check for fullscreen toggle and apply if necessary
 	if (m[opt_fullscr].value != gr_check_fullscreen())
@@ -985,7 +994,7 @@ void change_res()
 	// clean up and apply everything
 	newmenu_free_background();
 	set_screen_mode(SCREEN_MENU);
-	if (new_mode != Game_screen_mode)
+	if (new_mode != Game_screen_mode || cur_borderless != new_borderless)
 	{
 		gr_set_mode(new_mode);
 		Game_screen_mode = new_mode;

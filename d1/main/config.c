@@ -64,6 +64,7 @@ static const char MultisampleStr[] ="Multisample";
 static const char ClassicDepthStr[] ="ClassicDepth";
 static const char FPSIndicatorStr[] ="FPSIndicator";
 static const char GrabinputStr[] ="GrabInput";
+static const char BorderlessWindowStr[] ="BorderlessWindow";
 
 int ReadConfigFile()
 {
@@ -113,6 +114,7 @@ int ReadConfigFile()
 	GameCfg.ClassicDepth = 0;
 	GameCfg.FPSIndicator = 0;
 	GameCfg.Grabinput = 1;
+	GameCfg.BorderlessWindow = 0;
 
 	infile = PHYSFSX_openReadBuffered("descent.cfg");
 
@@ -224,6 +226,8 @@ int ReadConfigFile()
 				GameCfg.FPSIndicator = strtol(value, NULL, 10);
 			else if (!strcmp(token, GrabinputStr))
 				GameCfg.Grabinput = strtol(value, NULL, 10);
+			else if (!strcmp(token, BorderlessWindowStr))
+				GameCfg.BorderlessWindow = strtol(value, NULL, 10);
 		}
 		d_free(line);
 	}
@@ -279,6 +283,7 @@ int WriteConfigFile()
 	PHYSFSX_printf(infile, "%s=%i\n", ClassicDepthStr, GameCfg.ClassicDepth);
 	PHYSFSX_printf(infile, "%s=%i\n", FPSIndicatorStr, GameCfg.FPSIndicator);
 	PHYSFSX_printf(infile, "%s=%i\n", GrabinputStr, GameCfg.Grabinput);
+	PHYSFSX_printf(infile, "%s=%i\n", BorderlessWindowStr, GameCfg.BorderlessWindow);
 
 	PHYSFS_close(infile);
 
