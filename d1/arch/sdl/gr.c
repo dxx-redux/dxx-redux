@@ -98,6 +98,8 @@ int gr_set_mode(u_int32_t mode)
 	h=SM_H(mode);
 	screen=NULL;
 
+	sdl_video_flags = (sdl_video_flags & ~SDL_NOFRAME) | (GameCfg.BorderlessWindow ? SDL_NOFRAME : 0);
+
 	SDL_WM_SetCaption(DESCENT_VERSION, "Descent");
 	SDL_WM_SetIcon( SDL_LoadBMP( "d1x-rebirth.bmp" ), NULL );
 
