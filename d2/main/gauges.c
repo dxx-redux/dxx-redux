@@ -2650,7 +2650,7 @@ void hud_show_kill_list()
 
 		int color;
 
-		if (Players[player_num].connected != CONNECT_PLAYING) {
+		if (Show_kill_list != 3 && Players[player_num].connected != CONNECT_PLAYING) {
 			gr_set_fontcolor(BM_XRGB(12, 12, 12), -1);
 		} else if (Game_mode & GM_TEAM) {
 			color = get_color_for_team(team_num, 0);
@@ -2673,7 +2673,7 @@ void hud_show_kill_list()
 		}
 		gr_printf(x0,y,"%s",name);
 
-		if (Players[player_num].connected == CONNECT_PLAYING) {
+		if (Show_kill_list == 3 || Players[player_num].connected == CONNECT_PLAYING) {
 			if (Game_mode & GM_TEAM) {
 				color = get_color_for_team(team_num, 1);
 				gr_set_fontcolor(BM_XRGB(selected_player_rgb[color].r,selected_player_rgb[color].g,selected_player_rgb[color].b),-1 );
