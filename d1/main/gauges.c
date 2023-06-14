@@ -2298,12 +2298,14 @@ void hud_show_kill_list()
 
 	int ox1 = x1;
 	for (i=0;i<players;i++) {
-		int player_num;
+		int player_num, team_num;
 
 		if (Show_kill_list == 3) {
 			player_num = i;
+			team_num = i;
 		} else {
 			player_num = player_list[i];
+			team_num = get_team(player_num);
 			if (Netgame.host_is_obs && player_num == 0) {
 				continue;
 			}
@@ -2376,7 +2378,7 @@ void hud_show_kill_list()
 		if (Players[player_num].connected != CONNECT_PLAYING) {
 			gr_set_fontcolor(BM_XRGB(12, 12, 12), -1);
 		} else if (Game_mode & GM_TEAM) {
-			color = get_color_for_team(player_num, 0);
+			color = get_color_for_team(team_num, 0);
 			gr_set_fontcolor(BM_XRGB(selected_player_rgb[color].r,selected_player_rgb[color].g,selected_player_rgb[color].b),-1 );
 		} else {
 			color = get_color_for_player(player_num, 0);
@@ -2399,7 +2401,7 @@ void hud_show_kill_list()
 
 		if (Players[player_num].connected == CONNECT_PLAYING) {
 			if (Game_mode & GM_TEAM) {
-				color = get_color_for_team(player_num, 1);
+				color = get_color_for_team(team_num, 1);
 				gr_set_fontcolor(BM_XRGB(selected_player_rgb[color].r,selected_player_rgb[color].g,selected_player_rgb[color].b),-1 );
 			} else {
 				color = get_color_for_player(player_num, 1);

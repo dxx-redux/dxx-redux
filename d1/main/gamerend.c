@@ -304,11 +304,13 @@ void show_netplayerinfo()
 		gr_printf(x,y,"team");
 		gr_printf(x+FSPACX(8)*8,y,"score");
 		y+=LINE_SPACING;
-		gr_set_fontcolor(BM_XRGB(selected_player_rgb[0].r,selected_player_rgb[0].g,selected_player_rgb[0].b),-1 );
+		color = get_color_for_team(0, 0);
+		gr_set_fontcolor(BM_XRGB(selected_player_rgb[color].r,selected_player_rgb[color].g,selected_player_rgb[color].b),-1 );
 		gr_printf(x,y,"%s:",Netgame.team_name[0]);
 		gr_printf(x+FSPACX(8)*8,y,"%i",team_kills[0]);
 		y+=LINE_SPACING;
-		gr_set_fontcolor(BM_XRGB(selected_player_rgb[1].r,selected_player_rgb[1].g,selected_player_rgb[1].b),-1 );
+		color = get_color_for_team(1, 0);
+		gr_set_fontcolor(BM_XRGB(selected_player_rgb[color].r,selected_player_rgb[color].g,selected_player_rgb[color].b),-1 );
 		gr_printf(x,y,"%s:",Netgame.team_name[1]);
 		gr_printf(x+FSPACX(8)*8,y,"%i",team_kills[1]);
 		y+=LINE_SPACING*2;
