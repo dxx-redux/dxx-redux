@@ -229,22 +229,24 @@ gameseq_init_network_players()
 	}
 	NumNetPlayerPositions = k;
 
-	// Ensure we have 8 starting locations, even if there aren't 8 in the file.  This makes observer mode work in all levels.
-	for (; k < MAX_PLAYERS; k++) {
-		i = obj_allocate();
+	if (Game_mode & GM_MULTI) {
+		// Ensure we have 8 starting locations, even if there aren't 8 in the file.  This makes observer mode work in all levels.
+		for (; k < MAX_PLAYERS; k++) {
+			i = obj_allocate();
 
-		Objects[i].type = OBJ_PLAYER;
+			Objects[i].type = OBJ_PLAYER;
 
-		Player_init[k].pos = Objects[k % NumNetPlayerPositions].pos;
-		Player_init[k].orient = Objects[k % NumNetPlayerPositions].orient;
-		Player_init[k].segnum = Objects[k % NumNetPlayerPositions].segnum;
-		Players[k].objnum = i;
-		Objects[i].id = k;
+			Player_init[k].pos = Objects[k % NumNetPlayerPositions].pos;
+			Player_init[k].orient = Objects[k % NumNetPlayerPositions].orient;
+			Player_init[k].segnum = Objects[k % NumNetPlayerPositions].segnum;
+			Players[k].objnum = i;
+			Objects[i].id = k;
 
-		Objects[i].attached_obj = -1;
+			Objects[i].attached_obj = -1;
+		}
+
+		NumNetPlayerPositions = MAX_PLAYERS;
 	}
-
-	NumNetPlayerPositions = MAX_PLAYERS;
 }
 
 void gameseq_remove_unused_players()
