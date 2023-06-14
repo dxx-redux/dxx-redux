@@ -783,9 +783,11 @@ int load_game_data(PHYSFS_file *LoadFile)
 
 	if (game_top_fileinfo_version >= 19) {	//load pof names
 		N_save_pof_names = PHYSFSX_readShort(LoadFile);
-		if (N_save_pof_names != 0x614d && N_save_pof_names != 0x5547) { // "Ma"de w/DMB beta/"GU"ILE
-			Assert(N_save_pof_names < MAX_POLYGON_MODELS);
-			PHYSFS_read(LoadFile,Save_pof_names,N_save_pof_names,FILENAME_LEN);
+		if (N_save_pof_names != 0x614d && N_save_pof_names != 0x5547 && N_save_pof_names != 0x5053) { // "Ma"de w/DMB beta/"GU"ILE/"SP"IKE
+			if (N_save_pof_names >= 0 && N_save_pof_names < MAX_POLYGON_MODELS_NEW)
+				PHYSFS_read(LoadFile,Save_pof_names,N_save_pof_names,FILENAME_LEN);
+			else
+				con_printf(CON_NORMAL, "Invalid number of pof names %x\n", N_save_pof_names);
 		}
 	}
 
