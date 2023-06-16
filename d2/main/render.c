@@ -246,6 +246,7 @@ void render_face(int segnum, int sidenum, int nv, int *vp, int tmap1, int tmap2,
 		if (tmap2){
 			PIGGY_PAGE_IN(Textures[tmap2&0x3FFF]);
 			bm2 = &GameBitmaps[Textures[tmap2&0x3FFF].index];
+			PIGGY_PAGE_IN(Textures[tmap1]); // in case textures just got flushed
 		}
 #ifndef OGL_MERGE
 		if (bm2 && (bm2->bm_flags&BM_FLAG_SUPER_TRANSPARENT)){
