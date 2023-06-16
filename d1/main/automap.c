@@ -593,6 +593,8 @@ int automap_handler(window *wind, d_event *event, automap *am)
 		case EVENT_WINDOW_CLOSE:
 			if (!am->pause_game)
 				ConsoleObject->mtype.phys_info.flags |= am->old_wiggle;		// Restore wiggle
+			if (am->pause_game)
+				reset_time();
 			event_toggle_focus(0);
 			key_toggle_repeat(1);
 #ifdef OGL
