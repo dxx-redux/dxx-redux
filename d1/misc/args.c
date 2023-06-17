@@ -222,6 +222,8 @@ void ReadCmdArgs(void)
 
 	//GameArg.LogNetTraffic 		= ! FindArg("-nonetlog");
 	GameArg.LogNetTraffic 		= FindArg("-netlog");
+
+	GameArg.GameLogTimeStamp	= FindArg("-gamelog_timestamp");
 }
 
 void args_exit(void)

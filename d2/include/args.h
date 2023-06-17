@@ -96,6 +96,7 @@ typedef struct Arg
 	int DbgSdlASyncBlit;
 #endif
 	int LogNetTraffic; 	
+	int GameLogTimeStamp;
 } Arg;
 
 extern struct Arg GameArg;

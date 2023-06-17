@@ -270,12 +270,23 @@ static void con_close(void)
 
 void con_init(void)
 {
+	char filename[PATH_MAX];
+
 	memset(con_buffer,0,sizeof(con_buffer));
 
+	if (GameArg.GameLogTimeStamp) {
+		time_t now = time(NULL);
+		struct tm *t = localtime(&now);
+		snprintf(filename, sizeof(filename), "gamelog-%04d%02d%02d-%02d%02d%02d.txt",
+			t->tm_year + 1900, t->tm_mon, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
+	} else {
+		strcpy(filename, "gamelog.txt");
+	}
+
 	if (GameArg.DbgSafelog)
-		gamelog_fp = PHYSFS_openWrite("gamelog.txt");
+		gamelog_fp = PHYSFS_openWrite(filename);
 	else
-		gamelog_fp = PHYSFSX_openWriteBuffered("gamelog.txt");
+		gamelog_fp = PHYSFSX_openWriteBuffered(filename);
 	atexit(con_close);
 }
 
