@@ -1757,7 +1757,6 @@ int ogl_loadtexture (unsigned char *data, int dxo, int dyo, ogl_texture *tex, in
 
 unsigned char decodebuf[1024*1024];
 
-
 #ifdef OGL_MERGE
 void ogl_loadpngmask(png_data *pdata, grs_bitmap *bm, int texfilt)
 {
@@ -1906,9 +1905,8 @@ void ogl_loadbmtexture_f(grs_bitmap *bm, int texfilt, int filter_blueship_wing)
 						if(g > max) { max = g; }
 						if(b > max) { max = b; }
 
-						max = max * 4 / 3; 
+						max = max * 4 / 3;
 						if((g > r*4/3) && (g > b*4/3)) {
-							//con_printf(CON_NORMAL, "  Replacing lt grn pixel: %u %u %u\n", r, g, b);
 							int replace = gr_find_closest_color(max,max,max);
 							buf[i] = replace;
 						}
