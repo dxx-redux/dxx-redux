@@ -588,7 +588,7 @@ bool g3_draw_morphing_model(ubyte *p,grs_bitmap **model_bitmaps,vms_angvec *anim
 				int nv = w(p+2);
 				int i,ntris;
 
-				gr_setcolor(w(p+28));
+				gr_setcolor(gr_find_closest_color_15bpp(w(p + 28)));
 				
 				for (i=0;i<2;i++)
 					point_list[i] = Interp_point_list + wp(p+30)[i];
