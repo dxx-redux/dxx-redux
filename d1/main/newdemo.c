@@ -157,6 +157,7 @@ int Newdemo_vcr_state = 0;
 int Newdemo_show_percentage=1;
 sbyte Newdemo_do_interpolate = 1;
 int Newdemo_num_written;
+fix newdemo_last_rewind_time;
 
 // local var used for swapping endian demos
 static int swap_endian = 0;
@@ -843,6 +844,7 @@ void newdemo_record_start_demo()
 	int i;
 
 	nd_record_v_recordframe_last_time=GameTime64-REC_DELAY; // make sure first frame is recorded!
+	nd_record_v_framebytes_written=0;
 
 	stop_time();
 	nd_write_byte(ND_EVENT_START_DEMO);
@@ -3493,6 +3495,7 @@ void newdemo_start_playback(char * filename)
 	newdemo_playback_one_frame();       // get all of the objects to renderb game
 	if (!Game_wind)
 		Game_wind = game_setup();							// create game environment
+	newdemo_last_rewind_time = GameTime64;
 }
 
 void newdemo_stop_playback()
