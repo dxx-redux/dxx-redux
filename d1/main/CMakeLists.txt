@@ -106,8 +106,8 @@ if(WIN32)
         ${CMAKE_SOURCE_DIR}/arch/win32/d1x-rebirth.ico
         ${CMAKE_SOURCE_DIR}/arch/win32/d1x-rebirth.rc
         )
-    set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} /NODEFAULTLIB:msvcrt.lib")
     if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+        set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} /NODEFAULTLIB:msvcrt.lib")
         # The manifest has to be included through the .rc for compatibility with MSYS. However
         # MSVC will automatically generate a manifest using this method - which will cause a
         # collision - so we need to tell it not to.
