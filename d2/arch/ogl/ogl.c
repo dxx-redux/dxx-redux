@@ -1869,8 +1869,10 @@ void ogl_loadbmtexture_f(grs_bitmap *bm, int texfilt, int filter_blueship_wing)
 
 		if(Game_mode & GM_MULTI && Netgame.BlackAndWhitePyros) {
 			if(bm->bm_w == 64 && bm->bm_h == 64) {
-				char is_purple_tex1 = (bm == &GameBitmaps[103]);
-				char is_purple_tex2 = (bm == &GameBitmaps[104]);
+				ushort purple_tex1_index = piggy_find_bitmap("ship6-4").index;
+				char is_purple_tex1 = (purple_tex1_index > 0) ? (bm == &GameBitmaps[purple_tex1_index]) : 0;
+				ushort purple_tex2_index = piggy_find_bitmap("ship6-5").index;
+				char is_purple_tex2 = (purple_tex2_index > 0) ? (bm == &GameBitmaps[purple_tex2_index]) : 0;
 
 				if(is_purple_tex1 || is_purple_tex2) {
 					for(i=0; i < bm->bm_h * bm->bm_w; i++) {
@@ -1889,8 +1891,10 @@ void ogl_loadbmtexture_f(grs_bitmap *bm, int texfilt, int filter_blueship_wing)
 					}
 				}
 
-				char is_white_tex1 = (bm == &GameBitmaps[105]);
-				char is_white_tex2 = (bm == &GameBitmaps[106]);
+				ushort white_tex1_index = piggy_find_bitmap("ship7-4").index;
+				char is_white_tex1 = (white_tex1_index > 0) ? (bm == &GameBitmaps[white_tex1_index]) : 0;
+				ushort white_tex2_index = piggy_find_bitmap("ship7-5").index;
+				char is_white_tex2 = (white_tex2_index > 0) ? (bm == &GameBitmaps[white_tex2_index]) : 0;
 
 				if(is_white_tex1 || is_white_tex2) {
 					for(i=0; i < bm->bm_h * bm->bm_w; i++) {
