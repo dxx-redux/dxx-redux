@@ -1758,20 +1758,6 @@ int ogl_loadtexture (unsigned char *data, int dxo, int dyo, ogl_texture *tex, in
 
 unsigned char decodebuf[1024*1024];
 
-// An unbelievably horrible awful wretched hack
-//unsigned char blackpyro_tex1[8] = {60, 59, 31, 31, 31, 31, 23, 60}; 
-//unsigned char blackpyro_tex2[8] = {255, 168, 255, 168, 226, 168, 224, 255 }; 
-
-//unsigned char whitepyro_tex1[8] = {60, 59, 27, 27, 27, 27, 23, 60}; 
-//unsigned char whitepyro_tex2[8] = {255, 144, 255, 144, 226, 144, 224, 255};
-
-unsigned char blackpyro_tex1[8] = {255, 127, 255, 127, 226, 127, 224, 255}; 
-unsigned char blackpyro_tex2[8] = {50, 13, 0, 0, 60, 55, 31, 31 }; 
-
-unsigned char whitepyro_tex1[8] = {255, 80, 255, 80, 226, 80, 224, 255}; 
-unsigned char whitepyro_tex2[8] = {67, 13, 0, 0, 60, 55, 27, 27};
-
-
 #ifdef OGL_MERGE
 void ogl_loadpngmask(png_data *pdata, grs_bitmap *bm, int texfilt)
 {
@@ -1801,9 +1787,7 @@ void ogl_loadpngmask(png_data *pdata, grs_bitmap *bm, int texfilt)
 void ogl_loadbmtexture_f(grs_bitmap *bm, int texfilt, int filter_blueship_wing)
 {
 	unsigned char *buf;
-#ifdef HAVE_LIBPNG
-	char *bitmapname;
-#endif
+	const char *bitmapname = NULL;
 
 	while (bm->bm_parent)
 		bm=bm->bm_parent;
@@ -1883,23 +1867,12 @@ void ogl_loadbmtexture_f(grs_bitmap *bm, int texfilt, int filter_blueship_wing)
 
 		if(Game_mode & GM_MULTI && Netgame.BlackAndWhitePyros) {
 			if(bm->bm_w == 64 && bm->bm_h == 64) {
-				char is_black_tex1 = 1; 
-				char is_black_tex2 = 1; 
-				for(i = 0; i < 8; i++) {
-					if(bm->bm_data[68+i] != blackpyro_tex1[i]) {
-						is_black_tex1=0;
-						break;
-					}
-				}
+				if (!bitmapname)
+					bitmapname = piggy_game_bitmap_name(bm);
+				char is_purple_tex1 = bitmapname && !strcmp(bitmapname, "ship6-4");
+				char is_purple_tex2 = bitmapname && !strcmp(bitmapname, "ship6-5");
 
-				for(i = 0; i < 8; i++) {
-					if(bm->bm_data[i] != blackpyro_tex2[i]) {
-						is_black_tex2=0;
-						break;
-					}
-				}
-
-				if(is_black_tex1 || is_black_tex2) {
+				if(is_purple_tex1 || is_purple_tex2) {
 					for(i=0; i < bm->bm_h * bm->bm_w; i++) {
 						ubyte r = gr_current_pal[buf[i]*3];
 						ubyte g = gr_current_pal[buf[i]*3+1];
@@ -1909,30 +1882,15 @@ void ogl_loadbmtexture_f(grs_bitmap *bm, int texfilt, int filter_blueship_wing)
 						if(g > max) { max = g; }
 						if(b > max) { max = b; }
 
-						if((r > g*6/5) && (g > b*2)) {					
-							int replace = gr_find_closest_color(max/4,max/10,max/3); 
-							buf[i] = replace; 
+						if((r > g*6/5) && (g > b*2)) {
+							int replace = gr_find_closest_color(max/4,max/10,max/3);
+							buf[i] = replace;
 						}
-
-						
-					}			
-				}
-				
-				char is_white_tex1 = 1; 
-				char is_white_tex2 = 1; 
-				for(i = 0; i < 8; i++) {
-					if(bm->bm_data[68+i] != whitepyro_tex1[i]) {
-						is_white_tex1=0;
-						break;
 					}
 				}
 
-				for(i = 0; i < 8; i++) {
-					if(bm->bm_data[i] != whitepyro_tex2[i]) {
-						is_white_tex2=0;
-						break;
-					}
-				}
+				char is_white_tex1 = bitmapname && !strcmp(bitmapname, "ship7-4");
+				char is_white_tex2 = bitmapname && !strcmp(bitmapname, "ship7-5");
 
 				if(is_white_tex1 || is_white_tex2) {
 					for(i=0; i < bm->bm_h * bm->bm_w; i++) {
@@ -1944,16 +1902,13 @@ void ogl_loadbmtexture_f(grs_bitmap *bm, int texfilt, int filter_blueship_wing)
 						if(g > max) { max = g; }
 						if(b > max) { max = b; }
 
-						max = max * 4 / 3; 
+						max = max * 4 / 3;
 						if((g > r*4/3) && (g > b*4/3)) {
-//con_printf(CON_NORMAL, "  Replacing lt grn pixel: %u %u %u\n", r, g, b); 							
-							int replace = gr_find_closest_color(max,max,max); 
-							buf[i] = replace; 
+							int replace = gr_find_closest_color(max,max,max);
+							buf[i] = replace;
 						}
-
-						
-					}			
-				} 
+					}
+				}
 
 				int lower_bound[24]   = {28,27,26,25,24,23,22,21,20,19,19,18,17,16,15,14,13,13,12,11,10,9,8}; //bos
 				int upper_bound[24]   = {57,55,54,52,50,49,48,47,45,44,42,41,39,38,36,35,33,32,30,29,27,25,23}; // fos
