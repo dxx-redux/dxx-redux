@@ -1934,46 +1934,87 @@ void do_sound_menu()
 
 int menu_misc_options_handler ( newmenu *menu, d_event *event, void *userdata );
 
-void print_ship_color(char* color_string, int color_value) {
+void get_color_name(char* color_name, int color_name_length, int color_value, int use_alternate_colors)
+{
+	switch (color_value) {
+		case 0:  snprintf(color_name, color_name_length, "%s", "Blue"); break;
+		case 1:  snprintf(color_name, color_name_length, "%s", "Red"); break;
+		case 2:  snprintf(color_name, color_name_length, "%s", "Green"); break;
+		case 3:  snprintf(color_name, color_name_length, "%s", "Pink"); break;
+		case 4:  snprintf(color_name, color_name_length, "%s", "Orange"); break;
+		case 5:
+			if (use_alternate_colors)
+				snprintf(color_name, color_name_length, "%s", "Purple");
+			else
+				snprintf(color_name, color_name_length, "%s", "Tan");
+			break;
+		case 6:
+			if (use_alternate_colors)
+				snprintf(color_name, color_name_length, "%s", "White");
+			else
+				snprintf(color_name, color_name_length, "%s", "Mint");
+			break;
+		case 7:  snprintf(color_name, color_name_length, "%s", "Yellow"); break;
+		default: snprintf(color_name, color_name_length, "%s", "???");
+	}
+}
+
+void print_ship_color(char* color_string, int color_string_length, int color_value)
+{
 	char color[10];
-	switch(color_value) {
-		case 0:  sprintf(color, "%s", "Blue"); break;
-		case 1:  sprintf(color, "%s", "Red"); break;
-		case 2:  sprintf(color, "%s", "Green"); break;
-		case 3:  sprintf(color, "%s", "Pink"); break;
-		case 4:  sprintf(color, "%s", "Orange"); break;
-		case 5:  sprintf(color, "%s", "Purple"); break;
-		case 6:  sprintf(color, "%s", "White"); break;
-		case 7:  sprintf(color, "%s", "Yellow"); break;
-		case 8:  sprintf(color, "%s", "None"); break;
-		default: sprintf(color, "%s", "???"); 
-	}
+	if (color_value == 8)
+		snprintf(color, SDL_arraysize(color), "%s", "Default");
+	else
+		get_color_name(color, SDL_arraysize(color), color_value, 1);
 
-	sprintf( color_string, "Wing Color: %s", color);
+	snprintf(color_string, color_string_length, "Wing Color: %s", color);
 }
 
-void print_missile_color(char* color_string, int color_value) {
+void print_missile_color(char* color_string, int color_string_length, int color_value)
+{
 	char color[11];
-	switch(color_value) {
-		case 0:  sprintf(color, "%s", "Blue"); break;
-		case 1:  sprintf(color, "%s", "Red"); break;
-		case 2:  sprintf(color, "%s", "Green"); break;
-		case 3:  sprintf(color, "%s", "Pink"); break;
-		case 4:  sprintf(color, "%s", "Orange"); break;
-		case 5:  sprintf(color, "%s", "Purple"); break;
-		case 6:  sprintf(color, "%s", "White"); break;
-		case 7:  sprintf(color, "%s", "Yellow"); break;
-		case 8:  sprintf(color, "%s", "Match Ship"); break;
-		default: sprintf(color, "%s", "???"); 
-	}
+	if (color_value == 8)
+		snprintf(color, SDL_arraysize(color), "%s", "Match Ship");
+	else
+		get_color_name(color, SDL_arraysize(color), color_value, 1);
 
-	sprintf( color_string, "Missiles/Guns: %s", color);
+	snprintf(color_string, color_string_length, "Missiles/Guns: %s", color);
 }
+
+void print_my_team_color(char* color_string, int color_string_length, int color_value)
+{
+	char color[10];
+	if (color_value == 8)
+		snprintf(color, SDL_arraysize(color), "%s", "Default");
+	else
+		get_color_name(color, SDL_arraysize(color), color_value, 1);
+
+	snprintf(color_string, color_string_length, "My Team: %s", color);
+}
+
+void print_other_team_color(char* color_string, int color_string_length, int color_value)
+{
+	char color[10];
+	if (color_value == 8)
+		snprintf(color, SDL_arraysize(color), "%s", "Default");
+	else
+		get_color_name(color, SDL_arraysize(color), color_value, 1);
+
+	snprintf(color_string, color_string_length, "Other Team: %s", color);
+}
+
+struct misc_menu_data {
+	char preferred_color[30];
+	char missile_color[30];
+	char my_team_color[30];
+	char other_team_color[30];
+};
 
 void do_misc_menu()
 {
-	newmenu_item m[23];
+	newmenu_item m[30];
 	int i = 0;
+	struct misc_menu_data misc_menu_data;
 
 	do {
 		ADD_CHECK(0, "Ship auto-leveling", PlayerCfg.AutoLeveling);
@@ -2015,26 +2056,64 @@ void do_misc_menu()
 		ADD_CHECK(17, "Ammo Warnings",PlayerCfg.VulcanAmmoWarnings);
 		ADD_CHECK(18, "Shield Warnings",PlayerCfg.ShieldWarnings);
 		ADD_CHECK(19, "Automatically Start Demos",PlayerCfg.AutoDemo);
-		
-		char preferred_color[30];
-		print_ship_color(preferred_color, PlayerCfg.ShipColor); 
-		m[20].type = NM_TYPE_SLIDER; 
-		m[20].value= PlayerCfg.ShipColor; 
-		m[20].text= preferred_color; 
-		m[20].min_value=0; 
-		m[20].max_value=8; 
 
-		char missile_color[30];
-		print_missile_color(missile_color, PlayerCfg.MissileColor); 
-		m[21].type = NM_TYPE_SLIDER; 
-		m[21].value= PlayerCfg.MissileColor; 
-		m[21].text = missile_color; 
-		m[21].min_value=0; 
-		m[21].max_value=8; 		
+		m[20].type = NM_TYPE_TEXT;
+		m[20].text = "";
 
-		ADD_CHECK(22, "Show Custom Ship Colors", PlayerCfg.ShowCustomColors);
+		m[21].type = NM_TYPE_TEXT;
+		m[21].text = "My Ship Colors:";
 
-		i = newmenu_do1( NULL, "Misc Options", sizeof(m)/sizeof(*m), m, menu_misc_options_handler, NULL, i );
+		print_ship_color(misc_menu_data.preferred_color, SDL_arraysize(misc_menu_data.preferred_color),
+			PlayerCfg.ShipColor);
+		m[22].type = NM_TYPE_SLIDER;
+		m[22].value = PlayerCfg.ShipColor;
+		m[22].text = misc_menu_data.preferred_color;
+		m[22].min_value = 0;
+		m[22].max_value = 8;
+
+		print_missile_color(misc_menu_data.missile_color, SDL_arraysize(misc_menu_data.missile_color),
+			PlayerCfg.MissileColor);
+		m[23].type = NM_TYPE_SLIDER;
+		m[23].value = PlayerCfg.MissileColor;
+		m[23].text = misc_menu_data.missile_color;
+		m[23].min_value = 0;
+		m[23].max_value = 8;
+
+		ADD_CHECK(24, "Show Custom Ship Colors", PlayerCfg.ShowCustomColors);
+
+		m[25].type = NM_TYPE_TEXT;
+		m[25].text = "";
+
+		m[26].type = NM_TYPE_TEXT;
+		m[26].text = "Team Colors:";
+
+		print_my_team_color(misc_menu_data.my_team_color, SDL_arraysize(misc_menu_data.my_team_color),
+			PlayerCfg.MyTeamColor);
+		m[27].type = NM_TYPE_SLIDER;
+		m[27].value = PlayerCfg.MyTeamColor;
+		m[27].text = misc_menu_data.my_team_color;
+		m[27].min_value = 0;
+		m[27].max_value = 8;
+
+		print_other_team_color(misc_menu_data.other_team_color, SDL_arraysize(misc_menu_data.other_team_color),
+			PlayerCfg.OtherTeamColor);
+		m[28].type = NM_TYPE_SLIDER;
+		m[28].value = PlayerCfg.OtherTeamColor;
+		m[28].text = misc_menu_data.other_team_color;
+		m[28].min_value = 0;
+		m[28].max_value = 8;
+
+		if (PlayerCfg.MyTeamColor == 8 && PlayerCfg.OtherTeamColor == 8) {
+			// If we're not setting explicit team colors, we don't override what the game host picked
+			m[29].type = NM_TYPE_TEXT;
+			m[29].text = "Ignore Per-Game Team Colors (N/A)";
+		} else {
+			m[29].type = NM_TYPE_CHECK;
+			m[29].text = "Ignore Per-Game Team Colors";
+		}
+		m[29].value = PlayerCfg.PreferMyTeamColors;
+
+		i = newmenu_do1(NULL, "Misc Options", SDL_arraysize(m), m, menu_misc_options_handler, &misc_menu_data, i);
 
 		PlayerCfg.AutoLeveling			= m[0].value;
 		PlayerCfg.PersistentDebris		= m[1].value;
@@ -2057,29 +2136,47 @@ void do_misc_menu()
 		PlayerCfg.VulcanAmmoWarnings = m[17].value; 
 		PlayerCfg.ShieldWarnings = m[18].value; 
 		PlayerCfg.AutoDemo = m[19].value;
-		PlayerCfg.ShowCustomColors = m[22].value;
+		PlayerCfg.ShowCustomColors = m[24].value;
+		PlayerCfg.PreferMyTeamColors = (PlayerCfg.MyTeamColor == 8 && PlayerCfg.OtherTeamColor == 8) ? 0 : m[29].value;
 
 	} while( i>-1 );
 
 }
 
-int menu_misc_options_handler ( newmenu *menu, d_event *event, void *userdata )
+int menu_misc_options_handler(newmenu* menu, d_event* event, void* userdata)
 {
-	
 	newmenu_item *menus = newmenu_get_items(menu);
 	int citem = newmenu_get_citem(menu);
+	struct misc_menu_data* menu_data = (struct misc_menu_data*)userdata;
 	
-	if (event->type == EVENT_NEWMENU_CHANGED)
-	{
-		if (citem == 20) {
-			PlayerCfg.ShipColor = menus[20].value;
-			print_ship_color(menus[20].text, PlayerCfg.ShipColor);
-		} else if (citem == 21) {
-			PlayerCfg.MissileColor = menus[21].value;
-			print_missile_color(menus[21].text, PlayerCfg.MissileColor);
+	if (event->type == EVENT_NEWMENU_CHANGED) {
+		if (citem == 22) {
+			PlayerCfg.ShipColor = menus[22].value;
+			print_ship_color(menu_data->preferred_color, SDL_arraysize(menu_data->preferred_color),
+				PlayerCfg.ShipColor);
+		} else if (citem == 23) {
+			PlayerCfg.MissileColor = menus[23].value;
+			print_missile_color(menu_data->missile_color, SDL_arraysize(menu_data->missile_color),
+				PlayerCfg.MissileColor);
+		} else if (citem == 27) {
+			PlayerCfg.MyTeamColor = menus[27].value;
+			print_my_team_color(menu_data->my_team_color, SDL_arraysize(menu_data->my_team_color),
+				PlayerCfg.MyTeamColor);
+		} else if (citem == 28) {
+			PlayerCfg.OtherTeamColor = menus[28].value;
+			print_other_team_color(menu_data->other_team_color, SDL_arraysize(menu_data->other_team_color),
+				PlayerCfg.OtherTeamColor);
+		}
+
+		if (PlayerCfg.MyTeamColor == 8 && PlayerCfg.OtherTeamColor == 8) {
+			menus[29].type = NM_TYPE_TEXT;
+			menus[29].text = "Ignore Per-Game Team Colors (N/A)";
+		} else {
+			menus[29].type = NM_TYPE_CHECK;
+			menus[29].text = "Ignore Per-Game Team Colors";
 		}
 	}
-	
+
 	return 0;
 }
 

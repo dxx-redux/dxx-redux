@@ -1808,19 +1808,19 @@ void draw_player_ship(int cloak_state,int x, int y)
 
 	grs_bitmap *bm = NULL;
 
+	int color;
 #ifdef NETWORK
 	if (Game_mode & GM_TEAM)
 	{
-		PAGE_IN_GAUGE( GAUGE_SHIPS+get_team(pnum) );
-		bm = &GameBitmaps[ GET_GAUGE_INDEX(GAUGE_SHIPS+get_team(pnum)) ];
+		color = get_color_for_team(get_team(pnum));
 	}
 	else
 #endif
 	{
-		int color = Netgame.players[pnum].color;
+		color = Netgame.players[pnum].color;
+	}
 		PAGE_IN_GAUGE( GAUGE_SHIPS+color );
 		bm = &GameBitmaps[ GET_GAUGE_INDEX(GAUGE_SHIPS+color) ];
-	}
 
 	if (cloak_state)
 	{
@@ -2316,36 +2316,38 @@ extern int allowed_to_fire_laser(void);
 extern int allowed_to_fire_missile(void);
 
 // CED -- shipcolor fix
-const rgb player_rgb[MAX_PLAYERS] = {
-							{15,15,23},    // 0x7878B8 ---> blue
-							{27,0,0},      // 0xD80000 ---> red
-							{0,23,0},      // 0x00B800 ---> green
-							{30,11,31},    // 0xF058F8 ---> PINK
-							{31,16,0},     // 0xF88000 ---> orange
-							{24,17,6},     // 0xC08830 ---> light orange (PROBLEM)
-							{14,21,12},    // 0x70A860 ---> light green (PROBLEM)
-							{29,29,0}, };  // 0xE8E800 ---> YELLOW
+const rgb player_rgb[] = {
+	{15,15,23}, // 0x7878B8 (blue)
+	{27,0,0},   // 0xD80000 (red)
+	{0,23,0},   // 0x00B800 (green)
+	{30,11,31}, // 0xF058F8 (pink)
+	{31,16,0},  // 0xF88000 (orange)
+	{24,17,6},  // 0xC08830 (tan)
+	{14,21,12}, // 0x70A860 (mint)
+	{29,29,0},  // 0xE8E800 (yellow)
+};
 
-const rgb player_rgb_alt[MAX_PLAYERS] = {
-							{15,15,23},    // 0x7878B8 ---> blue
-							{27,0,0},      // 0xD80000 ---> red
-							{0,23,0},      // 0x00B800 ---> green
-							{30,11,31},    // 0xF058F8 ---> PINK
-							{31,16,0},     // 0xF88000 ---> orange
-							//{12,4,20},   // purple
-							{16,4,24},     // purple
-							{23, 23, 23},  // white
-							{29,29,0}, };  // 0xE8E800 ---> YELLOW
+const rgb player_rgb_alt[] = {
+	{15,15,23}, // 0x7878B8 (blue)
+	{27,0,0},   // 0xD80000 (red)
+	{0,23,0},   // 0x00B800 (green)
+	{30,11,31}, // 0xF058F8 (pink)
+	{31,16,0},  // 0xF88000 (orange)
+	{16,4,24},  // 0x8020C0 (purple)
+	{23,23,23}, // 0xB8B8B8 (white)
+	{29,29,0},  // 0xE8E800 (yellow)
+};
 
-const rgb player_rgb_all_blue[MAX_PLAYERS] = {
-							{15,15,23},    // 0x7878B8 ---> blue
+const rgb player_rgb_all_blue[] = {
+	{15,15,23}, // 0x7878B8 (blue)
 							{15,15,23},
 							{15,15,23},
 							{15,15,23},
 							{15,15,23},
 							{15,15,23},
 							{15,15,23},
-							{15,15,23}, };
+	{15,15,23},
+};
 
 const rgb* selected_player_rgb;
 
@@ -2653,7 +2655,7 @@ void hud_show_kill_list()
 		if (Show_kill_list != 3 && Players[player_num].connected != CONNECT_PLAYING) {
 			gr_set_fontcolor(BM_XRGB(12, 12, 12), -1);
 		} else if (Game_mode & GM_TEAM) {
-			color = get_color_for_team(team_num, 0);
+			color = get_color_for_team(team_num);
 			gr_set_fontcolor(BM_XRGB(selected_player_rgb[color].r,selected_player_rgb[color].g,selected_player_rgb[color].b),-1 );
 		} else {
 			color = get_color_for_player(player_num, 0);
@@ -2675,7 +2677,7 @@ void hud_show_kill_list()
 
 		if (Show_kill_list == 3 || Players[player_num].connected == CONNECT_PLAYING) {
 			if (Game_mode & GM_TEAM) {
-				color = get_color_for_team(team_num, 1);
+				color = get_color_for_team(team_num);
 				gr_set_fontcolor(BM_XRGB(selected_player_rgb[color].r,selected_player_rgb[color].g,selected_player_rgb[color].b),-1 );
 			} else {
 				color = get_color_for_player(player_num, 1);
@@ -3470,7 +3472,7 @@ void observer_maybe_show_kill_graph() {
 
 				if ((ev = First_event[pnum]) != NULL) {
 					if (Game_mode & GM_TEAM) {
-						color = get_color_for_team(pnum, 0);
+						color = get_color_for_team(pnum);
 						gr_setcolor(BM_XRGB(selected_player_rgb[color].r, selected_player_rgb[color].g, selected_player_rgb[color].b));
 					} else {
 						color = get_color_for_player(pnum, 0);

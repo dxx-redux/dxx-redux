@@ -137,7 +137,7 @@ void kmatrix_draw_names(int *sorted)
 	for (j=0; j<N_players; j++)
 	{
 		if (Game_mode & GM_TEAM)
-			color = get_color_for_team(sorted[j], 0);
+			color = get_color_for_team(sorted[j]);
 		else
 			color = get_color_for_player(sorted[j], 0);//sorted[j];
 
@@ -239,7 +239,7 @@ void kmatrix_redraw(kmatrix_screen *km)
 		for (i=0; i<N_players; i++ )
 		{
 			if (Game_mode & GM_TEAM)
-				color = get_color_for_team(sorted[i], 0);
+				color = get_color_for_team(sorted[i]);
 			else
 				color = get_color_for_player(sorted[i], 0);//sorted[j];
 

@@ -95,6 +95,7 @@ typedef struct player_config
 	ubyte ShieldWarnings; 
 	ubyte AutoDemo; 
 	ubyte ShowCustomColors; 
+	ubyte PreferMyTeamColors;
 	ubyte QuietPlasma; 
 	int AlphaEffects;
 	int DynLightColor;
@@ -104,6 +105,8 @@ typedef struct player_config
 	int maxFps;
 	int ShipColor; 
 	int MissileColor; 
+	int MyTeamColor;
+	int OtherTeamColor;
 	ubyte ObsTurbo;
 	ubyte ObsShowCockpit;
 	ubyte ObsShowScoreboardShieldText;

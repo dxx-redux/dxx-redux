@@ -134,10 +134,13 @@ int new_player_config()
 	PlayerCfg.ShieldWarnings = 0; 
 	PlayerCfg.AutoDemo = 1;
 	PlayerCfg.ShowCustomColors = 1;
+	PlayerCfg.PreferMyTeamColors = 0;
 	PlayerCfg.QuietPlasma = 1; 
 	PlayerCfg.maxFps = GameArg.SysMaxFPS; 
 	PlayerCfg.ShipColor = 8;
 	PlayerCfg.MissileColor = 8;
+	PlayerCfg.MyTeamColor = 8;
+	PlayerCfg.OtherTeamColor = 8;
 	PlayerCfg.ObsTurbo = 0;
 	PlayerCfg.ObsShowCockpit = 1;
 	PlayerCfg.ObsShowScoreboardShieldText = 1;
@@ -401,9 +404,15 @@ int read_player_d2x(char *filename)
 				if(!strcmp(word,"SHOWCUSTOMCOLORS"))
 					PlayerCfg.ShowCustomColors = atoi(line);
 				if(!strcmp(word,"SHIPCOLOR"))
-					PlayerCfg.ShipColor = atoi(line);	
+					PlayerCfg.ShipColor = atoi(line);
 				if(!strcmp(word,"MISSILECOLOR"))
 					PlayerCfg.MissileColor = atoi(line);
+				if (!strcmp(word, "OVERRIDETEAMCOLORS"))
+					PlayerCfg.PreferMyTeamColors = atoi(line);
+				if (!strcmp(word, "MYTEAMCOLOR"))
+					PlayerCfg.MyTeamColor = atoi(line);
+				if (!strcmp(word, "OTHERTEAMCOLOR"))
+					PlayerCfg.OtherTeamColor = atoi(line);
 				if(!strcmp(word,"OBSTURBO"))
 					PlayerCfg.ObsTurbo = atoi(line);
 				if (!strcmp(word, "OBSSHOWCOCKPIT"))
@@ -626,6 +635,9 @@ int write_player_d2x(char *filename)
 		PHYSFSX_printf(fout,"showcustomcolors=%i\n",PlayerCfg.ShowCustomColors);
 		PHYSFSX_printf(fout,"shipcolor=%i\n",PlayerCfg.ShipColor);	
 		PHYSFSX_printf(fout,"missilecolor=%i\n",PlayerCfg.MissileColor);
+		PHYSFSX_printf(fout, "overrideteamcolors=%i\n", PlayerCfg.PreferMyTeamColors);
+		PHYSFSX_printf(fout, "myteamcolor=%i\n", PlayerCfg.MyTeamColor);
+		PHYSFSX_printf(fout, "otherteamcolor=%i\n", PlayerCfg.OtherTeamColor);
 		PHYSFSX_printf(fout,"obsturbo=%i\n",PlayerCfg.ObsTurbo);
 		PHYSFSX_printf(fout,"obsshowcockpit=%i\n",PlayerCfg.ObsShowCockpit);
 		PHYSFSX_printf(fout,"obsshowscoreboardshieldtext=%i\n",PlayerCfg.ObsShowScoreboardShieldText);
