@@ -4217,7 +4217,8 @@ int see_object(int objnum)
 //show names of teammates & players carrying flags
 void show_HUD_names()
 {
-	int is_friend = 0, show_friend_name = 0, show_enemy_name = 0, show_name = 0, show_shields = 0, show_typing = 0, show_indi = 0, pnum = 0, objnum = 0;
+	int is_friend = 0, show_friend_name = 0, show_enemy_name = 0, show_name = 0, show_name_through_walls = 0,
+		show_shields = 0, show_typing = 0, show_indi = 0, pnum = 0, objnum = 0;
 
 	int my_pnum = get_pnum_for_hud();
 
@@ -4235,6 +4236,7 @@ void show_HUD_names()
 		show_friend_name = Show_reticle_name;
 		show_enemy_name = Show_reticle_name && Netgame.ShowEnemyNames && !(Players[pnum].flags & PLAYER_FLAGS_CLOAKED);
 		show_name = ((is_friend && show_friend_name) || (!is_friend && show_enemy_name)) || (is_observer() && PlayerCfg.ObsShowNames);
+		show_name_through_walls = (is_observer() || (is_friend && show_friend_name));
 		show_shields = (is_observer() && PlayerCfg.ObsShowShieldText);
 		show_typing = is_friend || !(Players[pnum].flags & PLAYER_FLAGS_CLOAKED);
 		show_indi = (((Game_mode & ( GM_CAPTURE | GM_HOARD ) && Players[pnum].flags & PLAYER_FLAGS_FLAG) || (Game_mode & GM_BOUNTY &&  pnum == Bounty_target)) && (is_friend || !(Players[pnum].flags & PLAYER_FLAGS_CLOAKED)));
@@ -4250,7 +4252,7 @@ void show_HUD_names()
 		else
 			objnum = Players[pnum].objnum;
 
-		if ((show_name || show_typing || show_indi || show_shields) && (see_object(objnum) || is_observer()))
+		if ((show_name || show_typing || show_indi || show_shields) && (see_object(objnum) || show_name_through_walls))
 		{
 			g3s_point player_point;
 			g3_rotate_point(&player_point,&Objects[objnum].pos);
