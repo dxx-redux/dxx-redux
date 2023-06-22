@@ -2983,8 +2983,6 @@ void net_udp_send_game_info(struct _sockaddr sender_addr, ubyte info_upid, ubyte
 		PUT_INTEL_SHORT(buf + len, Netgame.BrightPlayers);				len += 2;
 		len += 2; // Spawn invul -- no longer used, but don't break tools
 		memcpy(&buf[len], Netgame.team_name, 2*(CALLSIGN_LEN+1));			len += 2*(CALLSIGN_LEN+1);
-		buf[len] = Netgame.team_color[0];						len++;
-		buf[len] = Netgame.team_color[1];						len++;
 		for (i = 0; i < MAX_PLAYERS; i++)
 		{
 			PUT_INTEL_INT(buf + len, Netgame.locations[i]);				len += 4;
@@ -3043,6 +3041,8 @@ void net_udp_send_game_info(struct _sockaddr sender_addr, ubyte info_upid, ubyte
 		buf[len] = Netgame.AllowCustomModelsTextures; len++;
 		buf[len] = Netgame.ReducedFlash; len++;
 		buf[len] = Netgame.GaussAmmoStyle; len++;
+		buf[len] = Netgame.team_color[0];						len++;
+		buf[len] = Netgame.team_color[1];						len++;
 
 		if(info_upid == UPID_SYNC) {
 			PUT_INTEL_INT(buf + len, player_token); len += 4; 
@@ -3215,8 +3215,6 @@ int net_udp_process_game_info(ubyte *data, int data_len, struct _sockaddr game_a
 		Netgame.BrightPlayers = GET_INTEL_SHORT(&(data[len]));				len += 2;
 		len += 2; // Spawn invul -- no longer used, but don't break tools
 		memcpy(Netgame.team_name, &(data[len]), 2*(CALLSIGN_LEN+1));			len += 2*(CALLSIGN_LEN+1);
-		Netgame.team_color[0] = data[len];						len++;
-		Netgame.team_color[1] = data[len];						len++;
 		for (i = 0; i < MAX_PLAYERS; i++)
 		{
 			Netgame.locations[i] = GET_INTEL_INT(&(data[len]));			len += 4;
@@ -3275,6 +3273,8 @@ int net_udp_process_game_info(ubyte *data, int data_len, struct _sockaddr game_a
 		Netgame.AllowCustomModelsTextures = data[len]; len++;
 		Netgame.ReducedFlash = data[len]; len++;
 		Netgame.GaussAmmoStyle = data[len]; len++;
+		Netgame.team_color[0] = data[len];						len++;
+		Netgame.team_color[1] = data[len];						len++;
 
 		if (Netgame.host_is_obs) {
 			multi_make_player_ghost(0);

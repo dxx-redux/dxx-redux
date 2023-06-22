@@ -531,7 +531,6 @@ typedef struct netgame_info
 	short						ShowEnemyNames;
 	short						BrightPlayers;
 	char						team_name[2][CALLSIGN_LEN+1];
-	ubyte						team_color[2];
 	signed char						TeamKillGoalCount[2]; 
 	int						locations[MAX_PLAYERS];
 	short						kills[MAX_PLAYERS][MAX_PLAYERS];
@@ -574,6 +573,7 @@ typedef struct netgame_info
 	ubyte						AllowCustomModelsTextures;
 	ubyte						ReducedFlash;
 	ubyte						DisableGaussSplash;
+	ubyte						team_color[2];
 } __pack__ netgame_info;
 
 extern int Host_is_obs; // Reminder for host only that they are an observer.  Do not set for other players or observers.
