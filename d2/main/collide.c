@@ -511,7 +511,8 @@ int check_effect_blowup(segment *seg,int side,vms_vector *pnt, object *blower, i
 	{
 		int	ok_to_blow = 0;
 
-		if (blower->ctype.laser_info.parent_type == OBJ_ROBOT)
+		if (blower->ctype.laser_info.parent_type == OBJ_ROBOT &&
+			blower->ctype.laser_info.parent_signature == Objects[blower->ctype.laser_info.parent_num].signature)
 			if (Robot_info[Objects[blower->ctype.laser_info.parent_num].id].companion)
 				ok_to_blow = 1;
 
@@ -709,7 +710,9 @@ void collide_weapon_and_wall( object * weapon, fix hitspeed, short hitseg, short
 
 	//if ((seg->sides[hitwall].tmap_num2==0) && (TmapInfo[seg->sides[hitwall].tmap_num].flags & TMI_VOLATILE)) {
 
-	if ((weapon->ctype.laser_info.parent_type == OBJ_ROBOT) && (Robot_info[Objects[weapon->ctype.laser_info.parent_num].id].companion==1)) {
+	if ((weapon->ctype.laser_info.parent_type == OBJ_ROBOT) &&
+		(weapon->ctype.laser_info.parent_signature == Objects[weapon->ctype.laser_info.parent_num].signature) &&
+		(Robot_info[Objects[weapon->ctype.laser_info.parent_num].id].companion==1)) {
 		robot_escort = 1;
 
 		if (Game_mode & GM_MULTI)
