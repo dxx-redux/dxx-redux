@@ -85,18 +85,21 @@ typedef struct player_config
 	ubyte NoFireAutoselect;
 	ubyte CycleAutoselectOnly;
 	ubyte VulcanAmmoWarnings;
-	ubyte ShieldWarnings; 
+	ubyte ShieldWarnings;
 	ubyte AutoDemo;
 	ubyte ShowCustomColors;
-	ubyte QuietPlasma; 	
+	ubyte PreferMyTeamColors;
+	ubyte QuietPlasma;
 	int AlphaEffects;
 	int DynLightColor;
-	ubyte DisableCockpit;  /* DisableCockpit */ 
-	ubyte StickyRearview; /* StickyRearview */ 
-	ubyte SelectAfterFire; /* SelectAfterFire */ 	
+	ubyte DisableCockpit;  /* DisableCockpit */
+	ubyte StickyRearview; /* StickyRearview */
+	ubyte SelectAfterFire; /* SelectAfterFire */
 	int maxFps;
-	int ShipColor;	
+	int ShipColor;
 	int MissileColor;
+	int MyTeamColor;
+	int OtherTeamColor;
 	ubyte ObsTurbo;
 	ubyte ObsShowCockpit;
 	ubyte ObsShowScoreboardShieldText;

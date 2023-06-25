@@ -3159,37 +3159,18 @@ void disable_faircolors_if_3_connected() {
 	}
 }
 
-int get_color_for_first_team_player(int team, int missile) {
-	for(int i = 0; i < MAX_PLAYERS; i++) {
-		if(get_team(i) == team) {
-			if(missile) { return Netgame.players[i].missilecolor; }
-			return Netgame.players[i].color;
-		}
-	}
-	con_printf(CON_NORMAL, "Couldn't find team color for team %d\n", team);
-	return team; 
-}
-
 int get_color_for_player(int player, int missile) {
+	if (Game_mode & GM_TEAM) {
+		return get_color_for_team(get_team(player));
+	}
+
 	int color = 0;
 
 	if((! PlayerCfg.ShowCustomColors) || (! Netgame.AllowPreferredColors)) {
-		if(Game_mode & GM_TEAM) {
-			color = get_team(player);
-		} else {
-			color = player; 
-		}
+		color = player;
 	} else {
-		if(Game_mode & GM_TEAM) {
-			color = get_color_for_first_team_player(get_team(player), missile);
-		} else {
-			if(missile) { color = Netgame.players[player].missilecolor; }
-			else        { color = Netgame.players[player].color;  }
-		}
-	}
-
-	if (Game_mode & GM_TEAM) {
-		return(color); 
+		if(missile) { color = Netgame.players[player].missilecolor; }
+		else        { color = Netgame.players[player].color;  }
 	}
 
 	if(Game_mode & GM_MULTI && Netgame.FairColors && !is_observer()) {
@@ -3199,14 +3180,23 @@ int get_color_for_player(int player, int missile) {
 	return(color); 
 }
 
-int get_color_for_team(int team, int missile) {
-	for(int i = 0; i < MAX_PLAYERS; i++) {
-		if(get_team(i) == team) {
-			return get_color_for_player(i, missile);
-		}
+int get_color_for_team(int team)
+{
+	int team_color = Netgame.team_color[team];
+	int color = team_color;
+
+	// Are we using the player's preferred team colors?
+	if (!is_observer() && (team_color == 8 || PlayerCfg.PreferMyTeamColors)) {
+		int same_team = get_team(Player_num) == team;
+		color = same_team ? PlayerCfg.MyTeamColor : PlayerCfg.OtherTeamColor;
+		// No color set? Revert to what the game creator specified
+		if (color == 8) color = team_color;
 	}
 
-	return team; 
+	// If the team color is default, 0 is blue, 1 is red
+	if (color == 8) color = team;
+
+	return color;
 }
 
 void multi_reset_object_texture (object *objp)

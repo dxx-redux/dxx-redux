@@ -1790,7 +1790,7 @@ void ogl_loadpngmask(png_data *pdata, grs_bitmap *bm, int texfilt)
 void ogl_loadbmtexture_f(grs_bitmap *bm, int texfilt, int filter_blueship_wing)
 {
 	unsigned char *buf;
-	const char* bitmapname = NULL;
+	const char* bitmapname = piggy_game_bitmap_name(bm);
 
 	while (bm->bm_parent)
 		bm=bm->bm_parent;
@@ -1798,7 +1798,7 @@ void ogl_loadbmtexture_f(grs_bitmap *bm, int texfilt, int filter_blueship_wing)
 		return;
 	buf=bm->bm_data;
 #ifdef HAVE_LIBPNG
-	if (ogl_allow_png() && (bitmapname = piggy_game_bitmap_name(bm)))
+	if (ogl_allow_png() && bitmapname)
 	{
 		char filename[64];
 		png_data pdata;
@@ -1869,8 +1869,6 @@ void ogl_loadbmtexture_f(grs_bitmap *bm, int texfilt, int filter_blueship_wing)
 		buf=decodebuf;
 
 		if(Game_mode & GM_MULTI && Netgame.BlackAndWhitePyros) {
-			if (!bitmapname)
-				bitmapname = piggy_game_bitmap_name(bm);
 			char is_purple_tex1 = bitmapname && !strcmp(bitmapname, "ship6-4");
 			char is_purple_tex2 = bitmapname && !strcmp(bitmapname, "ship6-5");
 

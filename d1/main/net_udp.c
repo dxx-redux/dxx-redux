@@ -3041,6 +3041,8 @@ void net_udp_send_game_info(struct _sockaddr sender_addr, ubyte info_upid, ubyte
 		buf[len] = Netgame.AllowCustomModelsTextures; len++;
 		buf[len] = Netgame.ReducedFlash; len++;
 		buf[len] = Netgame.GaussAmmoStyle; len++;
+		buf[len] = Netgame.team_color[0];						len++;
+		buf[len] = Netgame.team_color[1];						len++;
 
 		if(info_upid == UPID_SYNC) {
 			PUT_INTEL_INT(buf + len, player_token); len += 4; 
@@ -3271,6 +3273,8 @@ int net_udp_process_game_info(ubyte *data, int data_len, struct _sockaddr game_a
 		Netgame.AllowCustomModelsTextures = data[len]; len++;
 		Netgame.ReducedFlash = data[len]; len++;
 		Netgame.GaussAmmoStyle = data[len]; len++;
+		Netgame.team_color[0] = data[len];						len++;
+		Netgame.team_color[1] = data[len];						len++;
 
 		if (Netgame.host_is_obs) {
 			multi_make_player_ghost(0);
@@ -4828,14 +4832,22 @@ int net_udp_send_sync(void)
 	return 0;
 }
 
+int net_udp_menu_select_teams_handler(newmenu* menu, d_event* event, void* userdata);
+
+struct select_teams_menu_data {
+	char team_names[2][CALLSIGN_LEN + 1];
+	ubyte team_colors[2];
+	int opt_team_a_color;
+	int opt_team_b_color;
+};
 
 int
 net_udp_select_teams(void)
 {
-	newmenu_item m[MAX_PLAYERS+4];
+	newmenu_item m[MAX_PLAYERS+7];
 	int choice, opt, opt_team_b;
 	ubyte team_vector = 0;
-	char team_names[2][CALLSIGN_LEN+1];
+	struct select_teams_menu_data menu_data;
 	int i;
 	int pnums[MAX_PLAYERS+2];
 
@@ -4846,63 +4858,128 @@ net_udp_select_teams(void)
 		team_vector |= (1 << i);
 	}
 
-	sprintf(team_names[0], "%s", TXT_BLUE);
-	sprintf(team_names[1], "%s", TXT_RED);
+	sprintf(menu_data.team_names[0], "%s", TXT_BLUE);
+	sprintf(menu_data.team_names[1], "%s", TXT_RED);
+	menu_data.team_colors[0] = menu_data.team_colors[1] = 8; // 8 = default
 
 	// Here comes da menu
-menu:
-	m[0].type = NM_TYPE_INPUT; m[0].text = team_names[0]; m[0].text_len = CALLSIGN_LEN; 
+	while (1) {
+		opt = 0;
 
-	opt = 1;
-	for (i = 0; i < N_players; i++)
-	{
-		if (!(team_vector & (1 << i)))
-		{
-			m[opt].type = NM_TYPE_MENU; m[opt].text = Netgame.players[i].callsign; pnums[opt] = i; opt++;
-		}
-	}
-	opt_team_b = opt;
-	m[opt].type = NM_TYPE_INPUT; m[opt].text = team_names[1]; m[opt].text_len = CALLSIGN_LEN; opt++;
-	for (i = 0; i < N_players; i++)
-	{
-		if (team_vector & (1 << i))
-		{
-			m[opt].type = NM_TYPE_MENU; m[opt].text = Netgame.players[i].callsign; pnums[opt] = i; opt++;
-		}
-	}
-	m[opt].type = NM_TYPE_TEXT; m[opt].text = ""; opt++;
-	m[opt].type = NM_TYPE_MENU; m[opt].text = TXT_ACCEPT; opt++;
+		menu_data.opt_team_a_color = opt;
+		m[opt].type = NM_TYPE_SLIDER;
+		m[opt].value = menu_data.team_colors[0];
+		m[opt].min_value = 0;
+		m[opt].max_value = 8;
+		m[opt].text = "Team 1 color: ";
+		opt++;
 
-	Assert(opt <= MAX_PLAYERS+4);
+		m[opt].type = NM_TYPE_INPUT;
+		m[opt].text = menu_data.team_names[0];
+		m[opt].text_len = CALLSIGN_LEN;
+		opt++;
+
+		// Team A player list
+		for (i = 0; i < N_players; i++)
+		{
+			if (!(team_vector & (1 << i)))
+			{
+				m[opt].type = NM_TYPE_MENU;
+				m[opt].text = Netgame.players[i].callsign;
+				pnums[opt] = i;
+				opt++;
+			}
+		}
+
+		opt_team_b = opt;
+
+		m[opt].type = NM_TYPE_TEXT;
+		m[opt].text = "";
+		opt++;
+
+		menu_data.opt_team_b_color = opt;
+		m[opt].type = NM_TYPE_SLIDER;
+		m[opt].value = menu_data.team_colors[1];
+		m[opt].min_value = 0;
+		m[opt].max_value = 8;
+		m[opt].text = "Team 2 color: ";
+		opt++;
+
+		m[opt].type = NM_TYPE_INPUT;
+		m[opt].text = menu_data.team_names[1];
+		m[opt].text_len = CALLSIGN_LEN;
+		opt++;
+
+		// Team B player list
+		for (i = 0; i < N_players; i++)
+		{
+			if (team_vector & (1 << i))
+			{
+				m[opt].type = NM_TYPE_MENU;
+				m[opt].text = Netgame.players[i].callsign;
+				pnums[opt] = i;
+				opt++;
+			}
+		}
+
+		m[opt].type = NM_TYPE_TEXT;
+		m[opt].text = "";
+		opt++;
+
+		m[opt].type = NM_TYPE_MENU;
+		m[opt].text = TXT_ACCEPT;
+		opt++;
+
+		Assert(opt <= SDL_arraysize(m));
 	
-	choice = newmenu_do(NULL, TXT_TEAM_SELECTION, opt, m, NULL, NULL);
+		choice = newmenu_do(NULL, TXT_TEAM_SELECTION, opt, m, net_udp_menu_select_teams_handler, &menu_data);
 
-	if (choice == opt-1)
-	{
-#if 0 // no need to wait for other players
-		if ((opt-2-opt_team_b < 2) || (opt_team_b == 1)) 
+		if (choice == opt-1)
 		{
-			nm_messagebox(NULL, 1, TXT_OK, TXT_TEAM_MUST_ONE);
-			#ifdef RELEASE
-			goto menu;
-			#endif
+			Netgame.team_vector = team_vector;
+			strcpy(Netgame.team_name[0], menu_data.team_names[0]);
+			strcpy(Netgame.team_name[1], menu_data.team_names[1]);
+			Netgame.team_color[0] = menu_data.team_colors[0];
+			Netgame.team_color[1] = menu_data.team_colors[1];
+			return 1;
 		}
-#endif
-		Netgame.team_vector = team_vector;
-		strcpy(Netgame.team_name[0], team_names[0]);
-		strcpy(Netgame.team_name[1], team_names[1]);
-		return 1;
+
+		else if ((choice > 0) && (choice < opt_team_b)) {
+			team_vector |= (1 << pnums[choice]);
+		}
+		else if ((choice > opt_team_b) && (choice < opt-2)) {
+			team_vector &= ~(1 << pnums[choice]);
+		}
+		else if (choice == -1)
+			return 0;
+	}
+}
+
+int net_udp_menu_select_teams_handler(newmenu* menu, d_event* event, void* userdata)
+{
+	newmenu_item* menus = newmenu_get_items(menu);
+	int citem = newmenu_get_citem(menu);
+	struct select_teams_menu_data* menu_data = (struct select_teams_menu_data*)userdata;
+
+	if (event->type == EVENT_NEWMENU_CHANGED) {
+		if (citem == menu_data->opt_team_a_color) {
+			menu_data->team_colors[0] = menus[citem].value;
+			if (menu_data->team_colors[0] == 8)
+				sprintf(menu_data->team_names[0], "%s", TXT_BLUE);
+			else
+				get_color_name(menu_data->team_names[0], SDL_arraysize(menu_data->team_names[0]),
+					menu_data->team_colors[0], Netgame.BlackAndWhitePyros);
+		} else if (citem == menu_data->opt_team_b_color) {
+			menu_data->team_colors[1] = menus[citem].value;
+			if (menu_data->team_colors[1] == 8)
+				sprintf(menu_data->team_names[1], "%s", TXT_RED);
+			else
+				get_color_name(menu_data->team_names[1], SDL_arraysize(menu_data->team_names[1]),
+					menu_data->team_colors[1], Netgame.BlackAndWhitePyros);
+		}
 	}
 
-	else if ((choice > 0) && (choice < opt_team_b)) {
-		team_vector |= (1 << pnums[choice]);
-	}
-	else if ((choice > opt_team_b) && (choice < opt-2)) {
-		team_vector &= ~(1 << pnums[choice]);
-	}
-	else if (choice == -1)
-		return 0;
-	goto menu;
+	return 0;
 }
 
 int
