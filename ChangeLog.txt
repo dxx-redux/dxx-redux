@@ -1,3 +1,13 @@
+2023-06-25 Redux 0.8
+- Improved team colors with customization options
+- Added -gamelog_timestamp ini option to preserve gamelog.txt files
+- Added Borderless Window option to Screen Resolutions menu
+- Fixed leaving automap while moving
+- Fixed observer crash if host left game while recording demo
+- Fixed D2 matcen crash on Linux
+- Fixed crash in level with lots of textures
+- Reduced cpu usage
+
 2023-05-18 Redux 0.7
 - Add load/save multiplayer settings preset
 - Fix below ship player name color with Show Custom Ship Colors disabled
