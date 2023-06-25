@@ -2178,6 +2178,12 @@ void do_misc_menu()
 
 	} while( i>-1 );
 
+	// Update team colors if they were changed during a game
+	if ((Game_mode & GM_TEAM) && (Network_status == NETSTAT_PLAYING)) {
+		for (int i = 0; i < N_players; i++)
+			if (Players[i].connected)
+				multi_reset_object_texture(&Objects[Players[i].objnum]);
+	}
 }
 
 int menu_misc_options_handler(newmenu* menu, d_event* event, void* userdata)

@@ -335,6 +335,7 @@ void multi_object_to_object_rw(object *obj, object_rw *obj_rw);
 void multi_object_rw_to_object(object_rw *obj_rw, object *obj);
 int get_color_for_player(int id, int missile);
 int get_color_for_team(int team);
+void multi_reset_object_texture(object* objp);
 void multi_send_obs_update(ubyte event, ubyte event_data);
 void multi_send_ship_status_for_frame();
 bool is_observing_player();
