@@ -4175,6 +4175,38 @@ void observer_show_bomb_highlights()
 	}
 }
 
+#define VEL_HIST 200
+void hud_show_vel()
+{
+	char vel_str[50], *p;
+	static float vels[VEL_HIST], veltot;
+	static int velidx = 0;
+	float velmax;
+	vms_vector *vel = &ConsoleObject->mtype.phys_info.velocity;
+	vms_vector *rotvel = &ConsoleObject->mtype.phys_info.rotvel;
+	float velmag = f2fl(vm_vec_mag(vel));
+	float rotvelmag = f2fl(vm_vec_mag(rotvel));
+	veltot += velmag - vels[velidx];
+	vels[velidx] = velmag;
+	if (++velidx == VEL_HIST)
+		velidx = 0;
+	velmax = 0;
+	for (int i = 0; i < VEL_HIST; i++)
+		if (vels[i] > velmax)
+			velmax = vels[i];
+	snprintf(vel_str, sizeof(vel_str), "%2.1f max %2.1f rot %1.2f", //"%+2.1f %+2.1f %+2.1f = %+2.1f",
+		//f2fl(vel->x), f2fl(vel->y), f2fl(vel->z),
+		velmag, velmax, rotvelmag);
+	for (p = vel_str; *p; p++)
+		if (*p == '1')
+			*p = '\x84'; // fixed width 1
+	int w, h, aw;
+	gr_get_string_size(vel_str, &w, &h, &aw );
+	gr_set_fontcolor(Color_0_31_0, -1);
+	gr_string(grd_curcanv->cv_bitmap.bm_w-FSPACX(160),
+		grd_curcanv->cv_bitmap.bm_h-LINE_SPACING, vel_str);
+}
+
 //draw all the things on the HUD
 
 void draw_hud()
@@ -4289,6 +4321,9 @@ void draw_hud()
 				newdemo_record_player_flags(Players[pnum].flags);
 			}
 		}
+
+		if ((Game_mode & (GM_NETWORK | GM_MULTI_COOP | GM_OBSERVER)) != GM_NETWORK || Newdemo_state == ND_STATE_PLAYBACK)
+			hud_show_vel();
 
 #ifndef RELEASE
 		if (!(Game_mode&GM_MULTI && Show_kill_list))
