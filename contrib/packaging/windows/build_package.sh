@@ -26,8 +26,13 @@ build_app() {
     cp ../${builddir}/${name}.exe ${outdir}/
     
     # Copy in .dlls the old fashioned way. This assumes all the needed DLLs are 
-    # ones from the mingw64 installation
-    ldd ${outdir}/${name}.exe |grep mingw64 |sort |cut -d' ' -f3 |while read dll; do cp "${dll}" ${outdir}/; done
+    # ones from the mingw32/mingw64 installation
+    ntldd -R ${outdir}/${name}.exe |grep -i $MSYSTEM |sort |awk '{print $3}' |while read -r dll; do cp -p "`cygpath -u "${dll}"`" ${outdir}/; done
+
+    # Copy the DLLS that SDL_mixer dynamically loads
+    dlldir="/`echo $MSYSTEM|tr A-Z a-z`/bin"
+    for i in libvorbisfile-3.dll libvorbis-0.dll libogg-0.dll libmikmod-3.dll libopenal-1.dll; do cp -p $dlldir/$i $outdir/; done
+    cp -p $dlldir/libFLAC.dll $outdir/libFLAC-8.dll
 
     # Copy in other resources
     cp ../COPYING.txt ${outdir}/
