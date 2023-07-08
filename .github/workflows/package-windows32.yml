@@ -1,4 +1,4 @@
-name: Package - Windows
+name: Package - Windows32
 
 on:
   #push:
@@ -10,9 +10,12 @@ on:
   workflow_dispatch:
 
 jobs:
-  windows:
-    name: Windows
+  windows32:
+    name: Windows32
     runs-on: windows-2019
+
+    env:
+      MSYSTEM: mingw32
 
     defaults:
       run:
@@ -22,21 +25,21 @@ jobs:
       - name: Setup MSYS2
         uses: msys2/setup-msys2@v2
         with:
-          msystem: MINGW64
+          msystem: MINGW32
           update: true
           install: >-
             git
             zip
-            base-devel 
-            mingw-w64-x86_64-toolchain
-            mingw-w64-x86_64-pkgconf
-            mingw-w64-x86_64-cmake
-            mingw-w64-x86_64-physfs
-            mingw-w64-x86_64-SDL
-            mingw-w64-x86_64-SDL_mixer
-            mingw-w64-x86_64-libpng
-            mingw-w64-x86_64-glew
-            mingw-w64-x86_64-ntldd-git
+            base-devel
+            mingw-w64-i686-toolchain
+            mingw-w64-i686-pkgconf
+            mingw-w64-i686-cmake
+            mingw-w64-i686-physfs
+            mingw-w64-i686-SDL
+            mingw-w64-i686-SDL_mixer
+            mingw-w64-i686-libpng
+            mingw-w64-i686-glew
+            mingw-w64-i686-ntldd-git
 
       - name: Clone repository
         uses: actions/checkout@v3
@@ -45,7 +48,7 @@ jobs:
         run: cmake -S d1 -B buildd1 -DCMAKE_BUILD_TYPE=RelWithDebInfo
 
       - name: Build D1
-        run: cmake --build buildd1 
+        run: cmake --build buildd1
 
       - name: Configure D2
         run: cmake -S d2 -B buildd2 -DCMAKE_BUILD_TYPE=RelWithDebInfo
@@ -59,5 +62,5 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
-          name: windows
+          name: windows32
           path: '*.zip'
