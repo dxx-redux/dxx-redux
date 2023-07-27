@@ -1,3 +1,6 @@
+2023-07-27 Redux 0.9
+- Fix crash on hostage door/diamond claw explosion
+
 2023-06-25 Redux 0.8
 - Improved team colors with customization options
 - Added -gamelog_timestamp ini option to preserve gamelog.txt files
