@@ -4427,6 +4427,37 @@ void show_HUD_names()
 #endif
 
 
+
+#define VEL_HIST 200
+void hud_show_vel()
+{
+	char vel_str[50], *p;
+	static float vels[VEL_HIST], veltot;
+	static int velidx = 0;
+	float velmax;
+	vms_vector *vel = &ConsoleObject->mtype.phys_info.velocity;
+	float velmag = f2fl(vm_vec_mag(vel));
+	veltot += velmag - vels[velidx];
+	vels[velidx] = velmag;
+	if (++velidx == VEL_HIST)
+		velidx = 0;
+	velmax = 0;
+	for (int i = 0; i < VEL_HIST; i++)
+		if (vels[i] > velmax)
+			velmax = vels[i];
+	snprintf(vel_str, sizeof(vel_str), "%2.1f max %2.1f", //"%+2.1f %+2.1f %+2.1f = %+2.1f",
+		//f2fl(vel->x), f2fl(vel->y), f2fl(vel->z),
+		velmag, velmax);
+	for (p = vel_str; *p; p++)
+		if (*p == '1')
+			*p = '\x84'; // fixed width 1
+	int w, h, aw;
+	gr_get_string_size(vel_str, &w, &h, &aw );
+	gr_set_fontcolor(Color_0_31_0, -1);
+	gr_string(grd_curcanv->cv_bitmap.bm_w-FSPACX(120),
+		grd_curcanv->cv_bitmap.bm_h-LINE_SPACING, vel_str);
+}
+
 //draw all the things on the HUD
 void draw_hud()
 {
@@ -4542,6 +4573,8 @@ void draw_hud()
 			hud_show_weapons();
 			hud_show_keys();
 			hud_show_cloak_invuln();
+
+			hud_show_vel();
 
 			if (Newdemo_state==ND_STATE_RECORDING)
 			{
