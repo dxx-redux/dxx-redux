@@ -377,42 +377,42 @@ void add_observatory_damage_stat(int player_num, fix shields_delta, fix new_shie
 		else {
 			ddt->total_damage += shields_delta;
 		}
-	}
 
-	// Sort damage done totals by total damage.
-	ddt = First_damage_done_totals[killer_id];
-	damage_done_totals* next_ddt = NULL;
-	damage_done_totals* ddt_a = NULL;
-	damage_done_totals* ddt_b = NULL;
-	while (ddt != NULL) {
-		next_ddt = ddt->next;
+		// Sort damage done totals by total damage.
+		ddt = First_damage_done_totals[killer_id];
+		damage_done_totals* next_ddt = NULL;
+		damage_done_totals* ddt_a = NULL;
+		damage_done_totals* ddt_b = NULL;
+		while (ddt != NULL) {
+			next_ddt = ddt->next;
 
-		if (ddt->prev != NULL) {
-			while (ddt != NULL && ddt->prev != NULL && ddt->total_damage > ddt->prev->total_damage) {
-				ddt_a = ddt->prev;
-				ddt_b = ddt;
+			if (ddt->prev != NULL) {
+				while (ddt != NULL && ddt->prev != NULL && ddt->total_damage > ddt->prev->total_damage) {
+					ddt_a = ddt->prev;
+					ddt_b = ddt;
 
-				ddt_a->next = ddt_b->next;
-				ddt_b->prev = ddt_a->prev;
+					ddt_a->next = ddt_b->next;
+					ddt_b->prev = ddt_a->prev;
 
-				if (ddt_a->next != NULL) {
-					ddt_a->next->prev = ddt_a;
-				}
+					if (ddt_a->next != NULL) {
+						ddt_a->next->prev = ddt_a;
+					}
 
-				if (ddt_b->prev != NULL) {
-					ddt_b->prev->next = ddt_b;
-				}
+					if (ddt_b->prev != NULL) {
+						ddt_b->prev->next = ddt_b;
+					}
 
-				ddt_b->next = ddt_a;
-				ddt_a->prev = ddt_b;
+					ddt_b->next = ddt_a;
+					ddt_a->prev = ddt_b;
 
-				if (ddt_a == First_damage_done_totals[killer_id]) {
-					First_damage_done_totals[killer_id] = ddt_b;
+					if (ddt_a == First_damage_done_totals[killer_id]) {
+						First_damage_done_totals[killer_id] = ddt_b;
+					}
 				}
 			}
-		}
 
-		ddt = next_ddt;
+			ddt = next_ddt;
+		}
 	}
 
 	// Record death.
