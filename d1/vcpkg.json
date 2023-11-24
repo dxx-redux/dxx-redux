@@ -1,19 +1,19 @@
 {
-    "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg/master/scripts/vcpkg.schema.json",
-    "name": "d1x-redux",
-    "version-semver": "0.9.0",
-    "dependencies": [
-        "physfs",
-        "sdl1",
-        "sdl1-mixer",
-        "libpng",
-        "glew"
-    ],
-    "vcpkg-configuration": {
-        "default-registry": {
-            "kind": "git",
-            "baseline": "2c401863dd54a640aeb26ed736c55489c079323b",
-            "repository": "https://github.com/microsoft/vcpkg"
-        }
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg/master/scripts/vcpkg.schema.json",
+  "name": "d1x-redux",
+  "version-semver": "0.9.0",
+  "dependencies": [
+    "physfs",
+    "sdl1",
+    "sdl1-mixer",
+    "libpng",
+    "glew"
+  ],
+  "vcpkg-configuration": {
+    "default-registry": {
+      "kind": "git",
+      "baseline": "2c401863dd54a640aeb26ed736c55489c079323b",
+      "repository": "https://github.com/microsoft/vcpkg"
     }
+  }
 }
