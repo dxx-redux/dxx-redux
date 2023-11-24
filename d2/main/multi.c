@@ -287,6 +287,12 @@ void add_observatory_damage_stat(int player_num, fix shields_delta, fix new_shie
 		source_id = SHIP_COLLISION_DAMAGE;
 	}
 
+	// Combine different laser levels into the same source_id. They aren't named differently in
+	// weapon_id_to_name, so we don't want them split up in summaries.
+	if (killer_type == OBJ_PLAYER && damage_type == DAMAGE_WEAPON && source_id > LASER_ID_L1 && source_id <= LASER_ID_L6) {
+		source_id = LASER_ID_L1;
+	}
+
 	// Record player's damage over time.
 	shield_status* sta = (shield_status*)d_malloc(sizeof(shield_status));
 	sta->timestamp = GameTime64;
