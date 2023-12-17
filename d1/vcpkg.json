@@ -8,5 +8,12 @@
     "sdl1-mixer",
     "libpng",
     "glew"
-  ]
+  ],
+  "vcpkg-configuration": {
+    "default-registry": {
+      "kind": "git",
+      "baseline": "2c401863dd54a640aeb26ed736c55489c079323b",
+      "repository": "https://github.com/microsoft/vcpkg"
+    }
+  }
 }

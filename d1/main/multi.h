@@ -604,16 +604,16 @@ typedef struct shield_status {
 	struct shield_status* next;
 } __pack__ shield_status;
 
-// The first shield status for the current point.
+// The beginning of the shield status list for the current point.
 extern shield_status* First_current_shield_status[MAX_PLAYERS];
 
-// The last shield status for the current point.  Used to append the next status.
+// The end of the shield status list for the current point.  Used to append the next status.
 extern shield_status* Last_current_shield_status[MAX_PLAYERS];
 
-// The first shield status for the previous point.
+// The beginning of the shield status list for the previous point.
 extern shield_status* First_previous_shield_status[MAX_PLAYERS];
 
-// The last shield status for the current point.  Used to display the killing blow.
+// The end of the shield status list for the current point.  Used to display the killing blow.
 extern shield_status* Last_previous_shield_status[MAX_PLAYERS];
 
 // When to show the death summary until.
@@ -633,13 +633,13 @@ typedef struct damage_taken_totals {
 	struct damage_taken_totals* prev;
 } __pack__ damage_taken_totals;
 
-// The first damage taken totals overall.
+// The beginning of the list of overall (for the whole game) damage taken totals.
 extern damage_taken_totals* First_damage_taken_totals[MAX_PLAYERS];
 
-// The first damage taken totals for the current point.
+// The beginning of the list of damage taken totals for the current point.
 extern damage_taken_totals* First_damage_taken_current_totals[MAX_PLAYERS];
 
-// The first damage taken totals for the previous point.
+// The beginning of the list of damage taken totals for the previous point.
 extern damage_taken_totals* First_damage_taken_previous_totals[MAX_PLAYERS];
 
 // Defines damage done totals for a single source.  Doubly linked list.
@@ -650,7 +650,7 @@ typedef struct damage_done_totals {
 	struct damage_done_totals* prev;
 } __pack__ damage_done_totals;
 
-// The first damage done totals.
+// The beginning of the list of damage done totals.
 extern damage_done_totals* First_damage_done_totals[MAX_PLAYERS];
 
 // Defines a kill for the kill log.  Singly linked list.
