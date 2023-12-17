@@ -1151,13 +1151,13 @@ void multi_compute_kill(int killer, int killed)
 
 		if (killed_pnum == Player_num)
 		{
-			HUD_init_message(HM_MULTI, "%s %s.", TXT_YOU_WERE, TXT_KILLED_BY_NONPLAY);
+			HUD_init_message(HM_MULTI | HM_KILLFEED, "%s %s.", TXT_YOU_WERE, TXT_KILLED_BY_NONPLAY);
 			multi_add_lifetime_killed ();
 
 			robo_anarchy_suicide_penalty();
 		}
 		else
-			HUD_init_message(HM_MULTI, "%s %s %s.", killed_name, TXT_WAS, TXT_KILLED_BY_NONPLAY );
+			HUD_init_message(HM_MULTI | HM_KILLFEED, "%s %s %s.", killed_name, TXT_WAS, TXT_KILLED_BY_NONPLAY );
 
 		add_observatory_stat(killed_pnum, OBSEV_DEATH | OBSEV_REACTOR);
 
@@ -1169,21 +1169,21 @@ void multi_compute_kill(int killer, int killed)
 		if (killer_id==PMINE_ID && killer_type!=OBJ_ROBOT)
 		{
 			if (killed_pnum == Player_num)
-				HUD_init_message_literal(HM_MULTI, "You were killed by a mine!");
+				HUD_init_message_literal(HM_MULTI | HM_KILLFEED, "You were killed by a mine!");
 			else
-				HUD_init_message(HM_MULTI, "%s was killed by a mine!",killed_name);
+				HUD_init_message(HM_MULTI | HM_KILLFEED, "%s was killed by a mine!",killed_name);
 		}
 		else
 		{
 			if (killed_pnum == Player_num)
 			{
-				HUD_init_message(HM_MULTI, "%s %s.", TXT_YOU_WERE, TXT_KILLED_BY_ROBOT);
+				HUD_init_message(HM_MULTI | HM_KILLFEED, "%s %s.", TXT_YOU_WERE, TXT_KILLED_BY_ROBOT);
 				multi_add_lifetime_killed();
 
 				robo_anarchy_suicide_penalty();
 			}
 			else
-				HUD_init_message(HM_MULTI, "%s %s %s.", killed_name, TXT_WAS, TXT_KILLED_BY_ROBOT );
+				HUD_init_message(HM_MULTI | HM_KILLFEED, "%s %s %s.", killed_name, TXT_WAS, TXT_KILLED_BY_ROBOT );
 		}
 		Players[killed_pnum].net_killed_total++;
 
@@ -1227,11 +1227,11 @@ void multi_compute_kill(int killer, int killed)
 
 		if (killer_pnum == Player_num)
 		{
-			HUD_init_message(HM_MULTI, "%s %s %s!", TXT_YOU, TXT_KILLED, TXT_YOURSELF );
+			HUD_init_message(HM_MULTI | HM_KILLFEED, "%s %s %s!", TXT_YOU, TXT_KILLED, TXT_YOURSELF );
 			multi_add_lifetime_killed();
 		}
 		else
-			HUD_init_message(HM_MULTI, "%s %s", killed_name, TXT_SUICIDE);
+			HUD_init_message(HM_MULTI | HM_KILLFEED, "%s %s", killed_name, TXT_SUICIDE);
 
 		/* Bounty mode needs some lovin' */
 		if( Game_mode & GM_BOUNTY && killed_pnum == Bounty_target && multi_i_am_master() )
@@ -1308,7 +1308,7 @@ void multi_compute_kill(int killer, int killed)
 		}
 
 		if (killer_pnum == Player_num) {
-			HUD_init_message(HM_MULTI, "%s %s %s!", TXT_YOU, TXT_KILLED, killed_name);
+			HUD_init_message(HM_MULTI | HM_KILLFEED, "%s %s %s!", TXT_YOU, TXT_KILLED, killed_name);
 			multi_add_lifetime_kills();
 			if ((Game_mode & GM_MULTI_COOP) && (Players[Player_num].score >= 1000))
 				add_points_to_score(-1000);
@@ -1318,7 +1318,7 @@ void multi_compute_kill(int killer, int killed)
 		}
 		else if (killed_pnum == Player_num)
 		{
-			HUD_init_message(HM_MULTI, "%s %s %s!", killer_name, TXT_KILLED, TXT_YOU);
+			HUD_init_message(HM_MULTI | HM_KILLFEED, "%s %s %s!", killer_name, TXT_KILLED, TXT_YOU);
 			multi_add_lifetime_killed();
 			if (Game_mode & GM_HOARD)
 			{
@@ -1329,7 +1329,7 @@ void multi_compute_kill(int killer, int killed)
 			}
 		}
 		else
-			HUD_init_message(HM_MULTI, "%s %s %s!", killer_name, TXT_KILLED, killed_name);
+			HUD_init_message(HM_MULTI | HM_KILLFEED, "%s %s %s!", killer_name, TXT_KILLED, killed_name);
 
 		add_observatory_stat(killed_pnum, OBSEV_DEATH | OBSEV_PLAYER);
 		add_observatory_stat(killer_pnum, OBSEV_KILL | OBSEV_PLAYER);
