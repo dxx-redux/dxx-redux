@@ -2431,19 +2431,19 @@ void hud_show_kill_list()
 
 		}
 
-
-		if((Show_network_stats && !is_observer()) && player_num != Player_num && Players[player_num].connected && Show_kill_list != 3) {
+		int my_player_num = is_observing_player() ? Current_obs_player : Player_num;
+		if((Show_network_stats && (!is_observer() || is_observing_player())) && player_num != my_player_num && Players[player_num].connected && Show_kill_list != 3) {
 			int lag = -1;
 
 			if(Netgame.RetroProtocol) {
 				lag = Netgame.players[player_num].ping;
 			} else {
-				if(multi_i_am_master()) {
+				if (my_player_num == multi_who_is_master()) {
 					lag = Netgame.players[player_num].ping;
 				} else if (player_num == multi_who_is_master()) {
-					lag = Netgame.players[Player_num].ping;
+					lag = Netgame.players[my_player_num].ping;
 				} else {
-					lag = Netgame.players[Player_num].ping + Netgame.players[player_num].ping;
+					lag = Netgame.players[my_player_num].ping + Netgame.players[player_num].ping;
 				}
 			}
 
@@ -4142,6 +4142,9 @@ void draw_hud()
 				show_reticle(PlayerCfg.ReticleType, 1);
 			if (PlayerCfg.CockpitMode[1] != CM_LETTERBOX && Newdemo_state != ND_STATE_PLAYBACK && (PlayerCfg.MouseControlStyle == MOUSE_CONTROL_FLIGHT_SIM) && PlayerCfg.MouseFSIndicator) /* Old School Mouse */
 				show_mousefs_indicator(Controls.raw_mouse_axis[0], Controls.raw_mouse_axis[1], Controls.raw_mouse_axis[2], GWIDTH/2, GHEIGHT/2, GHEIGHT/4);
+
+			if (Show_network_stats && Show_kill_list)
+				hud_show_kill_list();
 		}
 
 		return;
