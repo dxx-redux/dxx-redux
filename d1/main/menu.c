@@ -2190,7 +2190,7 @@ int menu_obs_options_handler ( newmenu *menu, d_event *event, void *userdata );
 
 void do_obs_menu()
 {
-	newmenu_item m[25];
+	newmenu_item m[26];
 	int i = 0;
 
 	do {
@@ -2232,8 +2232,9 @@ void do_obs_menu()
 		ADD_CHECK(20, "Kills over Time Graph", PlayerCfg.ObsShowKillGraph);
 		ADD_CHECK(21, "Damage Breakdown", PlayerCfg.ObsShowBreakdown);
 		ADD_CHECK(22, "List of Observers", PlayerCfg.ObsShowObs);
-        ADD_CHECK(23, "Observer Chat", PlayerCfg.ObsChat);
-        ADD_CHECK(24, "Player Chat", PlayerCfg.ObsPlayerChat);
+		ADD_CHECK(23, "Observer Chat", PlayerCfg.ObsChat);
+		ADD_CHECK(24, "Player Chat", PlayerCfg.ObsPlayerChat);
+		ADD_CHECK(25, "Bomb/Mine Countdowns", PlayerCfg.ObsShowBombTimes);
 
 		i = newmenu_do1( NULL, "JinX Mode Options", sizeof(m)/sizeof(*m), m, menu_obs_options_handler, NULL, i );
 
@@ -2254,8 +2255,9 @@ void do_obs_menu()
 		PlayerCfg.ObsShowKillGraph = m[20].value;
 		PlayerCfg.ObsShowBreakdown = m[21].value;
 		PlayerCfg.ObsShowObs = m[22].value;
-        PlayerCfg.ObsChat = m[23].value;
-        PlayerCfg.ObsPlayerChat = m[24].value;
+		PlayerCfg.ObsChat = m[23].value;
+		PlayerCfg.ObsPlayerChat = m[24].value;
+		PlayerCfg.ObsShowBombTimes = m[25].value;
 	} while( i>-1 );
 }
 

@@ -119,6 +119,7 @@ typedef struct player_config
 	ubyte ObsShowObs;
 	ubyte ObsChat;
 	ubyte ObsPlayerChat;
+	ubyte ObsShowBombTimes;
 } __pack__ player_config;
 
 extern struct player_config PlayerCfg;
