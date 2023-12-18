@@ -877,8 +877,8 @@ int read_player_file()
 
 	return EZERO;
 
- read_player_file_failed:
-	nm_messagebox(TXT_ERROR, 1, TXT_OK, "%s\n\n%s", "Error reading PLR file", PHYSFS_getLastError());
+read_player_file_failed:
+	nm_messagebox(TXT_ERROR, 1, TXT_OK, "%s\n\n%s", "Error reading PLR file", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
 	if (file)
 		PHYSFS_close(file);
 
@@ -1061,7 +1061,7 @@ int write_player_file()
 	return EZERO;
 
  write_player_file_failed:
-	nm_messagebox(TXT_ERROR, 1, TXT_OK, "%s\n\n%s", TXT_ERROR_WRITING_PLR, PHYSFS_getLastError());
+	nm_messagebox(TXT_ERROR, 1, TXT_OK, "%s\n\n%s", TXT_ERROR_WRITING_PLR, PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
 	if (file)
 	{
 		PHYSFS_close(file);

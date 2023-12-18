@@ -119,7 +119,7 @@ void PHYSFSX_init(int argc, char *argv[])
 	{
 		PHYSFS_setWriteDir(base_dir);
 		if (!PHYSFS_getWriteDir())
-			Error("can't set write dir: %s\n", PHYSFS_getLastError());
+			Error("can't set write dir: %s\n", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
 		else
 			PHYSFS_addToSearchPath(PHYSFS_getWriteDir(), 0);
 	}

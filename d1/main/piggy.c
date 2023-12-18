@@ -518,7 +518,8 @@ void piggy_read_sounds(int pc_shareware)
 		{
 			if (PHYSFS_read(array, Sounds, MAX_SOUNDS, 1) != 1)	// make the 'Sounds' index array match with the sounds we're about to read in
 			{
-				con_printf(CON_URGENT,"Warning: Can't read Sounds/sounds.array: %s", PHYSFS_getLastError());
+				PHYSFS_ErrorCode error_code = PHYSFS_getLastErrorCode();
+				con_printf(CON_URGENT,"Warning: Can't read Sounds/sounds.array: %s", PHYSFS_getErrorByCode(error_code));
 				PHYSFS_close(array);
 				return;
 			}

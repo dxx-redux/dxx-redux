@@ -398,7 +398,7 @@ int RunMovie(char *filename, int hires_flag, int must_have,int dx,int dy)
 	if (!filehndl)
 	{
 		if (must_have)
-			con_printf(CON_URGENT, "Can't open movie <%s>: %s\n", filename, PHYSFS_getLastError());
+			con_printf(CON_URGENT, "Can't open movie <%s>: %s\n", filename, PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
 		window_close(wind);
 		if (reshow)
 			show_menus();
@@ -517,7 +517,7 @@ int InitRobotMovie(char *filename)
 
 	if (!RoboFile)
 	{
-		con_printf(CON_URGENT, "Can't open movie <%s>: %s\n", filename, PHYSFS_getLastError());
+		con_printf(CON_URGENT, "Can't open movie <%s>: %s\n", filename, PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
 		return MOVIE_NOT_PLAYED;
 	}
 
@@ -702,7 +702,7 @@ void init_movie(char *movielib, int required)
 	if (!PHYSFSX_contfile_init(filename, 0))
 	{
 		if (required)
-			con_printf(CON_URGENT, "Can't open movielib <%s>: %s\n", filename, PHYSFS_getLastError());
+			con_printf(CON_URGENT, "Can't open movielib <%s>: %s\n", filename, PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
 	}
 }
 
@@ -729,11 +729,11 @@ void close_extra_robot_movie(void)
 
 		if (!PHYSFSX_contfile_close(filename))
 		{
-			con_printf(CON_URGENT, "Can't close movielib <%s>: %s\n", filename, PHYSFS_getLastError());
+			con_printf(CON_URGENT, "Can't close movielib <%s>: %s\n", filename, PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
 			snprintf(filename, FILENAME_LEN+2, "%s-%s.mvl", movielib_files[EXTRA_ROBOT_LIB], GameArg.GfxMovieHires?"l":"h");
 
 			if (!PHYSFSX_contfile_close(filename))
-				con_printf(CON_URGENT, "Can't close movielib <%s>: %s\n", filename, PHYSFS_getLastError());
+				con_printf(CON_URGENT, "Can't close movielib <%s>: %s\n", filename, PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
 		}
 	}
 }

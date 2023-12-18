@@ -3547,8 +3547,9 @@ int newdemo_swap_endian(char *filename)
 
 read_error:
 	{
+		PHYSFS_ErrorCode error_code = PHYSFS_getLastErrorCode();
 		nm_messagebox( NULL, 1, TXT_OK, complete ? "Demo %s converted%s" : "Error converting demo\n%s\n%s", filename,
-					  complete ? "" : (nd_playback_v_at_eof ? TXT_DEMO_CORRUPT : PHYSFS_getLastError()));
+					  complete ? "" : (nd_playback_v_at_eof ? TXT_DEMO_CORRUPT : PHYSFS_getErrorByCode(error_code)));
 	}
 
 	return nd_playback_v_at_eof;
