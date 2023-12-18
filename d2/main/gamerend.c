@@ -505,7 +505,7 @@ void game_draw_hud_stuff()
 
 		y = GHEIGHT-(LINE_SPACING*2);
 
-		if (is_observing_player() && !Obs_at_distance && PlayerCfg.ObsShowCockpit && PlayerCfg.CockpitMode[1] == CM_FULL_COCKPIT)
+		if (is_observing_player() && !Obs_at_distance && PlayerCfg.ObsShowCockpit[get_observer_game_mode()] && PlayerCfg.CockpitMode[1] == CM_FULL_COCKPIT)
 			y = grd_curcanv->cv_bitmap.bm_h / 1.2 ;
 
 		if (PlayerCfg.CockpitMode[1] != CM_REAR_VIEW) {
@@ -836,7 +836,7 @@ void game_render_frame_mono(int flip)
 	if (Newdemo_state == ND_STATE_PLAYBACK)
 		Game_mode = Newdemo_game_mode;
 
-	if (is_observer() && (!is_observing_player() || Obs_at_distance || !PlayerCfg.ObsShowCockpit)) {
+	if (is_observer() && (!is_observing_player() || Obs_at_distance || !PlayerCfg.ObsShowCockpit[get_observer_game_mode()])) {
 		// Do not render gauges.
 	} else {
 		if (PlayerCfg.CockpitMode[1] == CM_FULL_COCKPIT || PlayerCfg.CockpitMode[1] == CM_STATUS_BAR)
@@ -896,7 +896,7 @@ extern void ogl_loadbmtexture(grs_bitmap *bm, int filter_blueship_wing);
 // This actually renders the new cockpit onto the screen.
 void update_cockpits()
 {
-	if (is_observer() && (!is_observing_player() || Obs_at_distance || !PlayerCfg.ObsShowCockpit)) {
+	if (is_observer() && (!is_observing_player() || Obs_at_distance || !PlayerCfg.ObsShowCockpit[get_observer_game_mode()])) {
 		// Do not draw cockpit.
 	} else {
 		grs_bitmap *bm;
@@ -951,7 +951,7 @@ void update_cockpits()
 	else
 		return;
 
-	if (is_observer() && (!is_observing_player() || Obs_at_distance || !PlayerCfg.ObsShowCockpit)) {
+	if (is_observer() && (!is_observing_player() || Obs_at_distance || !PlayerCfg.ObsShowCockpit[get_observer_game_mode()])) {
 		return;
 	}
 

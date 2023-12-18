@@ -340,6 +340,7 @@ void multi_send_obs_update(ubyte event, ubyte event_data);
 void multi_send_ship_status_for_frame();
 bool is_observing_player();
 bool object_is_observer(object* obj);
+int get_observer_game_mode();
 
 // Exported variables
 
@@ -733,5 +734,8 @@ extern kill_log_event* Kill_log;
 void add_observatory_damage_stat(int player_num, fix shields_delta, fix new_shields, fix old_shields, ubyte killer_type, ubyte killer_id, ubyte damage_type, ubyte source_id);
 
 void reset_observatory_stats();
+
+#define NUM_OBS_MODES 4
+extern const char* Obs_mode_names[NUM_OBS_MODES];
 
 #endif /* _MULTI_H */
