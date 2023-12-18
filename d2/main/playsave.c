@@ -589,6 +589,11 @@ int read_player_d2x(char *filename)
 					PlayerCfg.ObsPlayerChat[obs_mode] = atoi(line);
 				if (sscanf_s(word, "OBSSHOWBOMBTIMES%i", &obs_mode) == 1)
 					PlayerCfg.ObsShowBombTimes[obs_mode] = atoi(line);
+
+				d_free(word);
+				PHYSFSX_fgets(line, 50, f);
+				word = splitword(line, '=');
+				d_strupr(word);
 			}
 		}
 		else if (strstr(word,"GRAPHICS"))
