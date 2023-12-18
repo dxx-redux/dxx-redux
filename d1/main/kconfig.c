@@ -1227,7 +1227,8 @@ void kconfig_read_controls(d_event *event, int automap_flag)
 		return;
 	}
 
-	int i = 0, j = 0, speed_factor = (cheats.turbo || (is_observer() && PlayerCfg.ObsTurbo))?2:1;
+	int i = 0, j = 0;
+	int speed_factor = (cheats.turbo || (is_observer() && PlayerCfg.ObsTurbo[get_observer_game_mode()])) ? 2 : 1;
 	static fix64 mouse_delta_time = 0;
     int overruns = 0;
 

@@ -1740,7 +1740,7 @@ void multi_send_macro(int key)
 void
 multi_send_message_start()
 {
-    if (is_observer() && !PlayerCfg.ObsChat) {
+    if (is_observer() && !PlayerCfg.ObsChat[get_observer_game_mode()]) {
         return;
     }
 
@@ -1759,7 +1759,7 @@ extern fix StartingShields;
 
 void multi_send_message_end()
 {
-    if (is_observer() && !PlayerCfg.ObsChat) {
+    if (is_observer() && !PlayerCfg.ObsChat[get_observer_game_mode()]) {
         return;
     }
 
@@ -2120,7 +2120,7 @@ void multi_do_message(const ubyte *cbuf)
 {
 	const char *buf = (const char*)cbuf;
 
-    if (is_observer() && !PlayerCfg.ObsPlayerChat) {
+	if (is_observer() && !PlayerCfg.ObsPlayerChat[get_observer_game_mode()]) {
 		multi_sending_message[(int)buf[1]] = 0;
         return;
     }
@@ -4794,6 +4794,24 @@ bool is_observing_player() {
 bool object_is_observer(object* obj)
 {
 	return is_observer() && obj == ConsoleObject;
+}
+
+int get_observer_game_mode()
+{
+	Assert(is_observer());
+
+	// Co-op - check for flag
+	if (Game_mode & GM_MULTI_COOP)
+		return 3;
+	// Teams - check for flag
+	else if (Game_mode & GM_TEAM)
+		return 2;
+	// We are some kind of free-for-all mode. Check the player count
+	else if (N_players > 2)
+		return 1;
+	// This is a 1v1
+	else
+		return 0;
 }
 
 /* Bounty packer sender and handler */

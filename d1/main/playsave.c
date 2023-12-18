@@ -119,26 +119,28 @@ int new_player_config()
 	PlayerCfg.MissileColor = 8;
 	PlayerCfg.MyTeamColor = 8;
 	PlayerCfg.OtherTeamColor = 8;
-	PlayerCfg.ObsTurbo = 0;
-	PlayerCfg.ObsShowCockpit = 1;
-	PlayerCfg.ObsShowScoreboardShieldText = 1;
-	PlayerCfg.ObsShowScoreboardShieldBar = 1;
-	PlayerCfg.ObsShowAmmoBars = 1;
-	PlayerCfg.ObsShowPrimary = 1;
-	PlayerCfg.ObsShowSecondary = 1;
-	PlayerCfg.ObsShowNames = 0;
-	PlayerCfg.ObsShowDamage = 1;
-	PlayerCfg.ObsShowShieldText = 0;
-	PlayerCfg.ObsShowShieldBar = 1;
-	PlayerCfg.ObsShowKillFeed = 1;
-	PlayerCfg.ObsShowDeathSummary = 0;
-	PlayerCfg.ObsShowStreaks = 0;
-	PlayerCfg.ObsShowKillGraph = 0;
-	PlayerCfg.ObsShowBreakdown = 0;
-	PlayerCfg.ObsShowObs = 1;
-    PlayerCfg.ObsChat = 1;
-    PlayerCfg.ObsPlayerChat = 1;
-	PlayerCfg.ObsShowBombTimes = 0;
+	for (int obs_mode = 0; obs_mode < NUM_OBS_MODES; obs_mode++) {
+		PlayerCfg.ObsTurbo[obs_mode] = 0;
+		PlayerCfg.ObsShowCockpit[obs_mode] = 1;
+		PlayerCfg.ObsShowScoreboardShieldText[obs_mode] = 1;
+		PlayerCfg.ObsShowScoreboardShieldBar[obs_mode] = 1;
+		PlayerCfg.ObsShowAmmoBars[obs_mode] = 1;
+		PlayerCfg.ObsShowPrimary[obs_mode] = 1;
+		PlayerCfg.ObsShowSecondary[obs_mode] = 1;
+		PlayerCfg.ObsShowNames[obs_mode] = 0;
+		PlayerCfg.ObsShowDamage[obs_mode] = 1;
+		PlayerCfg.ObsShowShieldText[obs_mode] = 0;
+		PlayerCfg.ObsShowShieldBar[obs_mode] = 1;
+		PlayerCfg.ObsShowKillFeed[obs_mode] = 1;
+		PlayerCfg.ObsShowDeathSummary[obs_mode] = 0;
+		PlayerCfg.ObsShowStreaks[obs_mode] = 0;
+		PlayerCfg.ObsShowKillGraph[obs_mode] = 0;
+		PlayerCfg.ObsShowBreakdown[obs_mode] = 0;
+		PlayerCfg.ObsShowObs[obs_mode] = 1;
+		PlayerCfg.ObsChat[obs_mode] = 1;
+		PlayerCfg.ObsPlayerChat[obs_mode] = 1;
+		PlayerCfg.ObsShowBombTimes[obs_mode] = 0;
+	}
 
 	// Default taunt macros
 	#ifdef NETWORK
@@ -443,58 +445,179 @@ int read_player_d1x(char *filename)
 					PlayerCfg.MyTeamColor = atoi(line);
 				if (!strcmp(word, "OTHERTEAMCOLOR"))
 					PlayerCfg.OtherTeamColor = atoi(line);
-				if(!strcmp(word,"OBSTURBO"))
-					PlayerCfg.ObsTurbo = atoi(line);
-				if(!strcmp(word,"OBSSHOWCOCKPIT"))
-					PlayerCfg.ObsShowCockpit = atoi(line);
-				if(!strcmp(word,"OBSSHOWSCOREBOARDSHIELDTEXT"))
-					PlayerCfg.ObsShowScoreboardShieldText = atoi(line);
-				if(!strcmp(word,"OBSSHOWSCOREBOARDSHIELDBAR"))
-					PlayerCfg.ObsShowScoreboardShieldBar = atoi(line);
-				if(!strcmp(word,"OBSSHOWAMMOBARS"))
-					PlayerCfg.ObsShowAmmoBars = atoi(line);
-				if(!strcmp(word,"OBSSHOWPRIMARY"))
-					PlayerCfg.ObsShowPrimary = atoi(line);
-				if(!strcmp(word,"OBSSHOWSECONDARY"))
-					PlayerCfg.ObsShowSecondary = atoi(line);
-				if(!strcmp(word,"OBSSHOWNAMES"))
-					PlayerCfg.ObsShowNames = atoi(line);
-				if(!strcmp(word,"OBSSHOWDAMAGE"))
-					PlayerCfg.ObsShowDamage = atoi(line);
-				if(!strcmp(word,"OBSSHOWSHIELDTEXT"))
-					PlayerCfg.ObsShowShieldText = atoi(line);
-				if(!strcmp(word,"OBSSHOWSHIELDBAR"))
-					PlayerCfg.ObsShowShieldBar = atoi(line);
-				if(!strcmp(word,"OBSSHOWKILLFEED"))
-					PlayerCfg.ObsShowKillFeed = atoi(line);
-				if(!strcmp(word,"OBSSHOWDEATHSUMMARY"))
-					PlayerCfg.ObsShowDeathSummary = atoi(line);
-				if(!strcmp(word,"OBSSHOWSTREAKS"))
-					PlayerCfg.ObsShowStreaks = atoi(line);
-				if(!strcmp(word,"OBSSHOWKILLGRAPH"))
-					PlayerCfg.ObsShowKillGraph = atoi(line);
-				if(!strcmp(word,"OBSSHOWBREAKDOWN"))
-					PlayerCfg.ObsShowBreakdown = atoi(line);
-				if(!strcmp(word,"OBSSHOWOBS"))
-					PlayerCfg.ObsShowObs = atoi(line);
-				if(!strcmp(word,"OBSCHAT"))
-					PlayerCfg.ObsChat = atoi(line);
-				if(!strcmp(word,"OBSPLAYERCHAT"))
-					PlayerCfg.ObsPlayerChat = atoi(line);
-				if(!strcmp(word,"OBSSHOWBOMBTIMES"))
-					PlayerCfg.ObsShowBombTimes = atoi(line);
-
 				//if(!strcmp(word,"QUIETPLASMA"))
-				//	PlayerCfg.QuietPlasma = atoi(line);							
+				//	PlayerCfg.QuietPlasma = atoi(line);
 				if(!strcmp(word,"MAXFPS")) {
-					PlayerCfg.maxFps = atoi(line);														
+					PlayerCfg.maxFps = atoi(line);
 					if(PlayerCfg.maxFps < 25) { PlayerCfg.maxFps = 25; }
 					if(PlayerCfg.maxFps > 200) { PlayerCfg.maxFps = 200; }
 				}
+
+				// Observer settings - migrate from old version
+				// If migrating from an older version, set all observer modes to the same value
+				int set_all_obs_modes = 0;
+				if (!strcmp(word, "OBSTURBO")) {
+					PlayerCfg.ObsTurbo[0] = atoi(line);
+					set_all_obs_modes = 1;
+				}
+				if (!strcmp(word, "OBSSHOWCOCKPIT")) {
+					PlayerCfg.ObsShowCockpit[0] = atoi(line);
+					set_all_obs_modes = 1;
+				}
+				if (!strcmp(word, "OBSSHOWSCOREBOARDSHIELDTEXT")) {
+					PlayerCfg.ObsShowScoreboardShieldText[0] = atoi(line);
+					set_all_obs_modes = 1;
+				}
+				if (!strcmp(word, "OBSSHOWSCOREBOARDSHIELDBAR")) {
+					PlayerCfg.ObsShowScoreboardShieldBar[0] = atoi(line);
+					set_all_obs_modes = 1;
+				}
+				if (!strcmp(word, "OBSSHOWAMMOBARS")) {
+					PlayerCfg.ObsShowAmmoBars[0] = atoi(line);
+					set_all_obs_modes = 1;
+				}
+				if (!strcmp(word, "OBSSHOWPRIMARY")) {
+					PlayerCfg.ObsShowPrimary[0] = atoi(line);
+					set_all_obs_modes = 1;
+				}
+				if (!strcmp(word, "OBSSHOWSECONDARY")) {
+					PlayerCfg.ObsShowSecondary[0] = atoi(line);
+					set_all_obs_modes = 1;
+				}
+				if (!strcmp(word, "OBSSHOWNAMES")) {
+					PlayerCfg.ObsShowNames[0] = atoi(line);
+					set_all_obs_modes = 1;
+				}
+				if (!strcmp(word, "OBSSHOWDAMAGE")) {
+					PlayerCfg.ObsShowDamage[0] = atoi(line);
+					set_all_obs_modes = 1;
+				}
+				if (!strcmp(word, "OBSSHOWSHIELDTEXT")) {
+					PlayerCfg.ObsShowShieldText[0] = atoi(line);
+					set_all_obs_modes = 1;
+				}
+				if (!strcmp(word, "OBSSHOWSHIELDBAR")) {
+					PlayerCfg.ObsShowShieldBar[0] = atoi(line);
+					set_all_obs_modes = 1;
+				}
+				if (!strcmp(word, "OBSSHOWKILLFEED")) {
+					PlayerCfg.ObsShowKillFeed[0] = atoi(line);
+					set_all_obs_modes = 1;
+				}
+				if (!strcmp(word, "OBSSHOWDEATHSUMMARY")) {
+					PlayerCfg.ObsShowDeathSummary[0] = atoi(line);
+					set_all_obs_modes = 1;
+				}
+				if (!strcmp(word, "OBSSHOWSTREAKS")) {
+					PlayerCfg.ObsShowStreaks[0] = atoi(line);
+					set_all_obs_modes = 1;
+				}
+				if (!strcmp(word, "OBSSHOWKILLGRAPH")) {
+					PlayerCfg.ObsShowKillGraph[0] = atoi(line);
+					set_all_obs_modes = 1;
+				}
+				if (!strcmp(word, "OBSSHOWBREAKDOWN")) {
+					PlayerCfg.ObsShowBreakdown[0] = atoi(line);
+					set_all_obs_modes = 1;
+				}
+				if (!strcmp(word, "OBSSHOWOBS")) {
+					PlayerCfg.ObsShowObs[0] = atoi(line);
+					set_all_obs_modes = 1;
+				}
+				if (!strcmp(word, "OBSCHAT")) {
+					PlayerCfg.ObsChat[0] = atoi(line);
+					set_all_obs_modes = 1;
+				}
+				if (!strcmp(word, "OBSPLAYERCHAT")) {
+					PlayerCfg.ObsPlayerChat[0] = atoi(line);
+					set_all_obs_modes = 1;
+				}
+				if (!strcmp(word, "OBSSHOWBOMBTIMES")) {
+					PlayerCfg.ObsShowBombTimes[0] = atoi(line);
+					set_all_obs_modes = 1;
+				}
+				if (set_all_obs_modes) {
+					for (int i = 1; i < NUM_OBS_MODES; i++) {
+						PlayerCfg.ObsTurbo[i] = PlayerCfg.ObsTurbo[0];
+						PlayerCfg.ObsShowCockpit[i] = PlayerCfg.ObsShowCockpit[0];
+						PlayerCfg.ObsShowScoreboardShieldText[i] = PlayerCfg.ObsShowScoreboardShieldText[0];
+						PlayerCfg.ObsShowScoreboardShieldBar[i] = PlayerCfg.ObsShowScoreboardShieldBar[0];
+						PlayerCfg.ObsShowAmmoBars[i] = PlayerCfg.ObsShowAmmoBars[0];
+						PlayerCfg.ObsShowPrimary[i] = PlayerCfg.ObsShowPrimary[0];
+						PlayerCfg.ObsShowSecondary[i] = PlayerCfg.ObsShowSecondary[0];
+						PlayerCfg.ObsShowNames[i] = PlayerCfg.ObsShowNames[0];
+						PlayerCfg.ObsShowDamage[i] = PlayerCfg.ObsShowDamage[0];
+						PlayerCfg.ObsShowShieldText[i] = PlayerCfg.ObsShowShieldText[0];
+						PlayerCfg.ObsShowShieldBar[i] = PlayerCfg.ObsShowShieldBar[0];
+						PlayerCfg.ObsShowKillFeed[i] = PlayerCfg.ObsShowKillFeed[0];
+						PlayerCfg.ObsShowDeathSummary[i] = PlayerCfg.ObsShowDeathSummary[0];
+						PlayerCfg.ObsShowStreaks[i] = PlayerCfg.ObsShowStreaks[0];
+						PlayerCfg.ObsShowKillGraph[i] = PlayerCfg.ObsShowKillGraph[0];
+						PlayerCfg.ObsShowBreakdown[i] = PlayerCfg.ObsShowBreakdown[0];
+						PlayerCfg.ObsShowObs[i] = PlayerCfg.ObsShowObs[0];
+						PlayerCfg.ObsChat[i] = PlayerCfg.ObsChat[0];
+						PlayerCfg.ObsPlayerChat[i] = PlayerCfg.ObsPlayerChat[0];
+						PlayerCfg.ObsShowBombTimes[i] = PlayerCfg.ObsShowBombTimes[0];
+					}
+				}
+
 				d_free(word);
 				PHYSFSX_fgets(line,50,f);
 				word=splitword(line,'=');
 				d_strupr(word);
+			}
+		}
+		else if (strstr(word, "OBSERVER"))
+		{
+			d_free(word);
+			PHYSFSX_fgets(line, 50, f);
+			word = splitword(line, '=');
+			d_strupr(word);
+
+			while (!strstr(word, "END") && !PHYSFS_eof(f))
+			{
+				int obs_mode;
+
+				if (sscanf_s(word, "OBSTURBO%i", &obs_mode) == 1)
+					PlayerCfg.ObsTurbo[obs_mode] = atoi(line);
+				if (sscanf_s(word, "OBSSHOWCOCKPIT%i", &obs_mode) == 1)
+					PlayerCfg.ObsShowCockpit[obs_mode] = atoi(line);
+				if (sscanf_s(word, "OBSSHOWSCOREBOARDSHIELDTEXT%i", &obs_mode) == 1)
+					PlayerCfg.ObsShowScoreboardShieldText[obs_mode] = atoi(line);
+				if (sscanf_s(word, "OBSSHOWSCOREBOARDSHIELDBAR%i", &obs_mode) == 1)
+					PlayerCfg.ObsShowScoreboardShieldBar[obs_mode] = atoi(line);
+				if (sscanf_s(word, "OBSSHOWAMMOBARS%i", &obs_mode) == 1)
+					PlayerCfg.ObsShowAmmoBars[obs_mode] = atoi(line);
+				if (sscanf_s(word, "OBSSHOWPRIMARY%i", &obs_mode) == 1)
+					PlayerCfg.ObsShowPrimary[obs_mode] = atoi(line);
+				if (sscanf_s(word, "OBSSHOWSECONDARY%i", &obs_mode) == 1)
+					PlayerCfg.ObsShowSecondary[obs_mode] = atoi(line);
+				if (sscanf_s(word, "OBSSHOWNAMES%i", &obs_mode) == 1)
+					PlayerCfg.ObsShowNames[obs_mode] = atoi(line);
+				if (sscanf_s(word, "OBSSHOWDAMAGE%i", &obs_mode) == 1)
+					PlayerCfg.ObsShowDamage[obs_mode] = atoi(line);
+				if (sscanf_s(word, "OBSSHOWSHIELDTEXT%i", &obs_mode) == 1)
+					PlayerCfg.ObsShowShieldText[obs_mode] = atoi(line);
+				if (sscanf_s(word, "OBSSHOWSHIELDBAR%i", &obs_mode) == 1)
+					PlayerCfg.ObsShowShieldBar[obs_mode] = atoi(line);
+				if (sscanf_s(word, "OBSSHOWKILLFEED%i", &obs_mode) == 1)
+					PlayerCfg.ObsShowKillFeed[obs_mode] = atoi(line);
+				if (sscanf_s(word, "OBSSHOWDEATHSUMMARY%i", &obs_mode) == 1)
+					PlayerCfg.ObsShowDeathSummary[obs_mode] = atoi(line);
+				if (sscanf_s(word, "OBSSHOWSTREAKS%i", &obs_mode) == 1)
+					PlayerCfg.ObsShowStreaks[obs_mode] = atoi(line);
+				if (sscanf_s(word, "OBSSHOWKILLGRAPH%i", &obs_mode) == 1)
+					PlayerCfg.ObsShowKillGraph[obs_mode] = atoi(line);
+				if (sscanf_s(word, "OBSSHOWBREAKDOWN%i", &obs_mode) == 1)
+					PlayerCfg.ObsShowBreakdown[obs_mode] = atoi(line);
+				if (sscanf_s(word, "OBSSHOWOBS%i", &obs_mode) == 1)
+					PlayerCfg.ObsShowObs[obs_mode] = atoi(line);
+				if (sscanf_s(word, "OBSCHAT%i", &obs_mode) == 1)
+					PlayerCfg.ObsChat[obs_mode] = atoi(line);
+				if (sscanf_s(word, "OBSPLAYERCHAT%i", &obs_mode) == 1)
+					PlayerCfg.ObsPlayerChat[obs_mode] = atoi(line);
+				if (sscanf_s(word, "OBSSHOWBOMBTIMES%i", &obs_mode) == 1)
+					PlayerCfg.ObsShowBombTimes[obs_mode] = atoi(line);
 			}
 		}
 		else if (strstr(word,"GRAPHICS"))
@@ -855,29 +978,33 @@ int write_player_d1x(char *filename)
 		PHYSFSX_printf(fout, "overrideteamcolors=%i\n", PlayerCfg.PreferMyTeamColors);
 		PHYSFSX_printf(fout, "myteamcolor=%i\n", PlayerCfg.MyTeamColor);
 		PHYSFSX_printf(fout, "otherteamcolor=%i\n", PlayerCfg.OtherTeamColor);
-		PHYSFSX_printf(fout,"obsturbo=%i\n",PlayerCfg.ObsTurbo);
-		PHYSFSX_printf(fout,"obsshowcockpit=%i\n",PlayerCfg.ObsShowCockpit);
-		PHYSFSX_printf(fout,"obsshowscoreboardshieldtext=%i\n",PlayerCfg.ObsShowScoreboardShieldText);
-		PHYSFSX_printf(fout,"obsshowscoreboardshieldbar=%i\n",PlayerCfg.ObsShowScoreboardShieldBar);
-		PHYSFSX_printf(fout,"obsshowammobars=%i\n",PlayerCfg.ObsShowAmmoBars);
-		PHYSFSX_printf(fout,"obsshowprimary=%i\n",PlayerCfg.ObsShowPrimary);
-		PHYSFSX_printf(fout,"obsshowsecondary=%i\n",PlayerCfg.ObsShowSecondary);
-		PHYSFSX_printf(fout,"obsshownames=%i\n",PlayerCfg.ObsShowNames);
-		PHYSFSX_printf(fout,"obsshowdamage=%i\n",PlayerCfg.ObsShowDamage);
-		PHYSFSX_printf(fout,"obsshowshieldtext=%i\n",PlayerCfg.ObsShowShieldText);
-		PHYSFSX_printf(fout,"obsshowshieldbar=%i\n",PlayerCfg.ObsShowShieldBar);
-		PHYSFSX_printf(fout,"obsshowkillfeed=%i\n",PlayerCfg.ObsShowKillFeed);
-		PHYSFSX_printf(fout,"obsshowdeathsummary=%i\n",PlayerCfg.ObsShowDeathSummary);
-		PHYSFSX_printf(fout,"obsshowstreaks=%i\n",PlayerCfg.ObsShowStreaks);
-		PHYSFSX_printf(fout,"obsshowkillgraph=%i\n",PlayerCfg.ObsShowKillGraph);
-		PHYSFSX_printf(fout,"obsshowbreakdown=%i\n",PlayerCfg.ObsShowBreakdown);
-		PHYSFSX_printf(fout,"obsshowobs=%i\n",PlayerCfg.ObsShowObs);
-		PHYSFSX_printf(fout,"obschat=%i\n",PlayerCfg.ObsChat);
-		PHYSFSX_printf(fout,"obsplayerchat=%i\n",PlayerCfg.ObsPlayerChat);
-		PHYSFSX_printf(fout,"obsshowbombtimes=%i\n",PlayerCfg.ObsShowBombTimes);
 		//PHYSFSX_printf(fout,"quietplasma=%i\n",PlayerCfg.QuietPlasma);	
 		PHYSFSX_printf(fout,"maxfps=%i\n",PlayerCfg.maxFps);	
 		PHYSFSX_printf(fout,"[end]\n");
+		PHYSFSX_printf(fout, "[observer]\n");
+		for (int obs_mode = 0; obs_mode < NUM_OBS_MODES; obs_mode++) {
+			PHYSFSX_printf(fout, "obsturbo%i=%i\n", obs_mode, PlayerCfg.ObsTurbo[obs_mode]);
+			PHYSFSX_printf(fout, "obsshowcockpit%i=%i\n", obs_mode, PlayerCfg.ObsShowCockpit[obs_mode]);
+			PHYSFSX_printf(fout, "obsshowscoreboardshieldtext%i=%i\n", obs_mode, PlayerCfg.ObsShowScoreboardShieldText[obs_mode]);
+			PHYSFSX_printf(fout, "obsshowscoreboardshieldbar%i=%i\n", obs_mode, PlayerCfg.ObsShowScoreboardShieldBar[obs_mode]);
+			PHYSFSX_printf(fout, "obsshowammobars%i=%i\n", obs_mode, PlayerCfg.ObsShowAmmoBars[obs_mode]);
+			PHYSFSX_printf(fout, "obsshowprimary%i=%i\n", obs_mode, PlayerCfg.ObsShowPrimary[obs_mode]);
+			PHYSFSX_printf(fout, "obsshowsecondary%i=%i\n", obs_mode, PlayerCfg.ObsShowSecondary[obs_mode]);
+			PHYSFSX_printf(fout, "obsshownames%i=%i\n", obs_mode, PlayerCfg.ObsShowNames[obs_mode]);
+			PHYSFSX_printf(fout, "obsshowdamage%i=%i\n", obs_mode, PlayerCfg.ObsShowDamage[obs_mode]);
+			PHYSFSX_printf(fout, "obsshowshieldtext%i=%i\n", obs_mode, PlayerCfg.ObsShowShieldText[obs_mode]);
+			PHYSFSX_printf(fout, "obsshowshieldbar%i=%i\n", obs_mode, PlayerCfg.ObsShowShieldBar[obs_mode]);
+			PHYSFSX_printf(fout, "obsshowkillfeed%i=%i\n", obs_mode, PlayerCfg.ObsShowKillFeed[obs_mode]);
+			PHYSFSX_printf(fout, "obsshowdeathsummary%i=%i\n", obs_mode, PlayerCfg.ObsShowDeathSummary[obs_mode]);
+			PHYSFSX_printf(fout, "obsshowstreaks%i=%i\n", obs_mode, PlayerCfg.ObsShowStreaks[obs_mode]);
+			PHYSFSX_printf(fout, "obsshowkillgraph%i=%i\n", obs_mode, PlayerCfg.ObsShowKillGraph[obs_mode]);
+			PHYSFSX_printf(fout, "obsshowbreakdown%i=%i\n", obs_mode, PlayerCfg.ObsShowBreakdown[obs_mode]);
+			PHYSFSX_printf(fout, "obsshowobs%i=%i\n", obs_mode, PlayerCfg.ObsShowObs[obs_mode]);
+			PHYSFSX_printf(fout, "obschat%i=%i\n", obs_mode, PlayerCfg.ObsChat[obs_mode]);
+			PHYSFSX_printf(fout, "obsplayerchat%i=%i\n", obs_mode, PlayerCfg.ObsPlayerChat[obs_mode]);
+			PHYSFSX_printf(fout, "obsshowbombtimes%i=%i\n", obs_mode, PlayerCfg.ObsShowBombTimes[obs_mode]);
+		}
+		PHYSFSX_printf(fout, "[end]\n");
 		PHYSFSX_printf(fout,"[graphics]\n");
 		PHYSFSX_printf(fout,"alphaeffects=%i\n",PlayerCfg.AlphaEffects);
 		PHYSFSX_printf(fout,"dynlightcolor=%i\n",PlayerCfg.DynLightColor);

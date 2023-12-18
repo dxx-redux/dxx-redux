@@ -2187,82 +2187,194 @@ int menu_misc_options_handler(newmenu* menu, d_event* event, void* userdata)
 }
 
 int menu_obs_options_handler ( newmenu *menu, d_event *event, void *userdata );
+int select_obs_game_mode_handler(listbox* lb, d_event* event, void* userdata);
+
+const char* Obs_mode_names[] = { "1v1", "FFA", "Teams", "Coop" };
+struct obs_menu_data
+{
+	newmenu* menu;
+	int mode;
+};
+#define OBS_MENU_MODE_SWITCHED -2
+#define OBS_MENU_OVERWRITE_MODES -3
 
 void do_obs_menu()
 {
-	newmenu_item m[26];
+	newmenu_item m[30];
+	struct obs_menu_data obs_menu_data;
+	obs_menu_data.mode = 0;
 	int i = 0;
 
 	do {
-		ADD_CHECK(0, "Fly Fast", PlayerCfg.ObsTurbo);
-		ADD_CHECK(1, "Show Cockpit in First Person", PlayerCfg.ObsShowCockpit);
+		int cmode = obs_menu_data.mode;
 
-		m[2].type = NM_TYPE_TEXT;
-		m[2].text = "";
+		char mode_text[40];
+		snprintf(mode_text, SDL_arraysize(mode_text), "Currently configuring: %s", Obs_mode_names[cmode]);
+		m[0].type = NM_TYPE_TEXT;
+		m[0].text = mode_text;
+
+		m[1].type = NM_TYPE_MENU;
+		m[1].text = "Switch Game Mode";
+
+		m[2].type = NM_TYPE_MENU;
+		m[2].text = "Copy Settings to All Game Modes";
 
 		m[3].type = NM_TYPE_TEXT;
-		m[3].text = "Show on Scoreboard:";
+		m[3].text = "";
 
-		ADD_CHECK(4, "Shield Text", PlayerCfg.ObsShowScoreboardShieldText);
-		ADD_CHECK(5, "Shield Bar", PlayerCfg.ObsShowScoreboardShieldBar);
-		ADD_CHECK(6, "Energy and Ammo Bars", PlayerCfg.ObsShowAmmoBars);
-		ADD_CHECK(7, "Primary Weapon", PlayerCfg.ObsShowPrimary);
-		ADD_CHECK(8, "Secondary Weapon", PlayerCfg.ObsShowSecondary);
+		ADD_CHECK(4, "Fly Fast", PlayerCfg.ObsTurbo[cmode]);
+		ADD_CHECK(5, "Show Cockpit in First Person", PlayerCfg.ObsShowCockpit[cmode]);
 
-		m[9].type = NM_TYPE_TEXT;
-		m[9].text = "";
+		m[6].type = NM_TYPE_TEXT;
+		m[6].text = "";
 
-		m[10].type = NM_TYPE_TEXT;
-		m[10].text = "Show on Player:";
+		m[7].type = NM_TYPE_TEXT;
+		m[7].text = "Show on Scoreboard:";
 
-		ADD_CHECK(11, "Player Names", PlayerCfg.ObsShowNames);
-		ADD_CHECK(12, "Damage Text", PlayerCfg.ObsShowDamage);
-		ADD_CHECK(13, "Shield Text", PlayerCfg.ObsShowShieldText);
-		ADD_CHECK(14, "Shield Bar", PlayerCfg.ObsShowShieldBar);
+		ADD_CHECK(8, "Shield Text", PlayerCfg.ObsShowScoreboardShieldText[cmode]);
+		ADD_CHECK(9, "Shield Bar", PlayerCfg.ObsShowScoreboardShieldBar[cmode]);
+		ADD_CHECK(10, "Energy and Ammo Bars", PlayerCfg.ObsShowAmmoBars[cmode]);
+		ADD_CHECK(11, "Primary Weapon", PlayerCfg.ObsShowPrimary[cmode]);
+		ADD_CHECK(12, "Secondary Weapon", PlayerCfg.ObsShowSecondary[cmode]);
 
-		m[15].type = NM_TYPE_TEXT;
-		m[15].text = "";
+		m[13].type = NM_TYPE_TEXT;
+		m[13].text = "";
 
-		m[16].type = NM_TYPE_TEXT;
-		m[16].text = "Show Information:";
+		m[14].type = NM_TYPE_TEXT;
+		m[14].text = "Show on Player:";
 
-		ADD_CHECK(17, "Kill Feed", PlayerCfg.ObsShowKillFeed);
-		ADD_CHECK(18, "Death Summary", PlayerCfg.ObsShowDeathSummary);
-		ADD_CHECK(19, "Streaks and Runs", PlayerCfg.ObsShowStreaks);
-		ADD_CHECK(20, "Kills over Time Graph", PlayerCfg.ObsShowKillGraph);
-		ADD_CHECK(21, "Damage Breakdown", PlayerCfg.ObsShowBreakdown);
-		ADD_CHECK(22, "List of Observers", PlayerCfg.ObsShowObs);
-		ADD_CHECK(23, "Observer Chat", PlayerCfg.ObsChat);
-		ADD_CHECK(24, "Player Chat", PlayerCfg.ObsPlayerChat);
-		ADD_CHECK(25, "Bomb/Mine Countdowns", PlayerCfg.ObsShowBombTimes);
+		ADD_CHECK(15, "Player Names", PlayerCfg.ObsShowNames[cmode]);
+		ADD_CHECK(16, "Damage Text", PlayerCfg.ObsShowDamage[cmode]);
+		ADD_CHECK(17, "Shield Text", PlayerCfg.ObsShowShieldText[cmode]);
+		ADD_CHECK(18, "Shield Bar", PlayerCfg.ObsShowShieldBar[cmode]);
 
-		i = newmenu_do1( NULL, "JinX Mode Options", sizeof(m)/sizeof(*m), m, menu_obs_options_handler, NULL, i );
+		m[19].type = NM_TYPE_TEXT;
+		m[19].text = "";
 
-		PlayerCfg.ObsTurbo = m[0].value;
-		PlayerCfg.ObsShowCockpit = m[1].value;
-		PlayerCfg.ObsShowScoreboardShieldText = m[4].value;
-		PlayerCfg.ObsShowScoreboardShieldBar = m[5].value;
-		PlayerCfg.ObsShowAmmoBars = m[6].value;
-		PlayerCfg.ObsShowPrimary = m[7].value;
-		PlayerCfg.ObsShowSecondary = m[8].value;
-		PlayerCfg.ObsShowNames = m[11].value;
-		PlayerCfg.ObsShowDamage = m[12].value;
-		PlayerCfg.ObsShowShieldText = m[13].value;
-		PlayerCfg.ObsShowShieldBar = m[14].value;
-		PlayerCfg.ObsShowKillFeed = m[17].value;
-		PlayerCfg.ObsShowDeathSummary = m[18].value;
-		PlayerCfg.ObsShowStreaks = m[19].value;
-		PlayerCfg.ObsShowKillGraph = m[20].value;
-		PlayerCfg.ObsShowBreakdown = m[21].value;
-		PlayerCfg.ObsShowObs = m[22].value;
-		PlayerCfg.ObsChat = m[23].value;
-		PlayerCfg.ObsPlayerChat = m[24].value;
-		PlayerCfg.ObsShowBombTimes = m[25].value;
-	} while( i>-1 );
+		m[20].type = NM_TYPE_TEXT;
+		m[20].text = "Show Information:";
+
+		ADD_CHECK(21, "Kill Feed", PlayerCfg.ObsShowKillFeed[cmode]);
+		ADD_CHECK(22, "Death Summary", PlayerCfg.ObsShowDeathSummary[cmode]);
+		ADD_CHECK(23, "Streaks and Runs", PlayerCfg.ObsShowStreaks[cmode]);
+		ADD_CHECK(24, "Kills over Time Graph", PlayerCfg.ObsShowKillGraph[cmode]);
+		ADD_CHECK(25, "Damage Breakdown", PlayerCfg.ObsShowBreakdown[cmode]);
+		ADD_CHECK(26, "List of Observers", PlayerCfg.ObsShowObs[cmode]);
+		ADD_CHECK(27, "Observer Chat", PlayerCfg.ObsChat[cmode]);
+		ADD_CHECK(28, "Player Chat", PlayerCfg.ObsPlayerChat[cmode]);
+		ADD_CHECK(29, "Bomb/Mine Countdowns", PlayerCfg.ObsShowBombTimes[cmode]);
+
+		i = newmenu_do1(NULL, "JinX Mode Options", sizeof(m) / sizeof(*m), m, menu_obs_options_handler, &obs_menu_data, i);
+
+		// Note: obs_menu_data.mode may have changed; we kept a copy in cmode which we use here
+		PlayerCfg.ObsTurbo[cmode] = m[4].value;
+		PlayerCfg.ObsShowCockpit[cmode] = m[5].value;
+		PlayerCfg.ObsShowScoreboardShieldText[cmode] = m[8].value;
+		PlayerCfg.ObsShowScoreboardShieldBar[cmode] = m[9].value;
+		PlayerCfg.ObsShowAmmoBars[cmode] = m[10].value;
+		PlayerCfg.ObsShowPrimary[cmode] = m[11].value;
+		PlayerCfg.ObsShowSecondary[cmode] = m[12].value;
+		PlayerCfg.ObsShowNames[cmode] = m[15].value;
+		PlayerCfg.ObsShowDamage[cmode] = m[16].value;
+		PlayerCfg.ObsShowShieldText[cmode] = m[17].value;
+		PlayerCfg.ObsShowShieldBar[cmode] = m[18].value;
+		PlayerCfg.ObsShowKillFeed[cmode] = m[21].value;
+		PlayerCfg.ObsShowDeathSummary[cmode] = m[22].value;
+		PlayerCfg.ObsShowStreaks[cmode] = m[23].value;
+		PlayerCfg.ObsShowKillGraph[cmode] = m[24].value;
+		PlayerCfg.ObsShowBreakdown[cmode] = m[25].value;
+		PlayerCfg.ObsShowObs[cmode] = m[26].value;
+		PlayerCfg.ObsChat[cmode] = m[27].value;
+		PlayerCfg.ObsPlayerChat[cmode] = m[28].value;
+		PlayerCfg.ObsShowBombTimes[cmode] = m[29].value;
+
+		// Only update other modes *after* we update the current one; user may have changed something
+		if (i == OBS_MENU_OVERWRITE_MODES)
+		{
+			for (int i = 0; i < SDL_arraysize(Obs_mode_names); i++)
+			{
+				if (i == cmode)
+					continue;
+
+				PlayerCfg.ObsTurbo[i] = PlayerCfg.ObsTurbo[cmode];
+				PlayerCfg.ObsShowCockpit[i] = PlayerCfg.ObsShowCockpit[cmode];
+				PlayerCfg.ObsShowScoreboardShieldText[i] = PlayerCfg.ObsShowScoreboardShieldText[cmode];
+				PlayerCfg.ObsShowScoreboardShieldBar[i] = PlayerCfg.ObsShowScoreboardShieldBar[cmode];
+				PlayerCfg.ObsShowAmmoBars[i] = PlayerCfg.ObsShowAmmoBars[cmode];
+				PlayerCfg.ObsShowPrimary[i] = PlayerCfg.ObsShowPrimary[cmode];
+				PlayerCfg.ObsShowSecondary[i] = PlayerCfg.ObsShowSecondary[cmode];
+				PlayerCfg.ObsShowNames[i] = PlayerCfg.ObsShowNames[cmode];
+				PlayerCfg.ObsShowDamage[i] = PlayerCfg.ObsShowDamage[cmode];
+				PlayerCfg.ObsShowShieldText[i] = PlayerCfg.ObsShowShieldText[cmode];
+				PlayerCfg.ObsShowShieldBar[i] = PlayerCfg.ObsShowShieldBar[cmode];
+				PlayerCfg.ObsShowKillFeed[i] = PlayerCfg.ObsShowKillFeed[cmode];
+				PlayerCfg.ObsShowDeathSummary[i] = PlayerCfg.ObsShowDeathSummary[cmode];
+				PlayerCfg.ObsShowStreaks[i] = PlayerCfg.ObsShowStreaks[cmode];
+				PlayerCfg.ObsShowKillGraph[i] = PlayerCfg.ObsShowKillGraph[cmode];
+				PlayerCfg.ObsShowBreakdown[i] = PlayerCfg.ObsShowBreakdown[cmode];
+				PlayerCfg.ObsShowObs[i] = PlayerCfg.ObsShowObs[cmode];
+				PlayerCfg.ObsChat[i] = PlayerCfg.ObsChat[cmode];
+				PlayerCfg.ObsPlayerChat[i] = PlayerCfg.ObsPlayerChat[cmode];
+				PlayerCfg.ObsShowBombTimes[i] = PlayerCfg.ObsShowBombTimes[cmode];
+			}
+		}
+	} while (i > -1 || i == OBS_MENU_MODE_SWITCHED || i == OBS_MENU_OVERWRITE_MODES);
 }
 
 int menu_obs_options_handler ( newmenu *menu, d_event *event, void *userdata )
 {
+	int citem = newmenu_get_citem(menu);
+	struct obs_menu_data* obs_menu_data = (struct obs_menu_data*)userdata;
+	int cmode = obs_menu_data->mode;
+
+	switch (event->type)
+	{
+	case EVENT_NEWMENU_SELECTED:
+		obs_menu_data->menu = menu;
+		if (citem == 1)
+		{
+			newmenu_listbox1("Select Game Mode", SDL_arraysize(Obs_mode_names), Obs_mode_names,
+				1, cmode, select_obs_game_mode_handler, obs_menu_data);
+			return 1;
+		}
+		else if (citem == 2)
+		{
+			int overwrite = nm_messagebox(NULL, 2, "No", "Yes",
+				"Are you sure you want to\noverwrite settings for\n"
+				"all game modes with the\ncurrent settings?");
+			if (overwrite == 1)
+			{
+				newmenu_set_rval(obs_menu_data->menu, OBS_MENU_OVERWRITE_MODES);
+				window_close(newmenu_get_window(obs_menu_data->menu));
+				return 1;
+			}
+		}
+		break;
+
+	default:
+		break;
+	}
+
+	return 0;
+}
+
+int select_obs_game_mode_handler(listbox* lb, d_event* event, void* userdata)
+{
+	int citem = listbox_get_citem(lb);
+	struct obs_menu_data* obs_menu_data = (struct obs_menu_data*)userdata;
+
+	switch (event->type)
+	{
+	case EVENT_NEWMENU_SELECTED:
+		obs_menu_data->mode = citem;
+		newmenu_set_rval(obs_menu_data->menu, OBS_MENU_MODE_SWITCHED);
+		window_close(newmenu_get_window(obs_menu_data->menu));
+		break;
+
+	default:
+		break;
+	}
+
 	return 0;
 }
 
