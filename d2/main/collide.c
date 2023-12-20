@@ -2312,9 +2312,12 @@ void collide_player_and_weapon( object * playerobj, object * weapon, vms_vector 
 		return;
 	}
 
-	if (weapon->id == OMEGA_ID)
+	if (weapon->id == OMEGA_ID) {
 		if (!ok_to_do_omega_damage(weapon)) // see comment in laser.c
 			return;
+		if ((Game_mode & GM_MULTI) && Netgame.RebalancedWeapons)
+			damage *= get_rebalance_omega_damage_scale(weapon);
+		}
 
 	//	Don't collide own smart mines unless direct hit.
 	if (weapon->id == SUPERPROX_ID)
