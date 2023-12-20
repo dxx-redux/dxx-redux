@@ -3051,7 +3051,7 @@ void net_udp_send_game_info(struct _sockaddr sender_addr, ubyte info_upid, ubyte
 		buf[len] = Netgame.AllowPreferredColors;                len++;
 		buf[len] = Netgame.BornWithBurner;						len++; 
 		buf[len] = Netgame.GaussAmmoStyle;						len++; 
-		buf[len] = Netgame.OriginalD1Weapons;                   len++;
+		buf[len] = Netgame.RebalancedWeapons;                   len++;
 		buf[len] = Netgame.obs_min; len++;
 		buf[len] = Netgame.host_is_obs; len++;
 		buf[len] = Netgame.HomingUpdateRate; len++;
@@ -3302,7 +3302,7 @@ int net_udp_process_game_info(ubyte *data, int data_len, struct _sockaddr game_a
 		Netgame.AllowPreferredColors = data[len];                len++; 
 		Netgame.BornWithBurner = data[len];                len++; 		
 		Netgame.GaussAmmoStyle = data[len];                len++;
-		Netgame.OriginalD1Weapons = data[len];             len++; 
+		Netgame.RebalancedWeapons = data[len];             len++;
 		Netgame.obs_min = data[len]; len++;
 		Netgame.host_is_obs = data[len]; len++;
 		Netgame.HomingUpdateRate = data[len]; len++;
@@ -3926,7 +3926,7 @@ void net_udp_more_game_options ()
 	m[opt].type = NM_TYPE_CHECK; m[opt].text = "Low Vulcan Ammo"; m[opt].value = Netgame.LowVulcan; opt++;	
 
 	opt_ow = opt;
-	m[opt].type = NM_TYPE_CHECK; m[opt].text = "Original D1 Weapons"; m[opt].value = Netgame.OriginalD1Weapons; opt++;	
+	m[opt].type = NM_TYPE_CHECK; m[opt].text = "Rebalanced Weapons"; m[opt].value = Netgame.RebalancedWeapons; opt++;
 
 
 	m[opt].type = NM_TYPE_TEXT; m[opt].text = ""; opt++;
@@ -4073,7 +4073,7 @@ menu:
 	//Netgame.DarkSmartBlobs = m[opt_dark_smarts].value;
 	Netgame.LowVulcan = m[opt_low_vulcan].value;
 	Netgame.AllowPreferredColors = m[opt_allowprefcolor].value;
-	Netgame.OriginalD1Weapons = m[opt_ow].value;
+	Netgame.RebalancedWeapons = m[opt_ow].value;
 	Netgame.HomingUpdateRate = m[opt_homing_update_rate].value + 20;
 	Netgame.ConstantHomingSpeed = m[opt_constant_homing_speed].value;
 	Netgame.AllowCustomModelsTextures = m[opt_allow_custom_models_textures].value;
@@ -4388,7 +4388,7 @@ void netgame_set_defaults()
 	Netgame.GaussAmmoStyle = GAUSS_STYLE_STEADY_RECHARGING;
 	Netgame.LowVulcan = 0; 
 	Netgame.AllowPreferredColors = 0;
-	Netgame.OriginalD1Weapons = 0;
+	Netgame.RebalancedWeapons = 0;
 	Netgame.HomingUpdateRate = 25;
 	Netgame.ConstantHomingSpeed = 0;
 	Netgame.AllowCustomModelsTextures = 0;
