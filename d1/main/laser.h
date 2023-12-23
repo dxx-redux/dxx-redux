@@ -22,9 +22,12 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 
 enum weapon_type_t
 {
+	LASER_ID_L1, //  0..3 are player lasers
+	LASER_ID_L2,
+	LASER_ID_L3,
+	LASER_ID_L4,
 	CONCUSSION_ID = 8,
 	FLARE_ID = 9,   //  NOTE: This MUST correspond to the ID generated at bitmaps.tbl read time.
-	LASER_ID = 10,
 	VULCAN_ID = 11,  //  NOTE: This MUST correspond to the ID generated at bitmaps.tbl read time.
 	XSPREADFIRE_ID = 12,  //  NOTE: This MUST correspond to the ID generated at bitmaps.tbl read time.
 	PLASMA_ID = 13,  //  NOTE: This MUST correspond to the ID generated at bitmaps.tbl read time.

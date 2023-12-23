@@ -263,8 +263,10 @@ int Laser_create_new( vms_vector * direction, vms_vector * position, int segnum,
 			//	Fusion damage was boosted by mk on 3/27 (for reg 1.1 release), but we only want it to apply to single player games.
 			if (Game_mode & GM_MULTI)
 				obj->ctype.laser_info.multiplier /= 2;
-		} else if ((weapon_type == LASER_ID) && (Players[Objects[parent].id].flags & PLAYER_FLAGS_QUAD_LASERS))
-			obj->ctype.laser_info.multiplier = F1_0*3/4;
+		}
+		// This original code was never executed since the LASER_ID constant referred to a robot weapon
+		//	else if ((weapon_type == LASER_ID) && (Players[Objects[parent].id].flags & PLAYER_FLAGS_QUAD_LASERS))
+		//		obj->ctype.laser_info.multiplier = F1_0*3/4;
 	}
 
 
