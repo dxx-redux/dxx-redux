@@ -2298,5 +2298,5 @@ void set_homing_update_rate(int update_rate) {
 	else
 		Min_trackable_dot = MIN_TRACKABLE_DOT;
 
-	con_printf(CON_NORMAL, "Homing update rate: %d\n", update_rate);
+	con_printf(CON_DEBUG, "Homing update rate: %d\n", update_rate);
 }
