@@ -4426,6 +4426,75 @@ void show_HUD_names()
 }
 #endif
 
+// Show bomb highlights in observer mode
+void observer_show_bomb_highlights()
+{
+	if (!is_observer() || !PlayerCfg.ObsShowBombTimes)
+	{
+		return;
+	}
+
+	// Find oldest bomb for each player (also include smart mines in D2)
+	// Technically it'd be more efficient to cache this and update it when a bomb is created or
+	// destroyed, but it'd also be a lot more cumbersome to implement, and this seems fast enough.
+	int oldest_bomb[MAX_PLAYERS];
+	for (int i = 0; i < MAX_PLAYERS; i++)
+		oldest_bomb[i] = -1;
+
+	for (int i = 0; i <= Highest_object_index; i++)
+	{
+		if (Objects[i].type == OBJ_WEAPON && (Objects[i].id == PROXIMITY_ID || Objects[i].id == SUPERPROX_ID))
+		{
+			if (Objects[i].ctype.laser_info.parent_type == OBJ_PLAYER)
+			{
+				int pnum = Objects[i].ctype.laser_info.parent_num;
+				if (pnum >= 0 && pnum < MAX_PLAYERS)
+				{
+					if (oldest_bomb[pnum] == -1 || Objects[i].lifeleft < Objects[oldest_bomb[pnum]].lifeleft)
+						oldest_bomb[pnum] = i;
+				}
+			}
+		}
+	}
+
+	// Display time remaining below each oldest bomb
+	for (int i = 0; i < MAX_PLAYERS; i++)
+	{
+		if (oldest_bomb[i] != -1)
+		{
+			int objnum = oldest_bomb[i];
+			g3s_point bomb_pos;
+			g3_rotate_point(&bomb_pos, &Objects[objnum].pos);
+
+			if (bomb_pos.p3_codes == 0) // on screen
+			{
+				g3_project_point(&bomb_pos);
+
+				if (!(bomb_pos.p3_flags & PF_OVERFLOW))
+				{
+					fix x, y, dy;
+					char s[20];
+					int w, h, aw, x1, y1;
+
+					x = bomb_pos.p3_sx;
+					y = bomb_pos.p3_sy;
+					dy = -fixmuldiv(fixmul(Objects[objnum].size, Matrix_scale.y), i2f(grd_curcanv->cv_bitmap.bm_h) / 2, bomb_pos.p3_z);
+
+					memset(&s, '\0', 20);
+					// Display time remaining in minutes and seconds
+					snprintf(s, sizeof(s), "%i:%02i", f2i(Objects[objnum].lifeleft) / 60, f2i(Objects[objnum].lifeleft) % 60);
+
+					gr_get_string_size(s, &w, &h, &aw);
+					// Red if it's a proximity bomb, yellow if it's a smart mine
+					gr_set_fontcolor(Objects[objnum].id == PROXIMITY_ID ? BM_XRGB(31, 0, 0) : BM_XRGB(31, 31, 0), -1);
+					x1 = f2i(x) - w / 2;
+					y1 = f2i(y - dy) + FSPACY(1);
+					gr_string(x1, y1, s);
+				}
+			}
+		}
+	}
+}
 
 //draw all the things on the HUD
 void draw_hud()
@@ -4450,6 +4519,9 @@ void draw_hud()
 
 		// Show game messages
 		HUD_render_message_frame();
+
+		// Show bomb/mine countdown timers
+		observer_show_bomb_highlights();
 
 		if (is_observing_player() && PlayerCfg.ObsShowCockpit && !Obs_at_distance) {
 			if (PlayerCfg.CockpitMode[1] == CM_STATUS_BAR || PlayerCfg.CockpitMode[1] == CM_FULL_SCREEN)
