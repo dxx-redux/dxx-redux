@@ -773,10 +773,25 @@ int HandleSystemKey(int key)
 			case KEY_ESC:
 			{
 				int choice;
-				choice=nm_messagebox( NULL, 2, TXT_YES, TXT_NO, TXT_ABORT_GAME );
-				if (choice == 0)
-					window_close(Game_wind);
-
+				int allow_loadsave = !(Game_mode & GM_MULTI) || (Game_mode & GM_MULTI_COOP);
+				choice = allow_loadsave ?
+					nm_messagebox(NULL, 4, "Abort Game", TXT_OPTIONS_, "Save Game...", TXT_LOAD_GAME, "Game Menu") :
+					nm_messagebox(NULL, 2, "Abort Game", TXT_OPTIONS_, "Game Menu");
+				switch(choice)
+				{
+					case 0: // Abort Game
+						window_close(Game_wind);
+						break;
+					case 1: // Options
+						HandleSystemKey(KEY_F2);
+						break;
+					case 2: // Save Game
+						HandleSystemKey(KEY_ALTED | KEY_F2);
+						break;
+					case 3: // Load Game
+						HandleSystemKey(KEY_ALTED | KEY_F3);
+						break;
+				}
 				return 1;
 			}
 
