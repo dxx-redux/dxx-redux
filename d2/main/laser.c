@@ -721,6 +721,12 @@ int Laser_create_new( vms_vector * direction, vms_vector * position, int segnum,
 			// Note: This actually just cancels out the multi_damage_scale applied to fusion,
 			// but it works, so no real reason to change it right now.
 			obj->shields = 60 * F1_0;
+		} else if (obj->id == SUPERPROX_ID) {
+			// Smart mine; down from 30
+			obj->shields = 10 * F1_0;
+		} else if (obj->id == SMART_MINE_HOMING_ID) {
+			// Smart mine blob; down from 25
+			obj->shields = 3 * F1_0;
 		}
 	}
 
