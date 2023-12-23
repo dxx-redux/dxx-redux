@@ -731,6 +731,14 @@ void LoadLevel(int level_num,int page_in_textures)
 
 	save_player = Players[Player_num];
 
+	if (Newdemo_state == ND_STATE_PLAYBACK && level_num == 0) {
+		// Workaround for Redux bug. We're hoping that the demo was recorded in a one-level
+		// mission; otherwise we don't have a good way to guess which one to load.
+		level_num = 1;
+		nm_messagebox(NULL, 1, TXT_OK, "This demo was recorded in\nan old version of D2X-Redux.\n"
+			"Some game information\nmay be missing.");
+	}
+
 	Assert(level_num <= Last_level  && level_num >= Last_secret_level  && level_num != 0);
 
 	if (level_num<0)		//secret level
@@ -1522,11 +1530,6 @@ void StartNewLevelSub(int level_num, int page_in_textures, int secret_flag)
 	if (Newdemo_state == ND_STATE_RECORDING) {
 		newdemo_set_new_level(level_num);
 		newdemo_record_start_frame(FrameTime );
-	}
-	else {
-		if (Game_mode & GM_MULTI && PlayerCfg.AutoDemo) {
-			newdemo_start_recording();
-		}
 	}
 
 	LoadLevel(level_num,page_in_textures);
