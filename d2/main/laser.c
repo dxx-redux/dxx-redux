@@ -161,6 +161,10 @@ int laser_are_related( int o1, int o2 )
 			if ((Objects[o1].id == PHOENIX_ID && (GameTime64 > Objects[o1].ctype.laser_info.creation_time + F1_0/4)) ||
 			   (Objects[o1].id == GUIDEDMISS_ID && (GameTime64 > Objects[o1].ctype.laser_info.creation_time + F1_0*2)) ||
 				(((Objects[o1].id == PROXIMITY_ID) || (Objects[o1].id == SUPERPROX_ID)) && (GameTime64 > Objects[o1].ctype.laser_info.creation_time + F1_0*4))) {
+				// Rebalanced Phoenix: It won't hit you until it's bounced at least once
+				if (Objects[o1].id == PHOENIX_ID && (Game_mode & GM_MULTI) && Netgame.RebalancedWeapons &&
+					(Objects[o1].mtype.phys_info.flags & PF_BOUNCES_TWICE) && !(Objects[o1].mtype.phys_info.flags & PF_BOUNCED_ONCE))
+					return 1;
 				return 0;
 			} else
 				return 1;
