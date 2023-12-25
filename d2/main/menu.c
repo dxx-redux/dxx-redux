@@ -2246,15 +2246,20 @@ void do_obs_menu()
 		int cmode = obs_menu_data.mode;
 
 		char mode_text[40];
-		snprintf(mode_text, SDL_arraysize(mode_text), "Currently configuring: %s", Obs_mode_names[cmode]);
+		snprintf(mode_text, SDL_arraysize(mode_text), "Currently configuring: %s",
+			PlayerCfg.ObsShareSettings ? "All" : Obs_mode_names[cmode]);
 		m[0].type = NM_TYPE_TEXT;
 		m[0].text = mode_text;
 
-		m[1].type = NM_TYPE_MENU;
-		m[1].text = "Switch Game Mode";
+		if (PlayerCfg.ObsShareSettings) {
+			m[1].type = NM_TYPE_TEXT;
+			m[1].text = "Switch Game Mode (N/A)";
+		} else {
+			m[1].type = NM_TYPE_MENU;
+			m[1].text = "Switch Game Mode";
+		}
 
-		m[2].type = NM_TYPE_MENU;
-		m[2].text = "Copy Settings to All Game Modes";
+		ADD_CHECK(2, "Share Settings Across Modes", PlayerCfg.ObsShareSettings);
 
 		m[3].type = NM_TYPE_TEXT;
 		m[3].text = "";
@@ -2301,8 +2306,9 @@ void do_obs_menu()
 		ADD_CHECK(28, "Player Chat", PlayerCfg.ObsPlayerChat[cmode]);
 		ADD_CHECK(29, "Bomb/Mine Countdowns", PlayerCfg.ObsShowBombTimes[cmode]);
 
-		i = newmenu_do1(NULL, "JinX Mode Options", sizeof(m) / sizeof(*m), m, menu_obs_options_handler, &obs_menu_data, i);
+		i = newmenu_do1(NULL, "JinX Mode Options", SDL_arraysize(m), m, menu_obs_options_handler, &obs_menu_data, i);
 
+		PlayerCfg.ObsShareSettings = m[2].value;
 		// Note: obs_menu_data.mode may have changed; we kept a copy in cmode which we use here
 		PlayerCfg.ObsTurbo[cmode] = m[4].value;
 		PlayerCfg.ObsShowCockpit[cmode] = m[5].value;
@@ -2326,7 +2332,7 @@ void do_obs_menu()
 		PlayerCfg.ObsShowBombTimes[cmode] = m[29].value;
 
 		// Only update other modes *after* we update the current one; user may have changed something
-		if (i == OBS_MENU_OVERWRITE_MODES)
+		if (i == OBS_MENU_OVERWRITE_MODES || PlayerCfg.ObsShareSettings)
 		{
 			for (int i = 0; i < SDL_arraysize(Obs_mode_names); i++)
 			{
@@ -2362,29 +2368,43 @@ int menu_obs_options_handler ( newmenu *menu, d_event *event, void *userdata )
 {
 	int citem = newmenu_get_citem(menu);
 	struct obs_menu_data* obs_menu_data = (struct obs_menu_data*)userdata;
+	obs_menu_data->menu = menu;
 	int cmode = obs_menu_data->mode;
 
 	switch (event->type)
 	{
-		case EVENT_NEWMENU_SELECTED:
-			obs_menu_data->menu = menu;
-			if (citem == 1)
-			{
-				newmenu_listbox1("Select Game Mode", SDL_arraysize(Obs_mode_names), Obs_mode_names,
-					1, cmode, select_obs_game_mode_handler, obs_menu_data);
-				return 1;
-			}
-			else if (citem == 2)
-			{
-				int overwrite = nm_messagebox(NULL, 2, "No", "Yes",
-					"Are you sure you want to\noverwrite settings for\n"
-					"all game modes with the\ncurrent settings?");
-				if (overwrite == 1)
-				{
+		case EVENT_NEWMENU_CHANGED:
+			if (citem == 2) {
+				newmenu_item* item = &newmenu_get_items(obs_menu_data->menu)[citem];
+				if (item->value == 1) {
+					// The user enabled sharing settings. Double-check that this is what they want
+					int overwrite = nm_messagebox(NULL, 2, "No", "Yes",
+						"Are you sure you want to\nreplace settings for\n"
+						"all game modes with the\ncurrent settings?");
+					if (overwrite == 1) {
+						newmenu_set_rval(obs_menu_data->menu, OBS_MENU_OVERWRITE_MODES);
+						window_close(newmenu_get_window(obs_menu_data->menu));
+						return 1;
+					} else {
+						// No? Then we switch the checkbox back off again
+						item->value = 0;
+					}
+				} else {
+					// We actually need to run an overwrite here too; if the user changed other
+					// settings before flipping this checkbox, it's going to be confusing if only
+					// the first game mode gets those changes.
 					newmenu_set_rval(obs_menu_data->menu, OBS_MENU_OVERWRITE_MODES);
 					window_close(newmenu_get_window(obs_menu_data->menu));
 					return 1;
 				}
+			}
+			break;
+
+		case EVENT_NEWMENU_SELECTED:
+			if (citem == 1) {
+				newmenu_listbox1("Select Game Mode", SDL_arraysize(Obs_mode_names), Obs_mode_names,
+					1, cmode, select_obs_game_mode_handler, obs_menu_data);
+				return 1;
 			}
 			break;
 
