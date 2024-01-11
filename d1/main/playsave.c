@@ -143,6 +143,7 @@ int new_player_config()
 		PlayerCfg.ObsPlayerChat[obs_mode] = 1;
 		PlayerCfg.ObsShowBombTimes[obs_mode] = 0;
 	}
+	PlayerCfg.NoChatSound = 0;
 
 	// Default taunt macros
 	#ifdef NETWORK
@@ -454,6 +455,8 @@ int read_player_d1x(char *filename)
 					if(PlayerCfg.maxFps < 25) { PlayerCfg.maxFps = 25; }
 					if(PlayerCfg.maxFps > 200) { PlayerCfg.maxFps = 200; }
 				}
+				if(!strcmp(word,"NOCHATSOUND"))
+					PlayerCfg.NoChatSound = atoi(line);
 
 				// Observer settings - migrate from old version
 				// If migrating from an older version, set all observer modes to the same value
@@ -902,6 +905,7 @@ int write_player_d1x(char *filename)
 		PHYSFSX_printf(fout, "otherteamcolor=%i\n", PlayerCfg.OtherTeamColor);
 		//PHYSFSX_printf(fout,"quietplasma=%i\n",PlayerCfg.QuietPlasma);	
 		PHYSFSX_printf(fout,"maxfps=%i\n",PlayerCfg.maxFps);	
+		PHYSFSX_printf(fout,"nochatsound=%i\n",PlayerCfg.NoChatSound);
 		PHYSFSX_printf(fout,"[end]\n");
 		PHYSFSX_printf(fout, "[observer]\n");
 		PHYSFSX_printf(fout, "obssharesettings=%i\n", PlayerCfg.ObsShareSettings);

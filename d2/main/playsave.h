@@ -121,6 +121,7 @@ typedef struct player_config
 	ubyte ObsChat[NUM_OBS_MODES];
 	ubyte ObsPlayerChat[NUM_OBS_MODES];
 	ubyte ObsShowBombTimes[NUM_OBS_MODES];
+	ubyte NoChatSound;
 } __pack__ player_config;
 
 extern struct player_config PlayerCfg;
