@@ -21,6 +21,10 @@ chmod a+x appimagetool-x86_64.AppImage
 curl -s -L -O https://github.com/AppImage/AppImageKit/releases/download/continuous/AppRun-x86_64 || exit 3
 chmod a+x AppRun-x86_64
 
+# And linuxdeploy
+curl -s -L -O https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage || exit 3
+chmod a+x linuxdeploy-x86_64.AppImage
+
 
 build_appimage() {
     name="$1"
@@ -55,6 +59,9 @@ build_appimage() {
     ## Package
     cp AppRun-x86_64 ${appdir}/AppRun
 
+    # Dependencies
+    ./linuxdeploy-x86_64.AppImage --appdir "${appdir}"
+
     # Package!
     ./appimagetool-x86_64.AppImage --no-appstream --verbose "${appdir}" "${appimagename}"
 
@@ -66,4 +73,4 @@ build_appimage "d1x-redux" "d1x-redux"
 build_appimage "d2x-redux" "d2x-redux"
 
 # Clean
-#rm -f appimagetool* AppRun*
+rm -f appimagetool* AppRun* linuxdeploy-*

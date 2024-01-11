@@ -24,13 +24,13 @@ jobs:
           sudo apt-get install -y cmake libphysfs-dev libsdl1.2-dev libsdl-mixer1.2-dev libpng-dev libglew-dev
 
       - name: Configure D1
-        run: cmake -S d1 -B buildd1 -DCMAKE_BUILD_TYPE=RelWithDebInfo
+        run: cmake -S d1 -B buildd1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DOpenGL_GL_PREFERENCE=LEGACY
 
       - name: Build D1
         run: cmake --build buildd1
 
       - name: Configure D2
-        run: cmake -S d2 -B buildd2 -DCMAKE_BUILD_TYPE=RelWithDebInfo
+        run: cmake -S d2 -B buildd2 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DOpenGL_GL_PREFERENCE=LEGACY
 
       - name: Build D2
         run: cmake --build buildd2
