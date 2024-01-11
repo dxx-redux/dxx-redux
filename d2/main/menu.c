@@ -2039,7 +2039,7 @@ struct misc_menu_data {
 
 void do_misc_menu()
 {
-	newmenu_item m[34];
+	newmenu_item m[35];
 	int i = 0;
 	struct misc_menu_data misc_menu_data;
 
@@ -2087,62 +2087,63 @@ void do_misc_menu()
 		ADD_CHECK(21, "Ammo Warnings",PlayerCfg.VulcanAmmoWarnings);
 		ADD_CHECK(22, "Shield Warnings",PlayerCfg.ShieldWarnings);
 		ADD_CHECK(23, "Automatically Start Demos", PlayerCfg.AutoDemo);
-
-		m[24].type = NM_TYPE_TEXT;
-		m[24].text = "";
+		ADD_CHECK(24, "No Player Chat Sound",PlayerCfg.NoChatSound);
 
 		m[25].type = NM_TYPE_TEXT;
-		m[25].text = "My Ship Colors:";
+		m[25].text = "";
+
+		m[26].type = NM_TYPE_TEXT;
+		m[26].text = "My Ship Colors:";
 
 		print_ship_color(misc_menu_data.preferred_color, SDL_arraysize(misc_menu_data.preferred_color),
 			PlayerCfg.ShipColor);
-		m[26].type = NM_TYPE_SLIDER;
-		m[26].value = PlayerCfg.ShipColor;
-		m[26].text = misc_menu_data.preferred_color;
-		m[26].min_value = 0;
-		m[26].max_value = 8;
-
-		print_missile_color(misc_menu_data.missile_color, SDL_arraysize(misc_menu_data.missile_color),
-			PlayerCfg.MissileColor);
 		m[27].type = NM_TYPE_SLIDER;
-		m[27].value = PlayerCfg.MissileColor;
-		m[27].text = misc_menu_data.missile_color;
+		m[27].value = PlayerCfg.ShipColor;
+		m[27].text = misc_menu_data.preferred_color;
 		m[27].min_value = 0;
 		m[27].max_value = 8;
 
-		ADD_CHECK(28, "Show Custom Ship Colors", PlayerCfg.ShowCustomColors);
+		print_missile_color(misc_menu_data.missile_color, SDL_arraysize(misc_menu_data.missile_color),
+			PlayerCfg.MissileColor);
+		m[28].type = NM_TYPE_SLIDER;
+		m[28].value = PlayerCfg.MissileColor;
+		m[28].text = misc_menu_data.missile_color;
+		m[28].min_value = 0;
+		m[28].max_value = 8;
 
-		m[29].type = NM_TYPE_TEXT;
-		m[29].text = "";
+		ADD_CHECK(29, "Show Custom Ship Colors", PlayerCfg.ShowCustomColors);
 
 		m[30].type = NM_TYPE_TEXT;
-		m[30].text = "Team Colors:";
+		m[30].text = "";
+
+		m[31].type = NM_TYPE_TEXT;
+		m[31].text = "Team Colors:";
 
 		print_my_team_color(misc_menu_data.my_team_color, SDL_arraysize(misc_menu_data.my_team_color),
 			PlayerCfg.MyTeamColor);
-		m[31].type = NM_TYPE_SLIDER;
-		m[31].value = PlayerCfg.MyTeamColor;
-		m[31].text = misc_menu_data.my_team_color;
-		m[31].min_value = 0;
-		m[31].max_value = 8;
-
-		print_other_team_color(misc_menu_data.other_team_color, SDL_arraysize(misc_menu_data.other_team_color),
-			PlayerCfg.OtherTeamColor);
 		m[32].type = NM_TYPE_SLIDER;
-		m[32].value = PlayerCfg.OtherTeamColor;
-		m[32].text = misc_menu_data.other_team_color;
+		m[32].value = PlayerCfg.MyTeamColor;
+		m[32].text = misc_menu_data.my_team_color;
 		m[32].min_value = 0;
 		m[32].max_value = 8;
 
+		print_other_team_color(misc_menu_data.other_team_color, SDL_arraysize(misc_menu_data.other_team_color),
+			PlayerCfg.OtherTeamColor);
+		m[33].type = NM_TYPE_SLIDER;
+		m[33].value = PlayerCfg.OtherTeamColor;
+		m[33].text = misc_menu_data.other_team_color;
+		m[33].min_value = 0;
+		m[33].max_value = 8;
+
 		if (PlayerCfg.MyTeamColor == 8 && PlayerCfg.OtherTeamColor == 8) {
 			// If we're not setting explicit team colors, we don't override what the game host picked
-			m[33].type = NM_TYPE_TEXT;
-			m[33].text = "Ignore Per-Game Team Colors (N/A)";
+			m[34].type = NM_TYPE_TEXT;
+			m[34].text = "Ignore Per-Game Team Colors (N/A)";
 		} else {
-			m[33].type = NM_TYPE_CHECK;
-			m[33].text = "Ignore Per-Game Team Colors";
+			m[34].type = NM_TYPE_CHECK;
+			m[34].text = "Ignore Per-Game Team Colors";
 		}
-		m[33].value = PlayerCfg.PreferMyTeamColors;
+		m[34].value = PlayerCfg.PreferMyTeamColors;
 
 		i = newmenu_do1(NULL, "Misc Options", SDL_arraysize(m), m, menu_misc_options_handler, &misc_menu_data, i);
 
@@ -2173,8 +2174,9 @@ void do_misc_menu()
 		PlayerCfg.VulcanAmmoWarnings = m[21].value; 
 		PlayerCfg.ShieldWarnings = m[22].value;
 		PlayerCfg.AutoDemo = m[23].value;
-		PlayerCfg.ShowCustomColors = m[28].value;
-		PlayerCfg.PreferMyTeamColors = (PlayerCfg.MyTeamColor == 8 && PlayerCfg.OtherTeamColor == 8) ? 0 : m[33].value;
+		PlayerCfg.NoChatSound = m[24].value;
+		PlayerCfg.ShowCustomColors = m[29].value;
+		PlayerCfg.PreferMyTeamColors = (PlayerCfg.MyTeamColor == 8 && PlayerCfg.OtherTeamColor == 8) ? 0 : m[34].value;
 
 	} while( i>-1 );
 
@@ -2193,30 +2195,30 @@ int menu_misc_options_handler(newmenu* menu, d_event* event, void* userdata)
 	struct misc_menu_data* menu_data = (struct misc_menu_data*)userdata;
 	
 	if (event->type == EVENT_NEWMENU_CHANGED) {
-		if (citem == 26) {
-			PlayerCfg.ShipColor = menus[26].value;
+		if (citem == 27) {
+			PlayerCfg.ShipColor = menus[27].value;
 			print_ship_color(menu_data->preferred_color, SDL_arraysize(menu_data->preferred_color),
 				PlayerCfg.ShipColor);
-		} else if (citem == 27) {
-			PlayerCfg.MissileColor = menus[27].value;
+		} else if (citem == 28) {
+			PlayerCfg.MissileColor = menus[28].value;
 			print_missile_color(menu_data->missile_color, SDL_arraysize(menu_data->missile_color),
 				PlayerCfg.MissileColor);
-		} else if (citem == 31) {
-			PlayerCfg.MyTeamColor = menus[31].value;
+		} else if (citem == 32) {
+			PlayerCfg.MyTeamColor = menus[32].value;
 			print_my_team_color(menu_data->my_team_color, SDL_arraysize(menu_data->my_team_color),
 				PlayerCfg.MyTeamColor);
-		} else if (citem == 32) {
-			PlayerCfg.OtherTeamColor = menus[32].value;
+		} else if (citem == 33) {
+			PlayerCfg.OtherTeamColor = menus[33].value;
 			print_other_team_color(menu_data->other_team_color, SDL_arraysize(menu_data->other_team_color),
 				PlayerCfg.OtherTeamColor);
 		}
 
 		if (PlayerCfg.MyTeamColor == 8 && PlayerCfg.OtherTeamColor == 8) {
-			menus[33].type = NM_TYPE_TEXT;
-			menus[33].text = "Ignore Per-Game Team Colors (N/A)";
+			menus[34].type = NM_TYPE_TEXT;
+			menus[34].text = "Ignore Per-Game Team Colors (N/A)";
 		} else {
-			menus[33].type = NM_TYPE_CHECK;
-			menus[33].text = "Ignore Per-Game Team Colors";
+			menus[34].type = NM_TYPE_CHECK;
+			menus[34].text = "Ignore Per-Game Team Colors";
 		}
 	}
 

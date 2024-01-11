@@ -2244,7 +2244,8 @@ void multi_do_message(const ubyte* cbuf)
 		mesbuf[t+2] = BM_XRGB(0, 31, 0);
 		mesbuf[t+3] = 0;
 
-		digi_play_sample(SOUND_HUD_MESSAGE, F1_0);
+		if (!PlayerCfg.NoChatSound)
+			digi_play_sample(SOUND_HUD_MESSAGE, F1_0);
 		HUD_init_message(HM_MULTI, "%s %s", mesbuf, buf+2);
 		multi_sending_message[(int)buf[1]] = 0;
 	}
@@ -2267,7 +2268,8 @@ void multi_do_message(const ubyte* cbuf)
 			mesbuf[t+2] = BM_XRGB(0, 31, 0);
 			mesbuf[t+3] = 0;
 
-			digi_play_sample(SOUND_HUD_MESSAGE, F1_0);
+			if (!PlayerCfg.NoChatSound)
+				digi_play_sample(SOUND_HUD_MESSAGE, F1_0);
 			HUD_init_message(HM_MULTI, "%s %s", mesbuf, colon+1);
 			multi_sending_message[(int)buf[1]] = 0;
 		}
