@@ -1803,7 +1803,7 @@ extern int force_cockpit_redraw;
 
 void multi_send_message_end()
 {
-	if (is_observer() && !PlayerCfg.ObsChat) {
+	if (is_observer() && !PlayerCfg.ObsChat[get_observer_game_mode()]) {
 		return;
 	}
 
@@ -2200,7 +2200,7 @@ void multi_do_message(const ubyte* cbuf)
 {
 	const char *buf = (const char *)cbuf;
 
-	if (is_observer() && !PlayerCfg.ObsPlayerChat) {
+	if (is_observer() && !PlayerCfg.ObsPlayerChat[get_observer_game_mode()]) {
 		multi_sending_message[(int)buf[1]] = 0;
 		return;
 	}
@@ -2276,7 +2276,7 @@ void multi_do_message(const ubyte* cbuf)
 
 void multi_do_obs_message(const ubyte* cbuf)
 {
-	if (!PlayerCfg.ObsChat) {
+	if (!PlayerCfg.ObsChat[get_observer_game_mode()]) {
 		return;
 	}
 
@@ -6295,6 +6295,26 @@ bool is_observing_player() {
 bool object_is_observer(object* obj)
 {
 	return is_observer() && obj == ConsoleObject;
+}
+
+int get_observer_game_mode()
+{
+	// Co-op - check for flag
+	if (Game_mode & GM_MULTI_COOP)
+		return 3;
+	// Teams - check for flag
+	else if (Game_mode & GM_TEAM)
+		return 2;
+	// We are some kind of free-for-all mode. Check the player count
+	else if (N_players > 2)
+		return 1;
+	// This is a 1v1, or only one player is connected (which we'll treat like a 1v1)
+	else {
+		// This function should only be called in multiplayer.
+		// Return 0 (1v1) in single-player to avoid a crash, but this indicates a bug.
+		Assert(Game_mode & GM_MULTI);
+		return 0;
+	}
 }
 
 /* Bounty packer sender and handler */

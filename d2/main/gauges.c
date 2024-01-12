@@ -2893,7 +2893,7 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 	if (!Netgame.obs_min) {
 		gr_set_curfont(GAME_FONT);
 
-		if (PlayerCfg.ObsShowScoreboardShieldText) {
+		if (PlayerCfg.ObsShowScoreboardShieldText[get_observer_game_mode()]) {
 			// Shields
 			char shields[7];
 
@@ -2914,7 +2914,7 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 			y += sh + 1;
 		}
 
-		if (PlayerCfg.ObsShowScoreboardShieldBar) {
+		if (PlayerCfg.ObsShowScoreboardShieldBar[get_observer_game_mode()]) {
 			// Shield display
 			int shield_bar_height = FSPACY(2.25);
 			double shield_count = f2db(Players[pnum].shields);
@@ -2974,8 +2974,8 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 		double energy = f2db(Players[pnum].energy);
 		double ammo = f2db(Players[pnum].primary_ammo[1]) * VULCAN_AMMO_SCALE;
 
-		if (PlayerCfg.ObsShowAmmoBars) {
-			if (!PlayerCfg.ObsShowScoreboardShieldBar) {
+		if (PlayerCfg.ObsShowAmmoBars[get_observer_game_mode()]) {
+			if (!PlayerCfg.ObsShowScoreboardShieldBar[get_observer_game_mode()]) {
 				y += 2;
 			}
 
@@ -3000,7 +3000,7 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 			y += ammo_bar_height + 2;
 		}
 
-		if (PlayerCfg.ObsShowPrimary) {
+		if (PlayerCfg.ObsShowPrimary[get_observer_game_mode()]) {
 			// Selected primary
 			char primary[8];
 			switch (Players[pnum].primary_weapon) {
@@ -3059,7 +3059,7 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 			y += sh + 1;
 		}
 
-		if (PlayerCfg.ObsShowSecondary) {
+		if (PlayerCfg.ObsShowSecondary[get_observer_game_mode()]) {
 			// Selected secondary
 			char secondary[7];
 			switch (Players[pnum].secondary_weapon) {
@@ -3247,7 +3247,7 @@ void observer_maybe_show_team_score() {
 }
 
 void observer_maybe_show_kill_graph() {
-	if (PlayerCfg.ObsShowKillGraph && GameTime64 < Show_graph_until) {
+	if (PlayerCfg.ObsShowKillGraph[get_observer_game_mode()] && GameTime64 < Show_graph_until) {
 		int pnum;
 		kill_event* ev;
 		int minscore = 0;
@@ -3506,7 +3506,7 @@ void observer_maybe_show_kill_graph() {
 #ifdef OGL
 		glLineWidth(linedotscale);
 #endif
-	} else if (PlayerCfg.ObsShowBreakdown && GameTime64 < Show_graph_until + (PlayerCfg.ObsShowKillGraph ? i2f(15) : 0)) {
+	} else if (PlayerCfg.ObsShowBreakdown[get_observer_game_mode()] && GameTime64 < Show_graph_until + (PlayerCfg.ObsShowKillGraph[get_observer_game_mode()] ? i2f(15) : 0)) {
 		int drawn_players = n_players - (Netgame.host_is_obs ? 1 : 0);
 		int y = GHEIGHT - (LINE_SPACING * 2); // Make space for the demo indicator
 		int x;
@@ -4055,7 +4055,7 @@ void observer_maybe_show_death_log(int y) {
 		y += LINE_SPACING;
 	}
 
-	if (PlayerCfg.ObsShowDeathSummary) {
+	if (PlayerCfg.ObsShowDeathSummary[get_observer_game_mode()]) {
 		kle = Kill_log;
 
 		damage_taken_totals* dtt;
@@ -4172,12 +4172,12 @@ void observer_show_kill_list()
 
 	int y = grd_curcanv->cv_bitmap.bm_h - 5;
 
-	if (PlayerCfg.ObsShowObs) {
+	if (PlayerCfg.ObsShowObs[get_observer_game_mode()]) {
 		y = maybe_show_observers(y);
 	}
 
 	// Show streaks, such as last kill, last death in non-1v1, kill streak, and runs in 1v1.
-	if (PlayerCfg.ObsShowStreaks) {
+	if (PlayerCfg.ObsShowStreaks[get_observer_game_mode()]) {
 		y = observer_maybe_show_streaks(y);
 	}
 
@@ -4186,7 +4186,7 @@ void observer_show_kill_list()
 	}
 
 	// Show a death log, including who killed who and with what, and death summaries.
-	if (PlayerCfg.ObsShowKillFeed) {
+	if (PlayerCfg.ObsShowKillFeed[get_observer_game_mode()]) {
 		observer_maybe_show_death_log(Observer_message_y_start);
 	}
 }
@@ -4237,9 +4237,9 @@ void show_HUD_names()
 		is_friend = (Game_mode & GM_MULTI_COOP || (Game_mode & GM_TEAM && get_team(pnum) == get_team(my_pnum)));
 		show_friend_name = Show_reticle_name;
 		show_enemy_name = Show_reticle_name && Netgame.ShowEnemyNames && !(Players[pnum].flags & PLAYER_FLAGS_CLOAKED);
-		show_name = ((is_friend && show_friend_name) || (!is_friend && show_enemy_name)) || (is_observer() && PlayerCfg.ObsShowNames);
+		show_name = ((is_friend && show_friend_name) || (!is_friend && show_enemy_name)) || (is_observer() && PlayerCfg.ObsShowNames[get_observer_game_mode()]);
 		show_name_through_walls = (is_observer() || (is_friend && show_friend_name));
-		show_shields = (is_observer() && PlayerCfg.ObsShowShieldText);
+		show_shields = (is_observer() && PlayerCfg.ObsShowShieldText[get_observer_game_mode()]);
 		show_typing = is_friend || !(Players[pnum].flags & PLAYER_FLAGS_CLOAKED);
 		show_indi = (((Game_mode & ( GM_CAPTURE | GM_HOARD ) && Players[pnum].flags & PLAYER_FLAGS_FLAG) || (Game_mode & GM_BOUNTY &&  pnum == Bounty_target)) && (is_friend || !(Players[pnum].flags & PLAYER_FLAGS_CLOAKED)));
 
@@ -4305,7 +4305,7 @@ void show_HUD_names()
 						y1 = f2i(y-dy)+FSPACY(1);
 						gr_string (x1, y1, s);
 					}
-					if (is_observer() && PlayerCfg.ObsShowShieldBar) {
+					if (is_observer() && PlayerCfg.ObsShowShieldBar[get_observer_game_mode()]) {
 #ifdef OGL
 						glLineWidth(1);
 #endif
@@ -4373,7 +4373,7 @@ void show_HUD_names()
 #endif
 					}
 
-					if (!Netgame.obs_min && is_observer() && PlayerCfg.ObsShowDamage)
+					if (!Netgame.obs_min && is_observer() && PlayerCfg.ObsShowDamage[get_observer_game_mode()])
 					{
 						if (Players[pnum].shields_delta != 0 && (Players[Player_num].hours_total - Players[pnum].shields_time_hours == 1 && i2f(3600) + Players[Player_num].time_total - Players[pnum].shields_time < i2f(2) || Players[Player_num].time_total - Players[pnum].shields_time < i2f(2)))
 						{
@@ -4523,7 +4523,7 @@ void draw_hud()
 		// Show bomb/mine countdown timers
 		observer_show_bomb_highlights();
 
-		if (is_observing_player() && PlayerCfg.ObsShowCockpit && !Obs_at_distance) {
+		if (is_observing_player() && PlayerCfg.ObsShowCockpit[get_observer_game_mode()] && !Obs_at_distance) {
 			if (PlayerCfg.CockpitMode[1] == CM_STATUS_BAR || PlayerCfg.CockpitMode[1] == CM_FULL_SCREEN)
 				hud_show_homing_warning();
 
@@ -4643,11 +4643,11 @@ void draw_hud()
 			show_reticle(PlayerCfg.ReticleType, 1);
 		if (PlayerCfg.CockpitMode[1] != CM_LETTERBOX && Newdemo_state != ND_STATE_PLAYBACK && (PlayerCfg.MouseControlStyle == MOUSE_CONTROL_FLIGHT_SIM) && PlayerCfg.MouseFSIndicator)
 			show_mousefs_indicator(Controls.raw_mouse_axis[0], Controls.raw_mouse_axis[1], Controls.raw_mouse_axis[2], GWIDTH/2, GHEIGHT/2, GHEIGHT/4);
-		if (Game_mode & GM_MULTI && PlayerCfg.ObsShowObs)
+		if (Game_mode & GM_MULTI && PlayerCfg.ObsShowObs[get_observer_game_mode()])
 		{
 			int startY = GHEIGHT;
 
-			if (PlayerCfg.CockpitMode[1] == CM_FULL_SCREEN || (is_observer() && (!is_observing_player() || Obs_at_distance || !PlayerCfg.ObsShowCockpit))) {
+			if (PlayerCfg.CockpitMode[1] == CM_FULL_SCREEN || (is_observer() && (!is_observing_player() || Obs_at_distance || !PlayerCfg.ObsShowCockpit[get_observer_game_mode()]))) {
 				if ((Game_mode & GM_MULTI) || (Newdemo_state == ND_STATE_PLAYBACK && Newdemo_game_mode & GM_MULTI))
 					startY -= LINE_SPACING * 12;
 				else

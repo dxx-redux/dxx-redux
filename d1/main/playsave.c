@@ -59,6 +59,7 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 struct player_config PlayerCfg;
 saved_game_sw saved_games[N_SAVE_SLOTS];
 extern void InitWeaponOrdering();
+void read_observer_setting(int obs_mode, char* line, char* word);
 
 int new_player_config()
 {
@@ -119,26 +120,29 @@ int new_player_config()
 	PlayerCfg.MissileColor = 8;
 	PlayerCfg.MyTeamColor = 8;
 	PlayerCfg.OtherTeamColor = 8;
-	PlayerCfg.ObsTurbo = 0;
-	PlayerCfg.ObsShowCockpit = 1;
-	PlayerCfg.ObsShowScoreboardShieldText = 1;
-	PlayerCfg.ObsShowScoreboardShieldBar = 1;
-	PlayerCfg.ObsShowAmmoBars = 1;
-	PlayerCfg.ObsShowPrimary = 1;
-	PlayerCfg.ObsShowSecondary = 1;
-	PlayerCfg.ObsShowNames = 0;
-	PlayerCfg.ObsShowDamage = 1;
-	PlayerCfg.ObsShowShieldText = 0;
-	PlayerCfg.ObsShowShieldBar = 1;
-	PlayerCfg.ObsShowKillFeed = 1;
-	PlayerCfg.ObsShowDeathSummary = 0;
-	PlayerCfg.ObsShowStreaks = 0;
-	PlayerCfg.ObsShowKillGraph = 0;
-	PlayerCfg.ObsShowBreakdown = 0;
-	PlayerCfg.ObsShowObs = 1;
-    PlayerCfg.ObsChat = 1;
-    PlayerCfg.ObsPlayerChat = 1;
-	PlayerCfg.ObsShowBombTimes = 0;
+	PlayerCfg.ObsShareSettings = 1;
+	for (int obs_mode = 0; obs_mode < NUM_OBS_MODES; obs_mode++) {
+		PlayerCfg.ObsTurbo[obs_mode] = 0;
+		PlayerCfg.ObsShowCockpit[obs_mode] = 1;
+		PlayerCfg.ObsShowScoreboardShieldText[obs_mode] = 1;
+		PlayerCfg.ObsShowScoreboardShieldBar[obs_mode] = 1;
+		PlayerCfg.ObsShowAmmoBars[obs_mode] = 1;
+		PlayerCfg.ObsShowPrimary[obs_mode] = 1;
+		PlayerCfg.ObsShowSecondary[obs_mode] = 1;
+		PlayerCfg.ObsShowNames[obs_mode] = 0;
+		PlayerCfg.ObsShowDamage[obs_mode] = 1;
+		PlayerCfg.ObsShowShieldText[obs_mode] = 0;
+		PlayerCfg.ObsShowShieldBar[obs_mode] = 1;
+		PlayerCfg.ObsShowKillFeed[obs_mode] = 1;
+		PlayerCfg.ObsShowDeathSummary[obs_mode] = 0;
+		PlayerCfg.ObsShowStreaks[obs_mode] = 0;
+		PlayerCfg.ObsShowKillGraph[obs_mode] = 0;
+		PlayerCfg.ObsShowBreakdown[obs_mode] = 0;
+		PlayerCfg.ObsShowObs[obs_mode] = 1;
+		PlayerCfg.ObsChat[obs_mode] = 1;
+		PlayerCfg.ObsPlayerChat[obs_mode] = 1;
+		PlayerCfg.ObsShowBombTimes[obs_mode] = 0;
+	}
 
 	// Default taunt macros
 	#ifdef NETWORK
@@ -443,57 +447,64 @@ int read_player_d1x(char *filename)
 					PlayerCfg.MyTeamColor = atoi(line);
 				if (!strcmp(word, "OTHERTEAMCOLOR"))
 					PlayerCfg.OtherTeamColor = atoi(line);
-				if(!strcmp(word,"OBSTURBO"))
-					PlayerCfg.ObsTurbo = atoi(line);
-				if(!strcmp(word,"OBSSHOWCOCKPIT"))
-					PlayerCfg.ObsShowCockpit = atoi(line);
-				if(!strcmp(word,"OBSSHOWSCOREBOARDSHIELDTEXT"))
-					PlayerCfg.ObsShowScoreboardShieldText = atoi(line);
-				if(!strcmp(word,"OBSSHOWSCOREBOARDSHIELDBAR"))
-					PlayerCfg.ObsShowScoreboardShieldBar = atoi(line);
-				if(!strcmp(word,"OBSSHOWAMMOBARS"))
-					PlayerCfg.ObsShowAmmoBars = atoi(line);
-				if(!strcmp(word,"OBSSHOWPRIMARY"))
-					PlayerCfg.ObsShowPrimary = atoi(line);
-				if(!strcmp(word,"OBSSHOWSECONDARY"))
-					PlayerCfg.ObsShowSecondary = atoi(line);
-				if(!strcmp(word,"OBSSHOWNAMES"))
-					PlayerCfg.ObsShowNames = atoi(line);
-				if(!strcmp(word,"OBSSHOWDAMAGE"))
-					PlayerCfg.ObsShowDamage = atoi(line);
-				if(!strcmp(word,"OBSSHOWSHIELDTEXT"))
-					PlayerCfg.ObsShowShieldText = atoi(line);
-				if(!strcmp(word,"OBSSHOWSHIELDBAR"))
-					PlayerCfg.ObsShowShieldBar = atoi(line);
-				if(!strcmp(word,"OBSSHOWKILLFEED"))
-					PlayerCfg.ObsShowKillFeed = atoi(line);
-				if(!strcmp(word,"OBSSHOWDEATHSUMMARY"))
-					PlayerCfg.ObsShowDeathSummary = atoi(line);
-				if(!strcmp(word,"OBSSHOWSTREAKS"))
-					PlayerCfg.ObsShowStreaks = atoi(line);
-				if(!strcmp(word,"OBSSHOWKILLGRAPH"))
-					PlayerCfg.ObsShowKillGraph = atoi(line);
-				if(!strcmp(word,"OBSSHOWBREAKDOWN"))
-					PlayerCfg.ObsShowBreakdown = atoi(line);
-				if(!strcmp(word,"OBSSHOWOBS"))
-					PlayerCfg.ObsShowObs = atoi(line);
-				if(!strcmp(word,"OBSCHAT"))
-					PlayerCfg.ObsChat = atoi(line);
-				if(!strcmp(word,"OBSPLAYERCHAT"))
-					PlayerCfg.ObsPlayerChat = atoi(line);
-				if(!strcmp(word,"OBSSHOWBOMBTIMES"))
-					PlayerCfg.ObsShowBombTimes = atoi(line);
-
 				//if(!strcmp(word,"QUIETPLASMA"))
-				//	PlayerCfg.QuietPlasma = atoi(line);							
+				//	PlayerCfg.QuietPlasma = atoi(line);
 				if(!strcmp(word,"MAXFPS")) {
-					PlayerCfg.maxFps = atoi(line);														
+					PlayerCfg.maxFps = atoi(line);
 					if(PlayerCfg.maxFps < 25) { PlayerCfg.maxFps = 25; }
 					if(PlayerCfg.maxFps > 200) { PlayerCfg.maxFps = 200; }
 				}
+
+				// Observer settings - migrate from old version
+				// If migrating from an older version, set all observer modes to the same value
+				read_observer_setting(-1, line, word);
+
 				d_free(word);
 				PHYSFSX_fgets(line,50,f);
 				word=splitword(line,'=');
+				d_strupr(word);
+			}
+		}
+		else if (strstr(word, "OBSERVER"))
+		{
+			d_free(word);
+			PHYSFSX_fgets(line, 50, f);
+			word = splitword(line, '=');
+			d_strupr(word);
+
+			while (!strstr(word, "END") && !PHYSFS_eof(f))
+			{
+				if (!strcmp(word, "OBSSHARESETTINGS"))
+					PlayerCfg.ObsShareSettings = atoi(line);
+				else if (PlayerCfg.ObsShareSettings)
+					read_observer_setting(-1, line, word);
+				else
+					for (int obs_mode = 0; obs_mode < NUM_OBS_MODES; obs_mode++) {
+						// Make an upper-case copy of the mode name
+						char mode_name_upper[50];
+						strcpy(mode_name_upper, Obs_mode_names[obs_mode]);
+						d_strupr(mode_name_upper);
+
+						if (strstr(word, mode_name_upper)) {
+							d_free(word);
+							PHYSFSX_fgets(line, 50, f);
+							word = splitword(line, '=');
+							d_strupr(word);
+
+							while (!strstr(word, "END") && !PHYSFS_eof(f)) {
+								read_observer_setting(obs_mode, line, word);
+
+								d_free(word);
+								PHYSFSX_fgets(line, 50, f);
+								word = splitword(line, '=');
+								d_strupr(word);
+							}
+						}
+					}
+
+				d_free(word);
+				PHYSFSX_fgets(line, 50, f);
+				word = splitword(line, '=');
 				d_strupr(word);
 			}
 		}
@@ -744,6 +755,40 @@ void plyr_save_stats()
 	PHYSFS_close(f);
 }
 
+#define READ_OBS_SETTING(setting_name, setting) \
+	if (!strcmp(word, setting_name)) { \
+		if (obs_mode != -1) \
+			PlayerCfg.setting[obs_mode] = atoi(line); \
+		else \
+			for (int i = 0; i < NUM_OBS_MODES; i++) \
+				PlayerCfg.setting[i] = atoi(line); \
+		return; \
+	}
+
+void read_observer_setting(int obs_mode, char* line, char* word)
+{
+	READ_OBS_SETTING("OBSTURBO", ObsTurbo);
+	READ_OBS_SETTING("OBSSHOWCOCKPIT", ObsShowCockpit);
+	READ_OBS_SETTING("OBSSHOWSCOREBOARDSHIELDTEXT", ObsShowScoreboardShieldText);
+	READ_OBS_SETTING("OBSSHOWSCOREBOARDSHIELDBAR", ObsShowScoreboardShieldBar);
+	READ_OBS_SETTING("OBSSHOWAMMOBARS", ObsShowAmmoBars);
+	READ_OBS_SETTING("OBSSHOWPRIMARY", ObsShowPrimary);
+	READ_OBS_SETTING("OBSSHOWSECONDARY", ObsShowSecondary);
+	READ_OBS_SETTING("OBSSHOWNAMES", ObsShowNames);
+	READ_OBS_SETTING("OBSSHOWDAMAGE", ObsShowDamage);
+	READ_OBS_SETTING("OBSSHOWSHIELDTEXT", ObsShowShieldText);
+	READ_OBS_SETTING("OBSSHOWSHIELDBAR", ObsShowShieldBar);
+	READ_OBS_SETTING("OBSSHOWKILLFEED", ObsShowKillFeed);
+	READ_OBS_SETTING("OBSSHOWDEATHSUMMARY", ObsShowDeathSummary);
+	READ_OBS_SETTING("OBSSHOWSTREAKS", ObsShowStreaks);
+	READ_OBS_SETTING("OBSSHOWKILLGRAPH", ObsShowKillGraph);
+	READ_OBS_SETTING("OBSSHOWBREAKDOWN", ObsShowBreakdown);
+	READ_OBS_SETTING("OBSSHOWOBS", ObsShowObs);
+	READ_OBS_SETTING("OBSCHAT", ObsChat);
+	READ_OBS_SETTING("OBSPLAYERCHAT", ObsPlayerChat);
+	READ_OBS_SETTING("OBSSHOWBOMBTIMES", ObsShowBombTimes);
+}
+
 int write_player_d1x(char *filename)
 {
 	PHYSFS_file *fout;
@@ -855,29 +900,66 @@ int write_player_d1x(char *filename)
 		PHYSFSX_printf(fout, "overrideteamcolors=%i\n", PlayerCfg.PreferMyTeamColors);
 		PHYSFSX_printf(fout, "myteamcolor=%i\n", PlayerCfg.MyTeamColor);
 		PHYSFSX_printf(fout, "otherteamcolor=%i\n", PlayerCfg.OtherTeamColor);
-		PHYSFSX_printf(fout,"obsturbo=%i\n",PlayerCfg.ObsTurbo);
-		PHYSFSX_printf(fout,"obsshowcockpit=%i\n",PlayerCfg.ObsShowCockpit);
-		PHYSFSX_printf(fout,"obsshowscoreboardshieldtext=%i\n",PlayerCfg.ObsShowScoreboardShieldText);
-		PHYSFSX_printf(fout,"obsshowscoreboardshieldbar=%i\n",PlayerCfg.ObsShowScoreboardShieldBar);
-		PHYSFSX_printf(fout,"obsshowammobars=%i\n",PlayerCfg.ObsShowAmmoBars);
-		PHYSFSX_printf(fout,"obsshowprimary=%i\n",PlayerCfg.ObsShowPrimary);
-		PHYSFSX_printf(fout,"obsshowsecondary=%i\n",PlayerCfg.ObsShowSecondary);
-		PHYSFSX_printf(fout,"obsshownames=%i\n",PlayerCfg.ObsShowNames);
-		PHYSFSX_printf(fout,"obsshowdamage=%i\n",PlayerCfg.ObsShowDamage);
-		PHYSFSX_printf(fout,"obsshowshieldtext=%i\n",PlayerCfg.ObsShowShieldText);
-		PHYSFSX_printf(fout,"obsshowshieldbar=%i\n",PlayerCfg.ObsShowShieldBar);
-		PHYSFSX_printf(fout,"obsshowkillfeed=%i\n",PlayerCfg.ObsShowKillFeed);
-		PHYSFSX_printf(fout,"obsshowdeathsummary=%i\n",PlayerCfg.ObsShowDeathSummary);
-		PHYSFSX_printf(fout,"obsshowstreaks=%i\n",PlayerCfg.ObsShowStreaks);
-		PHYSFSX_printf(fout,"obsshowkillgraph=%i\n",PlayerCfg.ObsShowKillGraph);
-		PHYSFSX_printf(fout,"obsshowbreakdown=%i\n",PlayerCfg.ObsShowBreakdown);
-		PHYSFSX_printf(fout,"obsshowobs=%i\n",PlayerCfg.ObsShowObs);
-		PHYSFSX_printf(fout,"obschat=%i\n",PlayerCfg.ObsChat);
-		PHYSFSX_printf(fout,"obsplayerchat=%i\n",PlayerCfg.ObsPlayerChat);
-		PHYSFSX_printf(fout,"obsshowbombtimes=%i\n",PlayerCfg.ObsShowBombTimes);
 		//PHYSFSX_printf(fout,"quietplasma=%i\n",PlayerCfg.QuietPlasma);	
 		PHYSFSX_printf(fout,"maxfps=%i\n",PlayerCfg.maxFps);	
 		PHYSFSX_printf(fout,"[end]\n");
+		PHYSFSX_printf(fout, "[observer]\n");
+		PHYSFSX_printf(fout, "obssharesettings=%i\n", PlayerCfg.ObsShareSettings);
+		if (PlayerCfg.ObsShareSettings) {
+			// Write one set of observer settings for all game modes
+			PHYSFSX_printf(fout, "obsturbo=%i\n", PlayerCfg.ObsTurbo[0]);
+			PHYSFSX_printf(fout, "obsshowcockpit=%i\n", PlayerCfg.ObsShowCockpit[0]);
+			PHYSFSX_printf(fout, "obsshowscoreboardshieldtext=%i\n", PlayerCfg.ObsShowScoreboardShieldText[0]);
+			PHYSFSX_printf(fout, "obsshowscoreboardshieldbar=%i\n", PlayerCfg.ObsShowScoreboardShieldBar[0]);
+			PHYSFSX_printf(fout, "obsshowammobars=%i\n", PlayerCfg.ObsShowAmmoBars[0]);
+			PHYSFSX_printf(fout, "obsshowprimary=%i\n", PlayerCfg.ObsShowPrimary[0]);
+			PHYSFSX_printf(fout, "obsshowsecondary=%i\n", PlayerCfg.ObsShowSecondary[0]);
+			PHYSFSX_printf(fout, "obsshownames=%i\n", PlayerCfg.ObsShowNames[0]);
+			PHYSFSX_printf(fout, "obsshowdamage=%i\n", PlayerCfg.ObsShowDamage[0]);
+			PHYSFSX_printf(fout, "obsshowshieldtext=%i\n", PlayerCfg.ObsShowShieldText[0]);
+			PHYSFSX_printf(fout, "obsshowshieldbar=%i\n", PlayerCfg.ObsShowShieldBar[0]);
+			PHYSFSX_printf(fout, "obsshowkillfeed=%i\n", PlayerCfg.ObsShowKillFeed[0]);
+			PHYSFSX_printf(fout, "obsshowdeathsummary=%i\n", PlayerCfg.ObsShowDeathSummary[0]);
+			PHYSFSX_printf(fout, "obsshowstreaks=%i\n", PlayerCfg.ObsShowStreaks[0]);
+			PHYSFSX_printf(fout, "obsshowkillgraph=%i\n", PlayerCfg.ObsShowKillGraph[0]);
+			PHYSFSX_printf(fout, "obsshowbreakdown=%i\n", PlayerCfg.ObsShowBreakdown[0]);
+			PHYSFSX_printf(fout, "obsshowobs=%i\n", PlayerCfg.ObsShowObs[0]);
+			PHYSFSX_printf(fout, "obschat=%i\n", PlayerCfg.ObsChat[0]);
+			PHYSFSX_printf(fout, "obsplayerchat=%i\n", PlayerCfg.ObsPlayerChat[0]);
+			PHYSFSX_printf(fout, "obsshowbombtimes=%i\n", PlayerCfg.ObsShowBombTimes[0]);
+		} else {
+			// Write separate observer settings for each game mode
+			for (int obs_mode = 0; obs_mode < NUM_OBS_MODES; obs_mode++) {
+				// Make a lower-case copy of the mode name
+				char mode_name_lower[20];
+				strcpy(mode_name_lower, Obs_mode_names[obs_mode]);
+				d_strlwr(mode_name_lower);
+
+				PHYSFSX_printf(fout, "[%s]\n", mode_name_lower);
+				PHYSFSX_printf(fout, "obsturbo=%i\n", PlayerCfg.ObsTurbo[obs_mode]);
+				PHYSFSX_printf(fout, "obsshowcockpit=%i\n", PlayerCfg.ObsShowCockpit[obs_mode]);
+				PHYSFSX_printf(fout, "obsshowscoreboardshieldtext=%i\n", PlayerCfg.ObsShowScoreboardShieldText[obs_mode]);
+				PHYSFSX_printf(fout, "obsshowscoreboardshieldbar=%i\n", PlayerCfg.ObsShowScoreboardShieldBar[obs_mode]);
+				PHYSFSX_printf(fout, "obsshowammobars=%i\n", PlayerCfg.ObsShowAmmoBars[obs_mode]);
+				PHYSFSX_printf(fout, "obsshowprimary=%i\n", PlayerCfg.ObsShowPrimary[obs_mode]);
+				PHYSFSX_printf(fout, "obsshowsecondary=%i\n", PlayerCfg.ObsShowSecondary[obs_mode]);
+				PHYSFSX_printf(fout, "obsshownames=%i\n", PlayerCfg.ObsShowNames[obs_mode]);
+				PHYSFSX_printf(fout, "obsshowdamage=%i\n", PlayerCfg.ObsShowDamage[obs_mode]);
+				PHYSFSX_printf(fout, "obsshowshieldtext=%i\n", PlayerCfg.ObsShowShieldText[obs_mode]);
+				PHYSFSX_printf(fout, "obsshowshieldbar=%i\n", PlayerCfg.ObsShowShieldBar[obs_mode]);
+				PHYSFSX_printf(fout, "obsshowkillfeed=%i\n", PlayerCfg.ObsShowKillFeed[obs_mode]);
+				PHYSFSX_printf(fout, "obsshowdeathsummary=%i\n", PlayerCfg.ObsShowDeathSummary[obs_mode]);
+				PHYSFSX_printf(fout, "obsshowstreaks=%i\n", PlayerCfg.ObsShowStreaks[obs_mode]);
+				PHYSFSX_printf(fout, "obsshowkillgraph=%i\n", PlayerCfg.ObsShowKillGraph[obs_mode]);
+				PHYSFSX_printf(fout, "obsshowbreakdown=%i\n", PlayerCfg.ObsShowBreakdown[obs_mode]);
+				PHYSFSX_printf(fout, "obsshowobs=%i\n", PlayerCfg.ObsShowObs[obs_mode]);
+				PHYSFSX_printf(fout, "obschat=%i\n", PlayerCfg.ObsChat[obs_mode]);
+				PHYSFSX_printf(fout, "obsplayerchat=%i\n", PlayerCfg.ObsPlayerChat[obs_mode]);
+				PHYSFSX_printf(fout, "obsshowbombtimes=%i\n", PlayerCfg.ObsShowBombTimes[obs_mode]);
+				PHYSFSX_printf(fout, "[end]\n");
+			}
+		}
+		PHYSFSX_printf(fout, "[end]\n");
 		PHYSFSX_printf(fout,"[graphics]\n");
 		PHYSFSX_printf(fout,"alphaeffects=%i\n",PlayerCfg.AlphaEffects);
 		PHYSFSX_printf(fout,"dynlightcolor=%i\n",PlayerCfg.DynLightColor);
