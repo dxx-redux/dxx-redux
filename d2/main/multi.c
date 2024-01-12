@@ -6299,8 +6299,6 @@ bool object_is_observer(object* obj)
 
 int get_observer_game_mode()
 {
-	Assert(is_observer());
-
 	// Co-op - check for flag
 	if (Game_mode & GM_MULTI_COOP)
 		return 3;
@@ -6310,9 +6308,13 @@ int get_observer_game_mode()
 	// We are some kind of free-for-all mode. Check the player count
 	else if (N_players > 2)
 		return 1;
-	// This is a 1v1
-	else
+	// This is a 1v1, or only one player is connected (which we'll treat like a 1v1)
+	else {
+		// This function should only be called in multiplayer.
+		// Return 0 (1v1) in single-player to avoid a crash, but this indicates a bug.
+		Assert(Game_mode & GM_MULTI);
 		return 0;
+	}
 }
 
 /* Bounty packer sender and handler */

@@ -2239,7 +2239,7 @@ void do_obs_menu()
 {
 	newmenu_item m[30];
 	struct obs_menu_data obs_menu_data;
-	obs_menu_data.mode = 0;
+	obs_menu_data.mode = is_observer() ? get_observer_game_mode() : 0;
 	int i = 0;
 
 	do {
