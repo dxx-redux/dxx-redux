@@ -32,7 +32,10 @@ build_appimage() {
     dir="${name:0:2}"
 
     appdir="${name}.appdir"
-    appimagename="${prettyname}-${version}.AppImage"
+    appimagename="${prettyname}.AppImage"
+    archivefilename="${prettyname}-${version}-linux.tar.gz"
+    tmpdir="packagetemp"
+    inipath="${dir}/${name:0:3}-default.ini"
 
     ## Install
     # Copy resources into package dir
@@ -64,6 +67,15 @@ build_appimage() {
 
     # Package!
     ./appimagetool-x86_64.AppImage --no-appstream --verbose "${appdir}" "${appimagename}"
+
+    rm -rf "${tmpdir}"
+    mkdir "${tmpdir}"
+    cp -p "${appimagename}" "${tmpdir}/"
+    cp -p COPYING.txt "${tmpdir}/"
+    cp -p ChangeLog.txt "${tmpdir}/"
+    cp -p "${inipath}" "${tmpdir}/"
+    (cd "${tmpdir}"; tar czf "../${archivefilename}" *)
+    rm -rf "${tmpdir}"
 
     #rm -rf ${appdir}
 }
