@@ -153,12 +153,13 @@ if(APPLE)
     target_link_libraries(d2x-redux PRIVATE arch_cocoa)
 endif()
 
-if(__LINUX__)
-    target_include_directories(d2x-redux PUBLIC ${CMAKE_SOURCE_DIR}/arch/linux/include)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_link_libraries(d2x-redux PRIVATE arch_x11)
+    list(APPEND EXTRA_LIBRARIES "X11")
 endif()
 
 if(NOT WIN32)
-    set(EXTRA_LIBRARIES m)
+    list(APPEND EXTRA_LIBRARIES "m")
 endif()
 
 find_package(SDL 1.2 REQUIRED)

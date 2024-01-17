@@ -95,6 +95,11 @@ if(APPLE)
     add_dependencies(d1x-redux arch_cocoa)
 endif()
 
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    add_subdirectory(arch/x11)
+    add_dependencies(d1x-redux arch_x11)
+endif()
+
 if(OPENGL)
     add_subdirectory(arch/ogl)
     add_subdirectory(xmodel)

@@ -75,9 +75,7 @@ char copyright[] = "DESCENT II  COPYRIGHT (C) 1994-1996 PARALLAX SOFTWARE CORPOR
 #include "../texmap/scanline.h" //for select_tmap -MM
 #include "event.h"
 #include "rbaudio.h"
-#ifndef __LINUX__
 #include "messagebox.h"
-#endif
 #ifdef EDITOR
 #include "editor/editor.h"
 #include "editor/kdefs.h"
@@ -300,12 +298,8 @@ jmp_buf LeaveEvents;
 int main(int argc, char *argv[])
 {
 	mem_init();
-#if defined(__LINUX__)
-	error_init(NULL);
-#else
 	error_init(msgbox_error);
 	set_warn_func(msgbox_warning);
-#endif
 	PHYSFSX_init(argc, argv);
 	con_init();  // Initialise the console
 
