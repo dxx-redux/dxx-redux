@@ -1298,7 +1298,7 @@ void graphics_config()
 	opt_gr_multisample = nitems;
 	m[nitems].type = NM_TYPE_CHECK; m[nitems].text="4x multisampling"; m[nitems].value = GameCfg.Multisample; nitems++;
 	opt_gr_classicdepth = nitems;
-	m[nitems].type = NM_TYPE_CHECK; m[nitems].text="Classic Depth Ordering"; m[nitems].value = GameCfg.ClassicDepth; nitems++;
+	m[nitems].type = NM_TYPE_CHECK; m[nitems].text="Classic Depth Ordering (SP)"; m[nitems].value = GameCfg.ClassicDepth; nitems++;
 #endif
 	opt_gr_fpsindi = nitems;
 	m[nitems].type = NM_TYPE_CHECK; m[nitems].text="FPS Counter"; m[nitems].value = GameCfg.FPSIndicator; nitems++;

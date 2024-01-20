@@ -890,14 +890,14 @@ void render_external_scene(fix eye_offset)
 	#endif
 
 #ifdef OGL
-	if (!GameCfg.ClassicDepth) {
+	if (!GameCfg.ClassicDepth || (Game_mode & GM_MULTI)) {
 		ogl_toggle_depth_test(0);
 		Render_depth = (200-(vm_vec_dist_quick(&mine_ground_exit_point, &Viewer_eye)/F1_0))/36;
 	}
 #endif
 	render_terrain(&mine_ground_exit_point,exit_point_bmx,exit_point_bmy);
 #ifdef OGL
-	if (!GameCfg.ClassicDepth) {
+	if (!GameCfg.ClassicDepth || (Game_mode & GM_MULTI)) {
 		Render_depth = orig_Render_depth;
 		ogl_toggle_depth_test(1);
 	}

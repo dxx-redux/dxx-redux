@@ -1206,7 +1206,7 @@ int sort_func(sort_item *a,sort_item *b)
 
 	delta_dist = a->dist - b->dist;
 
-	if (!GameCfg.ClassicDepth)
+	if (!GameCfg.ClassicDepth || (Game_mode & GM_MULTI))
 		return delta_dist;
 
 	obj_a = &Objects[a->objnum];
@@ -1728,7 +1728,7 @@ void render_mine(int start_seg_num,fix eye_offset)
 	}
 
 #ifdef OGL
-	if (GameCfg.ClassicDepth) {
+	if (GameCfg.ClassicDepth && !(Game_mode & GM_MULTI)) {
 #endif
 	for (nn=N_render_segs;nn--;) {
 		int segnum;
