@@ -1988,7 +1988,7 @@ void render_mine(int start_seg_num,fix eye_offset, int window_num)
 	}
 
 #ifdef OGL
-	if (GameCfg.ClassicDepth) {
+	if (GameCfg.ClassicDepth && !(Game_mode & GM_MULTI)) {
 #endif
 	for (nn=N_render_segs;nn--;) {
 		int segnum;
