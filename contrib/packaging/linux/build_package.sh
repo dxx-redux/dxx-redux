@@ -25,6 +25,8 @@ chmod a+x AppRun-x86_64
 curl -s -L -O https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage || exit 3
 chmod a+x linuxdeploy-x86_64.AppImage
 
+# And the soundfont
+curl -s -L -O https://github.com/arbruijn/TimGM6mb/releases/download/v20100822/TimGM6mb.sf2 || exit 3
 
 build_appimage() {
     name="$1"
@@ -58,6 +60,11 @@ build_appimage() {
     mkdir -p ${appdir}/usr/share/applications
     cp ${dir}/${name}.desktop ${appdir}/usr/share/applications
     cp ${dir}/${name}.desktop ${appdir}/
+
+    # Soundfont
+
+    mkdir -p ${appdir}/usr/share/sounds/sf3
+    cp -p TimGM6mb.sf2 ${appdir}/usr/share/sounds/sf3/default-GM.sf3
 
     ## Package
     cp AppRun-x86_64 ${appdir}/AppRun
