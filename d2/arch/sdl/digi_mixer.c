@@ -48,11 +48,34 @@ static inline int fix2byte(fix f) { return (f / 256) % 256; }
 Mix_Chunk SoundChunks[MAX_SOUNDS];
 ubyte channels[MAX_SOUND_SLOTS];
 
+#ifdef __linux__
+static int digi_mixer_check_soundfont(const char *path, void *data)
+{
+	FILE *file = fopen(path, "r");
+	if (!file)
+		return 0;
+	fclose(file);
+	return 1;
+}
+#endif
+
 /* Initialise audio */
 int digi_mixer_init()
 {
 	if (MIX_DIGI_DEBUG) con_printf(CON_DEBUG,"digi_init %d (SDL_Mixer)\n", MAX_SOUNDS);
 	if (SDL_InitSubSystem(SDL_INIT_AUDIO) < 0) Error("SDL audio initialisation failed: %s.", SDL_GetError());
+
+	#ifdef __linux__
+	// Use the soundfont in the AppImage if no other sound font specified
+	Mix_Init(0); // hack to set soundfont_paths on Debian patched SDL-mixer
+	if (!Mix_EachSoundFont(digi_mixer_check_soundfont, NULL) && getenv("APPDIR"))
+	{
+		char soundfonts[PATH_MAX];
+		snprintf(soundfonts, sizeof(soundfonts),
+			"%s/usr/share/sounds/sf3/default-GM.sf3", getenv("APPDIR"));
+		Mix_SetSoundFonts(soundfonts);
+	}
+	#endif
 
 	if (Mix_OpenAudio(SAMPLE_RATE_44K, MIX_OUTPUT_FORMAT, MIX_OUTPUT_CHANNELS, SOUND_BUFFER_SIZE))
 	{
