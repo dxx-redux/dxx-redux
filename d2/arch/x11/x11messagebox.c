@@ -102,20 +102,22 @@ static void splitLines(const char* text, char ***str, int *count){
 }
 
 static void computeTextSize(XFontSet* fs, char** texts, int size,
-		int lineHeight,
 		unsigned int spaceBetweenLines,
-		unsigned int *w,  unsigned int *h)
+		unsigned int *w,  unsigned int *h,
+		unsigned int *lineHeight)
 {
 	int i;
-	XRectangle rect	 = {0,0,0,0};
+	XRectangle rect	 = {0,0,0,0}, rectLogical = {0,0,0,0};
 	*h = 0;
 	*w = 0;
+	*lineHeight = 0;
 	for (i = 0; i < size; i++){
 		const char *line = texts[i];
-		Xutf8TextExtents(*fs, line, (int)strlen(line), &rect, NULL);
-		*w = (rect.width > *w) ? (rect.width): *w;
-		*h += lineHeight + spaceBetweenLines;
+		Xutf8TextExtents(*fs, line, (int)strlen(line), &rect, &rectLogical);
+		*w = (rectLogical.width > *w) ? (rectLogical.width): *w;
+		*lineHeight = (rectLogical.height > *lineHeight) ? (rectLogical.height): *lineHeight;
 	}
+	*h = size * (*lineHeight + spaceBetweenLines);
 }
 
 static void createGC(GC* gc, const Colormap* cmap, Display* dpy, const	 Window* win,
@@ -161,29 +163,32 @@ int x11MessageBox(const char* title, const char* text, const char ** buttons, in
 
 
 	XSelectInput(dpy, win, ExposureMask | PointerMotionMask | ButtonPressMask | ButtonReleaseMask | KeyPressMask);
-	XMapWindow(dpy, win);
 
 	//allow windows to be closed by pressing cross button (but it wont close - see ClientMessage on switch)
 	Atom WM_DELETE_WINDOW = XInternAtom(dpy, "WM_DELETE_WINDOW", False);
 	XSetWMProtocols(dpy, win, &WM_DELETE_WINDOW, 1);
 
-	//--create the gc for drawing text----------------------------------------------------------------------------------
-	XGCValues gcValues;
-	gcValues.font = XLoadFont(dpy, "7x13");
-	gcValues.foreground = BlackPixel(dpy, 0);
-	GC textGC = XCreateGC(dpy, win, GCFont + GCForeground, &gcValues);
-	XFontStruct *fontInfo = XQueryFont(dpy, gcValues.font);
-	XUnmapWindow( dpy, win );
-	int lineHeight = (fontInfo->ascent + fontInfo->descent) * 7 / 5;
-	//------------------------------------------------------------------------------------------------------------------
 
 	//----create fontset-----------------------------------------------------------------------------------------------
+	const char *fontName;
 	char **missingCharset_list = NULL;
 	int missingCharset_count = 0;
 	XFontSet fs;
+	fontName = "-*-*-medium-r-normal--*-120-*-*-*-*-*-*";
 	fs = XCreateFontSet(dpy,
-			"-*-*-medium-r-*-*-*-140-75-75-*-*-*-*" ,
+			fontName,
 			&missingCharset_list, &missingCharset_count, NULL);
+	if (!fs) {
+		fontName = "fixed";
+		fs = XCreateFontSet(dpy,
+				fontName,
+				&missingCharset_list, &missingCharset_count, NULL);
+	}
+	if (!fs) {
+		XDestroyWindow(dpy, win);
+		XCloseDisplay(dpy);
+		return -1;
+	}
 
 	if (missingCharset_count) {
 		fprintf(stderr, "Missing charsets :\n");
@@ -201,9 +206,10 @@ int x11MessageBox(const char* title, const char* text, const char ** buttons, in
 	//resize the window according to the text size-----------------------------------------------------------------------
 	unsigned int winW, winH;
 	unsigned int textW, textH;
+	unsigned int lineHeight;
 
 	//calculate the ideal window's size
-	computeTextSize(&fs, text_splitted, textLines, lineHeight, dim.lineSpacing, &textW, &textH);
+	computeTextSize(&fs, text_splitted, textLines, dim.lineSpacing, &textW, &textH, &lineHeight);
 	unsigned int newWidth = textW + dim.pad_left + dim.pad_right;
 	unsigned int newHeight = textH + dim.pad_up + dim.pad_down + dim.barHeight;
 	winW = (newWidth > dim.winMinWidth)? newWidth: dim.winMinWidth;
@@ -218,6 +224,11 @@ int x11MessageBox(const char* title, const char* text, const char ** buttons, in
 	XSetWMNormalHints( dpy, win, &hints );
 	XMapRaised( dpy, win );
 	//------------------------------------------------------------------------------------------------------------------
+
+	//--create the gc for drawing text----------------------------------------------------------------------------------
+	XGCValues gcValues;
+	gcValues.foreground = BlackPixel(dpy, 0);
+	GC textGC = XCreateGC(dpy, win, GCForeground, &gcValues);
 
 	GC barGC;
 	GC buttonGC;
