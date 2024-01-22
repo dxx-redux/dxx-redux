@@ -54,11 +54,11 @@ void clear_warn_func(void (*f)(char *s))
 
 void print_exit_message(const char *exit_message)
 {
+		con_printf(CON_CRITICAL, "\n%s\n",exit_message);
 		if (ErrorPrintFunc)
 		{
 			(*ErrorPrintFunc)(exit_message);
 		}
-		con_printf(CON_CRITICAL, "\n%s\n",exit_message);
 }
 
 //terminates with error code 1, printing message
