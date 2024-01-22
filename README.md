@@ -24,19 +24,48 @@ Building in Visual Studio
 Building in msys2 / Linux
 -------------------------
 
-- msys2: `pacman -S mingw-w64-x86_64-cmake mingw-w64-x86_64-physfs mingw-w64-x86_64-SDL mingw-w64-x86_64-SDL_mixer
-  mingw-w64-x86_64-libpng mingw-w64-x86_64-glew`
+- Install the required packages
 
-- Debian/Ubuntu: `apt install cmake libphysfs-dev libsdl1.2-dev libsdl-mixer1.2-dev libpng-dev
-  libglew-dev`
+  - msys2 (use the 'MSYS2 MINGW64' entry in the Start menu)
 
-- Fedora: `sudo dnf install cmake physfs-devel sdl12-compat-devel SDL_mixer-devel libpng-devel
-  glew-devel`
+    `pacman -S git mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake
+    mingw-w64-x86_64-physfs mingw-w64-x86_64-SDL mingw-w64-x86_64-SDL_mixer
+    mingw-w64-x86_64-libpng mingw-w64-x86_64-glew`
 
-- Arch Linux: `pacman -S cmake physfs sdl12-compat sdl_mixer libpng glew`
+  - Debian/Ubuntu
 
-- Use `cd` to go to the d1 or d2 directory
+    `apt install build-essential git cmake libphysfs-dev libsdl1.2-dev libsdl-mixer1.2-dev libpng-dev
+    libglew-dev`
 
-- `cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo`
+  - Fedora
 
-- `cmake --build build`
+    `dnf install make gcc-c++ git cmake physfs-devel sdl12-compat-devel SDL_mixer-devel libpng-devel
+    glew-devel`
+
+  - Arch Linux
+
+    `pacman -S base-devel git cmake physfs sdl12-compat sdl_mixer libpng glew`
+
+- Get the source code from github
+
+  `git clone https://github.com/dxx-redux/dxx-redux`
+
+- Enter the dxx-redux directory
+
+  `cd dxx-redux`
+
+- Enter the the d1 or d2 directory
+
+  `cd d1`
+
+- Set the build options
+
+  `cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo`
+
+  (see `cmake -B build -L` for more options)
+
+- Build the code
+
+  `cmake --build build`
+
+  (add `-j4` to use 4 cores)
