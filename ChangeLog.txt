@@ -1,3 +1,15 @@
+2024-01-23 Redux 1.0
+- Supports separate observer options for each game mode
+- Added observer option to show bomb timeouts
+- Combine laser levels in observer damage lists
+- Supress kill/death messages if the observer death log is active
+- Added option to disable chat sounds
+- Extended Abort Game menu
+- Fixed observer crash when player hit by reactor
+- Fixed auto demo recording in D2
+- Fixed keyboard slide left sensitivity setting
+- Improved Linux package (now works on the Steam Deck)
+
 2023-07-27 Redux 0.9
 - Fix crash on hostage door/diamond claw explosion
 
