@@ -238,6 +238,7 @@ void game_render_frame_mono(int flip);
 void game_leave_menus(void);
 
 bool is_observer();
+struct object* get_player_view_object();
 
 //Cheats
 typedef struct game_cheats

@@ -638,7 +638,7 @@ void show_extra_views()
 			DemoDoingLeft=DemoDoLeft;
 
 			if (DemoDoLeft==3)
-				do_cockpit_window_view(0,ConsoleObject,1,WBU_REAR,"REAR");
+				do_cockpit_window_view(0,get_player_view_object(),1,WBU_REAR,"REAR");
 			else
 				do_cockpit_window_view(0,&DemoLeftExtra,DemoRearCheck[DemoDoLeft],DemoWBUType[DemoDoLeft],DemoExtraMessage[DemoDoLeft]);
 		}
@@ -650,7 +650,7 @@ void show_extra_views()
 			DemoDoingRight=DemoDoRight;
 			
 			if (DemoDoRight==3)
-				do_cockpit_window_view(1,ConsoleObject,1,WBU_REAR,"REAR");
+				do_cockpit_window_view(1,get_player_view_object(),1,WBU_REAR,"REAR");
 			else
 			{
 				do_cockpit_window_view(1,&DemoRightExtra,DemoRearCheck[DemoDoRight],DemoWBUType[DemoDoRight],DemoExtraMessage[DemoDoRight]);
@@ -719,11 +719,11 @@ void show_extra_views()
 			case CV_REAR:
 				if (Rear_view) {		//if big window is rear view, show front here
 					RenderingType=3+(w<<4);				
-					do_cockpit_window_view(w,ConsoleObject,0,WBU_REAR,"FRONT");
+					do_cockpit_window_view(w,get_player_view_object(),0,WBU_REAR,"FRONT");
 				}
 				else {					//show normal rear view
 					RenderingType=3+(w<<4);				
-					do_cockpit_window_view(w,ConsoleObject,1,WBU_REAR,"REAR");
+					do_cockpit_window_view(w,get_player_view_object(),1,WBU_REAR,"REAR");
 				}
 			 	break;
 			case CV_ESCORT: {
