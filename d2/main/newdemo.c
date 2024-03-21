@@ -2169,11 +2169,11 @@ int newdemo_read_frame_information(int rewrite)
 				break;
 			}
 			if ((Newdemo_vcr_state == ND_STATE_PLAYBACK) || (Newdemo_vcr_state == ND_STATE_FASTFORWARD) || (Newdemo_vcr_state == ND_STATE_ONEFRAMEFORWARD)) {
-				Afterburner_charge = afterburner<<9;
+				Players[Player_num].afterburner_charge = afterburner<<9;
 // 				if (Afterburner_charge < 0) Afterburner_charge=f1_0;
 			} else if ((Newdemo_vcr_state == ND_STATE_REWINDING) || (Newdemo_vcr_state == ND_STATE_ONEFRAMEBACKWARD)) {
 				if (!afterburner_updated && old_afterburner != 255) {
-					Afterburner_charge = old_afterburner<<9;
+					Players[Player_num].afterburner_charge = old_afterburner<<9;
 					afterburner_updated = 1;
 				}
 			}

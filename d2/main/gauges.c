@@ -1067,10 +1067,10 @@ void hud_show_afterburner(void)
 
 	y = (Game_mode & GM_MULTI)?(-7*LINE_SPACING):(-3*LINE_SPACING);
 
-	gr_printf(FSPACX(1), grd_curcanv->cv_bitmap.bm_h+y, "burn: %d%%" , fixmul(Afterburner_charge,100));
+	gr_printf(FSPACX(1), grd_curcanv->cv_bitmap.bm_h+y, "burn: %d%%" , fixmul(Players[pnum].afterburner_charge,100));
 
 	if (Newdemo_state==ND_STATE_RECORDING )
-		newdemo_record_player_afterburner(Afterburner_charge);
+		newdemo_record_player_afterburner(Players[pnum].afterburner_charge);
 }
 
 static inline const char *SECONDARY_WEAPON_NAMES_VERY_SHORT(const unsigned u)
@@ -2222,7 +2222,7 @@ void sb_draw_afterburner()
 	PAGE_IN_GAUGE( SB_GAUGE_AFTERBURNER );
 	hud_bitblt(HUD_SCALE_X(SB_AFTERBURNER_GAUGE_X), HUD_SCALE_Y(SB_AFTERBURNER_GAUGE_Y), &GameBitmaps[GET_GAUGE_INDEX(SB_GAUGE_AFTERBURNER)]);
 
-	erase_height = HUD_SCALE_Y(fixmul((f1_0 - Afterburner_charge),SB_AFTERBURNER_GAUGE_H-1));
+	erase_height = HUD_SCALE_Y(fixmul((f1_0 - Players[pnum].afterburner_charge),SB_AFTERBURNER_GAUGE_H-1));
 	gr_setcolor( 0 );
 	for (i=0;i<erase_height;i++)
 		gr_uline( i2f(HUD_SCALE_X(SB_AFTERBURNER_GAUGE_X-1)), i2f(HUD_SCALE_Y(SB_AFTERBURNER_GAUGE_Y)+i), i2f(HUD_SCALE_X(SB_AFTERBURNER_GAUGE_X+(SB_AFTERBURNER_GAUGE_W))), i2f(HUD_SCALE_Y(SB_AFTERBURNER_GAUGE_Y)+i) );
@@ -2973,6 +2973,7 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 
 		double energy = f2db(Players[pnum].energy);
 		double ammo = f2db(Players[pnum].primary_ammo[1]) * VULCAN_AMMO_SCALE;
+		double afterburner = f2db(Players[pnum].afterburner_charge);
 
 		if (PlayerCfg.ObsShowAmmoBars[get_observer_game_mode()]) {
 			if (!PlayerCfg.ObsShowScoreboardShieldBar[get_observer_game_mode()]) {
@@ -2981,6 +2982,7 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 
 			int energy_bar_height = FSPACY(0.75);
 			int ammo_bar_height = FSPACY(0.5);
+			int afterburner_bar_height = FSPACY(0.5);
 
 			// Energy display
 			if (energy > 0) {
@@ -2998,6 +3000,14 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 			}
 
 			y += ammo_bar_height + 2;
+
+			// Afterburner display
+			if (afterburner > 0) {
+				gr_setcolor(BM_XRGB(25, 0, 0));
+				gr_urect(x + 2, y, min(x + 2 + (int)(afterburner * ((double)OBS_PLAYER_CARD_WIDTH - 4.0)), x + OBS_PLAYER_CARD_WIDTH - 2), y + afterburner_bar_height);
+			}
+
+			y += afterburner_bar_height + 2;
 		}
 
 		if (PlayerCfg.ObsShowPrimary[get_observer_game_mode()]) {
@@ -4708,8 +4718,8 @@ void render_gauges()
 		show_bomb_count(HUD_SCALE_X(BOMB_COUNT_X), HUD_SCALE_Y(BOMB_COUNT_Y), gr_find_closest_color(0, 0, 0), 0, 0);
 
 		if (Newdemo_state==ND_STATE_RECORDING )
-			newdemo_record_player_afterburner(Afterburner_charge);
-		draw_afterburner_bar(Afterburner_charge);
+			newdemo_record_player_afterburner(Players[pnum].afterburner_charge);
+		draw_afterburner_bar(Players[pnum].afterburner_charge);
 
 		draw_player_ship(cloak, SHIP_GAUGE_X, SHIP_GAUGE_Y);
 
@@ -4738,7 +4748,7 @@ void render_gauges()
 			show_bomb_count(HUD_SCALE_X(SB_BOMB_COUNT_X), HUD_SCALE_Y(SB_BOMB_COUNT_Y), gr_find_closest_color(0, 0, 0), 0, 0);
 
 		if (Newdemo_state==ND_STATE_RECORDING )
-			newdemo_record_player_afterburner(Afterburner_charge);
+			newdemo_record_player_afterburner(Players[pnum].afterburner_charge);
 		sb_draw_afterburner();
 
 		draw_player_ship(cloak, SB_SHIP_GAUGE_X, SB_SHIP_GAUGE_Y);

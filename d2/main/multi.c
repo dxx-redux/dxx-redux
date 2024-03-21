@@ -6260,6 +6260,7 @@ void multi_send_ship_status_for_frame()
 	multibuf[30] = (ubyte)Players[Player_num].secondary_weapon;
 	PUT_INTEL_INT(multibuf + 31, Players[Player_num].energy);
 	PUT_INTEL_INT(multibuf + 35, Players[Player_num].homing_object_dist);
+	PUT_INTEL_INT(multibuf + 39, Players[Player_num].afterburner_charge);
 
 	multi_send_data_direct( multibuf, 39, multi_who_is_master(), 2);
 }
@@ -6287,6 +6288,7 @@ void multi_do_ship_status( const ubyte *buf )
 		Players[buf[1]].secondary_weapon = (sbyte)buf[30];
 		Players[buf[1]].energy = GET_INTEL_INT(buf + 31);
 		Players[buf[1]].homing_object_dist = GET_INTEL_INT(buf + 35);
+		Players[buf[1]].afterburner_charge = GET_INTEL_INT(buf + 39);
 	}
 }
 

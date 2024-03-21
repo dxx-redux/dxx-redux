@@ -28,6 +28,4 @@ void read_flying_controls( object * obj );
 extern ubyte Controls_stopped;
 extern ubyte Controls_always_move;
 
-extern fix Afterburner_charge;
-
 #endif

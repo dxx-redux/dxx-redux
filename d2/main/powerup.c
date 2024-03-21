@@ -630,7 +630,7 @@ int do_powerup(object *obj)
 #endif
 				digi_play_sample( Powerup_info[obj->id].hit_sound, F1_0 );
 				powerup_basic(15, 15, 15, 0, "AFTERBURNER!");
-				Afterburner_charge = f1_0;
+				Players[Player_num].afterburner_charge = f1_0;
 				used=1;
 			}
 			break;

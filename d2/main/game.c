@@ -578,7 +578,7 @@ void do_afterburner_stuff(void)
 	static sbyte func_play = 0;
 
 	if (!(Players[Player_num].flags & PLAYER_FLAGS_AFTERBURNER))
-		Afterburner_charge = 0;
+		Players[Player_num].afterburner_charge = 0;
 
 	if (Endlevel_sequence || Player_is_dead)
 	{
@@ -592,9 +592,9 @@ void do_afterburner_stuff(void)
 #endif
 	}
 
-	if ((Controls.afterburner_state != Last_afterburner_state && Last_afterburner_charge) || (Last_afterburner_state && Last_afterburner_charge && !Afterburner_charge)) {
+	if ((Controls.afterburner_state != Last_afterburner_state && Last_afterburner_charge) || (Last_afterburner_state && Last_afterburner_charge && !Players[Player_num].afterburner_charge)) {
 
-		if (Afterburner_charge && Controls.afterburner_state && (Players[Player_num].flags & PLAYER_FLAGS_AFTERBURNER)) {
+		if (Players[Player_num].afterburner_charge && Controls.afterburner_state && (Players[Player_num].flags & PLAYER_FLAGS_AFTERBURNER)) {
 			digi_link_sound_to_object3( SOUND_AFTERBURNER_IGNITE, Players[Player_num].objnum, 1, F1_0, i2f(256), AFTERBURNER_LOOP_START, AFTERBURNER_LOOP_END );
 #ifdef NETWORK
 			if (Game_mode & GM_MULTI)
@@ -620,7 +620,7 @@ void do_afterburner_stuff(void)
 	//@@	afterburner_shake();
 
 	Last_afterburner_state = Controls.afterburner_state;
-	Last_afterburner_charge = Afterburner_charge;
+	Last_afterburner_charge = Players[Player_num].afterburner_charge;
 }
 
 // -- //	------------------------------------------------------------------------------------
