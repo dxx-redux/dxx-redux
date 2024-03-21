@@ -6262,7 +6262,7 @@ void multi_send_ship_status_for_frame()
 	PUT_INTEL_INT(multibuf + 35, Players[Player_num].homing_object_dist);
 	PUT_INTEL_INT(multibuf + 39, Players[Player_num].afterburner_charge);
 
-	multi_send_data_direct( multibuf, 39, multi_who_is_master(), 2);
+	multi_send_data_direct( multibuf, 43, multi_who_is_master(), 2);
 }
 
 void multi_do_ship_status( const ubyte *buf )

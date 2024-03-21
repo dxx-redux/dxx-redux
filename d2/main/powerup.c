@@ -632,6 +632,10 @@ int do_powerup(object *obj)
 				powerup_basic(15, 15, 15, 0, "AFTERBURNER!");
 				Players[Player_num].afterburner_charge = f1_0;
 				used=1;
+#ifdef NETWORK
+				if (Game_mode & GM_MULTI)
+					multi_send_ship_status();
+#endif
 			}
 			break;
 

@@ -144,8 +144,12 @@ void read_flying_controls( object * obj )
 
 				new_count = (Players[Player_num].afterburner_charge / (DROP_DELTA_TIME/AFTERBURNER_USE_SECS));
 
-				if (old_count != new_count)
+				if (old_count != new_count) {
 					Drop_afterburner_blob_flag = 1;	//drop blob (after physics called)
+
+					if (Game_mode & GM_MULTI)
+						multi_send_ship_status();
+				}
 			}
 		}
 		else {
@@ -162,6 +166,9 @@ void read_flying_controls( object * obj )
 			Players[Player_num].afterburner_charge += charge_up;
 	
 			Players[Player_num].energy -= charge_up * 100 / 10;	//full charge uses 10% of energy
+
+			if (charge_up > 0 && (Game_mode & GM_MULTI))
+				multi_send_ship_status();
 		}
 	}
 
