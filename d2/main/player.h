@@ -102,6 +102,7 @@ typedef struct player {
 	ushort  secondary_ammo[MAX_SECONDARY_WEAPONS]; // How much ammo of each type.
 	sbyte   primary_weapon;         // The currently selected primary weapon.
 	sbyte   secondary_weapon;       // The currently selected secondary weapon.
+	fix     afterburner_charge;     // The amount of afterburner charge remaining.
 
 	ushort  pad; // Pad because increased weapon_flags from byte to short -YW 3/22/95
 

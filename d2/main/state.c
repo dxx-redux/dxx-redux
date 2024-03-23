@@ -1077,7 +1077,7 @@ int state_save_all_sub(char *filename, char *desc)
 	PHYSFS_write(fp, &Players[0].callsign[0], sizeof(char), (NUM_MARKERS)*(CALLSIGN_LEN+1)); // PHYSFS_write(fp, MarkerOwner, sizeof(MarkerOwner), 1); MarkerOwner is obsolete
 	PHYSFS_write(fp, MarkerMessage, sizeof(MarkerMessage), 1);
 
-	PHYSFS_write(fp, &Afterburner_charge, sizeof(fix), 1);
+	PHYSFS_write(fp, &Players[Player_num].afterburner_charge, sizeof(fix), 1);
 
 	//save last was super information
 	PHYSFS_write(fp, &Primary_last_was_super, sizeof(Primary_last_was_super), 1);
@@ -1575,7 +1575,7 @@ int state_restore_all_sub(char *filename, int secret_restore)
 
 	if (version>=11) {
 		if (secret_restore != 1)
-			Afterburner_charge = PHYSFSX_readSXE32(fp, swap);
+			Players[Player_num].afterburner_charge = PHYSFSX_readSXE32(fp, swap);
 		else {
 			PHYSFSX_readSXE32(fp, swap);
 		}

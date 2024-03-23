@@ -436,7 +436,6 @@ void init_player_stats_new_ship(ubyte pnum)
 			Dead_player_camera = 0;
 
 		Global_laser_firing_count=0;
-		Afterburner_charge = 0;
 		Controls.afterburner_state = 0;
 		Last_afterburner_state = 0;
 		Missile_viewer=NULL; //reset missile camera if out there
@@ -457,6 +456,7 @@ void init_player_stats_new_ship(ubyte pnum)
 	Players[pnum].secondary_ammo[0] = 2 + NDL - Difficulty_level;
 	Players[pnum].primary_weapon_flags = HAS_LASER_FLAG;
 	Players[pnum].secondary_weapon_flags = HAS_CONCUSSION_FLAG;
+	Players[pnum].afterburner_charge = 0;
 	Players[pnum].flags &= ~( PLAYER_FLAGS_QUAD_LASERS | PLAYER_FLAGS_AFTERBURNER | PLAYER_FLAGS_CLOAKED | PLAYER_FLAGS_INVULNERABLE | PLAYER_FLAGS_MAP_ALL | PLAYER_FLAGS_CONVERTER | PLAYER_FLAGS_AMMO_RACK | PLAYER_FLAGS_HEADLIGHT | PLAYER_FLAGS_HEADLIGHT_ON | PLAYER_FLAGS_FLAG);
 	Players[pnum].cloak_time = 0;
 	Players[pnum].invulnerable_time = 0;
@@ -468,8 +468,7 @@ void init_player_stats_new_ship(ubyte pnum)
 #ifdef NETWORK
 	if(Game_mode & GM_MULTI && Netgame.BornWithBurner && !is_observer()) {
 		Players[pnum].flags |= PLAYER_FLAGS_AFTERBURNER;
-		if (pnum == Player_num)
-			Afterburner_charge = f1_0;
+		Players[pnum].afterburner_charge = f1_0;
 	}
 #endif
 	digi_kill_sound_linked_to_object(Players[pnum].objnum);
