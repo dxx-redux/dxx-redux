@@ -763,7 +763,7 @@ void reset_player_object()
 
 	//Init render info
 
-	ConsoleObject->render_type = RT_POLYOBJ;
+	ConsoleObject->render_type = is_observer() ? RT_NONE : RT_POLYOBJ;
 	ConsoleObject->rtype.pobj_info.model_num = Player_ship->model_num;		//what model is this?
 	ConsoleObject->rtype.pobj_info.subobj_flags = 0;		//zero the flags
 	ConsoleObject->rtype.pobj_info.tmap_override = -1;		//no tmap override!

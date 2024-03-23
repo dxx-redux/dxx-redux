@@ -1938,3 +1938,13 @@ void flickering_light_write(flickering_light *fl, PHYSFS_file *fp)
 bool is_observer() {
 	return (Game_mode & GM_OBSERVER) != 0;
 }
+
+object* get_player_view_object()
+{
+	// If we're observing a player, ConsoleObject may not actually be their location if we're in chase cam.
+	// But we still want to show extra views from their real location, so correct it
+	if (is_observer() && is_observing_player())
+		return &Objects[Players[Current_obs_player].objnum];
+	else
+		return ConsoleObject;
+}

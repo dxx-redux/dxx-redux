@@ -1643,7 +1643,7 @@ void render_frame(fix eye_offset, int window_num)
 	if (start_seg_num==-1)
 		start_seg_num = Viewer->segnum;
 
-	if (Rear_view && (Viewer==ConsoleObject)) {
+	if (Rear_view && (Viewer==get_player_view_object())) {
 		vms_matrix headm,viewm;
 		Player_head_angles.p = Player_head_angles.b = 0;
 		Player_head_angles.h = 0x7fff;
