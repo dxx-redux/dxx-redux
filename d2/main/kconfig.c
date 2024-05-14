@@ -1385,12 +1385,7 @@ void kconfig_read_controls(d_event *event, int automap_flag)
 			if (axis == kc_joystick[23].value) // Throttle - default deadzone
 				joy_null_value = PlayerCfg.JoystickDead[5]*3;
 
-			if (Controls.raw_joy_axis[axis] > joy_null_value) 
-				Controls.raw_joy_axis[axis] = ((Controls.raw_joy_axis[axis]-joy_null_value)*128)/(128-joy_null_value);
-			else if (Controls.raw_joy_axis[axis] < -joy_null_value)
-				Controls.raw_joy_axis[axis] = ((Controls.raw_joy_axis[axis]+joy_null_value)*128)/(128-joy_null_value);
-			else
-				Controls.raw_joy_axis[axis] = 0;
+			Controls.raw_joy_axis[axis] = joy_apply_deadzone(Controls.raw_joy_axis[axis], joy_null_value);
 			Controls.joy_axis[axis] = (Controls.raw_joy_axis[axis]*FrameTime)/128;
 			break;
 		}

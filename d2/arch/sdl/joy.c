@@ -54,6 +54,7 @@ static struct {
 	int hat_map[MAX_HATS_PER_JOYSTICK];  //Note: Descent expects hats to be buttons, so these are indices into Joystick.buttons
 	int axis_map[MAX_AXES_PER_JOYSTICK];
 	int button_map[MAX_BUTTONS_PER_JOYSTICK];
+	int axis_button_map[MAX_AXES_PER_JOYSTICK];
 } SDL_Joysticks[MAX_JOYSTICKS];
 
 void joy_button_handler(SDL_JoyButtonEvent *jbe)
@@ -129,6 +130,61 @@ int joy_axis_handler(SDL_JoyAxisEvent *jae)
 	return 1;
 }
 
+int joy_apply_deadzone(int value, int deadzone)
+{
+	if (value > deadzone)
+		return ((value - deadzone) * 128) / (128 - deadzone);
+	else if (value < -deadzone)
+		return ((value + deadzone) * 128) / (128 - deadzone);
+	else
+		return 0;
+}
+
+static int send_axis_button_event(unsigned button, event_type e)
+{
+	d_event_joystickbutton event;
+
+	Joystick.button_state[button] = (e == EVENT_JOYSTICK_BUTTON_UP) ? 0 : 1;
+	event.type = e;
+	event.button = button;
+	con_printf(CON_DEBUG, "Sending event %sEVENT_JOYSTICK_BUTTON_DOWN, button %d\n",
+		(e == EVENT_JOYSTICK_BUTTON_UP ? "EVENT_JOYSTICK_BUTTON_UP" : "EVENT_JOYSTICK_BUTTON_DOWN"), button);
+	event_send((d_event *)&event);
+	return 1;
+}
+
+int joy_axisbutton_handler(SDL_JoyAxisEvent *jae)
+{
+	int button;
+	int sent = 0;
+
+	button = SDL_Joysticks[jae->which].axis_button_map[jae->axis];
+
+	// We have to hardcode a deadzone here. It's not mapped into the settings.
+	// We could add another deadzone slider called "axis button deadzone".
+	// I think it's safe to assume a 30% deadzone on analog button presses for now.
+	int deadzone = 38;
+	int prev_value = joy_apply_deadzone(Joystick.axis_value[jae->axis], deadzone);
+	int new_value = joy_apply_deadzone(jae->value/256, deadzone);
+
+	if (prev_value <= 0 && new_value >= 0) // positive pressed
+	{
+		if (prev_value < 0) // Do previous direction release first if the case
+			sent |= send_axis_button_event(button + 1, EVENT_JOYSTICK_BUTTON_UP);
+		if (new_value > 0)
+			sent |= send_axis_button_event(button, EVENT_JOYSTICK_BUTTON_DOWN);
+	}
+	else if (prev_value >= 0 && new_value <= 0) // negative pressed
+	{
+		if (prev_value > 0) // Do previous direction release first if the case
+			sent |= send_axis_button_event(button, EVENT_JOYSTICK_BUTTON_UP);
+		if (new_value < 0)
+			sent |= send_axis_button_event(button + 1, EVENT_JOYSTICK_BUTTON_DOWN);
+	}
+
+	return sent;
+}
+
 
 /* ----------------------------------------------- */
 
@@ -197,6 +253,8 @@ void joy_init()
 			}
 			for (j=0; j < SDL_Joysticks[num_joysticks].n_hats; j++)
 			{
+				if (Joystick.n_buttons + 4 > MAX_BUTTONS_PER_JOYSTICK)
+					break;
 				SDL_Joysticks[num_joysticks].hat_map[j] = Joystick.n_buttons;
 				//a hat counts as four buttons
 				sprintf(temp, "J%d H%d%c", i + 1, j + 1, 0202);
@@ -206,6 +264,17 @@ void joy_init()
 				sprintf(temp, "J%d H%d%c", i + 1, j + 1, 0200);
 				joybutton_text[Joystick.n_buttons++] = d_strdup(temp);
 				sprintf(temp, "J%d H%d%c", i + 1, j + 1, 0201);
+				joybutton_text[Joystick.n_buttons++] = d_strdup(temp);
+			}
+			for (j=0; j < SDL_Joysticks[num_joysticks].n_axes; j++)
+			{
+				if (Joystick.n_buttons + 2 > MAX_BUTTONS_PER_JOYSTICK)
+					break;
+				SDL_Joysticks[num_joysticks].axis_button_map[j] = Joystick.n_buttons;
+				//an axis count as 2 buttons. negative - and positive +
+				sprintf(temp, "J%d -A%d", i + 1, j + 1);
+				joybutton_text[Joystick.n_buttons++] = d_strdup(temp);
+				sprintf(temp, "J%d +A%d", i + 1, j + 1);
 				joybutton_text[Joystick.n_buttons++] = d_strdup(temp);
 			}
 
