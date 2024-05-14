@@ -67,6 +67,8 @@ void event_poll()
 			case SDL_JOYAXISMOTION:
 				if (GameArg.CtlNoJoystick)
 					break;
+				if (joy_axisbutton_handler((SDL_JoyAxisEvent *)&event))
+					idle = 0;
 				if (joy_axis_handler((SDL_JoyAxisEvent *)&event))
 					idle = 0;
 				break;

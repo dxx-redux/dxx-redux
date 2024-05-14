@@ -29,5 +29,8 @@ extern int event_joystick_get_button(struct d_event *event);
 extern void joy_button_handler(SDL_JoyButtonEvent *jbe);
 extern void joy_hat_handler(SDL_JoyHatEvent *jhe);
 extern int joy_axis_handler(SDL_JoyAxisEvent *jae);
+extern int joy_axisbutton_handler(SDL_JoyAxisEvent *jae);
+
+extern int joy_apply_deadzone(int value, int deadzone);
 
 #endif // _JOY_H
