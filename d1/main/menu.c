@@ -2367,7 +2367,7 @@ int menu_obs_options_handler ( newmenu *menu, d_event *event, void *userdata )
 
 		case EVENT_NEWMENU_SELECTED:
 			if (citem == 1) {
-				newmenu_listbox1("Select Game Mode", SDL_arraysize(Obs_mode_names), Obs_mode_names,
+				newmenu_listbox1("Select Game Mode", SDL_arraysize(Obs_mode_names), (char **)Obs_mode_names,
 					1, cmode, select_obs_game_mode_handler, obs_menu_data);
 				return 1;
 			}
