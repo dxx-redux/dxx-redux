@@ -177,7 +177,10 @@ int player_has_weapon(ubyte pnum, int weapon_num, int secondary_flag)
 
 		// Special case: Gauss cannon uses vulcan ammo.
 		if (weapon_num == GAUSS_INDEX) {
-			if (Weapon_info[weapon_index].ammo_usage <= Players[pnum].primary_ammo[VULCAN_INDEX])
+			int ammo_usage = Weapon_info[weapon_index].ammo_usage;
+			if ((Game_mode & GM_MULTI) && Netgame.RebalancedWeapons)
+				ammo_usage *= 3; // 2 -> 6
+			if (ammo_usage <= Players[pnum].primary_ammo[VULCAN_INDEX])
 				return_value |= HAS_AMMO_FLAG;
 		} else
 			if (Weapon_info[weapon_index].ammo_usage <= Players[pnum].primary_ammo[weapon_num])

@@ -1715,7 +1715,7 @@ void do_laser_firing_player(void)
 
 	if ((Game_mode & GM_MULTI) && Netgame.RebalancedWeapons) {
 		if (weapon_id == GAUSS_ID)
-			ammo_used *= 10; // 2 -> 20
+			ammo_used *= 3; // 2 -> 6
 	}
 
 	primary_ammo = (Players[Player_num].primary_weapon == GAUSS_INDEX)?(plp->primary_ammo[VULCAN_INDEX]):(plp->primary_ammo[Players[Player_num].primary_weapon]);
