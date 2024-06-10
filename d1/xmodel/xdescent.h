@@ -6,20 +6,20 @@
 
 static inline int Max(int a, int b) { return a > b ? a : b; }
 
-#define __pack__
+#define __xpack__
 typedef union tTexCoord2f {
 	float a [2];
 	struct {
 		float	u, v;
 		} v;
-	} __pack__ tTexCoord2f;
+	} __xpack__ tTexCoord2f;
 
 typedef union tTexCoord3f {
 	float a [3];
 	struct {
 		float	u, v, l;
 		} v;
-	} __pack__ tTexCoord3f;
+	} __xpack__ tTexCoord3f;
 
 
 #define MAX_THRUSTERS		16
@@ -124,19 +124,19 @@ public:
 
 typedef struct tBGR {
 	uint8_t	b,g,r;
-} __pack__ tBGR;
+} __xpack__ tBGR;
 
 typedef struct tBGRA {
 	uint8_t	b,g,r,a;
-} __pack__ tBGRA;
+} __xpack__ tBGRA;
 
 typedef struct tRGB {
 	uint8_t	r,g,b;
-} __pack__ tRGB;
+} __xpack__ tRGB;
 
 typedef struct tRGBA {
 	uint8_t	r,g,b,a;
-} __pack__ tRGBA;
+} __xpack__ tRGBA;
 class CRGBColor {
 	public:
 		uint8_t	r, g, b;
