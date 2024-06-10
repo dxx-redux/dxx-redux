@@ -56,16 +56,16 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #endif
 
 #if 1 // packing no longer needed
-#define __pack__
+#define __xpack__
 #else
 // the following stuff has nothing to do with types but needed everywhere,
 // and since this file is included everywhere, it's here.
 #ifdef __GNUC__
-# define __pack__ __attribute__((packed))
+# define __xpack__ __attribute__((packed))
 #elif defined(_WIN32)
 # pragma pack(push, packing)
 # pragma pack(1)
-# define __pack__
+# define __xpack__
 #else
 # error d2x will not work without packed structures
 #endif

@@ -37,7 +37,7 @@ typedef struct tQuadInt {// integer 64 bit, previously called "quad"
 	uint32_t low;
    int32_t high;
 #endif
-} __pack__ tQuadInt;
+} __xpack__ tQuadInt;
 
 #define WORLDSCALE	1000	// one world unit (65536 in fixed point arithmetic) corresponds to 1000 mm (1 m) of the real world
 

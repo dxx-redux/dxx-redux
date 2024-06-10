@@ -53,10 +53,10 @@ class CFloatMatrix;
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 /**
- * \class __pack__ CFixVector
+ * \class CFixVector
  * A 3 element fixed-point vector.
  */
-class __pack__ CFixVector {
+class __xpack__ CFixVector {
 #if 1
 	public:
 		union {
@@ -182,7 +182,7 @@ class __pack__ CFixVector {
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 /**
- * \class __pack__ CFloatVector
+ * \class CFloatVector
  * A 4 element floating point vector class
  */
 class CFloatVector {
@@ -295,7 +295,7 @@ class CFloatVector {
 //------------------------------------------------------------------------------
 
 /**
- * \class __pack__ CFloatVector3
+ * \class CFloatVector3
  * A 3 element floating point vector class
  */
 class CFloatVector3 {
@@ -385,7 +385,7 @@ class CFloatVector3 {
 
 //Angle vector.  Used to store orientations
 
-class __pack__ CAngleVector {
+class __xpack__ CAngleVector {
 #if 1
 	public:
 		union {
@@ -1438,7 +1438,7 @@ inline const CFixVector CFixVector::operator/ (const fix d) const {
 // -----------------------------------------------------------------------------
 
 /**
- * \class __pack__ CFixMatrix
+ * \class CFixMatrix
  *
  * A 3x3 rotation m.matrix.  Sorry about the numbering starting with one. Ordering
  * is across then down, so <m1,m2,m3> is the first row.
@@ -1449,7 +1449,7 @@ typedef union tFixMatrixData {
 	} dir;
 	CFixVector	mat [3];
 	fix			vec [9];
-} __pack__ tFixMatrixData;
+} __xpack__ tFixMatrixData;
 
 
 class CFixMatrix {
@@ -1631,7 +1631,7 @@ inline void CFixMatrix::CheckAndFix (void)
 
 
 /**
- * \class __pack__ CFloatMatrix
+ * \class CFloatMatrix
  *
  * A 4x4 floating point transformation m.matrix
  */

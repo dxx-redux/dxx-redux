@@ -31,7 +31,7 @@ typedef struct {
     uint16_t height;            // image height in pixels
     char   bits;              // image bits per pixel 8,16,24,32
     char   descriptor;        // image descriptor bits (vh flip bits)
-} __pack__ tTGAHeader;
+} __xpack__ tTGAHeader;
 
 
 class CTGAHeader {
