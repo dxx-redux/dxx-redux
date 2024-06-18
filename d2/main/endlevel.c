@@ -293,6 +293,9 @@ void start_endlevel_sequence()
 	int	i;
 	
 
+	if (Player_is_dead || ConsoleObject->flags&OF_SHOULD_BE_DEAD)
+		return;				//don't start if dead!
+
 	reset_rear_view(); //turn off rear view if set - NOTE: make sure this happens before we pause demo recording!!
 
 	if (Newdemo_state == ND_STATE_RECORDING)		// stop demo recording
@@ -308,9 +311,6 @@ void start_endlevel_sequence()
 		strcpy(last_palette_loaded,"");		//force palette load next time
 		return;
 	}
-
-	if (Player_is_dead || ConsoleObject->flags&OF_SHOULD_BE_DEAD)
-		return;				//don't start if dead!
 
 	//	Dematerialize Buddy!
 	for (i=0; i<=Highest_object_index; i++)

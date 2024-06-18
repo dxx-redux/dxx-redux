@@ -210,6 +210,9 @@ void start_endlevel_sequence()
 #endif
 	int exit_side,tunnel_length;
 
+	if (Player_is_dead || ConsoleObject->flags&OF_SHOULD_BE_DEAD)
+		return;				//don't start if dead!
+
 	reset_rear_view(); //turn off rear view if set - NOTE: make sure this happens before we pause demo recording!!
 
 	if (Newdemo_state == ND_STATE_RECORDING)		// stop demo recording
@@ -217,9 +220,6 @@ void start_endlevel_sequence()
 
 	if (Newdemo_state == ND_STATE_PLAYBACK)		// don't do this if in playback mode
 		return;
-
-	if (Player_is_dead || ConsoleObject->flags&OF_SHOULD_BE_DEAD)
-		return;				//don't start if dead!
 
 	Players[Player_num].homing_object_dist = -F1_0; // Turn off homing sound.
 
