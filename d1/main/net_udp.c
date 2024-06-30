@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
 #ifdef __unix__
 #include <sys/time.h>
 #endif
