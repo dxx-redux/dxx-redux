@@ -1089,6 +1089,7 @@ void StartNewLevelSecret(int level_num, int page_in_textures)
 		init_morphs();
 		init_all_matcens();
 		reset_special_effects();
+		init_exploding_walls();
 		StartSecretLevel();
 	} else {
 		if (PHYSFSX_exists(SECRETC_FILENAME,0))
@@ -1101,6 +1102,7 @@ void StartNewLevelSecret(int level_num, int page_in_textures)
 			Players[Player_num].primary_weapon = pw_save;
 			Players[Player_num].secondary_weapon = sw_save;
 			reset_special_effects();
+			init_exploding_walls();
 			StartSecretLevel();
 			// -- No: This is only for returning to base level: set_pos_from_return_segment();
 		} else {
@@ -1614,6 +1616,7 @@ void StartNewLevelSub(int level_num, int page_in_textures, int secret_flag)
 		read_player_file();		//get window sizes
 
 	reset_special_effects();
+	init_exploding_walls();
 
 #ifdef OGL
 	gr_remap_mono_fonts();

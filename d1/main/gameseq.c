@@ -1212,6 +1212,7 @@ void StartNewLevelSub(int level_num, int page_in_textures, int secret_flag)
 		set_highest_level(Current_level_num);
 
 	reset_special_effects();
+	init_exploding_walls();
 
 #ifdef OGL
 	ogl_cache_level_textures();
