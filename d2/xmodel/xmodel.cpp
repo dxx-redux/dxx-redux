@@ -15,6 +15,7 @@ extern "C" {
 #include "config.h"
 #undef FILENAME_LEN
 #include "polyobj.h"
+#include "texmap.h"
 }
 
 struct CGameFolders gameFolders;
@@ -174,10 +175,21 @@ void *xmodel_load(const char *filename) {
 void xmodel_show(void *model, int mpcolor, g3s_lrgb *light) {
 	render_model& rm = *(render_model *)model;
 	int num_bitmaps = rm.m.m_textures.m_nBitmaps;
-	OGL_ENABLE(TEXTURE_2D);
+
 	if (GameCfg.ClassicDepth && !(Game_mode & GM_MULTI))
 		glEnable(GL_DEPTH_TEST);
-	glColor3f(f2fl(light->r), f2fl(light->g), f2fl(light->b));
+
+	float color_alpha;
+	if (tmap_drawer_ptr == draw_tmap_flat) { // cloaked effect
+		OGL_DISABLE(TEXTURE_2D);
+		color_alpha = 1.0 - (grd_curcanv->cv_fade_level/(GLfloat)GR_FADE_LEVELS) * 0.9;
+		glColor4f(0, 0, 0, color_alpha);
+	} else {
+		OGL_ENABLE(TEXTURE_2D);
+		color_alpha = (grd_curcanv->cv_fade_level >= GR_FADE_OFF)?1.0:(1.0 - (float)grd_curcanv->cv_fade_level / ((float)GR_FADE_LEVELS - 1.0));
+		glColor4f(f2fl(light->r), f2fl(light->g), f2fl(light->b), color_alpha);
+	}
+
 	glBindBuffer(GL_ARRAY_BUFFER, rm.vbo);
 	glVertexPointer(3, GL_FLOAT, sizeof(vert), (void *)0);
 	glTexCoordPointer(2, GL_FLOAT, sizeof(vert), (void *)offsetof(vert, tex));
