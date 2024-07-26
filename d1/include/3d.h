@@ -258,5 +258,7 @@ int g3_poly_get_color(void *model_ptr);
 // routine to convert little to big endian in polygon model data
 void swap_polygon_model_data(ubyte *data);
 
+extern tmap_drawer_type tmap_drawer_ptr;
+
 #endif
 
