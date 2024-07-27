@@ -311,17 +311,24 @@ int main(int argc, char *argv[])
 	if (!PHYSFSX_checkSupportedArchiveTypes())
 		return(0);
 
-	if (! PHYSFSX_contfile_init("descent.hog", 1))
+	if (! PHYSFSX_contfile_init("descent.hog", 1)) {
+		char path[PATH_MAX];
+		snprintf(path, sizeof(path), "%s", PHYSFS_getWriteDir());
+		if (path[0] && (path[strlen(path) - 1] == '/' || path[strlen(path) - 1] == '\\'))
+			path[strlen(path) - 1] = 0;
 #define DXX_NAME_NUMBER	"1"
 #define DXX_HOGFILE_NAMES	"descent.hog"
-#if defined(__unix__) && !defined(__APPLE__)
+#if defined(__APPLE__)
 #define DXX_HOGFILE_PROGRAM_DATA_DIRECTORY	\
-			      "\t$HOME/.d" DXX_NAME_NUMBER "x-rebirth\n"	\
+			      "\t%s\n" \
+			      "\t~/Library/Preferences/D" DXX_NAME_NUMBER "X-Rebirth/Data\n"
+#elif defined(__unix__)
+#define DXX_HOGFILE_PROGRAM_DATA_DIRECTORY	\
+			      "\t%s\n"	\
 			      "\t" SHAREPATH "\n"
 #else
 #define DXX_HOGFILE_PROGRAM_DATA_DIRECTORY	\
-				  "\tDirectory containing D" DXX_NAME_NUMBER "X-Redux\n" \
-				  "\t~/Library/Preferences/D" DXX_NAME_NUMBER "X-Rebirth/Data\n"
+			      "\t%s\n"
 #endif
 #if (defined(__APPLE__) && defined(__MACH__)) || defined(macintosh)
 #define DXX_HOGFILE_APPLICATION_BUNDLE	\
@@ -335,7 +342,8 @@ int main(int argc, char *argv[])
 		"\tIn a subdirectory called 'Data'\n"	\
 		DXX_HOGFILE_APPLICATION_BUNDLE	\
 		"Or use the -hogdir option to specify an alternate location."
-		Error(DXX_MISSING_HOGFILE_ERROR_TEXT);
+		Error(DXX_MISSING_HOGFILE_ERROR_TEXT, path);
+	}
 
 	switch (PHYSFSX_fsize("descent.hog"))
 	{
