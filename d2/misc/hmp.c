@@ -26,6 +26,7 @@
 int midi_volume;
 int channel_volume[16];
 void hmp_stop(hmp_file *hmp);
+HMIDISTRM stream;
 #endif
 
 // READ/OPEN/CLOSE HMP
@@ -151,19 +152,22 @@ void hmp_stop(hmp_file *hmp)
 	if (!hmp->stop) {
 		hmp->stop = 1;
 		//PumpMessages();
-		midiStreamStop(hmp->hmidi);
+		midiStreamStop(stream);
 		while (hmp->bufs_in_mm)
 			timer_delay(1);
 	}
 	while ((mhdr = hmp->evbuf)) {
-		midiOutUnprepareHeader((HMIDIOUT)hmp->hmidi, mhdr, sizeof(MIDIHDR));
+		midiOutUnprepareHeader(stream, mhdr, sizeof(MIDIHDR));
 		hmp->evbuf = mhdr->lpNext;
 		d_free(mhdr);
 	}
+}
 
-	if (hmp->hmidi) {
-		midiStreamClose(hmp->hmidi);
-		hmp->hmidi = NULL;
+void hmp_uninit()
+{
+	if (stream) {
+		midiStreamClose(stream);
+		stream = NULL;
 	}
 }
 
@@ -412,7 +416,7 @@ static void _stdcall midi_callback(HMIDISTRM hms, UINT uMsg, DWORD_PTR dwUser, D
 
 			reset_tracks(hmp);
 		}
-		if ((rc = midiStreamOut(hmp->hmidi, hmp->evbuf,
+		if ((rc = midiStreamOut(stream, hmp->evbuf,
 			sizeof(MIDIHDR))) != MMSYSERR_NOERROR) {
 			/* ??? */
 		} else {
@@ -439,7 +443,7 @@ void hmp_setvolume(hmp_file *hmp, int volume)
 
 	if (hmp)
 		for (channel = 0; channel < 16; channel++)
-			midiOutShortMsg((HMIDIOUT)hmp->hmidi, (DWORD)(channel | MIDI_CONTROL_CHANGE << 4 | MIDI_VOLUME << 8 | (channel_volume[channel] * volume / MIDI_VOLUME_SCALE) << 16));
+			midiOutShortMsg((HMIDIOUT)stream, (DWORD)(channel | MIDI_CONTROL_CHANGE << 4 | MIDI_VOLUME << 8 | (channel_volume[channel] * volume / MIDI_VOLUME_SCALE) << 16));
 
 	midi_volume = volume;
 }
@@ -453,17 +457,19 @@ int hmp_play(hmp_file *hmp, int bLoop)
 	hmp->loop_start = 0;
 	hmp->loop_end = 0;
 	hmp->looping = 0;
-	hmp->devid = MIDI_MAPPER;
 
 	if ((rc = setup_buffers(hmp)))
 		return rc;
-	if ((midiStreamOpen(&hmp->hmidi, &hmp->devid,1, (DWORD_PTR) midi_callback, 0, CALLBACK_FUNCTION)) != MMSYSERR_NOERROR) {
-		hmp->hmidi = NULL;
-		return HMP_MM_ERR;
+	if (!stream) {
+		UINT devid = MIDI_MAPPER;
+		if ((midiStreamOpen(&stream, &devid,1, (DWORD_PTR) midi_callback, 0, CALLBACK_FUNCTION)) != MMSYSERR_NOERROR) {
+			stream = NULL;
+			return HMP_MM_ERR;
+		}
 	}
 	mptd.cbStruct  = sizeof(mptd);
 	mptd.dwTimeDiv = hmp->tempo;
-	if ((midiStreamProperty(hmp->hmidi,(LPBYTE)&mptd,MIDIPROP_SET|MIDIPROP_TIMEDIV)) != MMSYSERR_NOERROR) {
+	if ((midiStreamProperty(stream,(LPBYTE)&mptd,MIDIPROP_SET|MIDIPROP_TIMEDIV)) != MMSYSERR_NOERROR) {
 		return HMP_MM_ERR;
 	}
 
@@ -479,31 +485,31 @@ int hmp_play(hmp_file *hmp, int bLoop)
 			} else
 				return rc;
 		}
- 		if ((rc = midiOutPrepareHeader((HMIDIOUT)hmp->hmidi, hmp->evbuf,
+		if ((rc = midiOutPrepareHeader((HMIDIOUT)stream, hmp->evbuf,
 			sizeof(MIDIHDR))) != MMSYSERR_NOERROR) {
 			return HMP_MM_ERR;
 		}
-		if ((rc = midiStreamOut(hmp->hmidi, hmp->evbuf,
+		if ((rc = midiStreamOut(stream, hmp->evbuf,
 			sizeof(MIDIHDR))) != MMSYSERR_NOERROR) {
 			return HMP_MM_ERR;
 		}
 		hmp->evbuf = hmp->evbuf->lpNext;
 		hmp->bufs_in_mm++;
 	}
-	midiStreamRestart(hmp->hmidi);
+	midiStreamRestart(stream);
 	return 0;
 }
 
 void hmp_pause(hmp_file *hmp)
 {
 	if (hmp)
-		midiStreamPause(hmp->hmidi);
+		midiStreamPause(stream);
 }
 
 void hmp_resume(hmp_file *hmp)
 {
 	if (hmp)
-		midiStreamRestart(hmp->hmidi);
+		midiStreamRestart(stream);
 }
 
 void hmp_reset()

@@ -65,8 +65,6 @@ typedef struct hmp_file {
 	int tempo;
 #ifdef _WIN32
 	MIDIHDR *evbuf;
-	HMIDISTRM hmidi;
-	UINT devid;
 #endif
 	unsigned char *pending;
 	unsigned int pending_size;
@@ -86,6 +84,7 @@ int hmp_play(hmp_file *hmp, int bLoop);
 void hmp_pause(hmp_file *hmp);
 void hmp_resume(hmp_file *hmp);
 void hmp_reset();
+void hmp_uninit();
 #endif
 
 #endif

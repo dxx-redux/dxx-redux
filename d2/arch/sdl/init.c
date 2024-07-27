@@ -11,10 +11,14 @@
 #include "text.h"
 #include "args.h"
 #include "config.h"
+#include "hmp.h"
 
 void arch_close(void)
 {
 	songs_uninit();
+#ifdef _WIN32
+	hmp_uninit();
+#endif
 
 	gr_close();
 
