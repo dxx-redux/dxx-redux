@@ -3544,16 +3544,16 @@ void multi_powcap_cap_objects()
 		return;
 	}
 
-	// Don't even try.  TODO: There is no try, only do.
-	if(Netgame.PrimaryDupFactor > 1 || Netgame.SecondaryDupFactor > 1 || Netgame.SecondaryCapFactor > 1 ) {
-		return;
-	}
-
 	if (!(Game_mode & GM_HOARD))
 	  	Players[Player_num].secondary_ammo[PROXIMITY_INDEX]+=Proximity_dropped;
 	Players[Player_num].secondary_ammo[SMART_MINE_INDEX]+=Smartmines_dropped;
 	Proximity_dropped=0;
 	Smartmines_dropped=0;
+
+	// Don't even try.  TODO: There is no try, only do.
+	if(Netgame.PrimaryDupFactor > 1 || Netgame.SecondaryDupFactor > 1 || Netgame.SecondaryCapFactor > 1 ) {
+		return;
+	}
 
 	for (index=0;index<MAX_PRIMARY_WEAPONS;index++)
 	{

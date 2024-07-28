@@ -3342,14 +3342,14 @@ void multi_powcap_cap_objects()
 		return;
 	}
 
+	Players[Player_num].secondary_ammo[PROXIMITY_INDEX]+=Proximity_dropped;
+	Proximity_dropped=0;
+
 	// Don't even try.  TODO: There is no try, only do.
 	if(Netgame.PrimaryDupFactor > 1 || Netgame.SecondaryDupFactor > 1 || Netgame.SecondaryCapFactor > 1 ) {
 		return;
 	}
 
-
-	Players[Player_num].secondary_ammo[PROXIMITY_INDEX]+=Proximity_dropped;
-	Proximity_dropped=0;
 
 	for (index=0;index<MAX_PRIMARY_WEAPONS;index++)
 	{
