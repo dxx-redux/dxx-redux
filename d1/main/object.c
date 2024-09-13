@@ -1366,7 +1366,7 @@ void dead_player_end(void)
 	Player_exploded = 0;
 	obj_delete(Dead_player_camera-Objects);
 	//Dead_player_camera = NULL;
-	select_cockpit(PlayerCfg.CockpitMode[0]);
+	select_cockpit(PlayerCfg.PreferredCockpitMode);
 	Viewer = Viewer_save;
 	ConsoleObject->type = OBJ_PLAYER;
 	ConsoleObject->flags = Player_flags_save;

@@ -9,6 +9,7 @@
 #include "multi.h"
 #include "hudmsg.h"
 #include "byteswap.h"
+#include "playsave.h"
 
 int RespawningConcussions[MAX_PLAYERS]; 
 int VulcanAmmoBoxesOnBoard[MAX_PLAYERS];
@@ -82,7 +83,8 @@ void reset_obs() {
 		return;
 	
 	Current_obs_player = Player_num;
-	init_cockpit();
+	// Force the cockpit mode back to full screen, since we don't have data for the gauges.
+	select_cockpit(CM_FULL_SCREEN);
 
 	Objects[Players[Current_obs_player].objnum].pos = Last_pos;
 	Objects[Players[Current_obs_player].objnum].orient = Last_orient;
@@ -107,7 +109,7 @@ void set_obs(int pnum) {
 			HUD_init_message(HM_DEFAULT, "Observing %s!", Players[pnum].callsign);
 		}
 		Current_obs_player = pnum;
-		init_cockpit();
+		select_cockpit(can_draw_observer_cockpit() ? PlayerCfg.PreferredCockpitMode : CM_FULL_SCREEN);
 	} else {
 		reset_obs();
 	}

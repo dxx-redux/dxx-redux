@@ -1083,7 +1083,7 @@ void hud_show_weapons_mode(int type,int vertical,int x,int y){
 						Players[pnum].laser_level+1);
 					break;
 				case 1:
-				if (PlayerCfg.CockpitMode[1]==CM_FULL_SCREEN)
+				if (PlayerCfg.CurrentCockpitMode==CM_FULL_SCREEN)
 					sprintf(weapon_str,"V%i", f2i(Players[pnum].primary_ammo[1] * VULCAN_AMMO_SCALE));
 				else
 					sprintf(weapon_str,"V%i", f2i(Players[pnum].primary_ammo[1] * VULCAN_AMMO_SCALE));
@@ -1280,7 +1280,7 @@ void hud_show_lives()
 	if (HUD_toolong)
 		return;
 
-	if (PlayerCfg.CockpitMode[1] == CM_FULL_COCKPIT)
+	if (PlayerCfg.CurrentCockpitMode == CM_FULL_COCKPIT)
 		x = HUD_SCALE_X(7);
 	else
 		x = FSPACX(2);
@@ -1514,9 +1514,9 @@ void cockpit_decode_alpha(grs_bitmap *bm)
 
 void draw_wbu_overlay()
 {
-	grs_bitmap * bm = &GameBitmaps[cockpit_bitmap[PlayerCfg.CockpitMode[1]].index];
+	grs_bitmap * bm = &GameBitmaps[cockpit_bitmap[PlayerCfg.CurrentCockpitMode].index];
 
-	PIGGY_PAGE_IN(cockpit_bitmap[PlayerCfg.CockpitMode[1]]);
+	PIGGY_PAGE_IN(cockpit_bitmap[PlayerCfg.CurrentCockpitMode]);
 	cockpit_decode_alpha(bm);
 
 	if (WinBoxOverlay[0] != NULL)
@@ -1770,7 +1770,7 @@ void draw_weapon_info(int weapon_type,int weapon_num)
 
 	if (weapon_type == 0)
 	{
-		if (PlayerCfg.CockpitMode[1] == CM_STATUS_BAR)
+		if (PlayerCfg.CurrentCockpitMode == CM_STATUS_BAR)
 		{
 			draw_weapon_info_sub(Primary_weapon_to_weapon_info[weapon_num],&gauge_boxes[SB_PRIMARY_BOX],SB_PRIMARY_W_PIC_X,SB_PRIMARY_W_PIC_Y,PRIMARY_WEAPON_NAMES_SHORT(weapon_num),SB_PRIMARY_W_TEXT_X,SB_PRIMARY_W_TEXT_Y);
 			x=SB_PRIMARY_AMMO_X;
@@ -1785,7 +1785,7 @@ void draw_weapon_info(int weapon_type,int weapon_num)
 	}
 	else
 	{
-		if (PlayerCfg.CockpitMode[1] == CM_STATUS_BAR)
+		if (PlayerCfg.CurrentCockpitMode == CM_STATUS_BAR)
 		{
 			draw_weapon_info_sub(Secondary_weapon_to_weapon_info[weapon_num],&gauge_boxes[SB_SECONDARY_BOX],SB_SECONDARY_W_PIC_X,SB_SECONDARY_W_PIC_Y,SECONDARY_WEAPON_NAMES_SHORT(weapon_num),SB_SECONDARY_W_TEXT_X,SB_SECONDARY_W_TEXT_Y);
 			x=SB_SECONDARY_AMMO_X;
@@ -1817,7 +1817,7 @@ void draw_ammo_info(int x,int y,int ammo_count,int primary)
 
 void draw_primary_ammo_info(int ammo_count)
 {
-	if (PlayerCfg.CockpitMode[1] == CM_STATUS_BAR)
+	if (PlayerCfg.CurrentCockpitMode == CM_STATUS_BAR)
 		draw_ammo_info(SB_PRIMARY_AMMO_X,SB_PRIMARY_AMMO_Y,ammo_count,1);
 	else
 		draw_ammo_info(PRIMARY_AMMO_X,PRIMARY_AMMO_Y,ammo_count,1);
@@ -1825,7 +1825,7 @@ void draw_primary_ammo_info(int ammo_count)
 
 void draw_secondary_ammo_info(int ammo_count)
 {
-	if (PlayerCfg.CockpitMode[1] == CM_STATUS_BAR)
+	if (PlayerCfg.CurrentCockpitMode == CM_STATUS_BAR)
 		draw_ammo_info(SB_SECONDARY_AMMO_X,SB_SECONDARY_AMMO_Y,ammo_count,0);
 	else
 		draw_ammo_info(SECONDARY_AMMO_X,SECONDARY_AMMO_Y,ammo_count,0);
@@ -1887,7 +1887,7 @@ void draw_weapon_box(int weapon_type,int weapon_num)
 	if (weapon_box_states[weapon_type] != WS_SET)         //fade gauge
 	{
 		int fade_value = f2i(weapon_box_fade_values[weapon_type]);
-		int boxofs = (PlayerCfg.CockpitMode[1]==CM_STATUS_BAR)?SB_PRIMARY_BOX:COCKPIT_PRIMARY_BOX;
+		int boxofs = (PlayerCfg.CurrentCockpitMode==CM_STATUS_BAR)?SB_PRIMARY_BOX:COCKPIT_PRIMARY_BOX;
 
 		gr_settransblend(fade_value, GR_BLEND_NORMAL);
 		gr_rect(HUD_SCALE_X(gauge_boxes[boxofs+weapon_type].left),HUD_SCALE_Y(gauge_boxes[boxofs+weapon_type].top),HUD_SCALE_X(gauge_boxes[boxofs+weapon_type].right),HUD_SCALE_Y(gauge_boxes[boxofs+weapon_type].bot));
@@ -1953,7 +1953,7 @@ void sb_draw_energy_bar(int energy)
 
 void sb_draw_shield_num(int shield)
 {
-	grs_bitmap *bm = &GameBitmaps[cockpit_bitmap[PlayerCfg.CockpitMode[1]].index];
+	grs_bitmap *bm = &GameBitmaps[cockpit_bitmap[PlayerCfg.CurrentCockpitMode].index];
 	int sw, sh, saw;
 
 	//draw numbers
@@ -1961,7 +1961,7 @@ void sb_draw_shield_num(int shield)
 	gr_set_fontcolor(BM_XRGB(14,14,23),-1 );
 
 	//erase old one
-	PIGGY_PAGE_IN( cockpit_bitmap[PlayerCfg.CockpitMode[1]] );
+	PIGGY_PAGE_IN( cockpit_bitmap[PlayerCfg.CurrentCockpitMode] );
 	gr_setcolor(gr_gpixel(bm,SB_SHIELD_NUM_X,SB_SHIELD_NUM_Y-(SM_H(Game_screen_mode)-bm->bm_h)));
 	gr_get_string_size((shield>199)?"200":(shield>99)?"100":(shield>9)?"00":"0",&sw,&sh,&saw);
 	gr_printf((grd_curscreen->sc_w/2.267)-(sw/2),HUD_SCALE_Y(SB_SHIELD_NUM_Y),"%d",shield);
@@ -2008,7 +2008,7 @@ void draw_invulnerable_ship()
 	if (Players[pnum].invulnerable_time+INVULNERABLE_TIME_MAX-GameTime64 > 0 && (Players[pnum].invulnerable_time+INVULNERABLE_TIME_MAX-GameTime64 > F1_0*4 || GameTime64 & 0x8000))
 	{
 
-		if (PlayerCfg.CockpitMode[1] == CM_STATUS_BAR)	{
+		if (PlayerCfg.CurrentCockpitMode == CM_STATUS_BAR)	{
 			PIGGY_PAGE_IN(Gauges[GAUGE_INVULNERABLE+invulnerable_frame]);
 			hud_bitblt( HUD_SCALE_X(SB_SHIELD_GAUGE_X), HUD_SCALE_Y(SB_SHIELD_GAUGE_Y), &GameBitmaps[Gauges[GAUGE_INVULNERABLE+invulnerable_frame].index]);
 		} else {
@@ -2023,7 +2023,7 @@ void draw_invulnerable_ship()
 			if (++invulnerable_frame == N_INVULNERABLE_FRAMES)
 				invulnerable_frame=0;
 		}
-	} else if (PlayerCfg.CockpitMode[1] == CM_STATUS_BAR)
+	} else if (PlayerCfg.CurrentCockpitMode == CM_STATUS_BAR)
 		sb_draw_shield_bar(f2ir(Players[pnum].shields));
 	else
 		draw_shield_bar(f2ir(Players[pnum].shields));
@@ -2283,7 +2283,7 @@ void hud_show_kill_list()
 
 	save_y = y = grd_curcanv->cv_bitmap.bm_h - n_left*(LINE_SPACING);
 
-	if (PlayerCfg.CockpitMode[1] == CM_FULL_COCKPIT) {
+	if (PlayerCfg.CurrentCockpitMode == CM_FULL_COCKPIT) {
 		save_y = y -= FSPACX(6);
 		if ((Game_mode & GM_MULTI_COOP) || (Game_mode & GM_MULTI_ROBOTS))
 			x1 = FSPACX(33);
@@ -2311,7 +2311,7 @@ void hud_show_kill_list()
 		int sw,sh,aw;
 
 		if (i>=n_left) {
-			if (PlayerCfg.CockpitMode[1] == CM_FULL_COCKPIT)
+			if (PlayerCfg.CurrentCockpitMode == CM_FULL_COCKPIT)
 				x0 = grd_curcanv->cv_bitmap.bm_w - FSPACX(53);
 			else
 				x0 = grd_curcanv->cv_bitmap.bm_w - FSPACX(60);
@@ -4191,11 +4191,11 @@ void draw_hud()
 		// Show bomb countdown timers
 		observer_show_bomb_highlights();
 
-		if (is_observing_player() && PlayerCfg.ObsShowCockpit[get_observer_game_mode()] && !Obs_at_distance) {
-			if (PlayerCfg.CockpitMode[1]==CM_STATUS_BAR || PlayerCfg.CockpitMode[1]==CM_FULL_SCREEN)
+		if (can_draw_observer_cockpit()) {
+			if (PlayerCfg.CurrentCockpitMode==CM_STATUS_BAR || PlayerCfg.CurrentCockpitMode==CM_FULL_SCREEN)
 				hud_show_homing_warning();
 
-			if (PlayerCfg.CockpitMode[1]==CM_FULL_SCREEN) {
+			if (PlayerCfg.CurrentCockpitMode==CM_FULL_SCREEN) {
 				hud_show_energy();
 				hud_show_shield();
 				hud_show_weapons();
@@ -4210,9 +4210,9 @@ void draw_hud()
 				}
 			}
 
-			if (PlayerCfg.CockpitMode[1] != CM_LETTERBOX)
+			if (PlayerCfg.CurrentCockpitMode != CM_LETTERBOX)
 				show_reticle(PlayerCfg.ReticleType, 1);
-			if (PlayerCfg.CockpitMode[1] != CM_LETTERBOX && Newdemo_state != ND_STATE_PLAYBACK && (PlayerCfg.MouseControlStyle == MOUSE_CONTROL_FLIGHT_SIM) && PlayerCfg.MouseFSIndicator) /* Old School Mouse */
+			if (PlayerCfg.CurrentCockpitMode != CM_LETTERBOX && Newdemo_state != ND_STATE_PLAYBACK && (PlayerCfg.MouseControlStyle == MOUSE_CONTROL_FLIGHT_SIM) && PlayerCfg.MouseFSIndicator) /* Old School Mouse */
 				show_mousefs_indicator(Controls.raw_mouse_axis[0], Controls.raw_mouse_axis[1], Controls.raw_mouse_axis[2], GWIDTH/2, GHEIGHT/2, GHEIGHT/4);
 		}
 
@@ -4223,19 +4223,19 @@ void draw_hud()
 		return;
 
 	// Cruise speed
-	if ( Player_num > -1 && Viewer->type==OBJ_PLAYER && Viewer->id==Player_num && PlayerCfg.CockpitMode[1] != CM_REAR_VIEW)	{
+	if ( Player_num > -1 && Viewer->type==OBJ_PLAYER && Viewer->id==Player_num && PlayerCfg.CurrentCockpitMode != CM_REAR_VIEW)	{
 		int	x = FSPACX(1);
 		int	y = grd_curcanv->cv_bitmap.bm_h;
 
 		gr_set_curfont( GAME_FONT );
 		gr_set_fontcolor( BM_XRGB(0, 31, 0), -1 );
 		if (Cruise_speed > 0) {
-			if (PlayerCfg.CockpitMode[1]==CM_FULL_SCREEN) {
+			if (PlayerCfg.CurrentCockpitMode==CM_FULL_SCREEN) {
 				if (Game_mode & GM_MULTI)
 					y -= LINE_SPACING * 10;
 				else
 					y -= LINE_SPACING * 6;
-			} else if (PlayerCfg.CockpitMode[1] == CM_STATUS_BAR) {
+			} else if (PlayerCfg.CurrentCockpitMode == CM_STATUS_BAR) {
 				if (Game_mode & GM_MULTI)
 					y -= LINE_SPACING * 6;
 				else
@@ -4252,24 +4252,24 @@ void draw_hud()
 	}
 
 	//	Show score so long as not in rearview
-	if ( !Rear_view && PlayerCfg.CockpitMode[1]!=CM_REAR_VIEW && PlayerCfg.CockpitMode[1]!=CM_STATUS_BAR) {
+	if ( !Rear_view && PlayerCfg.CurrentCockpitMode!=CM_REAR_VIEW && PlayerCfg.CurrentCockpitMode!=CM_STATUS_BAR) {
 		hud_show_score();
 		if (score_time)
 			hud_show_score_added();
 	}
 
-	if ( !Rear_view && PlayerCfg.CockpitMode[1]!=CM_REAR_VIEW)
+	if ( !Rear_view && PlayerCfg.CurrentCockpitMode!=CM_REAR_VIEW)
 		hud_show_timer_count();
 
 	//	Show other stuff if not in rearview or letterbox.
-	if (!Rear_view && PlayerCfg.CockpitMode[1]!=CM_REAR_VIEW)
+	if (!Rear_view && PlayerCfg.CurrentCockpitMode!=CM_REAR_VIEW)
 	{
 		show_HUD_names();
 
-		if (PlayerCfg.CockpitMode[1]==CM_STATUS_BAR || PlayerCfg.CockpitMode[1]==CM_FULL_SCREEN)
+		if (PlayerCfg.CurrentCockpitMode==CM_STATUS_BAR || PlayerCfg.CurrentCockpitMode==CM_FULL_SCREEN)
 			hud_show_homing_warning();
 
-		if (PlayerCfg.CockpitMode[1]==CM_FULL_SCREEN) {
+		if (PlayerCfg.CurrentCockpitMode==CM_FULL_SCREEN) {
 			hud_show_energy();
 			hud_show_shield();
 			hud_show_weapons();
@@ -4290,24 +4290,24 @@ void draw_hud()
 #endif
 		HUD_render_message_frame();
 
-		if (PlayerCfg.CockpitMode[1]!=CM_STATUS_BAR)
+		if (PlayerCfg.CurrentCockpitMode!=CM_STATUS_BAR)
 			hud_show_lives();
 		if (Game_mode&GM_MULTI && Show_kill_list)
 			hud_show_kill_list();
-		if (PlayerCfg.CockpitMode[1] != CM_LETTERBOX)
+		if (PlayerCfg.CurrentCockpitMode != CM_LETTERBOX)
 			show_reticle(PlayerCfg.ReticleType, 1);
-		if (PlayerCfg.CockpitMode[1] != CM_LETTERBOX && Newdemo_state != ND_STATE_PLAYBACK && (PlayerCfg.MouseControlStyle == MOUSE_CONTROL_FLIGHT_SIM) && PlayerCfg.MouseFSIndicator) /* Old School Mouse */
+		if (PlayerCfg.CurrentCockpitMode != CM_LETTERBOX && Newdemo_state != ND_STATE_PLAYBACK && (PlayerCfg.MouseControlStyle == MOUSE_CONTROL_FLIGHT_SIM) && PlayerCfg.MouseFSIndicator) /* Old School Mouse */
 			show_mousefs_indicator(Controls.raw_mouse_axis[0], Controls.raw_mouse_axis[1], Controls.raw_mouse_axis[2], GWIDTH/2, GHEIGHT/2, GHEIGHT/4);
 		if (Game_mode & GM_MULTI && PlayerCfg.ObsShowObs[get_observer_game_mode()])
 		{
 			int startY = GHEIGHT;
 
-			if (PlayerCfg.CockpitMode[1] == CM_FULL_SCREEN || (is_observer() && (!is_observing_player() || Obs_at_distance || !PlayerCfg.ObsShowCockpit[get_observer_game_mode()]))) {
+			if (PlayerCfg.CurrentCockpitMode == CM_FULL_SCREEN || (is_observer() && !can_draw_observer_cockpit())) {
 				if ((Game_mode & GM_MULTI) || (Newdemo_state == ND_STATE_PLAYBACK && Newdemo_game_mode & GM_MULTI))
 					startY -= LINE_SPACING * 12;
 				else
 					startY -= LINE_SPACING * 6;
-			} else if (PlayerCfg.CockpitMode[1] == CM_STATUS_BAR) {
+			} else if (PlayerCfg.CurrentCockpitMode == CM_STATUS_BAR) {
 				if ((Game_mode & GM_MULTI) || (Newdemo_state == ND_STATE_PLAYBACK && Newdemo_game_mode & GM_MULTI))
 					startY -= LINE_SPACING * 8;
 				else
@@ -4323,7 +4323,7 @@ void draw_hud()
 		}
 	}
 
-	if (Rear_view && PlayerCfg.CockpitMode[1]!=CM_REAR_VIEW) {
+	if (Rear_view && PlayerCfg.CurrentCockpitMode!=CM_REAR_VIEW) {
 		HUD_render_message_frame();
 		gr_set_curfont( GAME_FONT );
 		gr_set_fontcolor(BM_XRGB(0,31,0),-1 );
@@ -4341,7 +4341,7 @@ void render_gauges()
 	int shields = f2ir(Players[pnum].shields);
 	int cloak = ((Players[pnum].flags&PLAYER_FLAGS_CLOAKED) != 0);
 
-	Assert(PlayerCfg.CockpitMode[1]==CM_FULL_COCKPIT || PlayerCfg.CockpitMode[1]==CM_STATUS_BAR);
+	Assert(PlayerCfg.CurrentCockpitMode==CM_FULL_COCKPIT || PlayerCfg.CurrentCockpitMode==CM_STATUS_BAR);
 
 	if (shields < 0 ) shields = 0;
 
@@ -4354,7 +4354,7 @@ void render_gauges()
 
 	draw_weapon_boxes();
 
-	if (PlayerCfg.CockpitMode[1] == CM_FULL_COCKPIT) {
+	if (PlayerCfg.CurrentCockpitMode == CM_FULL_COCKPIT) {
 
 		if (Newdemo_state == ND_STATE_RECORDING)
 			newdemo_record_player_energy(energy);
@@ -4379,7 +4379,7 @@ void render_gauges()
 		show_homing_warning();
 		draw_wbu_overlay();
 
-	} else if (PlayerCfg.CockpitMode[1] == CM_STATUS_BAR) {
+	} else if (PlayerCfg.CurrentCockpitMode == CM_STATUS_BAR) {
 
 		if (Newdemo_state == ND_STATE_RECORDING)
 			newdemo_record_player_energy(energy);

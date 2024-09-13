@@ -517,7 +517,7 @@ void stop_endlevel_sequence()
 {
 	Interpolation_method = 0;
 
-	select_cockpit(PlayerCfg.CockpitMode[0]);
+	select_cockpit(PlayerCfg.PreferredCockpitMode);
 
 	Endlevel_sequence = EL_OFF;
 

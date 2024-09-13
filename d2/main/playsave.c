@@ -104,7 +104,7 @@ int new_player_config()
     PlayerCfg.MouseOverrun[0] = PlayerCfg.MouseOverrun[1] = PlayerCfg.MouseOverrun[2] = PlayerCfg.MouseOverrun[3] = PlayerCfg.MouseOverrun[4] = PlayerCfg.MouseOverrun[5] = 0;
 	PlayerCfg.MouseFSDead = 0;
 	PlayerCfg.MouseFSIndicator = 1;
-	PlayerCfg.CockpitMode[0] = PlayerCfg.CockpitMode[1] = CM_FULL_COCKPIT;
+	PlayerCfg.CurrentCockpitMode = PlayerCfg.PreferredCockpitMode = CM_FULL_COCKPIT;
 	PlayerCfg.Cockpit3DView[0]=CV_NONE;
 	PlayerCfg.Cockpit3DView[1]=CV_NONE;
 	PlayerCfg.ReticleType = RET_TYPE_CLASSIC;
@@ -824,7 +824,7 @@ int read_player_file()
 	PlayerCfg.DefaultDifficulty = PHYSFSX_readByte(file);
 	PlayerCfg.AutoLeveling       = PHYSFSX_readByte(file);
 	PHYSFS_seek(file,PHYSFS_tell(file)+sizeof(sbyte)); // skip ReticleOn
-	PlayerCfg.CockpitMode[0] = PlayerCfg.CockpitMode[1] = PHYSFSX_readByte(file);
+	PlayerCfg.CurrentCockpitMode = PlayerCfg.PreferredCockpitMode = PHYSFSX_readByte(file);
 	PHYSFS_seek(file,PHYSFS_tell(file)+sizeof(sbyte)); //skip Default_display_mode
 	PlayerCfg.MissileViewEnabled      = PHYSFSX_readByte(file);
 	PlayerCfg.HeadlightActiveDefault  = PHYSFSX_readByte(file);
@@ -1066,7 +1066,7 @@ int write_player_file()
 	PHYSFSX_writeU8(file, PlayerCfg.DefaultDifficulty);
 	PHYSFSX_writeU8(file, PlayerCfg.AutoLeveling);
 	PHYSFSX_writeU8(file, PlayerCfg.ReticleType==RET_TYPE_NONE?0:1);
-	PHYSFSX_writeU8(file, PlayerCfg.CockpitMode[0]);
+	PHYSFSX_writeU8(file, PlayerCfg.PreferredCockpitMode);
 	PHYSFS_seek(file,PHYSFS_tell(file)+sizeof(PHYSFS_uint8)); // skip Default_display_mode
 	PHYSFSX_writeU8(file, PlayerCfg.MissileViewEnabled);
 	PHYSFSX_writeU8(file, PlayerCfg.HeadlightActiveDefault);

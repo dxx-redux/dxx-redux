@@ -187,6 +187,7 @@ void game_render_frame_mono(int flip);
 void game_leave_menus(void);
 
 bool is_observer();
+bool can_draw_observer_cockpit();
 
 //Cheats
 typedef struct game_cheats
