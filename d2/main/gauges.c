@@ -4839,6 +4839,10 @@ void do_cockpit_window_view(int win,object *viewer,int rear_view_flag,int user,c
 
 	if (PlayerCfg.CurrentCockpitMode == CM_FULL_SCREEN)
 	{
+		// If we're drawing the kill graph in observer mode, we don't have space for the extra views
+		if (is_observer() && PlayerCfg.ObsShowKillGraph[get_observer_game_mode()] && GameTime64 < Show_graph_until)
+			goto abort;
+
 		w = HUD_SCALE_X_AR(HIRESMODE?106:44);
 		h = HUD_SCALE_Y_AR(HIRESMODE?106:44);
 
