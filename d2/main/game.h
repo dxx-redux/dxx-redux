@@ -239,6 +239,7 @@ void game_leave_menus(void);
 
 bool is_observer();
 struct object* get_player_view_object();
+bool can_draw_observer_cockpit();
 
 //Cheats
 typedef struct game_cheats

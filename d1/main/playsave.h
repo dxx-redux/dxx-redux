@@ -73,7 +73,8 @@ typedef struct player_config
     int MouseOverrun[6];
 	int MouseFSDead;
 	int MouseFSIndicator;
-	int CockpitMode[2]; // 0 saves the "real" cockpit, 1 also saves letterbox and rear. Used to properly switch between modes and restore the real one.
+	int PreferredCockpitMode;
+	int CurrentCockpitMode; // Also includes letterbox/rear, which are not persisted in the player profile
 	char NetworkMessageMacro[4][MAX_MESSAGE_LEN];
 	int NetlifeKills;
 	int NetlifeKilled;

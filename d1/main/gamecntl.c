@@ -569,8 +569,12 @@ int HandleSystemKey(int key)
 
 		KEY_MAC(case KEY_COMMAND+KEY_3:)
 		case KEY_F3:
-			if (!Player_is_dead)
+			if ((!Player_is_dead && Viewer->type == OBJ_PLAYER) ||
+				// Alternatively, we can also toggle the cockpit while observing in first-person mode.
+				(is_observer() && can_draw_observer_cockpit()))
+			{
 				toggle_cockpit();
+			}
 			break;
 
 		KEY_MAC(case KEY_COMMAND+KEY_5:)

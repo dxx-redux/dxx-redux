@@ -89,7 +89,7 @@ int new_player_config()
     PlayerCfg.MouseOverrun[0] = PlayerCfg.MouseOverrun[1] = PlayerCfg.MouseOverrun[2] = PlayerCfg.MouseOverrun[3] = PlayerCfg.MouseOverrun[4] = PlayerCfg.MouseOverrun[5] = 0;
 	PlayerCfg.MouseFSDead = 0;
 	PlayerCfg.MouseFSIndicator = 1;
-	PlayerCfg.CockpitMode[0] = PlayerCfg.CockpitMode[1] = CM_FULL_COCKPIT;
+	PlayerCfg.CurrentCockpitMode = PlayerCfg.PreferredCockpitMode = CM_FULL_COCKPIT;
 	PlayerCfg.ReticleType = RET_TYPE_CLASSIC;
 	PlayerCfg.ReticleRGBA[0] = RET_COLOR_DEFAULT_R; PlayerCfg.ReticleRGBA[1] = RET_COLOR_DEFAULT_G; PlayerCfg.ReticleRGBA[2] = RET_COLOR_DEFAULT_B; PlayerCfg.ReticleRGBA[3] = RET_COLOR_DEFAULT_A;
 	PlayerCfg.ReticleSize = 0;
@@ -380,7 +380,7 @@ int read_player_d1x(char *filename)
 			while(!strstr(word,"END") && !PHYSFS_eof(f))
 			{
 				if(!strcmp(word,"MODE"))
-					PlayerCfg.CockpitMode[0] = PlayerCfg.CockpitMode[1] = atoi(line);
+					PlayerCfg.CurrentCockpitMode = PlayerCfg.PreferredCockpitMode = atoi(line);
 				else if(!strcmp(word,"HUD"))
 					PlayerCfg.HudMode = atoi(line);
 				else if(!strcmp(word,"RETTYPE"))
@@ -874,7 +874,7 @@ int write_player_d1x(char *filename)
 		PHYSFSX_printf(fout,"0=0x%x,0x%x,0x%x\n",PlayerCfg.KeySettingsD1X[27],PlayerCfg.KeySettingsD1X[28],PlayerCfg.KeySettingsD1X[29]);
 		PHYSFSX_printf(fout,"[end]\n");
 		PHYSFSX_printf(fout,"[cockpit]\n");
-		PHYSFSX_printf(fout,"mode=%i\n",PlayerCfg.CockpitMode[0]);
+		PHYSFSX_printf(fout,"mode=%i\n",PlayerCfg.PreferredCockpitMode);
 		PHYSFSX_printf(fout,"hud=%i\n",PlayerCfg.HudMode);
 		PHYSFSX_printf(fout,"rettype=%i\n",PlayerCfg.ReticleType);
 		PHYSFSX_printf(fout,"retrgba=%i,%i,%i,%i\n",PlayerCfg.ReticleRGBA[0],PlayerCfg.ReticleRGBA[1],PlayerCfg.ReticleRGBA[2],PlayerCfg.ReticleRGBA[3]);

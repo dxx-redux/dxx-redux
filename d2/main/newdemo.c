@@ -2872,28 +2872,28 @@ int newdemo_read_frame_information(int rewrite)
 	if (nd_playback_v_dead)
 	{
 		Rear_view = 0;
-		if (PlayerCfg.CockpitMode[1] != CM_LETTERBOX)
+		if (PlayerCfg.CurrentCockpitMode != CM_LETTERBOX)
 			select_cockpit(CM_LETTERBOX);
 	}
 	else if (nd_playback_v_guided)
 	{
 		Rear_view = 0;
-		if (PlayerCfg.CockpitMode[1] != CM_FULL_SCREEN || PlayerCfg.CockpitMode[1] != CM_STATUS_BAR)
+		if (PlayerCfg.CurrentCockpitMode != CM_FULL_SCREEN || PlayerCfg.CurrentCockpitMode != CM_STATUS_BAR)
 		{
-			select_cockpit((PlayerCfg.CockpitMode[0] == CM_FULL_SCREEN)?CM_FULL_SCREEN:CM_STATUS_BAR);
+			select_cockpit((PlayerCfg.PreferredCockpitMode == CM_FULL_SCREEN)?CM_FULL_SCREEN:CM_STATUS_BAR);
 		}
 	}
 	else if (nd_playback_v_rear)
 	{
 		Rear_view = nd_playback_v_rear;
-		if (PlayerCfg.CockpitMode[0] == CM_FULL_COCKPIT)
+		if (PlayerCfg.PreferredCockpitMode == CM_FULL_COCKPIT)
 			select_cockpit(CM_REAR_VIEW);
 	}
 	else
 	{
 		Rear_view = 0;
-		if (PlayerCfg.CockpitMode[1] != PlayerCfg.CockpitMode[0])
-			select_cockpit(PlayerCfg.CockpitMode[0]);
+		if (PlayerCfg.CurrentCockpitMode != PlayerCfg.PreferredCockpitMode)
+			select_cockpit(PlayerCfg.PreferredCockpitMode);
 	}
 
 	if (nd_playback_v_bad_read) {

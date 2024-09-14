@@ -852,7 +852,9 @@ int HandleSystemKey(int key)
 		KEY_MAC(case KEY_COMMAND+KEY_3:)
 
 		case KEY_F3:
-			if (!Player_is_dead && Viewer->type==OBJ_PLAYER) //if (!(Guided_missile[Player_num] && Guided_missile[Player_num]->type==OBJ_WEAPON && Guided_missile[Player_num]->id==GUIDEDMISS_ID && Guided_missile[Player_num]->signature==Guided_missile_sig[Player_num] && PlayerCfg.GuidedInBigWindow))
+			if ((!Player_is_dead && Viewer->type==OBJ_PLAYER) ||
+				// Alternatively, we can also toggle the cockpit while observing in first-person mode.
+				(is_observer() && can_draw_observer_cockpit()))
 			{
 				toggle_cockpit();
 			}

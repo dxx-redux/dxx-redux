@@ -179,20 +179,20 @@ void init_cockpit()
 		return;
 
 	if ( Screen_mode == SCREEN_EDITOR )
-		PlayerCfg.CockpitMode[1] = CM_FULL_SCREEN;
+		PlayerCfg.CurrentCockpitMode = CM_FULL_SCREEN;
 
 #ifndef OGL
-	if ( Game_screen_mode != (HiresGFXAvailable? SM(640,480) : SM(320,200)) && PlayerCfg.CockpitMode[1] != CM_LETTERBOX) {
-		PlayerCfg.CockpitMode[1] = CM_FULL_SCREEN;
+	if ( Game_screen_mode != (HiresGFXAvailable? SM(640,480) : SM(320,200)) && PlayerCfg.CurrentCockpitMode != CM_LETTERBOX) {
+		PlayerCfg.CurrentCockpitMode = CM_FULL_SCREEN;
 	}
 #endif
 
 	gr_set_current_canvas(NULL);
 
-	if (is_observer() && (!is_observing_player() || Obs_at_distance || !PlayerCfg.ObsShowCockpit[get_observer_game_mode()])) {
+	if (is_observer() && !can_draw_observer_cockpit()) {
 		game_init_render_sub_buffers(0, 0, SWIDTH, SHEIGHT);
 	} else {
-		switch( PlayerCfg.CockpitMode[1] ) {
+		switch( PlayerCfg.CurrentCockpitMode ) {
 			case CM_FULL_COCKPIT:
 				game_init_render_sub_buffers(0, 0, SWIDTH, (SHEIGHT*2)/3);
 				break;
@@ -202,8 +202,8 @@ void init_cockpit()
 				int x1 = 0, y1 = 0, x2 = SWIDTH, y2 = (SHEIGHT*2)/3;
 				grs_bitmap *bm;
 
-				PIGGY_PAGE_IN(cockpit_bitmap[PlayerCfg.CockpitMode[1]]);
-				bm = &GameBitmaps[cockpit_bitmap[PlayerCfg.CockpitMode[1]].index];
+				PIGGY_PAGE_IN(cockpit_bitmap[PlayerCfg.CurrentCockpitMode]);
+				bm = &GameBitmaps[cockpit_bitmap[PlayerCfg.CurrentCockpitMode].index];
 				gr_bitblt_find_transparent_area(bm, &x1, &y1, &x2, &y2);
 				game_init_render_sub_buffers(x1*((float)SWIDTH/bm->bm_w), y1*((float)SHEIGHT/bm->bm_h), (x2-x1+1)*((float)SWIDTH/bm->bm_w), (y2-y1+2)*((float)SHEIGHT/bm->bm_h));
 				break;
@@ -239,8 +239,8 @@ void init_cockpit()
 //selects a given cockpit (or lack of one).  See types in game.h
 void select_cockpit(int mode)
 {
-	if (mode != PlayerCfg.CockpitMode[1]) {		//new mode
-		PlayerCfg.CockpitMode[1]=mode;
+	if (mode != PlayerCfg.CurrentCockpitMode) {		//new mode
+		PlayerCfg.CurrentCockpitMode=mode;
 		init_cockpit();
 	}
 }
@@ -836,8 +836,8 @@ void check_rear_view()
 
 		if (Rear_view) {
 			Rear_view = 0;
-			if (PlayerCfg.CockpitMode[1]==CM_REAR_VIEW) {
-				select_cockpit(PlayerCfg.CockpitMode[0]);
+			if (PlayerCfg.CurrentCockpitMode==CM_REAR_VIEW) {
+				select_cockpit(PlayerCfg.PreferredCockpitMode);
 			}
 			if (Newdemo_state == ND_STATE_RECORDING)
 				newdemo_record_restore_rearview();
@@ -846,7 +846,7 @@ void check_rear_view()
 			Rear_view = 1;
 			leave_mode = 0;		//means wait for another key
 			entry_time = timer_query();
-			if (PlayerCfg.CockpitMode[1] == CM_FULL_COCKPIT) {
+			if (PlayerCfg.CurrentCockpitMode == CM_FULL_COCKPIT) {
 				select_cockpit(CM_REAR_VIEW);
 			}
 			if (Newdemo_state == ND_STATE_RECORDING)
@@ -866,8 +866,8 @@ void check_rear_view()
 		{
 			if (leave_mode==1 && Rear_view) {
 				Rear_view = 0;
-				if (PlayerCfg.CockpitMode[1]==CM_REAR_VIEW) {
-					select_cockpit(PlayerCfg.CockpitMode[0]);
+				if (PlayerCfg.CurrentCockpitMode==CM_REAR_VIEW) {
+					select_cockpit(PlayerCfg.PreferredCockpitMode);
 				}
 				if (Newdemo_state == ND_STATE_RECORDING)
 					newdemo_record_restore_rearview();
@@ -883,7 +883,7 @@ void reset_rear_view(void)
 	}
 
 	Rear_view = 0;
-	select_cockpit(PlayerCfg.CockpitMode[0]);
+	select_cockpit(PlayerCfg.PreferredCockpitMode);
 }
 
 int Config_menu_flag;
@@ -904,7 +904,7 @@ window *game_setup(void)
 {
 	window *game_wind;
 
-	PlayerCfg.CockpitMode[1] = PlayerCfg.CockpitMode[0];
+	PlayerCfg.CurrentCockpitMode = PlayerCfg.PreferredCockpitMode;
 	last_drawn_cockpit = -1;	// Force cockpit to redraw next time a frame renders.
 	Endlevel_sequence = 0;
 
@@ -1456,4 +1456,11 @@ void show_free_objects(void)
 
 bool is_observer() {
 	return (Game_mode & GM_OBSERVER) != 0;
+}
+
+bool can_draw_observer_cockpit()
+{
+	// We can only draw a cockpit in observer mode if the relevant setting is enabled, and we're
+	// observing in first-person mode.
+	return PlayerCfg.ObsShowCockpit[get_observer_game_mode()] && is_observing_player() && !Obs_at_distance;
 }
