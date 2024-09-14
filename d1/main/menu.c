@@ -1034,7 +1034,7 @@ void input_config_sensitivity()
 	m[nitems].type = NM_TYPE_SLIDER; m[nitems].text = TXT_BANK_LR; m[nitems].value = PlayerCfg.MouseSens[4]; m[nitems].min_value = 0; m[nitems].max_value = 16; nitems++;
 	m[nitems].type = NM_TYPE_SLIDER; m[nitems].text = TXT_THROTTLE; m[nitems].value = PlayerCfg.MouseSens[5]; m[nitems].min_value = 0; m[nitems].max_value = 16; nitems++;
 	m[nitems].type = NM_TYPE_TEXT; m[nitems].text = ""; nitems++;	
-	m[nitems].type = NM_TYPE_TEXT; m[nitems].text = "Mouse Smoothing:"; nitems++;
+	m[nitems].type = NM_TYPE_TEXT; m[nitems].text = "Mouse Oversteer Buffer:"; nitems++;
 	mouseoverrun = nitems;
 	m[nitems].type = NM_TYPE_SLIDER; m[nitems].text = TXT_TURN_LR; m[nitems].value = PlayerCfg.MouseOverrun[0]; m[nitems].min_value = 0; m[nitems].max_value = 16; nitems++;
 	m[nitems].type = NM_TYPE_SLIDER; m[nitems].text = TXT_PITCH_UD; m[nitems].value = PlayerCfg.MouseOverrun[1]; m[nitems].min_value = 0; m[nitems].max_value = 16; nitems++;
