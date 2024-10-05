@@ -64,7 +64,7 @@ extern int multi_protocol; // set and determinate used protocol
 #define MULTI_PROTO_UDP 1 // UDP protocol
 
 // What version of the multiplayer protocol is this? Increment each time something drastic changes in Multiplayer without the version number changes. Can be reset to 0 each time the version of the game changes
-#define MULTI_PROTO_VERSION 30003 // Redux 0.5
+#define MULTI_PROTO_VERSION 29003 // Redux 1.0 remspark
 
 // PROTOCOL VARIABLES AND DEFINES - END
 
@@ -124,6 +124,7 @@ extern int multi_protocol; // set and determinate used protocol
 	VALUE(MULTI_DAMAGE               , 14)  \
 	VALUE(MULTI_REPAIR               , 11)  \
 	VALUE(MULTI_SHIP_STATUS          , 29)  \
+	VALUE(MULTI_CREATE_EXPLOSION2    , 24)  \
 	AFTER
 for_each_multiplayer_command(enum {, define_multiplayer_command, });
 
@@ -257,6 +258,8 @@ void multi_do_repair( const ubyte *buf );
 void multi_send_ship_status();
 void multi_do_ship_status( const ubyte *buf );
 
+void multi_send_create_explosion2(int segnum, vms_vector *pos, fix size, int type);
+void multi_do_create_explosion2( const ubyte *buf );
 
 void multi_send_bounty( void );
 void multi_endlevel_score(void);
