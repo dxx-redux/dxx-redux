@@ -5289,6 +5289,8 @@ multi_process_data(const ubyte *buf, int len)
 			multi_do_repair(buf); break;
 		case MULTI_SHIP_STATUS:
 			multi_do_ship_status(buf); break;
+		case MULTI_CREATE_EXPLOSION2:
+			multi_do_create_explosion2(buf); break;
 		default:
 			Int3();
 	}
@@ -5607,4 +5609,67 @@ void multi_object_rw_to_object(object_rw *obj_rw, object *obj)
 			break;
 			
 	}
+}
+
+void
+multi_send_create_explosion2(int segnum, vms_vector *pos, fix size, int type)
+{
+	if(is_observer()) { return; }
+
+	// Create an explosion on a remote machine
+
+#ifdef WORDS_BIGENDIAN
+	vms_vector swapped_vec;
+#endif
+	int count = 0;
+
+	multibuf[count] = MULTI_CREATE_EXPLOSION2; count += 1;
+	multibuf[count] = Player_num;              count += 1;
+	PUT_INTEL_SHORT(multibuf+count, segnum );  count += 2;
+#ifndef WORDS_BIGENDIAN
+	memcpy(multibuf+count, pos, sizeof(vms_vector));  count += sizeof(vms_vector);
+#else
+	swapped_vec.x = (fix)INTEL_INT( (int)pos->x );
+	swapped_vec.y = (fix)INTEL_INT( (int)pos->y );
+	swapped_vec.z = (fix)INTEL_INT( (int)pos->z );
+	memcpy(multibuf+count, &swapped_vec, 12); count += 12;
+#endif
+	PUT_INTEL_INT(multibuf+count, size );     count += 4;
+	PUT_INTEL_INT(multibuf+count, type );     count += 4;
+
+	multi_send_data(multibuf, count, 2);
+}
+
+
+void
+multi_do_create_explosion2(const ubyte *buf)
+{
+	short segnum;
+	int pnum;
+	int count = 1;
+	vms_vector new_pos;
+	fix size;
+	int type;
+
+	pnum = buf[count++];
+	segnum = GET_INTEL_SHORT(buf + count); count += 2;
+
+	if ((segnum < 0) || (segnum > Highest_segment_index)) {
+		Int3();
+		return;
+	}
+	
+	new_pos = *(vms_vector *)(buf+count); count+=sizeof(vms_vector);
+
+#ifdef WORDS_BIGENDIAN
+	new_pos.x = (fix)SWAPINT((int)new_pos.x);
+	new_pos.y = (fix)SWAPINT((int)new_pos.y);
+	new_pos.z = (fix)SWAPINT((int)new_pos.z);
+#endif
+
+	size = GET_INTEL_INT(buf + count); count += 4;
+	type = GET_INTEL_INT(buf + count); count += 4;
+	
+
+	object_create_explosion(segnum, &new_pos, size, type);
 }
