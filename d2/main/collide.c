@@ -2378,7 +2378,11 @@ void collide_player_and_weapon( object * playerobj, object * weapon, vms_vector 
 		}
 	}
 
-	object_create_explosion( playerobj->segnum, collision_point, i2f(10)/2, VCLIP_PLAYER_HIT );
+	if ((Game_mode & GM_MULTI) && playerobj->id == Player_num)
+		multi_send_create_explosion2(playerobj->segnum, collision_point, i2f(10)/2, VCLIP_PLAYER_HIT);
+	if (playerobj->id == Player_num)
+		object_create_explosion( playerobj->segnum, collision_point, i2f(10)/2, VCLIP_PLAYER_HIT );
+
 	if ( Weapon_info[weapon->id].damage_radius ) {
 		vms_vector player2weapon;
 		vm_vec_sub(&player2weapon, collision_point, &playerobj->pos);
