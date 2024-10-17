@@ -424,6 +424,8 @@ int ogl_init_window(int x, int y)
 #ifdef OGL_MERGE
 	ogl_init_prog();
 #endif
+	if (Game_wind)
+		ogl_cache_level_textures();
 
 	linedotscale = ((x/640<y/480?x/640:y/480)<1?1:(x/640<y/480?x/640:y/480));
 
@@ -480,6 +482,8 @@ int gr_toggle_fullscreen(void)
 #ifdef OGL_MERGE
 		ogl_init_prog();
 #endif
+		if (Game_wind)
+			ogl_cache_level_textures();
 	}
 	GameCfg.WindowMode = (sdl_video_flags & SDL_FULLSCREEN)?0:1;
 	return (sdl_video_flags & SDL_FULLSCREEN)?1:0;
@@ -731,6 +735,8 @@ void gr_set_attributes(void)
 	if (gl_initialized)
 		ogl_init_prog();
 #endif
+	if (Game_wind)
+		ogl_cache_level_textures();
 }
 
 int gr_init(int mode)

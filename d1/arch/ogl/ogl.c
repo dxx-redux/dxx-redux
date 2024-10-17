@@ -108,7 +108,7 @@ static inline float minf(float x, float y) { return x < y ? x : y; }
 extern GLubyte *pixels;
 extern GLubyte *texbuf;
 void ogl_filltexbuf(unsigned char *data, GLubyte *texp, int truewidth, int width, int height, int dxo, int dyo, int twidth, int theight, int type, int bm_flags, int data_format);
-void ogl_loadbmtexture(grs_bitmap *bm, int filter_blueship_wing);
+void ogl_loadbmtexture(grs_bitmap *bm);
 int ogl_loadtexture(unsigned char *data, int dxo, int dyo, ogl_texture *tex, int bm_flags, int data_format, int texfilt);
 void ogl_freetexture(ogl_texture *gltexture);
 
@@ -343,7 +343,7 @@ void ogl_texture_stats(void)
 
 void ogl_bindbmtex(grs_bitmap *bm){
 	if (bm->gltexture==NULL || bm->gltexture->handle<=0)
-		ogl_loadbmtexture(bm, 0);
+		ogl_loadbmtexture(bm);
 	OGL_BINDTEXTURE(bm->gltexture->handle);
 	bm->gltexture->numrend++;
 }
@@ -359,179 +359,20 @@ void ogl_texwrap(ogl_texture *gltexture,int state)
 	}
 }
 
-//crude texture precaching
-//handles: powerups, walls, weapons, polymodels, etc.
-//it is done with the horrid do_special_effects kludge so that sides that have to be texmerged and have animated textures will be correctly cached.
-//similarly, with the objects(esp weapons), we could just go through and cache em all instead, but that would get ones that might not even be on the level
-//TODO: doors
-
-void ogl_cache_polymodel_textures(int model_num)
-{
-	polymodel *po;
-	int i;
-
-	if (model_num < 0)
-		return;
-	po = &Polygon_models[model_num];
-	for (i=0;i<po->n_textures;i++)  {
-		PIGGY_PAGE_IN(ObjBitmaps[ObjBitmapPtrs[po->first_texture + i]]);
-		if(model_num == 43 && i == 5) { // wings
-			ogl_loadbmtexture(&GameBitmaps[ObjBitmaps[ObjBitmapPtrs[po->first_texture+i]].index], 1);
-		} else {
-			ogl_loadbmtexture(&GameBitmaps[ObjBitmaps[ObjBitmapPtrs[po->first_texture+i]].index], 0);
-		}
-	}
-}
-
-void ogl_cache_vclip_textures(vclip *vc){
-	int i;
-	for (i=0;i<vc->num_frames;i++){
-		PIGGY_PAGE_IN(vc->frames[i]);
-		ogl_loadbmtexture(&GameBitmaps[vc->frames[i].index], 0);
-	}
-}
-
-void ogl_cache_vclipn_textures(int i)
-{
-	if (i >= 0 && i < VCLIP_MAXNUM)
-		ogl_cache_vclip_textures(&Vclip[i]);
-}
-
-void ogl_cache_weapon_textures(int weapon_type)
-{
-	weapon_info *w;
-
-	if (weapon_type < 0)
-		return;
-	w = &Weapon_info[weapon_type];
-	ogl_cache_vclipn_textures(w->flash_vclip);
-	ogl_cache_vclipn_textures(w->robot_hit_vclip);
-	ogl_cache_vclipn_textures(w->wall_hit_vclip);
-	if (w->render_type==WEAPON_RENDER_VCLIP)
-		ogl_cache_vclipn_textures(w->weapon_vclip);
-	else if (w->render_type == WEAPON_RENDER_POLYMODEL)
-	{
-		ogl_cache_polymodel_textures(w->model_num);
-		ogl_cache_polymodel_textures(w->model_num_inner);
-	}
-}
-
 void ogl_cache_level_textures(void)
 {
-	int seg,side,i;
-	eclip *ec;
-	short tmap1,tmap2;
-	grs_bitmap *bm,*bm2;
-	struct side *sidep;
-	int max_efx=0,ef;
+	int i;
 	
 	ogl_reset_texture_stats_internal();//loading a new lev should reset textures
 
 	if (!ogl_allow_png())
 		ogl_smash_png_textures();
-	
-	for (i=0,ec=Effects;i<Num_effects;i++,ec++) {
-		ogl_cache_vclipn_textures(Effects[i].dest_vclip);
-		if ((Effects[i].changing_wall_texture == -1) && (Effects[i].changing_object_texture==-1) )
-			continue;
-		if (ec->vc.num_frames>max_efx)
-			max_efx=ec->vc.num_frames;
-	}
-	glmprintf((0,"max_efx:%i\n",max_efx));
-	for (ef=0;ef<max_efx;ef++){
-		for (i=0,ec=Effects;i<Num_effects;i++,ec++) {
-			if ((Effects[i].changing_wall_texture == -1) && (Effects[i].changing_object_texture==-1) )
-				continue;
-			ec->time_left=-1;
-		}
-		do_special_effects();
 
-		for (seg=0;seg<Num_segments;seg++){
-			for (side=0;side<MAX_SIDES_PER_SEGMENT;side++){
-				sidep=&Segments[seg].sides[side];
-				tmap1=sidep->tmap_num;
-				tmap2=sidep->tmap_num2;
-				if (tmap1<0 || tmap1>=NumTextures){
-					glmprintf((0,"ogl_cache_level_textures %i %i %i %i\n",seg,side,tmap1,NumTextures));
-					//				tmap1=0;
-					continue;
-				}
-				PIGGY_PAGE_IN(Textures[tmap1]);
-				bm = &GameBitmaps[Textures[tmap1].index];
-				if (tmap2 != 0){
-					PIGGY_PAGE_IN(Textures[tmap2&0x3FFF]);
-					bm2 = &GameBitmaps[Textures[tmap2&0x3FFF].index];
-					if (GameArg.DbgAltTexMerge == 0
-#ifndef OGL_MERGE
-						|| (bm2->bm_flags & BM_FLAG_SUPER_TRANSPARENT)
-#endif
-						)
-						bm = texmerge_get_cached_bitmap( tmap1, tmap2 );
-					else
-						ogl_loadbmtexture(bm2, 0);
-				}
-				ogl_loadbmtexture(bm, 0);
-			}
-		}
-		glmprintf((0,"finished ef:%i\n",ef));
+	for (i = 0; i < Num_bitmap_files; i++) {
+		if (!(GameBitmaps[i].bm_flags & BM_FLAG_PAGED_OUT))
+			ogl_loadbmtexture(&GameBitmaps[i]);
 	}
-	reset_special_effects();
-	init_special_effects();
-	{
-		// always have lasers, concs, flares.  Always shows player appearance, and at least concs are always available to disappear.
-		ogl_cache_weapon_textures(Primary_weapon_to_weapon_info[LASER_INDEX]);
-		ogl_cache_weapon_textures(Secondary_weapon_to_weapon_info[CONCUSSION_INDEX]);
-		ogl_cache_weapon_textures(FLARE_ID);
-		ogl_cache_vclipn_textures(VCLIP_PLAYER_APPEARANCE);
-		ogl_cache_vclipn_textures(VCLIP_POWERUP_DISAPPEARANCE);
-		ogl_cache_polymodel_textures(Player_ship->model_num);
-		ogl_cache_vclipn_textures(Player_ship->expl_vclip_num);
 
-		for (i=0;i<=Highest_object_index;i++){
-			if(Objects[i].render_type==RT_POWERUP){
-				ogl_cache_vclipn_textures(Objects[i].rtype.vclip_info.vclip_num);
-				switch (Objects[i].id){
-					case POW_VULCAN_WEAPON:
-						ogl_cache_weapon_textures(Primary_weapon_to_weapon_info[VULCAN_INDEX]);
-						break;
-					case POW_SPREADFIRE_WEAPON:
-						ogl_cache_weapon_textures(Primary_weapon_to_weapon_info[SPREADFIRE_INDEX]);
-						break;
-					case POW_PLASMA_WEAPON:
-						ogl_cache_weapon_textures(Primary_weapon_to_weapon_info[PLASMA_INDEX]);
-						break;
-					case POW_FUSION_WEAPON:
-						ogl_cache_weapon_textures(Primary_weapon_to_weapon_info[FUSION_INDEX]);
-						break;
-					case POW_PROXIMITY_WEAPON:
-						ogl_cache_weapon_textures(Secondary_weapon_to_weapon_info[PROXIMITY_INDEX]);
-						break;
-					case POW_HOMING_AMMO_1:
-					case POW_HOMING_AMMO_4:
-						ogl_cache_weapon_textures(Primary_weapon_to_weapon_info[HOMING_INDEX]);
-						break;
-					case POW_SMARTBOMB_WEAPON:
-						ogl_cache_weapon_textures(Secondary_weapon_to_weapon_info[SMART_INDEX]);
-						break;
-					case POW_MEGA_WEAPON:
-						ogl_cache_weapon_textures(Secondary_weapon_to_weapon_info[MEGA_INDEX]);
-						break;
-				}
-			}
-			else if(Objects[i].render_type==RT_POLYOBJ){
-				if (Objects[i].type == OBJ_ROBOT)
-				{
-					ogl_cache_vclipn_textures(Robot_info[Objects[i].id].exp1_vclip_num);
-					ogl_cache_vclipn_textures(Robot_info[Objects[i].id].exp2_vclip_num);
-					ogl_cache_weapon_textures(Robot_info[Objects[i].id].weapon_type);
-				}
-				if (Objects[i].rtype.pobj_info.tmap_override != -1)
-					ogl_loadbmtexture(&GameBitmaps[Textures[Objects[i].rtype.pobj_info.tmap_override].index], 0);
-				else
-					ogl_cache_polymodel_textures(Objects[i].rtype.pobj_info.model_num);
-			}
-		}
-	}
 	xmodel_load_gl_all();
 	glmprintf((0,"finished caching\n"));
 	r_cachedtexcount = r_texcount;
@@ -1787,7 +1628,7 @@ void ogl_loadpngmask(png_data *pdata, grs_bitmap *bm, int texfilt)
 }
 #endif
 
-void ogl_loadbmtexture_f(grs_bitmap *bm, int texfilt, int filter_blueship_wing)
+void ogl_loadbmtexture_f(grs_bitmap *bm, int texfilt)
 {
 	unsigned char *buf;
 	const char* bitmapname = piggy_game_bitmap_name(bm);
@@ -1909,9 +1750,10 @@ void ogl_loadbmtexture_f(grs_bitmap *bm, int texfilt, int filter_blueship_wing)
 				}
 			}
 
-			int lower_bound[24]   = {28,27,26,25,24,23,22,21,20,19,19,18,17,16,15,14,13,13,12,11,10,9,8}; //bos
-			int upper_bound[24]   = {57,55,54,52,50,49,48,47,45,44,42,41,39,38,36,35,33,32,30,29,27,25,23}; // fos
-			if(filter_blueship_wing && bm->bm_h == 64 && bm->bm_w == 64) {
+			char is_blue_tex2 = bitmapname && !strcmp(bitmapname, "ship1-5");
+			if(is_blue_tex2) {
+				static const int lower_bound[24]   = {28,27,26,25,24,23,22,21,20,19,19,18,17,16,15,14,13,13,12,11,10,9,8}; //bos
+				static const int upper_bound[24]   = {57,55,54,52,50,49,48,47,45,44,42,41,39,38,36,35,33,32,30,29,27,25,23}; // fos
 				for(i=0; i < bm->bm_h * bm->bm_w; i++) {
 					int r = i / bm->bm_w;
 					int c = i % bm->bm_w; 
@@ -1941,7 +1783,6 @@ void ogl_loadbmtexture_f(grs_bitmap *bm, int texfilt, int filter_blueship_wing)
 						buf[i] = replace; 
 					}					
 				}
-				filter_blueship_wing = 0;
 			}			
 		}
 
@@ -1965,9 +1806,9 @@ void ogl_loadbmtexture_f(grs_bitmap *bm, int texfilt, int filter_blueship_wing)
 #endif
 }
 
-void ogl_loadbmtexture(grs_bitmap *bm, int filter_blueship_wing)
+void ogl_loadbmtexture(grs_bitmap *bm)
 {
-	ogl_loadbmtexture_f(bm, GameCfg.TexFilt, filter_blueship_wing);
+	ogl_loadbmtexture_f(bm, GameCfg.TexFilt);
 }
 
 void ogl_freetexture(ogl_texture *gltexture)
