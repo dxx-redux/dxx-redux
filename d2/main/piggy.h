@@ -134,6 +134,7 @@ extern void remove_char( char * s, char c );	// in piggy.c
 
 extern ubyte bogus_bitmap_initialized;
 extern digi_sound bogus_sound;
+extern int Num_bitmap_files;
 extern const char space[3];
 extern const char equal_space[4];
 

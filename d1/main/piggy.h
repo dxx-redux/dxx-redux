@@ -51,6 +51,8 @@ extern ubyte bogus_bitmap_initialized;
 
 extern digi_sound bogus_sound;
 
+extern int Num_bitmap_files;
+
 
 int properties_init();
 
