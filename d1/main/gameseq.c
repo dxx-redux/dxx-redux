@@ -1275,7 +1275,11 @@ void StartNewLevel(int level_num)
 {
 	hide_menus();
 
+	extern int homerFrameCount;
+	extern fix currentHomerFrameTime;
 	GameTime64 = 0;
+	homerFrameCount = 0;
+	currentHomerFrameTime = 0;
 	ThisLevelTime=0;
 
 	if (!(Game_mode & GM_MULTI)) {

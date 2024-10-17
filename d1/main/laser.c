@@ -696,7 +696,7 @@ int track_track_goal(int track_goal, object *tracker, fix *dot, unsigned int hom
 #ifdef NEWHOMER
 	if (object_is_trackable(track_goal, tracker, dot)) {  // CED -- && (tracker - Objects) is useless
 		return track_goal;
-	} else if ((((tracker-Objects) ^ homerFrameCount) % 4) == 0) // CED -- Reverted to 1994 original release code, with homer frame count
+	} else if (((homerFrameCount - tracker->ctype.laser_info.creation_framecount) % 4) == 0) // CED -- Reverted to 1994 original release code, with homer frame count
 #else
 	//	Every 8 frames for each object, scan all objects.
 	if (object_is_trackable(track_goal, tracker, dot) && ((((tracker-Objects) ^ d_tick_count) % 8) != 0)) {
@@ -706,6 +706,7 @@ int track_track_goal(int track_goal, object *tracker, fix *dot, unsigned int hom
 	{
 		int	rval = -2;
 
+		//printf("hfc %d cr %d\n", homerFrameCount, tracker->ctype.laser_info.creation_framecount);
 		//	If player fired missile, then search for an object, if not, then give up.
 		if (Objects[tracker->ctype.laser_info.parent_num].type == OBJ_PLAYER) {
 			int	goal_type;
@@ -848,6 +849,7 @@ void Laser_player_fire_spread_delay(object *obj, int laser_type, int gun_num, fi
 			#ifdef NETWORK
 			Network_laser_track = Objects[objnum].ctype.laser_info.track_goal;
 			#endif
+			//printf("wcr %d track %d\n", Objects[objnum].ctype.laser_info.creation_framecount, Objects[objnum].ctype.laser_info.track_goal);
 		}
 		#ifdef NETWORK
 		else // Some other player shot the homing thing

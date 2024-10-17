@@ -124,8 +124,8 @@ int	Num_rendered_objects = 0;
 static float idealHomerFPS = 25.0;
 static fix idealHomerFrameTime = F1_0/25; 
 
-static unsigned int homerFrameCount = 0; 
-static fix currentHomerFrameTime = F0_0; 
+unsigned int homerFrameCount = 0; 
+fix currentHomerFrameTime = F0_0; 
 
 static int doHomerFrame = 0; 
 
@@ -1262,6 +1262,7 @@ int obj_create(enum object_type_t type, ubyte id,int segnum,vms_vector *pos,
 	if (obj->type == OBJ_WEAPON) {
 		obj->mtype.phys_info.flags |= (Weapon_info[obj->id].persistent*PF_PERSISTENT);
 		obj->ctype.laser_info.creation_time = GameTime64;
+		obj->ctype.laser_info.creation_framecount = homerFrameCount;
 		obj->ctype.laser_info.last_hitobj = -1;
 		memset(&obj->ctype.laser_info.hitobj_list, 0, sizeof(ubyte)*MAX_OBJECTS);
 		obj->ctype.laser_info.multiplier = F1_0;
