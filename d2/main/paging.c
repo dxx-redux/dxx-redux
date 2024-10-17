@@ -49,6 +49,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "powerup.h"
 #include "fuelcen.h"
 #include "mission.h"
+#include "args.h"
 
 
 void paging_touch_vclip( vclip * vc )
@@ -82,6 +83,9 @@ void paging_touch_wall_effects( int tmap_num )
 		}
 
 	}
+
+	if ( TmapInfo[tmap_num].destroyed )
+		PIGGY_PAGE_IN( Textures[TmapInfo[tmap_num].destroyed] );
 }
 
 void paging_touch_object_effects( int tmap_num )
@@ -118,7 +122,10 @@ void paging_touch_weapon( int weapon_type )
 	if ( (weapon_type < 0) || (weapon_type > N_weapon_types) ) return;
 
 	if ( Weapon_info[weapon_type].picture.index )	{
-		PIGGY_PAGE_IN( Weapon_info[weapon_type].picture );
+		if ( HIRESMODE )
+			PIGGY_PAGE_IN( Weapon_info[weapon_type].hires_picture );
+		else
+			PIGGY_PAGE_IN( Weapon_info[weapon_type].picture );
 	}		
 	
 	if ( Weapon_info[weapon_type].flash_vclip > -1 )
@@ -239,11 +246,10 @@ void paging_touch_side( segment * segp, int sidenum )
 	tmap1 = segp->sides[sidenum].tmap_num;
 	paging_touch_wall_effects(tmap1);
 	tmap2 = segp->sides[sidenum].tmap_num2;
+	PIGGY_PAGE_IN( Textures[tmap1] );
 	if (tmap2 != 0)	{
-		texmerge_get_cached_bitmap( tmap1, tmap2 );
+		PIGGY_PAGE_IN( Textures[tmap2 & 0x3FFF] );
 		paging_touch_wall_effects( tmap2 & 0x3FFF );
-	} else	{
-		PIGGY_PAGE_IN( Textures[tmap1] );
 	}
 
 	// PSX STUFF
@@ -356,14 +362,26 @@ void paging_touch_all()
 			paging_touch_vclip(&Vclip[Powerup_info[s].vclip_num]);
 	}
 
-
-	for (s=0; s<MAX_GAUGE_BMS; s++ )	{
-		if ( Gauges[s].index )	{
-			PIGGY_PAGE_IN( Gauges[s] );
+	if ( HIRESMODE )	{
+		for (s=0; s<MAX_GAUGE_BMS; s++ )	{
+			if ( Gauges_hires[s].index )
+				PIGGY_PAGE_IN( Gauges_hires[s] );
+		}
+		for (s=0; s<Num_cockpits/2; s++ )	{
+			PIGGY_PAGE_IN( cockpit_bitmap[s+Num_cockpits/2] );
+		}
+	} else {
+		for (s=0; s<MAX_GAUGE_BMS; s++ )	{
+			if ( Gauges[s].index )
+				PIGGY_PAGE_IN( Gauges[s] );
+		}
+		for (s=0; s<Num_cockpits/2; s++ )	{
+			PIGGY_PAGE_IN( cockpit_bitmap[s] );
 		}
 	}
 	paging_touch_vclip( &Vclip[VCLIP_PLAYER_APPEARANCE] );
 	paging_touch_vclip( &Vclip[VCLIP_POWERUP_DISAPPEARANCE] );
+	paging_touch_vclip( &Vclip[VCLIP_MONITOR_STATIC] );
 
 
 #ifdef PSX_BUILD_TOOLS

@@ -684,7 +684,7 @@ void ogl_init_font(grs_font * font)
 		gr_init_sub_bitmap(&font->ft_bitmaps[i],&font->ft_parent_bitmap,curx,cury,w,h);
 		curx+=w+gap;
 	}
-	ogl_loadbmtexture_f(&font->ft_parent_bitmap, GameCfg.TexFilt, 0);
+	ogl_loadbmtexture_f(&font->ft_parent_bitmap, GameCfg.TexFilt);
 }
 
 int ogl_internal_string(int x, int y, const char *s )
