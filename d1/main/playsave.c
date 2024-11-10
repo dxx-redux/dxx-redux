@@ -144,6 +144,9 @@ int new_player_config()
 		PlayerCfg.ObsChat[obs_mode] = 1;
 		PlayerCfg.ObsPlayerChat[obs_mode] = 1;
 		PlayerCfg.ObsShowBombTimes[obs_mode] = 0;
+		PlayerCfg.ObsTransparentThirdPerson[obs_mode] = 0;
+		PlayerCfg.ObsIncreaseThirdPersonDist[obs_mode] = 0;
+		PlayerCfg.ObsHideEnergyWeaponMuzzle[obs_mode] = 0;
 	}
 	PlayerCfg.NoChatSound = 0;
 
@@ -798,6 +801,9 @@ void read_observer_setting(int obs_mode, char* line, char* word)
 	READ_OBS_SETTING("OBSCHAT", ObsChat);
 	READ_OBS_SETTING("OBSPLAYERCHAT", ObsPlayerChat);
 	READ_OBS_SETTING("OBSSHOWBOMBTIMES", ObsShowBombTimes);
+	READ_OBS_SETTING("OBSTRANSPARENTTHIRDPERSON", ObsTransparentThirdPerson);
+	READ_OBS_SETTING("OBSINCREASETHIRDPERSONDIST", ObsIncreaseThirdPersonDist);
+	READ_OBS_SETTING("OBSHIDEENERGYWEAPONMUZZLE", ObsHideEnergyWeaponMuzzle);
 }
 
 int write_player_d1x(char *filename)
@@ -941,6 +947,9 @@ int write_player_d1x(char *filename)
 			PHYSFSX_printf(fout, "obschat=%i\n", PlayerCfg.ObsChat[0]);
 			PHYSFSX_printf(fout, "obsplayerchat=%i\n", PlayerCfg.ObsPlayerChat[0]);
 			PHYSFSX_printf(fout, "obsshowbombtimes=%i\n", PlayerCfg.ObsShowBombTimes[0]);
+			PHYSFSX_printf(fout, "obstransparentthirdperson=%i\n", PlayerCfg.ObsTransparentThirdPerson[0]);
+			PHYSFSX_printf(fout, "obsincreasethirdpersondist=%i\n", PlayerCfg.ObsIncreaseThirdPersonDist[0]);
+			PHYSFSX_printf(fout, "obshideenergyweaponmuzzle=%i\n", PlayerCfg.ObsHideEnergyWeaponMuzzle[0]);
 		} else {
 			// Write separate observer settings for each game mode
 			for (int obs_mode = 0; obs_mode < NUM_OBS_MODES; obs_mode++) {
@@ -970,6 +979,9 @@ int write_player_d1x(char *filename)
 				PHYSFSX_printf(fout, "obschat=%i\n", PlayerCfg.ObsChat[obs_mode]);
 				PHYSFSX_printf(fout, "obsplayerchat=%i\n", PlayerCfg.ObsPlayerChat[obs_mode]);
 				PHYSFSX_printf(fout, "obsshowbombtimes=%i\n", PlayerCfg.ObsShowBombTimes[obs_mode]);
+				PHYSFSX_printf(fout, "obstransparentthirdperson=%i\n", PlayerCfg.ObsTransparentThirdPerson[obs_mode]);
+				PHYSFSX_printf(fout, "obsincreasethirdpersondist=%i\n", PlayerCfg.ObsIncreaseThirdPersonDist[obs_mode]);
+				PHYSFSX_printf(fout, "obshideenergyweaponmuzzle=%i\n", PlayerCfg.ObsHideEnergyWeaponMuzzle[obs_mode]);
 				PHYSFSX_printf(fout, "[end]\n");
 			}
 		}
