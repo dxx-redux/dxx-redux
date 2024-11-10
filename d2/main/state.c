@@ -193,6 +193,7 @@ void state_object_to_object_rw(object *obj, object_rw *obj_rw)
 			obj_rw->ctype.laser_info.last_hitobj      = obj->ctype.laser_info.last_hitobj;
 			obj_rw->ctype.laser_info.track_goal       = obj->ctype.laser_info.track_goal;
 			obj_rw->ctype.laser_info.multiplier       = obj->ctype.laser_info.multiplier;
+			obj->ctype.laser_info.creation_framecount = 0;
 			break;
 			
 		case CT_EXPLOSION:

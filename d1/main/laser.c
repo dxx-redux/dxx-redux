@@ -694,7 +694,7 @@ int track_track_goal(int track_goal, object *tracker, fix *dot, unsigned int hom
 #ifdef NEWHOMER
 	if (object_is_trackable(track_goal, tracker, dot)) {  // CED -- && (tracker - Objects) is useless
 		return track_goal;
-	} else if ((((tracker-Objects) ^ homerFrameCount) % 4) == 0) // CED -- Reverted to 1994 original release code, with homer frame count
+	} else if (((homerFrameCount - tracker->ctype.laser_info.creation_framecount) % 4) == 0) // CED -- Reverted to 1994 original release code, with homer frame count
 #else
 	//	Every 8 frames for each object, scan all objects.
 	if (object_is_trackable(track_goal, tracker, dot) && ((((tracker-Objects) ^ d_tick_count) % 8) != 0)) {
