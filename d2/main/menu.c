@@ -2252,7 +2252,7 @@ struct obs_menu_data
 
 void do_obs_menu()
 {
-	newmenu_item m[30];
+	newmenu_item m[33];
 	struct obs_menu_data obs_menu_data;
 	obs_menu_data.mode = is_observer() ? get_observer_game_mode() : 0;
 	int i = 0;
@@ -2320,6 +2320,9 @@ void do_obs_menu()
 		ADD_CHECK(27, "Observer Chat", PlayerCfg.ObsChat[cmode]);
 		ADD_CHECK(28, "Player Chat", PlayerCfg.ObsPlayerChat[cmode]);
 		ADD_CHECK(29, "Bomb/Mine Countdowns", PlayerCfg.ObsShowBombTimes[cmode]);
+		ADD_CHECK(30, "Transparent third person ship", PlayerCfg.ObsTransparentThirdPerson[cmode]);
+		ADD_CHECK(31, "Increase third person distance", PlayerCfg.ObsIncreaseThirdPersonDist[cmode]);
+		ADD_CHECK(32, "Hide energy weapon muzzle", PlayerCfg.ObsHideEnergyWeaponMuzzle[cmode]);
 
 		i = newmenu_do1(NULL, "JinX Mode Options", SDL_arraysize(m), m, menu_obs_options_handler, &obs_menu_data, i);
 
@@ -2345,6 +2348,9 @@ void do_obs_menu()
 		PlayerCfg.ObsChat[cmode] = m[27].value;
 		PlayerCfg.ObsPlayerChat[cmode] = m[28].value;
 		PlayerCfg.ObsShowBombTimes[cmode] = m[29].value;
+		PlayerCfg.ObsTransparentThirdPerson[cmode] = m[30].value;
+		PlayerCfg.ObsIncreaseThirdPersonDist[cmode] = m[31].value;
+		PlayerCfg.ObsHideEnergyWeaponMuzzle[cmode] = m[32].value;
 
 		// Only update other modes *after* we update the current one; user may have changed something
 		if (i == OBS_MENU_OVERWRITE_MODES || PlayerCfg.ObsShareSettings)
@@ -2374,6 +2380,9 @@ void do_obs_menu()
 				PlayerCfg.ObsChat[i] = PlayerCfg.ObsChat[cmode];
 				PlayerCfg.ObsPlayerChat[i] = PlayerCfg.ObsPlayerChat[cmode];
 				PlayerCfg.ObsShowBombTimes[i] = PlayerCfg.ObsShowBombTimes[cmode];
+				PlayerCfg.ObsTransparentThirdPerson[i] = PlayerCfg.ObsTransparentThirdPerson[cmode];
+				PlayerCfg.ObsIncreaseThirdPersonDist[i] = PlayerCfg.ObsIncreaseThirdPersonDist[cmode];
+				PlayerCfg.ObsHideEnergyWeaponMuzzle[i] = PlayerCfg.ObsHideEnergyWeaponMuzzle[cmode];
 			}
 		}
 	} while (i > -1 || i == OBS_MENU_MODE_SWITCHED || i == OBS_MENU_OVERWRITE_MODES);

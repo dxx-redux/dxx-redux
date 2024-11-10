@@ -734,7 +734,8 @@ int Laser_create_new( vms_vector * direction, vms_vector * position, int segnum,
 	if ((obj->render_type == RT_POLYOBJ) || (Weapon_info[obj->id].homing_flag))
 		vm_vector_2_matrix( &obj->orient,direction, &Objects[parent].orient.uvec ,NULL);
 
-	if (( &Objects[parent] != Viewer ) && (Objects[parent].type != OBJ_WEAPON))	{
+	if (( &Objects[parent] != Viewer ) && (Objects[parent].type != OBJ_WEAPON) &&
+		(!is_observer() || !PlayerCfg.ObsHideEnergyWeaponMuzzle[get_observer_game_mode()] || weapon_type == VULCAN_ID || Weapon_info[weapon_type].damage_radius)) {
 		// Muzzle flash
 		if (Weapon_info[obj->id].flash_vclip > -1 )
 			object_create_muzzle_flash( obj->segnum, &obj->pos, Weapon_info[obj->id].flash_size, Weapon_info[obj->id].flash_vclip );

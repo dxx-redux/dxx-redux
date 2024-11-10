@@ -460,6 +460,9 @@ void draw_polygon_object(object *obj)
 							   alt_textures);
 			}
 
+			int observed = is_observer() && Obs_at_distance && obj->type == OBJ_PLAYER && is_observing_player() && Players[Current_obs_player].objnum == obj - Objects;
+			if (observed && PlayerCfg.ObsTransparentThirdPerson[get_observer_game_mode()])
+				gr_settransblend(CLOAKED_FADE_LEVEL*2/3, GR_BLEND_NORMAL);
 			draw_polygon_model(&obj->pos,
 					   &obj->orient,
 					   obj->rtype.pobj_info.anim_angles,obj->rtype.pobj_info.model_num,
@@ -467,6 +470,8 @@ void draw_polygon_object(object *obj)
 					   light,
 					   engine_glow_value,
 					   alt_textures);
+			if (observed && PlayerCfg.ObsTransparentThirdPerson[get_observer_game_mode()])
+				gr_settransblend(GR_FADE_OFF, GR_BLEND_NORMAL);
 
 #ifndef OGL // in software rendering must draw inner model last
 			if (obj->type == OBJ_WEAPON && (Weapon_info[obj->id].model_num_inner > -1 )) {

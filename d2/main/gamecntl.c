@@ -1917,8 +1917,9 @@ int ReadControls(d_event *event)
 
 				// If we're observing at a distance, move the camera accordingly.achieved_state
 				if (Obs_at_distance == 1) {
+					int dist = PlayerCfg.ObsIncreaseThirdPersonDist[get_observer_game_mode()] ? -30 : -20;
 					vms_vector move = ZERO_VECTOR;
-					vm_vec_copy_scale(&move, &Real_orient.fvec, F1_0 * -20);
+					vm_vec_copy_scale(&move, &Real_orient.fvec, F1_0 * dist);
 					Real_pos.x += move.x;
 					Real_pos.y += move.y;
 					Real_pos.z += move.z;
