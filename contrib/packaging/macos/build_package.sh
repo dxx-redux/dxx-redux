@@ -29,6 +29,7 @@ build_app() {
     prettyname="$3"
     appltag="$4"
     srcdir="${name:0:2}"
+    machine_arch=`/usr/bin/uname -m`
     contents="${prettyname}.app/Contents"
 
     zipfilename="${name}-${version}-mac.zip"
@@ -41,12 +42,21 @@ build_app() {
     cp -p $srcdir/arch/cocoa/${name}.icns $contents/Resources
     echo -n "APPL${appltag}" > $contents/PkgInfo
 
-    dylibbundler -ns -od -b -x $contents/MacOS/$name -d $contents/libs
+    if [[ "${machine_arch}" == "x86_64" ]]; then
+        dylibbundler -ns -od -b -x $contents/MacOS/$name -d $contents/libs
+    else
+        dylibbundler -od -b -x $contents/MacOS/$name -d $contents/libs
+    fi
 
     # SDL2 is loaded dynamically by sdl12-compat
     sdl2=libSDL2-2.0.0.dylib
     cp -p $(find_lib $builddir/$name $sdl2) $contents/libs
-    dylibbundler -ns -of -b -x $contents/libs/$sdl2 -d $contents/libs
+
+    if [[ "${machine_arch}" == "x86_64" ]]; then
+        dylibbundler -ns -of -b -x $contents/libs/$sdl2 -d $contents/libs
+    else
+        dylibbundler -of -b -x $contents/libs/$sdl2 -d $contents/libs
+    fi
 
     # zip up and output to top level dir
     zip -r -X ${zipfilename} ${prettyname}.app
