@@ -2182,7 +2182,7 @@ int newdemo_read_frame_information(int rewrite)
 				nd_write_short(distance);
 				break;
 			}
-			Players[Player_num].homing_object_dist = i2f((int)(distance << 16));
+			Players[Player_num].homing_object_dist = distance << 16;
 			break;
 		}
 
