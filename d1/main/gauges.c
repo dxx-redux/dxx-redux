@@ -4176,6 +4176,11 @@ void observer_show_bomb_highlights()
 
 void draw_hud()
 {
+	int pnum = get_pnum_for_hud();
+	if (Newdemo_state == ND_STATE_RECORDING)
+		if (Players[pnum].homing_object_dist >= 0)
+			newdemo_record_homing_distance(Players[pnum].homing_object_dist);
+
 	n_players = multi_get_kill_list(player_list);
 
 	if (is_observer()) {
@@ -4205,7 +4210,6 @@ void draw_hud()
 
 				if (Newdemo_state==ND_STATE_RECORDING)
 				{
-					int pnum = get_pnum_for_hud();
 					newdemo_record_player_flags(Players[pnum].flags);
 				}
 			}
@@ -4279,7 +4283,6 @@ void draw_hud()
 
 			if (Newdemo_state==ND_STATE_RECORDING)
 			{
-				int pnum = get_pnum_for_hud();
 				newdemo_record_player_flags(Players[pnum].flags);
 			}
 		}
@@ -4347,10 +4350,6 @@ void render_gauges()
 
 	gr_set_current_canvas(NULL);
 	gr_set_curfont( GAME_FONT );
-
-	if (Newdemo_state == ND_STATE_RECORDING)
-		if (Players[pnum].homing_object_dist >= 0)
-			newdemo_record_homing_distance(Players[pnum].homing_object_dist);
 
 	draw_weapon_boxes();
 
