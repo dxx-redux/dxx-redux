@@ -881,7 +881,7 @@ void play_homing_warning(void)
 
 	int pnum = get_pnum_for_hud();
 
-	if (Endlevel_sequence || Player_is_dead)
+	if (Endlevel_sequence || Player_is_dead || Newdemo_state == ND_STATE_PLAYBACK)
 		return;
 
 	if (Players[pnum].homing_object_dist >= 0) {
