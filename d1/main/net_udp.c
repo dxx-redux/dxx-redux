@@ -418,6 +418,7 @@ int udp_dns_filladdr( char *host, int port, struct _sockaddr *sAddr )
 	
 	// We are always UDP
 	hints.ai_socktype = SOCK_DGRAM;
+	hints.ai_family = _af;
 	
 	// Resolve the domain name
 	if( getaddrinfo( host, sPort, &hints, &result ) != 0 )
