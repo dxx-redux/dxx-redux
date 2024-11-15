@@ -4509,13 +4509,16 @@ void observer_show_bomb_highlights()
 //draw all the things on the HUD
 void draw_hud()
 {
+	int pnum = get_pnum_for_hud();
 	if (Newdemo_state == ND_STATE_RECORDING)
 	{
-		if (Players[Player_num].primary_weapon == VULCAN_INDEX)
-			newdemo_record_primary_ammo(Players[Player_num].primary_ammo[Players[Player_num].primary_weapon]);
-		if (Players[Player_num].primary_weapon == OMEGA_INDEX)
+		if (Players[pnum].homing_object_dist >= 0)
+			newdemo_record_homing_distance(Players[pnum].homing_object_dist);
+		if (Players[pnum].primary_weapon == VULCAN_INDEX)
+			newdemo_record_primary_ammo(Players[pnum].primary_ammo[Players[pnum].primary_weapon]);
+		if (Players[pnum].primary_weapon == OMEGA_INDEX)
 			newdemo_record_primary_ammo(Omega_charge);
-		newdemo_record_secondary_ammo(Players[Player_num].secondary_ammo[Players[Player_num].secondary_weapon]);
+		newdemo_record_secondary_ammo(Players[pnum].secondary_ammo[Players[pnum].secondary_weapon]);
 	}
 
 	n_players = multi_get_kill_list(player_list);
@@ -4547,7 +4550,6 @@ void draw_hud()
 
 				if (Newdemo_state == ND_STATE_RECORDING)
 				{
-					int pnum = get_pnum_for_hud();
 					newdemo_record_player_flags(Players[pnum].flags);
 				}
 			}
@@ -4627,7 +4629,6 @@ void draw_hud()
 
 			if (Newdemo_state==ND_STATE_RECORDING)
 			{
-				int pnum = get_pnum_for_hud();
 				newdemo_record_player_flags(Players[pnum].flags);
 			}
 		}
@@ -4703,10 +4704,6 @@ void render_gauges()
 
 	gr_set_current_canvas(NULL);
 	gr_set_curfont( GAME_FONT );
-
-	if (Newdemo_state == ND_STATE_RECORDING)
-		if (Players[pnum].homing_object_dist >= 0)
-			newdemo_record_homing_distance(Players[pnum].homing_object_dist);
 
 	draw_weapon_boxes();
 
