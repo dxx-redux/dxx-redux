@@ -84,7 +84,7 @@ void paging_touch_wall_effects( int tmap_num )
 
 	}
 
-	if ( TmapInfo[tmap_num].destroyed )
+	if ( TmapInfo[tmap_num].destroyed != -1 )
 		PIGGY_PAGE_IN( Textures[TmapInfo[tmap_num].destroyed] );
 }
 
