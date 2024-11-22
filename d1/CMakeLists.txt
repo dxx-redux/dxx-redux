@@ -38,6 +38,18 @@ elseif(ASM)
 endif()
 if(SDLMIXER)
     add_definitions(/DUSE_SDLMIXER)
+    if (APPLE)
+        include(FetchContent)
+        FetchContent_Declare(
+            SDL_mixer-1.2-cmake
+            GIT_REPOSITORY https://github.com/arbruijn/SDL_mixer-1.2-cmake
+            GIT_TAG master
+        )
+        FetchContent_MakeAvailable(SDL_mixer-1.2-cmake)
+        set(SDL_MIXER_LIBRARY SDL_mixer-1.2-cmake::SDL_mixer-1.2-cmake)
+    else()
+        find_package(SDL_mixer REQUIRED)
+    endif()
 endif()
 if(EDITOR)
     add_definitions(/DEDITOR)
