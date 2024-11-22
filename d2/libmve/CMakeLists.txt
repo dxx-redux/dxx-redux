@@ -12,8 +12,9 @@ find_package(SDL)
 target_include_directories(libmve PUBLIC ${SDL_INCLUDE_DIR})
 
 if(SDLMIXER)
-    find_package(SDL_mixer)
-    target_include_directories(libmve PUBLIC ${SDL_MIXER_INCLUDE_DIRS})
+    #find_package(SDL_mixer)
+    #target_include_directories(libmve PUBLIC ${SDL_MIXER_INCLUDE_DIRS})
+    target_link_libraries(libmve PUBLIC ${SDL_MIXER_LIBRARY})
 endif()
 
 include(CheckStructHasMember)
