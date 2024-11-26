@@ -1460,6 +1460,9 @@ bool is_observer() {
 
 bool can_draw_observer_cockpit()
 {
+	// The result of this function is meaningful only in observer mode.
+	Assert(is_observer());
+
 	// We can only draw a cockpit in observer mode if the relevant setting is enabled, and we're
 	// observing in first-person mode.
 	return PlayerCfg.ObsShowCockpit[get_observer_game_mode()] && is_observing_player() && !Obs_at_distance;
