@@ -4106,7 +4106,7 @@ void show_HUD_names()
 // Show bomb highlights in observer mode
 void observer_show_bomb_highlights()
 {
-	if (!is_observer() || !PlayerCfg.ObsShowBombTimes)
+	if (!is_observer() || !PlayerCfg.ObsShowBombTimes[get_observer_game_mode()])
 	{
 		return;
 	}
