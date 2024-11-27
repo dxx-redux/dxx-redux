@@ -722,7 +722,8 @@ void load_level_robots(int level_num)
 }
 
 //load a level off disk. level numbers start at 1.  Secret levels are -1,-2,-3
-void LoadLevel(int level_num,int page_in_textures)
+//returns 0 if succesful
+int LoadLevel(int level_num,int page_in_textures)
 {
 	char *level_name;
 	player save_player;
@@ -751,7 +752,7 @@ void LoadLevel(int level_num,int page_in_textures)
 	load_ret = load_level(level_name);		//actually load the data from disk!
 
 	if (load_ret)
-		Error("Couldn't load level file <%s>, error = %d",level_name,load_ret);
+		return load_ret;
 
 	Current_level_num=level_num;
 
@@ -789,6 +790,8 @@ void LoadLevel(int level_num,int page_in_textures)
 	gr_palette_load(gr_palette);		//actually load the palette
 
 //	WIN(HideCursorW());
+
+	return 0;
 }
 
 //sets up Player_num & ConsoleObject
@@ -1533,7 +1536,10 @@ void StartNewLevelSub(int level_num, int page_in_textures, int secret_flag)
 		newdemo_record_start_frame(FrameTime );
 	}
 
-	LoadLevel(level_num,page_in_textures);
+	if (LoadLevel(level_num, page_in_textures)) {
+		show_menus();
+		return;
+	}
 
 	Assert(Current_level_num == level_num);	//make sure level set right
 

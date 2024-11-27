@@ -2792,7 +2792,12 @@ int newdemo_read_frame_information(int rewrite)
 					return -1;
 				}
 
-				LoadLevel((int)loaded_level,1);
+				if (LoadLevel((int)loaded_level,1)) {
+					free_mission();
+					start_time();
+					return -1;
+				}
+
 				nd_playback_v_cntrlcen_destroyed = 0;
 			}
 
@@ -2938,8 +2943,13 @@ void newdemo_goto_end(int to_rewrite)
 			newdemo_stop_playback();
 			return;
 		}
-		if (level != Current_level_num)
-			LoadLevel(level,1);
+		if (level != Current_level_num) {
+			if (LoadLevel(level,1)) {
+				free_mission();
+				newdemo_stop_playback();
+				return;
+			}
+		}
 	}
 	else if (level != Current_level_num)
 	{
@@ -3697,8 +3707,13 @@ void newdemo_start_playback(char * filename)
 	HUD_clear_messages();
 	if (!Game_wind)
 		hide_menus();
-	newdemo_playback_one_frame();       // this one loads new level
-	newdemo_playback_one_frame();       // get all of the objects to renderb game
+	newdemo_playback_one_frame();           // this one loads new level
+	if (Newdemo_state != ND_STATE_NORMAL)
+		newdemo_playback_one_frame();       // get all of the objects to renderb game
+	if (Newdemo_state == ND_STATE_NORMAL) { // playback failed
+		show_menus();
+		return;
+	}
 	if (!Game_wind)
 		Game_wind = game_setup();							// create game environment
 }

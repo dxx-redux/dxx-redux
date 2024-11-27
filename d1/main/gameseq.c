@@ -636,10 +636,12 @@ ushort netmisc_calc_checksum()
 }
 
 //load a level off disk. level numbers start at 1.  Secret levels are -1,-2,-3
-void LoadLevel(int level_num,int page_in_textures)
+//returns 0 if succesful
+int LoadLevel(int level_num,int page_in_textures)
 {
 	char *level_name;
 	player save_player;
+	int load_ret;
 
 	save_player = Players[Player_num];
 
@@ -647,8 +649,12 @@ void LoadLevel(int level_num,int page_in_textures)
 
 	level_name = get_level_file(level_num);
 
-	if (!load_level(level_name))
-		Current_level_num=level_num;
+	load_ret = load_level(level_name);		//actually load the data from disk!
+
+	if (load_ret)
+		return load_ret;
+
+	Current_level_num=level_num;
 
 	gr_use_palette_table( "palette.256" );
 
@@ -679,6 +685,8 @@ void LoadLevel(int level_num,int page_in_textures)
 
 	if ( page_in_textures )
 		piggy_load_level_data();
+
+	return 0;
 }
 
 //sets up Player_num & ConsoleObject
@@ -1137,7 +1145,10 @@ void StartNewLevelSub(int level_num, int page_in_textures, int secret_flag)
 		newdemo_record_start_frame(FrameTime );
 	} 
 
-	LoadLevel(level_num, page_in_textures);
+	if (LoadLevel(level_num, page_in_textures)) {
+		show_menus();
+		return;
+	}
 
 	Assert(Current_level_num == level_num);	//make sure level set right
 
