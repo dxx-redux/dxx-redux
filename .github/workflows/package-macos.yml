@@ -12,7 +12,7 @@ on:
 jobs:
   macos:
     name: macOS Apps
-    runs-on: macos-11
+    runs-on: macos-12
     env:
       MACOSX_DEPLOYMENT_TARGET: 10.14
     steps:
