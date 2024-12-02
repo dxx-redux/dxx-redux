@@ -292,7 +292,7 @@ fixang fix_asin(fix v)
 	vv = labs(v);
 
 	if (vv >= f1_0)		//check for out of range
-		return 0x4000;
+		return v < 0 ? -0x4000 : 0x4000;
 
 	i = (vv>>8)&0xff;
 	f = vv&0xff;
@@ -315,7 +315,7 @@ fixang fix_acos(fix v)
 	vv = labs(v);
 
 	if (vv >= f1_0)		//check for out of range
-		return 0;
+		return v < 0 ? 0x8000 : 0;
 
 	i = (vv>>8)&0xff;
 	f = vv&0xff;
