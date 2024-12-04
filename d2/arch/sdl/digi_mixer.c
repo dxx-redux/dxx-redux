@@ -44,7 +44,7 @@
 
 static int digi_initialised = 0;
 static int digi_max_channels = MAX_SOUND_SLOTS;
-static inline int fix2byte(fix f) { return (f / 256) % 256; }
+static inline int fix2byte(fix f) { return f < 0 ? 0 : f >= 65536 ? 255 : f / 256; }
 Mix_Chunk SoundChunks[MAX_SOUNDS];
 ubyte channels[MAX_SOUND_SLOTS];
 
