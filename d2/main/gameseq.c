@@ -771,8 +771,12 @@ void LoadLevel(int level_num,int page_in_textures)
 
 	load_level_robots(level_num);
 
-	if ( page_in_textures )
+	if ( page_in_textures ) {
 		piggy_load_level_data();
+#ifdef OGL
+		ogl_cache_level_textures();
+#endif
+	}
 
 #ifdef NETWORK
 	my_segments_checksum = netmisc_calc_checksum();
@@ -1630,7 +1634,6 @@ void StartNewLevelSub(int level_num, int page_in_textures, int secret_flag)
 
 #ifdef OGL
 	gr_remap_mono_fonts();
-	ogl_cache_level_textures();
 #endif
 
 

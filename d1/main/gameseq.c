@@ -677,8 +677,12 @@ void LoadLevel(int level_num,int page_in_textures)
 
 	gr_palette_load(gr_palette);		//actually load the palette
 
-	if ( page_in_textures )
+	if ( page_in_textures ) {
 		piggy_load_level_data();
+#ifdef OGL
+		ogl_cache_level_textures();
+#endif
+	}
 }
 
 //sets up Player_num & ConsoleObject
@@ -1224,10 +1228,6 @@ void StartNewLevelSub(int level_num, int page_in_textures, int secret_flag)
 
 	reset_special_effects();
 	init_exploding_walls();
-
-#ifdef OGL
-	ogl_cache_level_textures();
-#endif
 
 #ifdef NETWORK
 	if (Network_rejoined == 1)
