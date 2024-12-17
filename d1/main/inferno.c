@@ -296,6 +296,9 @@ int main(int argc, char *argv[])
 #ifdef _WIN32
 	freopen( "CON", "w", stdout );
 	freopen( "CON", "w", stderr );
+	// Automatic crash dump saving is currently only implemented in Win32
+	if (GameArg.DbgAutoDump)
+		init_crash_dump_handler();
 #endif
 
 	if (GameArg.SysShowCmdHelp) {

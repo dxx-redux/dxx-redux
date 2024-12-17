@@ -102,7 +102,7 @@ if(UDP)
 endif()
 
 if(WIN32)
-    target_link_libraries(d2x-redux PUBLIC glu32 winmm ws2_32)
+    target_link_libraries(d2x-redux PUBLIC dbghelp glu32 winmm ws2_32)
     target_link_libraries(d2x-redux PRIVATE arch_win32)
     target_sources(d2x-redux PRIVATE
         ${CMAKE_SOURCE_DIR}/arch/win32/d2x-rebirth.ico

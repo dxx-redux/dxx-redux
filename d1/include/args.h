@@ -81,6 +81,7 @@ typedef struct Arg
 	int DbgUseDoubleBuffer;
 	int DbgBigPig;
 	int DbgBpp;
+	int DbgAutoDump;
 #ifdef OGL
 	int DbgAltTexMerge;
 	int DbgGlIntensity4Ok;

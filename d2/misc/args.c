@@ -216,6 +216,7 @@ void ReadCmdArgs(void)
 	GameArg.DbgUseDoubleBuffer 	= !FindArg("-nodoublebuffer");
 	GameArg.DbgBigPig 		= !FindArg("-bigpig");
 	GameArg.DbgBpp 			= (FindArg("-16bpp") ? 16 : 32);
+	GameArg.DbgAutoDump		= FindArg("-autodump");
 
 #ifdef OGL
 	GameArg.DbgAltTexMerge 		= !FindArg("-gl_oldtexmerge");
