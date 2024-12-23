@@ -94,6 +94,7 @@ typedef struct Arg
 #endif
 	int LogNetTraffic; 
 	int GameLogTimeStamp;
+	int GameLogSplit;
 } __pack__ Arg;
 
 extern struct Arg GameArg;

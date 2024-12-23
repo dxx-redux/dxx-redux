@@ -232,6 +232,7 @@ void ReadCmdArgs(void)
 	GameArg.LogNetTraffic 		= FindArg("-netlog");
 
 	GameArg.GameLogTimeStamp	= FindArg("-gamelog_timestamp");
+	GameArg.GameLogSplit		= FindArg("-gamelog_split");
 }
 
 void args_exit(void)

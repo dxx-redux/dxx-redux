@@ -1197,6 +1197,8 @@ int game_handler(window *wind, d_event *event, void *data)
 
 			game_disable_cheats();
 			Game_mode = GM_GAME_OVER;
+			if (GameArg.GameLogSplit)
+				con_switch_log(NULL); // switch back to default log
 #ifdef EDITOR
 			if (!EditorWindow)		// have to do it this way because of the necessary longjmp. Yuck.
 #endif
