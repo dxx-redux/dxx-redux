@@ -2862,6 +2862,7 @@ int newdemo_read_frame_information(int rewrite)
 			full_palette_save();				// initialise for palette_restore()
 
 			start_time();
+			reset_time(); // stop FrameTime spikes that mess up interpolation
 			break;
 		}
 
