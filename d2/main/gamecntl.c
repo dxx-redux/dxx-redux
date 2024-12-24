@@ -863,9 +863,9 @@ int HandleSystemKey(int key)
 		KEY_MAC(case KEY_COMMAND+KEY_5:)
 		case KEY_F5:
 			if ( Newdemo_state == ND_STATE_RECORDING )
-				newdemo_stop_recording();
+				newdemo_stop_recording(1);
 			else if ( Newdemo_state == ND_STATE_NORMAL )
-				newdemo_start_recording();
+				newdemo_start_recording(0);
 			break;
 #ifdef NETWORK
 		KEY_MAC(case KEY_COMMAND+KEY_ALTED+KEY_4:)

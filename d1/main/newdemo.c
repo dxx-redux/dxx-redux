@@ -22,6 +22,7 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h> // for memset
+#include <time.h>
 #include <errno.h>
 #include <ctype.h>
 
@@ -152,6 +153,7 @@ PHYSFS_file *outfile = NULL;
 
 // Some globals
 int Newdemo_state = 0;
+int Newdemo_is_autorecord = 0;
 int Newdemo_game_mode = 0;
 int Newdemo_vcr_state = 0;
 int Newdemo_show_percentage=1;
@@ -271,7 +273,7 @@ int newdemo_write(const void *buffer, int elsize, int nelem )
 		return num_written;
 
 	nd_record_v_no_space=2;
-	newdemo_stop_recording();
+	newdemo_stop_recording(0);
 	return -1;
 }
 
@@ -3114,11 +3116,12 @@ void newdemo_playback_one_frame()
 	}
 }
 
-void newdemo_start_recording()
+void newdemo_start_recording(int is_autorecord)
 {
 	Newdemo_num_written = 0;
 	nd_record_v_no_space=0;
 	Newdemo_state = ND_STATE_RECORDING;
+	Newdemo_is_autorecord = is_autorecord;
 
 	PHYSFS_mkdir(DEMO_DIR); //always try making directory - could only exist in read-only path
 
@@ -3206,18 +3209,135 @@ void newdemo_write_end()
 	nd_write_byte(ND_EVENT_EOF);
 }
 
-char demoname_allowed_chars[] = "azAZ09__--";
-void newdemo_stop_recording()
+// Removes invalid characters from a filename.
+void newdemo_clean_filename(char* filename_buffer, unsigned int filename_buffer_length)
 {
-	newmenu_item m[6];
-	int exit;
-	static char filename[PATH_MAX] = "", *s;
-	static sbyte tmpcnt = 0;
-	char fullname[PATH_MAX] = DEMO_DIR;
+	size_t len = strnlen(filename_buffer, filename_buffer_length);
+	for (char* fc = filename_buffer; *fc;) {
+		if (!isalnum(*fc) && *fc != '_') {
+			size_t bytes_to_move = len + filename_buffer - fc - 1;
+			memmove(fc, fc + 1, bytes_to_move);
+			fc[bytes_to_move] = 0;
+		} else {
+			fc++;
+		}
+	}
+}
 
-	exit = 0;
+// Checks whether a demo filename is valid, notifying the player if not.
+int newdemo_validate_filename(const char* filename_buffer, unsigned int filename_buffer_length)
+{
+	if (filename_buffer[0] == 0) // empty string
+		return 0;
 
+	//check to make sure name is ok
+	for (const char* s = filename_buffer; *s; s++)
+		if (!isalnum(*s) && *s != '_') {
+			nm_messagebox(NULL, 1, TXT_CONTINUE, TXT_DEMO_USE_LETTERS);
+			return 0;
+		}
 
+	return 1;
+}
+
+#define MAX_DEMO_NAME_ATTEMPTS 255
+void newdemo_get_default_filename(char* filename_buffer, unsigned int filename_buffer_length)
+{
+	char basename[PATH_MAX] = "";
+
+	if (Game_mode & GM_MULTI) {
+		// Multiplayer game; use the game type, who we're playing against, etc.
+		if (is_observer()) {
+			sprintf_s(basename, SDL_arraysize(basename), "%s_OBS_%s", Players[Player_num].callsign, Netgame.mission_name);
+		} else if(Game_mode & GM_MULTI_COOP) {
+			sprintf_s(basename, SDL_arraysize(basename), "%s_COOP_%s", Players[Player_num].callsign, Netgame.mission_name);
+		}
+		// Was this a 1v1? Checking callsigns instead of player count to handle the case where players leave.
+		else if (strlen(Players[0].callsign) && strlen(Players[1].callsign) && !strlen(Players[2].callsign)) {
+			int me = Player_num;
+			int you = Player_num ? 0 : 1;
+			sprintf_s(basename, SDL_arraysize(basename), "%s_%s_%d_%d_%s",
+				Players[Player_num].callsign, Players[you].callsign, Players[me].net_kills_total, Players[you].net_kills_total, Netgame.mission_name);
+		} else {
+			sprintf_s(basename, SDL_arraysize(basename), "%s_ANARCHY_%s", Players[Player_num].callsign, Netgame.mission_name);
+		}
+	} else {
+		// Single-player game; use our name, the name of the mission, and the date.
+		time_t now = time(NULL);
+		struct tm* t = localtime(&now);
+		sprintf_s(basename, SDL_arraysize(basename), "%s_%s_%04d%02d%02d",
+			Players[Player_num].callsign, Current_mission_filename, t->tm_year + 1900, t->tm_mon, t->tm_mday);
+	}
+
+	// Remove invalid characters, because map names can include invalid characters.
+	newdemo_clean_filename(basename, SDL_arraysize(basename));
+
+	// Try to make sure the filename is unique; try appending numbers if there's a collision.
+	for (int attemptnum = 1; attemptnum <= MAX_DEMO_NAME_ATTEMPTS; attemptnum++)
+	{
+		char testpath[PATH_MAX] = "";
+		if (attemptnum > 1)
+			sprintf_s(testpath, SDL_arraysize(testpath), DEMO_DIR "%s_%d" DEMO_EXT, basename, attemptnum);
+		else
+			sprintf_s(testpath, SDL_arraysize(testpath), DEMO_DIR "%s" DEMO_EXT, basename);
+
+		if (!PHYSFSX_exists(testpath, 0)) {
+			if (attemptnum > 1)
+				sprintf_s(filename_buffer, filename_buffer_length, "%s_%d", basename, attemptnum);
+			else
+				strcpy_s(filename_buffer, filename_buffer_length, basename);
+			break;
+		}
+	}
+
+	if (filename_buffer[0] == '\0')
+		// Ran out of attempts. Just overwrite the old file
+		sprintf_s(filename_buffer, filename_buffer_length, "%s_%d", basename, MAX_DEMO_NAME_ATTEMPTS);
+
+	con_printf(CON_NORMAL, "Got default demo file name: %s\n", filename_buffer);
+}
+
+int newdemo_prompt_filename(char* filename_buffer, unsigned int filename_buffer_length)
+{
+	char filename_from_prompt[PATH_MAX] = "";
+	strncpy_s(filename_from_prompt, SDL_arraysize(filename_from_prompt), filename_buffer, filename_buffer_length);
+
+	do {
+		newmenu_item m[2];
+		int exit = 0;
+		Newmenu_allowed_chars = "azAZ09__";
+		if (!nd_record_v_no_space) {
+			m[0].type = NM_TYPE_INPUT;
+			m[0].text_len = SDL_arraysize(filename_from_prompt) - 1;
+			m[0].text = filename_from_prompt;
+			exit = newmenu_do(NULL, TXT_SAVE_DEMO_AS, 1, m, NULL, NULL);
+		} else if (nd_record_v_no_space == 2) {
+			m[0].type = NM_TYPE_TEXT;
+			m[0].text = TXT_DEMO_SAVE_NOSPACE;
+			m[1].type = NM_TYPE_INPUT;
+			m[1].text_len = SDL_arraysize(filename_from_prompt) - 1;
+			m[1].text = filename_from_prompt;
+			exit = newmenu_do(NULL, NULL, 2, m, NULL, NULL);
+		}
+		Newmenu_allowed_chars = NULL;
+
+		if (exit == -2) { // got bumped out from network menu
+			return 1; // Just use the default filename
+		}
+		if (exit == -1) { // pressed ESC
+			HUD_init_message_literal(HM_DEFAULT | HM_MULTI, "Demo saved as tmpdemo.dem");
+			return 0; // tell caller not to move the demo
+		}
+	} while (!newdemo_validate_filename(filename_from_prompt, SDL_arraysize(filename_from_prompt)));
+
+	strcpy_s(filename_buffer, filename_buffer_length, filename_from_prompt);
+	return 1;
+}
+
+void newdemo_stop_recording(int is_manual)
+{
+	char demo_name[PATH_MAX] = "";
+	int was_autorecord = Newdemo_is_autorecord;
 
 	if (!nd_record_v_no_space)
 	{
@@ -3228,149 +3348,22 @@ void newdemo_stop_recording()
 	PHYSFS_close(outfile);
 	outfile = NULL;
 	Newdemo_state = ND_STATE_NORMAL;
+	Newdemo_is_autorecord = 0;
 	gr_palette_load( gr_palette );
 
-	if(Game_mode & GM_MULTI) {
-		char p1[CALLSIGN_LEN + 1];
-		strcpy(p1, Players[Player_num].callsign);
+	newdemo_get_default_filename(demo_name, SDL_arraysize(demo_name));
+	// If we're suppressing auto-record UI, don't ask for the name, just use the default.
+	// If the player presses F5 while auto-recording, we do prompt for a name though.
+	if (is_manual || !was_autorecord || !PlayerCfg.AutoDemoHideUi)
+		if (!newdemo_prompt_filename(demo_name, SDL_arraysize(demo_name)))
+			return;
 
-		char p2[16];
+	// Add path and extension to the file name
+	char filename[PATH_MAX] = "";
+	sprintf_s(filename, SDL_arraysize(filename), DEMO_DIR "%s" DEMO_EXT, demo_name);
 
-		if(is_observer()) {
-			sprintf(p2, "OBS");
-		} else if(Game_mode & GM_MULTI_COOP) {
-			sprintf(p2, "COOP");
-		} else if (strlen(Players[0].callsign) && strlen(Players[1].callsign) && ! strlen(Players[2].callsign)) {
-			int me = Player_num;
-			int you = Player_num ? 0 : 1;
-
-			snprintf(p2, sizeof(p2), "%s_%d_%d", Players[you].callsign, Players[me].net_kills_total, Players[you].net_kills_total);
-		} else {
-			sprintf(p2, "ANARCHY");
-		}
-
-		char basename[PATH_MAX] = "";
-		char testpath[PATH_MAX] = ""; 
-		int attemptnum = 2; 
-
-		sprintf(basename, "%s_%s_%s", p1, p2, Netgame.mission_name);
-
-		sprintf(testpath, "%s%s%s", DEMO_DIR, basename, DEMO_EXT); 
-		while(PHYSFSX_exists(testpath, 0) && attemptnum < 20) {
-			sprintf(testpath, "%s%s_%d%s", DEMO_DIR, basename, attemptnum++, DEMO_EXT); 
-		}
-
-		con_printf(CON_NORMAL, "%s does not exist!\n", testpath); 
-
-		if(attemptnum > 2) {
-			sprintf(filename, "%s_%d", basename, attemptnum - 1); 
-		} else {
-			strncpy(filename, basename, PATH_MAX);
-		}
-
-	} else {
-
-		if (filename[0] != '\0') {
-			int num, i = strlen(filename) - 1;
-			char newfile[PATH_MAX];
-
-			while (isdigit(filename[i])) {
-				i--;
-				if (i == -1)
-					break;
-			}
-			i++;
-			num = atoi(&(filename[i]));
-			num++;
-			filename[i] = '\0';
-			sprintf (newfile, "%s%d", filename, num);
-			strncpy(filename, newfile, PATH_MAX);
-			filename[PATH_MAX - 1] = '\0';
-		}
-	}
-
-	// Remove invalid characters, because map names can include invalid characters.
-	char* fc = filename;
-
-	while (*fc) {
-		const char *p = demoname_allowed_chars;
-
-		bool good = 0;
-		while (*p) {
-			Assert(p[1]);
-
-			if (fc[0]>=p[0] && fc[0]<=p[1]) {
-				good = 1;
-				break;
-			}
-
-			p += 2;
-		}
-
-		if (!good) {
-			char* fc2 = fc;
-
-			while (*fc2) {
-				fc2[0] = fc2[1];
-
-				fc2++;
-			}
-		}
-
-		fc++;
-	}
-
-try_again:
-	;
-
-	Newmenu_allowed_chars = demoname_allowed_chars;
-	if (!nd_record_v_no_space) {
-		m[0].type=NM_TYPE_INPUT; m[0].text_len = PATH_MAX - 1; m[0].text = filename;
-		exit = newmenu_do( NULL, TXT_SAVE_DEMO_AS, 1, &(m[0]), NULL, NULL );
-	} else if (nd_record_v_no_space == 2) {
-		m[ 0].type = NM_TYPE_TEXT; m[ 0].text = TXT_DEMO_SAVE_NOSPACE;
-		m[ 1].type = NM_TYPE_INPUT;m[ 1].text_len = PATH_MAX - 1; m[1].text = filename;
-		exit = newmenu_do( NULL, NULL, 2, m, NULL, NULL );
-	}
-	Newmenu_allowed_chars = NULL;
-
-	if (exit == -2) {                   // got bumped out from network menu
-		char save_file[PATH_MAX];
-
-		if (filename[0] != '\0') {
-			strcpy(save_file, DEMO_DIR);
-			strcat(save_file, filename);
-			strcat(save_file, DEMO_EXT);
-		} else
-			sprintf (save_file, "%stmp%d.dem", DEMO_DIR, tmpcnt++);
-		remove(save_file);
-		PHYSFSX_rename(DEMO_FILENAME, save_file);
-		return;
-	}
-	// Nooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo
-	if (exit == -1) {               // pressed ESC
-		HUD_init_message_literal( HM_DEFAULT|HM_MULTI, "Demo saved as tmpdemo.dem" );
-	//	PHYSFS_delete(DEMO_FILENAME);   // might as well remove the file
-		return;                     // return without doing anything
-	}
-
-	if (filename[0]==0) //null string
-		goto try_again;
-
-	//check to make sure name is ok
-	for (s=filename;*s;s++)
-		if (!isalnum(*s) && *s!='_') {
-			nm_messagebox(NULL, 1,TXT_CONTINUE, TXT_DEMO_USE_LETTERS);
-			goto try_again;
-		}
-
-	if (nd_record_v_no_space)
-		strcat(fullname, m[1].text);
-	else
-		strcat(fullname, m[0].text);
-	strcat(fullname, DEMO_EXT);
-	PHYSFS_delete(fullname);
-	PHYSFSX_rename(DEMO_FILENAME, fullname);
+	PHYSFS_delete(filename);
+	PHYSFSX_rename(DEMO_FILENAME, filename);
 }
 
 //returns the number of demo files on the disk

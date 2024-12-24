@@ -429,7 +429,8 @@ void game_draw_hud_stuff()
 		if (is_observer() && can_draw_observer_cockpit() && PlayerCfg.CurrentCockpitMode == CM_FULL_COCKPIT)
 			y = grd_curcanv->cv_bitmap.bm_h / 1.2 ;
 
-		if (PlayerCfg.CurrentCockpitMode != CM_REAR_VIEW) {
+		if (PlayerCfg.CurrentCockpitMode != CM_REAR_VIEW &&
+			(!PlayerCfg.AutoDemoHideUi || !Newdemo_is_autorecord)) {
 			if (PlayerCfg.DemoRecordingIndicator == 0) {
 				gr_string(0x8000, y, message );
 			} else if (PlayerCfg.DemoRecordingIndicator == 1) {

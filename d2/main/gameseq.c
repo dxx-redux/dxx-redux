@@ -1281,7 +1281,7 @@ void show_order_form();
 void DoEndGame(void)
 {
 	if ((Newdemo_state == ND_STATE_RECORDING) || (Newdemo_state == ND_STATE_PAUSED))
-		newdemo_stop_recording();
+		newdemo_stop_recording(0);
 
 	set_screen_mode( SCREEN_MENU );
 
@@ -1650,8 +1650,11 @@ void StartNewLevelSub(int level_num, int page_in_textures, int secret_flag)
 	if (!((Game_mode & GM_MULTI) && (Newdemo_state != ND_STATE_PLAYBACK)))
 		full_palette_save();
 
-	if(Game_mode & GM_MULTI && PlayerCfg.AutoDemo && Newdemo_state != ND_STATE_RECORDING) {
-		newdemo_start_recording();
+	int autodemo_enabled_for_game_mode =
+		(!(Game_mode & GM_MULTI) && PlayerCfg.AutoDemoSp) ||
+		((Game_mode & GM_MULTI) && PlayerCfg.AutoDemoMp);
+	if (autodemo_enabled_for_game_mode && Newdemo_state != ND_STATE_RECORDING) {
+		newdemo_start_recording(1);
 	}
 
 	if (!Game_wind)

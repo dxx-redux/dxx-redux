@@ -133,7 +133,9 @@ int new_player_config()
 	PlayerCfg.SelectAfterFire = 1;  /* SelectAfterFire */
 	PlayerCfg.VulcanAmmoWarnings = 1; 
 	PlayerCfg.ShieldWarnings = 0; 
-	PlayerCfg.AutoDemo = 1;
+	PlayerCfg.AutoDemoSp = 0;
+	PlayerCfg.AutoDemoMp = 0;
+	PlayerCfg.AutoDemoHideUi = 0;
 	PlayerCfg.ShowCustomColors = 1;
 	PlayerCfg.PreferMyTeamColors = 0;
 	PlayerCfg.QuietPlasma = 1; 
@@ -406,7 +408,13 @@ int read_player_d2x(char *filename)
 				if(!strcmp(word,"SHIELDWARNINGS"))
 					PlayerCfg.ShieldWarnings = atoi(line);	
 				if(!strcmp(word,"AUTODEMO"))
-					PlayerCfg.AutoDemo = atoi(line);
+					PlayerCfg.AutoDemoMp = atoi(line);
+				if(!strcmp(word,"AUTODEMOSP"))
+					PlayerCfg.AutoDemoSp = atoi(line);
+				if(!strcmp(word,"AUTODEMOMP"))
+					PlayerCfg.AutoDemoMp = atoi(line);
+				if(!strcmp(word,"AUTODEMOHIDEUI"))
+					PlayerCfg.AutoDemoHideUi = atoi(line);
 				if(!strcmp(word,"SHOWCUSTOMCOLORS"))
 					PlayerCfg.ShowCustomColors = atoi(line);
 				if(!strcmp(word,"SHIPCOLOR"))
@@ -682,7 +690,9 @@ int write_player_d2x(char *filename)
 		PHYSFSX_printf(fout,"cycleautoselectonly=%i\n",PlayerCfg.CycleAutoselectOnly);
 		PHYSFSX_printf(fout,"vulcanammowarnings=%i\n",PlayerCfg.VulcanAmmoWarnings);		
 		PHYSFSX_printf(fout,"shieldwarnings=%i\n",PlayerCfg.ShieldWarnings);
-		PHYSFSX_printf(fout,"autodemo=%i\n",PlayerCfg.AutoDemo);
+		PHYSFSX_printf(fout,"autodemosp=%i\n",PlayerCfg.AutoDemoSp);
+		PHYSFSX_printf(fout,"autodemomp=%i\n",PlayerCfg.AutoDemoMp);
+		PHYSFSX_printf(fout,"autodemohideui=%i\n",PlayerCfg.AutoDemoHideUi);
 		PHYSFSX_printf(fout,"showcustomcolors=%i\n",PlayerCfg.ShowCustomColors);
 		PHYSFSX_printf(fout,"shipcolor=%i\n",PlayerCfg.ShipColor);	
 		PHYSFSX_printf(fout,"missilecolor=%i\n",PlayerCfg.MissileColor);

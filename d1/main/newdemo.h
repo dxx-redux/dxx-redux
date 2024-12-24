@@ -40,6 +40,7 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 
 // Gives state of recorder
 extern int Newdemo_state;
+extern int Newdemo_is_autorecord;
 extern int NewdemoFrameCount;
 
 extern int Newdemo_vcr_state;
@@ -101,8 +102,8 @@ extern void newdemo_goto_beginning();
 // Interactive functions to control playback/record;
 extern void newdemo_start_playback( char * filename );
 extern void newdemo_stop_playback();
-extern void newdemo_start_recording();
-extern void newdemo_stop_recording();
+extern void newdemo_start_recording(int is_autorecord);
+extern void newdemo_stop_recording(int is_manual);
 
 extern int newdemo_swap_endian(char *filename);
 

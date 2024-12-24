@@ -2039,7 +2039,7 @@ struct misc_menu_data {
 
 void do_misc_menu()
 {
-	newmenu_item m[35];
+	newmenu_item m[39];
 	int i = 0;
 	struct misc_menu_data misc_menu_data;
 
@@ -2076,74 +2076,83 @@ void do_misc_menu()
 		m[12].type = NM_TYPE_TEXT;
 		m[12].text = "";
 
-		ADD_CHECK(13, "Movie Subtitles",GameCfg.MovieSubtitles);
-		ADD_CHECK(14, "No redundant pickup messages",PlayerCfg.NoRedundancy);
-		ADD_CHECK(15, "Show Player chat only (Multi)",PlayerCfg.MultiMessages);
-		ADD_CHECK(16, "No Rankings (Multi)",PlayerCfg.NoRankings);
-		ADD_CHECK(17, "Free Flight controls in Automap",PlayerCfg.AutomapFreeFlight);
-		ADD_CHECK(18, "No Weapon Autoselect when firing",PlayerCfg.NoFireAutoselect);
-		ADD_CHECK(19, "Autoselect after firing",PlayerCfg.SelectAfterFire);
-		ADD_CHECK(20, "Only Cycle Autoselect Weapons",PlayerCfg.CycleAutoselectOnly);
-		ADD_CHECK(21, "Ammo Warnings",PlayerCfg.VulcanAmmoWarnings);
-		ADD_CHECK(22, "Shield Warnings",PlayerCfg.ShieldWarnings);
-		ADD_CHECK(23, "Automatically Start Demos", PlayerCfg.AutoDemo);
-		ADD_CHECK(24, "No Player Chat Sound",PlayerCfg.NoChatSound);
+		m[13].type = NM_TYPE_TEXT;
+		m[13].text = "Automatically Start Demos:";
 
-		m[25].type = NM_TYPE_TEXT;
-		m[25].text = "";
+		ADD_CHECK(14, "Single-Player", PlayerCfg.AutoDemoSp);
+		ADD_CHECK(15, "Multiplayer", PlayerCfg.AutoDemoMp);
+		ADD_CHECK(16, "Silent (Don't Show Prompts)", PlayerCfg.AutoDemoHideUi);
 
-		m[26].type = NM_TYPE_TEXT;
-		m[26].text = "My Ship Colors:";
+		m[17].type = NM_TYPE_TEXT;
+		m[17].text = "";
+
+		ADD_CHECK(18, "Movie Subtitles",GameCfg.MovieSubtitles);
+		ADD_CHECK(19, "No redundant pickup messages",PlayerCfg.NoRedundancy);
+		ADD_CHECK(20, "Show Player chat only (Multi)",PlayerCfg.MultiMessages);
+		ADD_CHECK(21, "No Rankings (Multi)",PlayerCfg.NoRankings);
+		ADD_CHECK(22, "Free Flight controls in Automap",PlayerCfg.AutomapFreeFlight);
+		ADD_CHECK(23, "No Weapon Autoselect when firing",PlayerCfg.NoFireAutoselect);
+		ADD_CHECK(24, "Autoselect after firing",PlayerCfg.SelectAfterFire);
+		ADD_CHECK(25, "Only Cycle Autoselect Weapons",PlayerCfg.CycleAutoselectOnly);
+		ADD_CHECK(26, "Ammo Warnings",PlayerCfg.VulcanAmmoWarnings);
+		ADD_CHECK(27, "Shield Warnings",PlayerCfg.ShieldWarnings);
+		ADD_CHECK(28, "No Player Chat Sound",PlayerCfg.NoChatSound);
+
+		m[29].type = NM_TYPE_TEXT;
+		m[29].text = "";
+
+		m[30].type = NM_TYPE_TEXT;
+		m[30].text = "My Ship Colors:";
 
 		print_ship_color(misc_menu_data.preferred_color, SDL_arraysize(misc_menu_data.preferred_color),
 			PlayerCfg.ShipColor);
-		m[27].type = NM_TYPE_SLIDER;
-		m[27].value = PlayerCfg.ShipColor;
-		m[27].text = misc_menu_data.preferred_color;
-		m[27].min_value = 0;
-		m[27].max_value = 8;
+		m[31].type = NM_TYPE_SLIDER;
+		m[31].value = PlayerCfg.ShipColor;
+		m[31].text = misc_menu_data.preferred_color;
+		m[31].min_value = 0;
+		m[31].max_value = 8;
 
 		print_missile_color(misc_menu_data.missile_color, SDL_arraysize(misc_menu_data.missile_color),
 			PlayerCfg.MissileColor);
-		m[28].type = NM_TYPE_SLIDER;
-		m[28].value = PlayerCfg.MissileColor;
-		m[28].text = misc_menu_data.missile_color;
-		m[28].min_value = 0;
-		m[28].max_value = 8;
-
-		ADD_CHECK(29, "Show Custom Ship Colors", PlayerCfg.ShowCustomColors);
-
-		m[30].type = NM_TYPE_TEXT;
-		m[30].text = "";
-
-		m[31].type = NM_TYPE_TEXT;
-		m[31].text = "Team Colors:";
-
-		print_my_team_color(misc_menu_data.my_team_color, SDL_arraysize(misc_menu_data.my_team_color),
-			PlayerCfg.MyTeamColor);
 		m[32].type = NM_TYPE_SLIDER;
-		m[32].value = PlayerCfg.MyTeamColor;
-		m[32].text = misc_menu_data.my_team_color;
+		m[32].value = PlayerCfg.MissileColor;
+		m[32].text = misc_menu_data.missile_color;
 		m[32].min_value = 0;
 		m[32].max_value = 8;
 
+		ADD_CHECK(33, "Show Custom Ship Colors", PlayerCfg.ShowCustomColors);
+
+		m[34].type = NM_TYPE_TEXT;
+		m[34].text = "";
+
+		m[35].type = NM_TYPE_TEXT;
+		m[35].text = "Team Colors:";
+
+		print_my_team_color(misc_menu_data.my_team_color, SDL_arraysize(misc_menu_data.my_team_color),
+			PlayerCfg.MyTeamColor);
+		m[36].type = NM_TYPE_SLIDER;
+		m[36].value = PlayerCfg.MyTeamColor;
+		m[36].text = misc_menu_data.my_team_color;
+		m[36].min_value = 0;
+		m[36].max_value = 8;
+
 		print_other_team_color(misc_menu_data.other_team_color, SDL_arraysize(misc_menu_data.other_team_color),
 			PlayerCfg.OtherTeamColor);
-		m[33].type = NM_TYPE_SLIDER;
-		m[33].value = PlayerCfg.OtherTeamColor;
-		m[33].text = misc_menu_data.other_team_color;
-		m[33].min_value = 0;
-		m[33].max_value = 8;
+		m[37].type = NM_TYPE_SLIDER;
+		m[37].value = PlayerCfg.OtherTeamColor;
+		m[37].text = misc_menu_data.other_team_color;
+		m[37].min_value = 0;
+		m[37].max_value = 8;
 
 		if (PlayerCfg.MyTeamColor == 8 && PlayerCfg.OtherTeamColor == 8) {
 			// If we're not setting explicit team colors, we don't override what the game host picked
-			m[34].type = NM_TYPE_TEXT;
-			m[34].text = "Ignore Per-Game Team Colors (N/A)";
+			m[38].type = NM_TYPE_TEXT;
+			m[38].text = "Ignore Per-Game Team Colors (N/A)";
 		} else {
-			m[34].type = NM_TYPE_CHECK;
-			m[34].text = "Ignore Per-Game Team Colors";
+			m[38].type = NM_TYPE_CHECK;
+			m[38].text = "Ignore Per-Game Team Colors";
 		}
-		m[34].value = PlayerCfg.PreferMyTeamColors;
+		m[38].value = PlayerCfg.PreferMyTeamColors;
 
 		i = newmenu_do1(NULL, "Misc Options", SDL_arraysize(m), m, menu_misc_options_handler, &misc_menu_data, i);
 
@@ -2163,20 +2172,22 @@ void do_misc_menu()
 		else if (m[11].value) {
 			PlayerCfg.DemoRecordingIndicator = 2;
 		}
-		GameCfg.MovieSubtitles 			= m[13].value;
-		PlayerCfg.NoRedundancy 			= m[14].value;
-		PlayerCfg.MultiMessages 		= m[15].value;
-		PlayerCfg.NoRankings 			= m[16].value;
-		PlayerCfg.AutomapFreeFlight		= m[17].value;
-		PlayerCfg.NoFireAutoselect		= m[18].value;
-		PlayerCfg.SelectAfterFire		= m[19].value; if(PlayerCfg.SelectAfterFire) { PlayerCfg.NoFireAutoselect = 1; }
-		PlayerCfg.CycleAutoselectOnly		= m[20].value;
-		PlayerCfg.VulcanAmmoWarnings = m[21].value; 
-		PlayerCfg.ShieldWarnings = m[22].value;
-		PlayerCfg.AutoDemo = m[23].value;
-		PlayerCfg.NoChatSound = m[24].value;
-		PlayerCfg.ShowCustomColors = m[29].value;
-		PlayerCfg.PreferMyTeamColors = (PlayerCfg.MyTeamColor == 8 && PlayerCfg.OtherTeamColor == 8) ? 0 : m[34].value;
+		PlayerCfg.AutoDemoSp			= m[14].value;
+		PlayerCfg.AutoDemoMp			= m[15].value;
+		PlayerCfg.AutoDemoHideUi		= m[16].value;
+		GameCfg.MovieSubtitles 			= m[18].value;
+		PlayerCfg.NoRedundancy 			= m[19].value;
+		PlayerCfg.MultiMessages 		= m[20].value;
+		PlayerCfg.NoRankings 			= m[21].value;
+		PlayerCfg.AutomapFreeFlight		= m[22].value;
+		PlayerCfg.NoFireAutoselect		= m[23].value;
+		PlayerCfg.SelectAfterFire		= m[24].value; if(PlayerCfg.SelectAfterFire) { PlayerCfg.NoFireAutoselect = 1; }
+		PlayerCfg.CycleAutoselectOnly		= m[25].value;
+		PlayerCfg.VulcanAmmoWarnings = m[26].value; 
+		PlayerCfg.ShieldWarnings = m[27].value;
+		PlayerCfg.NoChatSound = m[28].value;
+		PlayerCfg.ShowCustomColors = m[33].value;
+		PlayerCfg.PreferMyTeamColors = (PlayerCfg.MyTeamColor == 8 && PlayerCfg.OtherTeamColor == 8) ? 0 : m[38].value;
 
 	} while( i>-1 );
 
@@ -2195,30 +2206,30 @@ int menu_misc_options_handler(newmenu* menu, d_event* event, void* userdata)
 	struct misc_menu_data* menu_data = (struct misc_menu_data*)userdata;
 	
 	if (event->type == EVENT_NEWMENU_CHANGED) {
-		if (citem == 27) {
-			PlayerCfg.ShipColor = menus[27].value;
+		if (citem == 31) {
+			PlayerCfg.ShipColor = menus[31].value;
 			print_ship_color(menu_data->preferred_color, SDL_arraysize(menu_data->preferred_color),
 				PlayerCfg.ShipColor);
-		} else if (citem == 28) {
-			PlayerCfg.MissileColor = menus[28].value;
+		} else if (citem == 32) {
+			PlayerCfg.MissileColor = menus[32].value;
 			print_missile_color(menu_data->missile_color, SDL_arraysize(menu_data->missile_color),
 				PlayerCfg.MissileColor);
-		} else if (citem == 32) {
-			PlayerCfg.MyTeamColor = menus[32].value;
+		} else if (citem == 36) {
+			PlayerCfg.MyTeamColor = menus[36].value;
 			print_my_team_color(menu_data->my_team_color, SDL_arraysize(menu_data->my_team_color),
 				PlayerCfg.MyTeamColor);
-		} else if (citem == 33) {
-			PlayerCfg.OtherTeamColor = menus[33].value;
+		} else if (citem == 37) {
+			PlayerCfg.OtherTeamColor = menus[37].value;
 			print_other_team_color(menu_data->other_team_color, SDL_arraysize(menu_data->other_team_color),
 				PlayerCfg.OtherTeamColor);
 		}
 
 		if (PlayerCfg.MyTeamColor == 8 && PlayerCfg.OtherTeamColor == 8) {
-			menus[34].type = NM_TYPE_TEXT;
-			menus[34].text = "Ignore Per-Game Team Colors (N/A)";
+			menus[38].type = NM_TYPE_TEXT;
+			menus[38].text = "Ignore Per-Game Team Colors (N/A)";
 		} else {
-			menus[34].type = NM_TYPE_CHECK;
-			menus[34].text = "Ignore Per-Game Team Colors";
+			menus[38].type = NM_TYPE_CHECK;
+			menus[38].text = "Ignore Per-Game Team Colors";
 		}
 	}
 

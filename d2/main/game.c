@@ -1184,7 +1184,7 @@ int game_handler(window *wind, d_event *event, void *data)
 			digi_stop_digi_sounds();
 
 			if ( (Newdemo_state == ND_STATE_RECORDING) || (Newdemo_state == ND_STATE_PAUSED) )
-				newdemo_stop_recording();
+				newdemo_stop_recording(0);
 
 #ifdef NETWORK
 			multi_leave_game();
