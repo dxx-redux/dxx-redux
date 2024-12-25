@@ -1907,16 +1907,20 @@ int ReadControls(d_event *event)
 		// Force the observer to a certain camera based on whether they are freely observing or observing a specific player.
 		if (is_observing_player()) {
 			// We're observing a player directly, and need to interpolate the position and orientation.  Check to see if the real position has updated, and accumulate Last_real_update time.
-			if (vm_vec_equal(&Real_pos, &Objects[Players[Current_obs_player].objnum].pos) && vm_mat_equal(&Real_orient, &Objects[Players[Current_obs_player].objnum].orient)) {
+			object* obs_player_obj = &Objects[Players[Current_obs_player].objnum];
+			if (vm_vec_equal(&Real_pos, &obs_player_obj->pos) && vm_mat_equal(&Real_orient, &obs_player_obj->orient)) {
 				Last_real_update += FrameTime;
 			} else {
 
-				Real_pos = Objects[Players[Current_obs_player].objnum].pos;
-				Real_orient = Objects[Players[Current_obs_player].objnum].orient;
+				Real_pos = obs_player_obj->pos;
+				// If the player is dead, stop updating orientation (to prevent the camera from spinning).
+				if (!(obs_player_obj->flags & OF_SHOULD_BE_DEAD))
+					Real_orient = obs_player_obj->orient;
 				Last_real_update = 0;
 
-				// If we're observing at a distance, move the camera accordingly.achieved_state
-				if (Obs_at_distance == 1) {
+				// If we're observing at a distance, move the camera accordingly.
+				// Also do this temporarily when they're dead, to mimic the dead player camera.
+				if (Obs_at_distance == 1 || (obs_player_obj->flags & OF_SHOULD_BE_DEAD)) {
 					int dist = PlayerCfg.ObsIncreaseThirdPersonDist[get_observer_game_mode()] ? -30 : -20;
 					vms_vector move = ZERO_VECTOR;
 					vm_vec_copy_scale(&move, &Real_orient.fvec, F1_0 * dist);
