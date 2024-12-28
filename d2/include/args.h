@@ -97,6 +97,7 @@ typedef struct Arg
 #endif
 	int LogNetTraffic; 	
 	int GameLogTimeStamp;
+	int GameLogSplit;
 } Arg;
 
 extern struct Arg GameArg;

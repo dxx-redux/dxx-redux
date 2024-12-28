@@ -1129,6 +1129,17 @@ void StartNewLevelSub(int level_num, int page_in_textures, int secret_flag)
 		last_drawn_cockpit = -1;
 	}
 
+	if (GameArg.GameLogSplit) {
+		// Include the mission name, level number and timestamp in the log filename
+		char log_filename[PATH_MAX];
+		time_t now = time(NULL);
+		struct tm *t = localtime(&now);
+		snprintf(log_filename, SDL_arraysize(log_filename), "gamelog-%s-%d-%04d%02d%02d-%02d%02d%02d.txt",
+			Current_mission_filename, level_num, t->tm_year + 1900, t->tm_mon, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
+
+		con_switch_log(log_filename);
+	}
+
 	if (Newdemo_state == ND_STATE_PAUSED)
 		Newdemo_state = ND_STATE_RECORDING;
 
