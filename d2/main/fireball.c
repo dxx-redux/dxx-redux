@@ -286,7 +286,8 @@ object *object_create_explosion_sub(object *objp, short segnum, vms_vector * pos
 										multi_send_damage(damage, obj0p->shields, obj_type, 0, DAMAGE_BLAST, objp);
 									}
 
-									apply_damage_to_player(obj0p, killer, damage, 0 );
+									// Explosions CAN be friendly fire.
+									apply_damage_to_player(obj0p, killer, damage, 1);
 								}
 							}
 								break;

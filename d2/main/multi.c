@@ -6088,6 +6088,8 @@ int multi_maybe_disable_friendly_fire(object *killer)
 		return 0;
 	if (killer->type != OBJ_PLAYER) // not a player -> harm me!
 		return 0;
+	if (killer == ConsoleObject) // it's me -> harm me! (That's not how you use concussion missiles!)
+		return 0;
 	if (Game_mode & GM_MULTI_COOP) // coop mode -> don't harm me!
 		return 1;
 	else if (Game_mode & GM_TEAM) // team mode - find out if killer is in my team
