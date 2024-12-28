@@ -73,6 +73,18 @@ typedef _ssize_t ssize_t;
 #endif
 #endif
 
+#if !defined(HAVE_STRUCT_TIMEVAL) || !HAVE_STRUCT_TIMEVAL
+struct timeval
+{
+	long tv_sec;
+	long tv_usec;
+};
+#endif
+
+#if defined(_WIN32) || defined(macintosh)
+int gettimeofday(struct timeval* tv, void* tz); // defined in mveplay for D2, but we still need the forward declaration
+#endif //  defined(_WIN32) || defined(macintosh)
+
 // Prototypes
 void net_udp_init();
 void net_udp_close();
