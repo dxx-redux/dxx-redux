@@ -969,7 +969,7 @@ int AdvanceLevel(int secret_flag)
 	if (Current_level_num == Last_level) {		//player has finished the game!
 
 		if ((Newdemo_state == ND_STATE_RECORDING) || (Newdemo_state == ND_STATE_PAUSED))
-			newdemo_stop_recording();
+			newdemo_stop_recording(0);
 
 		do_end_briefing_screens(Ending_text_filename);
 
@@ -1254,8 +1254,11 @@ void StartNewLevelSub(int level_num, int page_in_textures, int secret_flag)
 	if (!((Game_mode & GM_MULTI) && (Newdemo_state != ND_STATE_PLAYBACK)))
 		palette_save();
 
-	if(Game_mode & GM_MULTI && PlayerCfg.AutoDemo && Newdemo_state != ND_STATE_RECORDING) {
-		newdemo_start_recording();
+	int autodemo_enabled_for_game_mode =
+		(!(Game_mode & GM_MULTI) && PlayerCfg.AutoDemoSp) ||
+		((Game_mode & GM_MULTI) && PlayerCfg.AutoDemoMp);
+	if (autodemo_enabled_for_game_mode && Newdemo_state != ND_STATE_RECORDING) {
+		newdemo_start_recording(1);
 	}
 
 	if (!Game_wind)

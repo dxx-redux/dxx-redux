@@ -87,7 +87,9 @@ typedef struct player_config
 	ubyte CycleAutoselectOnly;
 	ubyte VulcanAmmoWarnings;
 	ubyte ShieldWarnings;
-	ubyte AutoDemo;
+	ubyte AutoDemoSp;
+	ubyte AutoDemoMp;
+	ubyte AutoDemoHideUi;
 	ubyte ShowCustomColors;
 	ubyte PreferMyTeamColors;
 	ubyte QuietPlasma;
