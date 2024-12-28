@@ -2378,9 +2378,12 @@ void collide_player_and_weapon( object * playerobj, object * weapon, vms_vector 
 		}
 	}
 
-	if ((Game_mode & GM_MULTI) && playerobj->id == Player_num)
+	// Send to other players that the local player got hit
+	if ((Game_mode & GM_MULTI) && Netgame.RemoteHitSpark && playerobj->id == Player_num)
 		multi_send_create_explosion2(playerobj->segnum, collision_point, i2f(10)/2, VCLIP_PLAYER_HIT);
-	if (playerobj->id == Player_num)
+
+	// Show local hit if it won't be received from player
+	if (!(Game_mode & GM_MULTI) || !Netgame.RemoteHitSpark || playerobj->id == Player_num)
 		object_create_explosion( playerobj->segnum, collision_point, i2f(10)/2, VCLIP_PLAYER_HIT );
 
 	if ( Weapon_info[weapon->id].damage_radius ) {

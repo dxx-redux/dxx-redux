@@ -3069,7 +3069,7 @@ void net_udp_send_game_info(struct _sockaddr sender_addr, ubyte info_upid, ubyte
 		buf[len] = Netgame.obs_min; len++;
 		buf[len] = Netgame.host_is_obs; len++;
 		buf[len] = Netgame.HomingUpdateRate; len++;
-		buf[len] = Netgame.ConstantHomingSpeed; len++;
+		buf[len] = Netgame.RemoteHitSpark; len++;
 		buf[len] = Netgame.AllowCustomModelsTextures; len++;
 		buf[len] = Netgame.ReducedFlash; len++;
 		buf[len] = Netgame.DisableGaussSplash; len++;
@@ -3320,7 +3320,7 @@ int net_udp_process_game_info(ubyte *data, int data_len, struct _sockaddr game_a
 		Netgame.obs_min = data[len]; len++;
 		Netgame.host_is_obs = data[len]; len++;
 		Netgame.HomingUpdateRate = data[len]; len++;
-		Netgame.ConstantHomingSpeed = data[len]; len++;
+		Netgame.RemoteHitSpark = data[len]; len++;
 		Netgame.AllowCustomModelsTextures = data[len]; len++;
 		Netgame.ReducedFlash = data[len]; len++;
 		Netgame.DisableGaussSplash = data[len]; len++;
@@ -3832,7 +3832,7 @@ static int opt_allowprefcolor, opt_ow;
 static int opt_low_vulcan;
 static int opt_gauss_duplicating, opt_gauss_depleting, opt_gauss_steady_recharge, opt_gauss_steady_respawn; 
 static int opt_homing_update_rate;
-static int opt_constant_homing_speed;
+static int opt_remote_hit_spark;
 static int opt_allow_custom_models_textures;
 static int opt_reduced_flash;
 static int opt_disable_gauss_splash;
@@ -4017,8 +4017,8 @@ void net_udp_more_game_options ()
 	sprintf( HomingUpdateRateText, "Homing Update Rate: %d", Netgame.HomingUpdateRate);
 	m[opt].type = NM_TYPE_SLIDER; m[opt].value=max(0, Netgame.HomingUpdateRate - 20); m[opt].text= HomingUpdateRateText; m[opt].min_value=0; m[opt].max_value=10; opt++;
 
-	opt_constant_homing_speed=opt;
-	m[opt].type = NM_TYPE_CHECK; m[opt].text = "DXX-Retro Homing Speed"; m[opt].value = Netgame.ConstantHomingSpeed; opt++;
+	opt_remote_hit_spark=opt;
+	m[opt].type = NM_TYPE_CHECK; m[opt].text = "Remote Hit Spark"; m[opt].value = Netgame.RemoteHitSpark; opt++;
 
 	opt_allow_custom_models_textures=opt;
 	m[opt].type = NM_TYPE_CHECK; m[opt].text = "Allow custom models and textures"; m[opt].value = Netgame.AllowCustomModelsTextures; opt++;
@@ -4089,7 +4089,7 @@ menu:
 	Netgame.AllowPreferredColors = m[opt_allowprefcolor].value;
 	Netgame.OriginalD1Weapons = m[opt_ow].value;
 	Netgame.HomingUpdateRate = m[opt_homing_update_rate].value + 20;
-	Netgame.ConstantHomingSpeed = m[opt_constant_homing_speed].value;
+	Netgame.RemoteHitSpark = m[opt_remote_hit_spark].value;
 	Netgame.AllowCustomModelsTextures = m[opt_allow_custom_models_textures].value;
 	Netgame.ReducedFlash = m[opt_reduced_flash].value;
 	Netgame.DisableGaussSplash = m[opt_disable_gauss_splash].value;
@@ -4404,7 +4404,7 @@ void netgame_set_defaults()
 	Netgame.AllowPreferredColors = 0;
 	Netgame.OriginalD1Weapons = 0;
 	Netgame.HomingUpdateRate = 25;
-	Netgame.ConstantHomingSpeed = 0;
+	Netgame.RemoteHitSpark = 0;
 	Netgame.AllowCustomModelsTextures = 0;
 	Netgame.ReducedFlash = 0;
 	Netgame.DisableGaussSplash = 0;
@@ -7664,14 +7664,14 @@ static int show_game_rules_handler(window *wind, d_event *event, netgame_info *n
 			y = 77;
 
 			gr_set_fontcolor(label_color,-1);
-			gr_printf( FSPACX( 25),FSPACY(y+ 0), "DXX-Retro Homing:");
+			gr_printf( FSPACX( 25),FSPACY(y+ 0), "Remote Hit Spark:");
 			gr_printf( FSPACX( 25),FSPACY(y+ 6), "Custom Mods:");
 			gr_printf( FSPACX( 25),FSPACY(y+12), "No Gauss Splash:");
 			gr_printf( FSPACX(155),FSPACY(y+ 0), "Reduced Flash:");
 			gr_printf( FSPACX(155),FSPACY(y+ 6), "Gauss Ammo Style:");
 
 			gr_set_fontcolor(value_color,-1);
-			gr_printf( FSPACX(115),FSPACY(y+ 0), netgame->ConstantHomingSpeed?"ON":"OFF");
+			gr_printf( FSPACX(115),FSPACY(y+ 0), netgame->RemoteHitSpark?"ON":"OFF");
 			gr_printf( FSPACX(115),FSPACY(y+ 6), netgame->AllowCustomModelsTextures?"ON":"OFF");
 			gr_printf( FSPACX(115),FSPACY(y+12), netgame->DisableGaussSplash?"ON":"OFF");
 			gr_printf( FSPACX(275),FSPACY(y+ 0), netgame->ReducedFlash?"ON":"OFF");

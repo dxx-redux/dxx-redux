@@ -1297,8 +1297,8 @@ int read_netgame_settings_file(const char *filename, netgame_info *ng, int no_na
 				ng->obs_min = strtol(value, NULL, 10);
 			else if (!strcmp(token, "HomingUpdateRate"))
 				ng->HomingUpdateRate = strtol(value, NULL, 10);
-			else if (!strcmp(token, "ConstantHomingSpeed"))
-				ng->ConstantHomingSpeed = strtol(value, NULL, 10);
+			else if (!strcmp(token, "RemoteHitSpark"))
+				ng->RemoteHitSpark = strtol(value, NULL, 10);
 			else if (!strcmp(token, "AllowCustomModelsTextures"))
 				ng->AllowCustomModelsTextures = strtol(value, NULL, 10);
 			else if (!strcmp(token, "ReducedFlash"))
@@ -1375,7 +1375,7 @@ int write_netgame_settings_file(const char *filename, netgame_info *ng, int no_n
 	PHYSFSX_printf(file, "obs_delay=%i\n", ng->obs_delay);
 	PHYSFSX_printf(file, "obs_min=%i\n", ng->obs_min);
 	PHYSFSX_printf(file, "HomingUpdateRate=%i\n", ng->HomingUpdateRate);
-	PHYSFSX_printf(file, "ConstantHomingSpeed=%i\n", ng->ConstantHomingSpeed);
+	PHYSFSX_printf(file, "RemoteHitSpark=%i\n", ng->RemoteHitSpark);
 	PHYSFSX_printf(file, "AllowCustomModelsTextures=%i\n", ng->AllowCustomModelsTextures);
 	PHYSFSX_printf(file, "ReducedFlash=%i\n", ng->ReducedFlash);
 	PHYSFSX_printf(file, "DisableGaussSplash=%i\n", ng->DisableGaussSplash);
