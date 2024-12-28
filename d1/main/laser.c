@@ -50,8 +50,6 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 
 #define NEWHOMER
 
-int Constant_homing_speed = 0;
-
 int Network_laser_track = -1;
 
 int find_homing_object_complete(vms_vector *curpos, object *tracker, int track_obj_type1, int track_obj_type2);
@@ -1003,7 +1001,7 @@ void Laser_do_weapon_sequence(object *obj, int doHomerFrame, fix idealHomerFrame
 
 				vm_vec_normalize_quick(&vector_to_object);
 				temp_vec = obj->mtype.phys_info.velocity;
-				speed = Constant_homing_speed ? vm_vec_normalize(&temp_vec) : vm_vec_normalize_quick(&temp_vec);
+				speed = vm_vec_normalize_quick(&temp_vec);
 				max_speed = Weapon_info[obj->id].speed[Difficulty_level];
 				if (speed+F1_0 < max_speed) {
 					speed += fixmul(max_speed, idealHomerFrameTime/2);  // CED 
@@ -1019,7 +1017,7 @@ void Laser_do_weapon_sequence(object *obj, int doHomerFrame, fix idealHomerFrame
 				//	The boss' smart children track better...
 				if (Weapon_info[obj->id].render_type != WEAPON_RENDER_POLYMODEL)
 					vm_vec_add2(&temp_vec, &vector_to_object);
-				Constant_homing_speed ? vm_vec_normalize(&temp_vec) : vm_vec_normalize_quick(&temp_vec);
+				vm_vec_normalize_quick(&temp_vec);
 				vm_vec_scale(&temp_vec, speed);
 				obj->mtype.phys_info.velocity = temp_vec;
 
@@ -1627,9 +1625,5 @@ void net_missile_firing(int player, int gun, int flags, vms_vector shot_orientat
 
 }
 #endif
-
-void set_constant_homing_speed(int value) {
-	Constant_homing_speed = value;
-}
 
 

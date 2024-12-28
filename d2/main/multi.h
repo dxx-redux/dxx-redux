@@ -60,7 +60,7 @@ extern int multi_protocol; // set and determinate used protocol
 #define MULTI_PROTO_UDP 1 // UDP protocol
 
 // What version of the multiplayer protocol is this? Increment each time something drastic changes in Multiplayer without the version number changes. Can be reset to 0 each time the version of the game changes
-#define MULTI_PROTO_VERSION 30004 // Redux 1.1
+#define MULTI_PROTO_VERSION 30005 // Redux 1.1
 
 // PROTOCOL VARIABLES AND DEFINES - END
 
@@ -575,7 +575,7 @@ typedef struct netgame_info
 	ubyte						Tracker;
 #endif
 	ubyte						HomingUpdateRate;
-	ubyte						ConstantHomingSpeed;
+	ubyte						RemoteHitSpark;
 	ubyte						AllowCustomModelsTextures;
 	ubyte						ReducedFlash;
 	ubyte						DisableGaussSplash;

@@ -171,6 +171,4 @@ static inline int is_proximity_bomb_or_smart_mine_or_placed_mine(enum weapon_typ
 	return id == PROXIMITY_ID;
 }
 
-extern void set_constant_homing_speed(int value);
-
 #endif /* _LASER_H */

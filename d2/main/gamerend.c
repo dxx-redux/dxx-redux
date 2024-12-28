@@ -236,7 +236,7 @@ void show_netplayerinfo()
 	char hom_string[16];
 	snprintf(hom_string, sizeof(hom_string), "Hom %d", Netgame.HomingUpdateRate);
 	draw_flag(hom_string, Netgame.HomingUpdateRate != 25,                          base_flags_left + word_spacing*0, y);
-	draw_flag("RetroHom", Netgame.ConstantHomingSpeed,                             base_flags_left + word_spacing*1, y);
+	draw_flag("RemSpark", Netgame.RemoteHitSpark,                                  base_flags_left + word_spacing*1, y);
 	draw_flag("CustMod",  Netgame.AllowCustomModelsTextures,                       base_flags_left + word_spacing*2, y);
 
 	set_font_newline();
