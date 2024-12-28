@@ -37,6 +37,7 @@ void Warning(char *fmt,...);				//print out warning message to user
 void set_warn_func(void (*f)(char *s));//specifies the function to call with warning messages
 void clear_warn_func(void (*f)(char *s));//say this function no longer valid
 void Error(const char *fmt,...) __noreturn __attribute_gcc_format((printf, 1, 2));				//exit with error code=1, print message
+void init_crash_dump_handler();
 #define Assert assert
 #ifndef NDEBUG		//macros for debugging
 
