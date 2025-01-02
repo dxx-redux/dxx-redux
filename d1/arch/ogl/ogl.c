@@ -1276,6 +1276,37 @@ void ogl_filltexbuf(unsigned char *data, GLubyte *texp, int truewidth, int width
 	if ((width > max(grd_curscreen->sc_w, 1024)) || (height > max(grd_curscreen->sc_h, 1024)))
 		Error("Texture is too big: %ix%i", width, height);
 
+	if (data_format) { // true color bitmap?
+		if (width == truewidth && width == twidth) {
+			memcpy(texp, data, data_format * width * height);
+		} else {
+			for (y = 0; y < height; y++) {
+				memcpy(texp + twidth * y * data_format,
+					data + truewidth * y * data_format,
+					width * data_format);
+				if (width < twidth) { // repeat last pixel, clear rest
+					memcpy(texp + (y * twidth + width) * data_format,
+						data + (y * truewidth + width - 1) * data_format,
+						data_format);
+					if (width + 1 < twidth)
+						memset(texp + (y * twidth + width + 1) * data_format,
+							0, (twidth - width - 1) * data_format);
+				}
+			}
+		}
+		if (height < theight) { // repeat last row, clear rest
+			memcpy(texp + height * twidth * data_format,
+				data + (height - 1) * truewidth * data_format,
+				width * data_format);
+			memset(texp + (height * twidth + width) * data_format,
+				0, (twidth - width) * data_format);
+			if (height + 1 < theight)
+				memset(texp + (height + 1) * twidth * data_format,
+					0, (theight - height - 1) * twidth * data_format);
+		}
+		return;
+	}
+
 	i=0;
 	for (y=0;y<theight;y++)
 	{
@@ -1284,19 +1315,7 @@ void ogl_filltexbuf(unsigned char *data, GLubyte *texp, int truewidth, int width
 		{
 			if (x<width && y<height)
 			{
-				if (data_format)
-				{
-					int j;
-
-					for (j = 0; j < data_format; ++j)
-						(*(texp++)) = data[i * data_format + j];
-					i++;
-					continue;
-				}
-				else
-				{
-					c = data[i++];
-				}
+				c = data[i++];
 			}
 			else if (x == width && y < height) // end of bitmap reached - fill this pixel with last color to make a clean border when filtering this texture
 			{
