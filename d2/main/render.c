@@ -1702,7 +1702,7 @@ void build_segment_list(int start_seg_num, int window_num)
 	int	lcnt,scnt,ecnt;
 	int	l,c;
 	int	ch;
-	int	obs = is_observer();
+	int	obs = is_observer() || (Newdemo_state == ND_STATE_PLAYBACK && Newdemo_game_mode & GM_OBSERVER);
 
 	memset(visited, 0, sizeof(visited[0])*(Highest_segment_index+1));
 	memset(render_pos, -1, sizeof(render_pos[0])*(Highest_segment_index+1));
