@@ -1371,6 +1371,7 @@ int obj_create(enum object_type_t type,ubyte id,int segnum,const vms_vector *pos
 		Assert(obj->control_type == CT_WEAPON);
 		obj->mtype.phys_info.flags |= (Weapon_info[obj->id].persistent*PF_PERSISTENT);
 		obj->ctype.laser_info.creation_time = GameTime64;
+		obj->ctype.laser_info.creation_framecount = homerFrameCount;
 		obj->ctype.laser_info.last_hitobj = -1;
 		memset(&obj->ctype.laser_info.hitobj_list, 0, sizeof(ubyte)*MAX_OBJECTS);
 		obj->ctype.laser_info.multiplier = F1_0;
