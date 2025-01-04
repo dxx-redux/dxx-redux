@@ -311,3 +311,26 @@ void string_array_tidy(char ***list, char **list_buf, int *num_str, int *max_str
 
 	*num_str = j;
 }
+
+#ifndef WIN32
+int strcpy_s(char *dest, size_t dest_size, const char *src)
+{
+	if (!memchr(src, 0, dest_size)) // src longer than dest_size?
+		abort();
+	strcpy(dest, src);
+	return 0;
+}
+
+int sprintf_s(char *buffer, size_t buffer_size, const char *format, ...)
+{
+	va_list vp;
+	int ret;
+
+	va_start(vp, format);
+	ret = vsnprintf(buffer, buffer_size, format, vp);
+	va_end(vp);
+	if (ret >= buffer_size) // result didn't fit?
+		abort();
+	return ret;
+}
+#endif
