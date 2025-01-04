@@ -14,6 +14,8 @@ option(TRACKER "Enable Tracker support (requires UDP) [default: ON]" ON)
 option(PNG "Build with PNG support for screenshots and textures [default: ON]" ON)
 option(OPENGLMERGE "Use an OpenGL shader for texmerge [default: ON]" ON)
 
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_FLAGS_MINSIZEREL "${CMAKE_C_FLAGS_MINSIZEREL} -DRELEASE")
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -DRELEASE")
 set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} -DRELEASE")
