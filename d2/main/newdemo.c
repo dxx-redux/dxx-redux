@@ -3535,7 +3535,7 @@ void newdemo_get_default_filename(char* filename_buffer, unsigned int filename_b
 int newdemo_prompt_filename(char* filename_buffer, unsigned int filename_buffer_length)
 {
 	char filename_from_prompt[PATH_MAX] = "";
-	strncpy_s(filename_from_prompt, SDL_arraysize(filename_from_prompt), filename_buffer, filename_buffer_length);
+	strcpy_s(filename_from_prompt, SDL_arraysize(filename_from_prompt), filename_buffer);
 
 	do {
 		newmenu_item m[2];

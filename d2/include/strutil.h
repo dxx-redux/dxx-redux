@@ -32,4 +32,9 @@ int string_array_sort_func(char **e0, char **e1);
 // reallocate pointers to save memory, sort list alphabetically and remove duplicates according to 'comp'
 void string_array_tidy(char ***list, char **list_buf, int *num_str, int *max_str, int *max_buf, int offset, int (*comp)( const char *, const char * ));
 
+#ifndef WIN32
+int strcpy_s(char *dest, size_t dest_size, const char *src);
+int sprintf_s(char *buffer, size_t buffer_size, const char *format, ...);
+#endif
+
 #endif /* _STRUTILS_H */
