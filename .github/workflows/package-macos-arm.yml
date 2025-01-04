@@ -1,4 +1,4 @@
-name: Package - macOS
+name: Package - macOS - arm
 
 on:
   #push:
@@ -12,9 +12,7 @@ on:
 jobs:
   macos:
     name: macOS Apps
-    runs-on: macos-13
-    env:
-      MACOSX_DEPLOYMENT_TARGET: 10.14
+    runs-on: macos-14
     steps:
       - name: Clone repository
         uses: actions/checkout@v3
@@ -46,5 +44,5 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: macos
+          name: macos-arm
           path: '*.zip'
