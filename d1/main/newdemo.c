@@ -3267,7 +3267,7 @@ void newdemo_get_default_filename(char* filename_buffer, unsigned int filename_b
 		time_t now = time(NULL);
 		struct tm* t = localtime(&now);
 		sprintf_s(basename, SDL_arraysize(basename), "%s_%s_%04d%02d%02d",
-			Players[Player_num].callsign, Current_mission_filename, t->tm_year + 1900, t->tm_mon, t->tm_mday);
+			Players[Player_num].callsign, Current_mission_filename, t->tm_year + 1900, t->tm_mon + 1, t->tm_mday);
 	}
 
 	// Remove invalid characters, because map names can include invalid characters.
