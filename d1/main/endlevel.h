@@ -26,7 +26,7 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 extern int Endlevel_sequence;
 
 void start_endlevel_sequence();
-void render_external_scene();
+void render_external_scene(fix eye_offset);
 void render_endlevel_frame(fix eye_offset);
 void do_endlevel_frame();
 void draw_exit_model();

@@ -34,8 +34,8 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 
 extern bitmap_index Gauges[MAX_GAUGE_BMS_MAC];   // Array of all gauge bitmaps.
 
-extern void add_points_to_score();
-extern void add_bonus_points_to_score();
+extern void add_points_to_score(int points);
+extern void add_bonus_points_to_score(int points);
 
 void render_gauges(void);
 void init_gauges(void);

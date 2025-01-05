@@ -441,7 +441,7 @@ void change_playernum_to(int new_pnum);
 // Multiplayer powerup capping
 extern void multi_powcap_count_powerups_in_mine(void);
 extern void multi_powcap_cap_objects();
-extern void multi_do_powcap_update();
+extern void multi_do_powcap_update(const ubyte *buf);
 extern void multi_send_powcap_update();
 extern void multi_send_stolen_items();
 extern void multi_send_kill_goal_counts();
