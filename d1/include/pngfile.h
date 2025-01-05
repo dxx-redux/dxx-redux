@@ -1,5 +1,6 @@
 #ifndef PNGFILE_H
 #define PNGFILE_H
+#include "pstypes.h" // for consistent struct packing
 
 typedef struct _png_data {
 	unsigned int width;
