@@ -1,0 +1,60 @@
+name: Package - MSVC
+
+on:
+  workflow_dispatch:
+
+  workflow_call:
+
+jobs:
+  msvc:
+    name: MSVC
+    runs-on: windows-latest
+    env:
+      VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
+      VCPKG_BUILD_TYPE: "release"
+
+    strategy:
+      matrix:
+        arch:
+          - x64
+          - x86
+
+    steps:
+    - uses: actions/checkout@v3
+    - uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: ${{ matrix.arch }}
+
+    - name: Export GitHub Actions cache environment variables
+      uses: actions/github-script@v7
+      with:
+        script: |
+          core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+          core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+
+    - name: Use GitHub Actions provided vcpkg
+      shell: pwsh
+      run: Add-Content "$env:GITHUB_ENV" "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT"
+
+    - name: Install Ninja
+      run: choco install ninja
+
+    - name: Configure CMake D1
+      shell: pwsh
+      run: cmake --preset=x86-release -D CMAKE_BUILD_TYPE=RelWithDebInfo -S d1 -B buildd1
+
+    - name: Build D1
+      run: cmake --build buildd1
+
+    - name: Configure CMake D2
+      shell: pwsh
+      run: cmake --preset=x86-release -D CMAKE_BUILD_TYPE=RelWithDebInfo -S d2 -B buildd2
+
+    - name: Build D2
+      run: cmake --build buildd2
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: msvc-${{ matrix.arch }}
+        path: 'buildd?/main/*.*'
