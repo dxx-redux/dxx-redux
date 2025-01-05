@@ -9,6 +9,8 @@ on:
 
   workflow_dispatch:
 
+  workflow_call:
+
 jobs:
   macos:
     name: macOS Apps
