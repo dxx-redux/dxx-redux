@@ -60,7 +60,7 @@ jobs:
         run: ./contrib/packaging/windows/build_package.sh
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: windows32
           path: '*.zip'
