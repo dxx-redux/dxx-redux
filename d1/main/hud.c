@@ -122,7 +122,7 @@ static int is_worth_showing(int class_flag)
 		return 0;
 
 	// Don't show kill feed messages if the observer death log is active; they're redundant
-	if (is_observer() && PlayerCfg.ObsShowKillFeed && (class_flag & HM_KILLFEED))
+	if (is_observer() && PlayerCfg.ObsShowKillFeed[get_observer_game_mode()] && (class_flag & HM_KILLFEED))
 		return 0;
 
 	return 1;
