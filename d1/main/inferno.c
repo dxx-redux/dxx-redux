@@ -278,6 +278,25 @@ int standard_handler(d_event *event)
 	return 0;
 }
 
+// Use SEH for catching exceptions on Windows, this is needed because of the SDL parachute
+// But only on MSVC/64-bit clang (SEH is broken on 32-bit clang https://github.com/llvm/llvm-project/issues/25753)
+#if defined(WIN32) && (defined(_MSC_VER) || (defined(__clang__) && !defined(__i386__)))
+int inner_main(int argc, char *argv[]);
+LONG WINAPI win32_exception_handler(EXCEPTION_POINTERS* exceptionPointers);
+
+int main(int argc, char *argv[])
+{
+	__try {
+		return inner_main(argc, argv);
+	} __except (win32_exception_handler(GetExceptionInformation())) {
+		return 1;
+	}
+}
+
+#undef main
+#define main inner_main
+#endif
+
 jmp_buf LeaveEvents;
 #define PROGNAME argv[0]
 

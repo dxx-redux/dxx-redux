@@ -79,6 +79,10 @@ if(WIN32)
     # memory corruption when Windows headers are compiled with non-default packing (set in
     # include/pstypes.h). This may actually be a problem that warrants fixing; keep an eye on that.
     add_definitions(/DWINDOWS /DHAVE_STRUCT_TIMEVAL /DWINDOWS_IGNORE_PACKING_MISMATCH)
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        add_compile_options(-gcodeview -fms-extensions -fseh-exceptions)
+        add_link_options(-fuse-ld=lld -Wl,--pdb=)
+    endif()
 elseif(APPLE)
     add_definitions(/DHAVE_STRUCT_TIMESPEC /DHAVE_STRUCT_TIMEVAL /D__unix__)
 elseif(__LINUX__)

@@ -29,8 +29,6 @@ jobs:
           install: >-
             git
             zip
-            base-devel 
-            mingw-w64-x86_64-toolchain
             mingw-w64-x86_64-pkgconf
             mingw-w64-x86_64-cmake
             mingw-w64-x86_64-physfs
@@ -39,18 +37,20 @@ jobs:
             mingw-w64-x86_64-libpng
             mingw-w64-x86_64-glew
             mingw-w64-x86_64-ntldd-git
+            mingw-w64-x86_64-clang
+            mingw-w64-x86_64-lld
 
       - name: Clone repository
         uses: actions/checkout@v3
 
       - name: Configure D1
-        run: cmake -S d1 -B buildd1 -DCMAKE_BUILD_TYPE=RelWithDebInfo
+        run: CC=clang CXX=clang++ cmake -S d1 -B buildd1 -DCMAKE_BUILD_TYPE=RelWithDebInfo
 
       - name: Build D1
         run: cmake --build buildd1 
 
       - name: Configure D2
-        run: cmake -S d2 -B buildd2 -DCMAKE_BUILD_TYPE=RelWithDebInfo
+        run: CC=clang CXX=clang++ cmake -S d2 -B buildd2 -DCMAKE_BUILD_TYPE=RelWithDebInfo
 
       - name: Build D2
         run: cmake --build buildd2
