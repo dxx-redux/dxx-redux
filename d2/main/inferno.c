@@ -345,6 +345,7 @@ int main(int argc, char *argv[])
 		! PHYSFSX_contfile_init("d2demo.hog", 1)) {
 		char path[PATH_MAX];
 		snprintf(path, sizeof(path), "%s", PHYSFS_getWriteDir());
+		size_t len = strlen(path);
 		if (len >= 3 && (strcmp(path + len - 3, "\\.\\") == 0 || strcmp(path + len - 3, "/./") == 0))
 			path[len - 3] = 0;
 		else if (len && (path[len - 1] == '/' || path[len - 1] == '\\'))
