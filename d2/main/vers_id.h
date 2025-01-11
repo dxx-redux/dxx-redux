@@ -24,7 +24,6 @@
 #define VERSION D2XMAJOR "." D2XMINOR "." D2XMICRO
 #define DESCENT_VERSION "D2X-Redux " RH_VERSION
 
-extern const char g_descent_version[40];
 extern const char g_descent_build_datetime[21];
 
 #endif /* _VERS_ID */

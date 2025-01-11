@@ -86,7 +86,7 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 endif()
 
 if(NOT WIN32)
-    add_compile_definitions(SHAREPATH="/usr/share/games/d1x-rebirth")
+    add_compile_definitions(SHAREPATH="/usr/share/games/d1x-redux")
 endif()
 
 add_subdirectory(2d)

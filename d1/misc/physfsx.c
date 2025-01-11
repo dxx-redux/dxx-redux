@@ -62,9 +62,9 @@ void PHYSFSX_init(int argc, char *argv[])
 	
 #if defined(__unix__)
 # if !(defined(__APPLE__) && defined(__MACH__))
-	path = "~/.d1x-rebirth/";
+	path = "~/.d1x-redux/";
 # else
-	path = "~/Library/Preferences/D1X Rebirth/";
+	path = "~/Library/Preferences/D1X Redux/";
 # endif
 	
 	if (path[0] == '~') // yes, this tilde can be put before non-unix paths.
