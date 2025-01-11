@@ -456,11 +456,114 @@ void do_weapon_select(int weapon_num, int secondary_flag)
 	select_weapon(weapon_num, secondary_flag, 1, 1);
 }
 
+void classic_auto_select_weapon(int weapon_type)
+{
+	int	r;
+	int cutpoint;
+	int looped=0;
+
+	if (weapon_type==0) {
+		r = player_has_weapon(Player_num, Players[Player_num].primary_weapon, 0);
+		if (r != HAS_ALL) {
+			int	cur_weapon;
+			int	try_again = 1;
+
+			cur_weapon = POrderList(Players[Player_num].primary_weapon);
+			cutpoint = POrderList (255);
+
+			while (try_again) {
+				cur_weapon++;
+
+				if (cur_weapon>=cutpoint)
+				{
+					if (looped)
+					{
+						HUD_init_message_literal(HM_DEFAULT, TXT_NO_PRIMARY);
+						select_weapon(0, 0, 0, 1);
+						try_again = 0;
+						continue;
+					}
+					cur_weapon=0;
+					looped=1;
+				}
+
+
+				if (cur_weapon==MAX_PRIMARY_WEAPONS)
+					cur_weapon = 0;
+
+				//	Hack alert!  Because the fusion uses 0 energy at the end (it's got the weird chargeup)
+				//	it looks like it takes 0 to fire, but it doesn't, so never auto-select.
+				// if (PlayerCfg.PrimaryOrder[cur_weapon] == FUSION_INDEX)
+				//	continue;
+
+				if (PlayerCfg.PrimaryOrder[cur_weapon] == Players[Player_num].primary_weapon) {
+					HUD_init_message_literal(HM_DEFAULT, TXT_NO_PRIMARY);
+					select_weapon(0, 0, 0, 1);
+					try_again = 0;			// Tried all weapons!
+
+				} else if (PlayerCfg.PrimaryOrder[cur_weapon]!=255 && player_has_weapon(Player_num, PlayerCfg.PrimaryOrder[cur_weapon], 0) == HAS_ALL) {
+					select_weapon(PlayerCfg.PrimaryOrder[cur_weapon], 0, 1, 1 );
+					try_again = 0;
+				}
+			}
+		}
+
+	} else {
+
+		Assert(weapon_type==1);
+		r = player_has_weapon(Player_num, Players[Player_num].secondary_weapon, 1);
+		if (r != HAS_ALL) {
+			int	cur_weapon;
+			int	try_again = 1;
+
+			cur_weapon = SOrderList(Players[Player_num].secondary_weapon);
+			cutpoint = SOrderList (255);
+
+
+			while (try_again) {
+				cur_weapon++;
+
+				if (cur_weapon>=cutpoint)
+				{
+					if (looped)
+					{
+						HUD_init_message_literal(HM_DEFAULT, "No secondary weapons selected!");
+						try_again = 0;
+						continue;
+					}
+					cur_weapon=0;
+					looped=1;
+				}
+
+				if (cur_weapon==MAX_SECONDARY_WEAPONS)
+					cur_weapon = 0;
+
+				if (PlayerCfg.SecondaryOrder[cur_weapon] == Players[Player_num].secondary_weapon) {
+					HUD_init_message_literal(HM_DEFAULT, "No secondary weapons available!");
+					try_again = 0;				// Tried all weapons!
+				} else if (player_has_weapon(Player_num, PlayerCfg.SecondaryOrder[cur_weapon], 1) == HAS_ALL) {
+					select_weapon(PlayerCfg.SecondaryOrder[cur_weapon], 1, 1, 1 );
+					try_again = 0;
+				}
+			}
+		}
+
+
+	}
+
+}
+
+
 //	----------------------------------------------------------------------------------------
 //	Automatically select next best weapon if unable to fire current weapon.
 // Weapon type: 0==primary, 1==secondary
 void auto_select_weapon(int weapon_type)
 {
+	if (PlayerCfg.ClassicAutoselectWeapon) {
+		classic_auto_select_weapon(weapon_type);
+		return;
+	}
+
 	// Can you fire your current weapon? 
 	if(weapon_type == 0 && player_has_weapon(Player_num, Players[Player_num].primary_weapon, 0) == HAS_ALL) { return; }
 	if(weapon_type == 1 && player_has_weapon(Player_num, Players[Player_num].secondary_weapon, 1) == HAS_ALL) { return; }
