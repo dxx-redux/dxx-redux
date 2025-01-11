@@ -90,7 +90,7 @@ elseif(__LINUX__)
 endif()
 
 if(NOT WIN32)
-    add_compile_definitions(SHAREPATH="/usr/share/games/d2x-rebirth")
+    add_compile_definitions(SHAREPATH="/usr/share/games/d2x-redux")
 endif()
 
 add_subdirectory(2d)
