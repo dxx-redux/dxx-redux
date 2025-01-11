@@ -168,6 +168,7 @@ int new_player_config()
 		PlayerCfg.ObsShowBombTimes[obs_mode] = 0;
 	}
 	PlayerCfg.NoChatSound = 0;
+	PlayerCfg.ClassicAutoselectWeapon = 0;
 
 	// Default taunt macros
 	#ifdef NETWORK
@@ -436,6 +437,8 @@ int read_player_d2x(char *filename)
 				}
 				if(!strcmp(word,"NOCHATSOUND"))
 					PlayerCfg.NoChatSound = atoi(line);
+				if(!strcmp(word,"CLASSICAUTOSELECTWEAPON"))
+					PlayerCfg.ClassicAutoselectWeapon = atoi(line);
 
 				// Observer settings - migrate from old version
 				// If migrating from an older version, set all observer modes to the same value
@@ -702,6 +705,7 @@ int write_player_d2x(char *filename)
 		//PHYSFSX_printf(fout,"quietplasma=%i\n",PlayerCfg.QuietPlasma);	
 		PHYSFSX_printf(fout,"maxfps=%i\n",PlayerCfg.maxFps);	
 		PHYSFSX_printf(fout,"nochatsound=%i\n",PlayerCfg.NoChatSound);
+		PHYSFSX_printf(fout,"classicautoselectweapon=%i\n",PlayerCfg.ClassicAutoselectWeapon);
 		PHYSFSX_printf(fout,"[end]\n");
 		PHYSFSX_printf(fout, "[observer]\n");
 		PHYSFSX_printf(fout, "obssharesettings=%i\n", PlayerCfg.ObsShareSettings);
