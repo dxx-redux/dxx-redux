@@ -30,19 +30,28 @@ void PHYSFSX_init(int argc, char *argv[])
 #endif
 #if defined(__unix__)
 	char *path = NULL;
+	char *appimage;
 #endif
+	char *base_dir;
 #ifdef macintosh	// Mac OS 9
-	char base_dir[PATH_MAX];
 	int bundle = 0;
-#else
-#define base_dir PHYSFS_getBaseDir()
 #endif
 	
 	PHYSFS_init(argv[0]);
 	PHYSFS_permitSymbolicLinks(1);
+	base_dir = strdup(PHYSFS_getBaseDir());
 	
+#ifdef __unix__
+	if ((appimage = getenv("APPIMAGE")))
+	{
+		char *p;
+		free(base_dir);
+		base_dir = strdup(appimage);
+		if ((p = strrchr(base_dir, '/')))
+			p[1] = 0;
+	}
+#endif
 #ifdef macintosh
-	strcpy(base_dir, PHYSFS_getBaseDir());
 	if (strstr(base_dir, ".app:Contents:MacOSClassic"))	// the Mac OS 9 program is still in the .app bundle
 	{
 		char *p;
@@ -164,6 +173,7 @@ void PHYSFSX_init(int argc, char *argv[])
 		PHYSFS_addToSearchPath(base_dir, 1);
 	}
 #endif
+	free(base_dir);
 }
 
 // Add a searchpath, but that searchpath is relative to an existing searchpath
