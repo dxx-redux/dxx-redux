@@ -1850,35 +1850,51 @@ int listbox_mouse(window *wind, d_event *event, listbox *lb, int button)
 
 int listbox_key_command(window *wind, d_event *event, listbox *lb)
 {
+	// Note: statics are required to be zero-initialized in C, so we don't need to do it explicitly
+	static char ascii_buffer[MAX_PATH];
+	static fix64 last_key_time;
+
+	// Reset the buffer after 3 seconds of inactivity
+	if (last_key_time + F3_0 < timer_query())
+		ascii_buffer[0] = 0;
+	last_key_time = timer_query();
+
 	int key = event_key_get(event);
 	int rval = 1;
 
 	switch(key)	{
 		case KEY_HOME:
 		case KEY_PAD7:
+			ascii_buffer[0] = 0;
 			lb->citem = 0;
 			break;
 		case KEY_END:
 		case KEY_PAD1:
+			ascii_buffer[0] = 0;
 			lb->citem = lb->nitems-1;
 			break;
 		case KEY_UP:
 		case KEY_PAD8:
+			ascii_buffer[0] = 0;
 			lb->citem--;
 			break;
 		case KEY_DOWN:
 		case KEY_PAD2:
+			ascii_buffer[0] = 0;
 			lb->citem++;
 			break;
 		case KEY_PAGEDOWN:
 		case KEY_PAD3:
+			ascii_buffer[0] = 0;
 			lb->citem += LB_ITEMS_ON_SCREEN;
 			break;
 		case KEY_PAGEUP:
 		case KEY_PAD9:
+			ascii_buffer[0] = 0;
 			lb->citem -= LB_ITEMS_ON_SCREEN;
 			break;
 		case KEY_ESC:
+			ascii_buffer[0] = 0;
 			if (lb->allow_abort_flag) {
 				lb->citem = -1;
 				window_close(wind);
@@ -1887,6 +1903,7 @@ int listbox_key_command(window *wind, d_event *event, listbox *lb)
 			break;
 		case KEY_ENTER:
 		case KEY_PADENTER:
+			ascii_buffer[0] = 0;
 			// Tell callback, allow staying in menu
 			event->type = EVENT_NEWMENU_SELECTED;
 			if (lb->listbox_callback && (*lb->listbox_callback)(lb, event, lb->userdata))
@@ -1899,23 +1916,22 @@ int listbox_key_command(window *wind, d_event *event, listbox *lb)
 		default:
 		{
 			int ascii = key_ascii();
-			if ( ascii < 255 )	{
-				int cc,cc1;
-				cc=cc1=lb->citem+1;
-				if (cc1 < 0 )  cc1 = 0;
-				if (cc1 >= lb->nitems )  cc1 = 0;
-				while(1) {
-					if ( cc < 0 ) cc = 0;
-					if ( cc >= lb->nitems ) cc = 0;
-					if ( lb->citem == cc ) break;
+			if (ascii < 255) {
+				size_t len = strlen(ascii_buffer);
+				if (len < SDL_arraysize(ascii_buffer) - 1) {
+					ascii_buffer[len++] = ascii;
+					ascii_buffer[len] = 0;
 
-					if ( toupper( lb->item[cc][0] ) == toupper(ascii) )	{
-						lb->citem = cc;
-						break;
-					}
-					cc++;
+					// We're only going to need to search backward for the first letter
+					for (int cc = len > 1 ? lb->citem : 0; cc < lb->nitems; cc++)
+						if (d_strnicmp(lb->item[cc], ascii_buffer, strlen(ascii_buffer)) == 0) {
+							lb->citem = cc;
+							break;
+						}
 				}
 			}
+			else
+				ascii_buffer[0] = 0;
 			rval = 0;
 		}
 	}
