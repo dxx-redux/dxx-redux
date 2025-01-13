@@ -1857,7 +1857,7 @@ int listbox_mouse(window *wind, d_event *event, listbox *lb, int button)
 int listbox_key_command(window *wind, d_event *event, listbox *lb)
 {
 	// Note: statics are required to be zero-initialized in C, so we don't need to do it explicitly
-	static char ascii_buffer[MAX_PATH];
+	static char ascii_buffer[PATH_MAX];
 	static fix64 last_key_time;
 
 	// Reset the buffer after 3 seconds of inactivity
