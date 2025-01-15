@@ -21,7 +21,7 @@ void win32_create_dump(EXCEPTION_POINTERS* exceptionPointers)
 		exceptionInfo.ExceptionPointers = exceptionPointers;
 		exceptionInfo.ClientPointers = FALSE;
 
-		MiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), hDumpFile, MiniDumpNormal, &exceptionInfo, NULL, NULL);
+		MiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), hDumpFile, MiniDumpWithDataSegs, &exceptionInfo, NULL, NULL);
 		CloseHandle(hDumpFile);
 	}
 }
