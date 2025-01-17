@@ -1,3 +1,35 @@
+Redux 1.1
+General:
+- Automatic demo improvements
+- Allow using joystick axis as buttons
+- Added Classic No Ammo Autoselect option
+- Allow multi-character search on listboxes
+- linux/mac directories now have the name redux
+- linux support for .ini file in .AppImage dir
+- Added -gamelog_split option
+- Improved png texture loading time
+- Fixed sound exactly from right playing on left
+- Fixed hostage door after aborting while it explodes
+- Fixed playback of multi-level demos
+- Demo lock sound/indicator fixes
+- Now creates crash dump files on crash
+- "Mouse Smoothing" name change
+- Fixed cockpit appearing after exiting while dead
+Multiplayer:
+- Added Only Show Confirmed Hit Sparks option
+- Removed DXX-Retro Homing Speed option
+- Better synchronized homer scanning interval
+- Fixed bomb death spew with extra/capped weapons
+- With friendly fire off, also ignore friendly splash damage
+Observer mode:
+- Observer mode demo fixes
+- Added third person, muzzle observer options
+- Fixed disabling Show Bomb Times
+- Fixed observer afterburner charge indicator
+- Avoids overlapping kill graph and monitor views
+- Better support for switching cockpit mode
+- Fixed rear view monitor
+
 2024-01-23 Redux 1.0
 - Supports separate observer options for each game mode
 - Added observer option to show bomb timeouts
