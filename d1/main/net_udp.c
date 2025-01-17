@@ -3954,7 +3954,7 @@ void net_udp_more_game_options ()
 	m[opt].type = NM_TYPE_SLIDER; m[opt].value=max(0, Netgame.HomingUpdateRate - 20); m[opt].text= HomingUpdateRateText; m[opt].min_value=0; m[opt].max_value=10; opt++;
 
 	opt_remote_hit_spark=opt;
-	m[opt].type = NM_TYPE_CHECK; m[opt].text = "Remote Hit Spark"; m[opt].value = Netgame.RemoteHitSpark; opt++;
+	m[opt].type = NM_TYPE_CHECK; m[opt].text = "Only Show Confirmed Hit Sparks"; m[opt].value = Netgame.RemoteHitSpark; opt++;
 
 	opt_allow_custom_models_textures=opt;
 	m[opt].type = NM_TYPE_CHECK; m[opt].text = "Allow custom models and textures"; m[opt].value = Netgame.AllowCustomModelsTextures; opt++;
