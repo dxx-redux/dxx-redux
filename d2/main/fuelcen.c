@@ -138,8 +138,10 @@ void fuelcen_create( segment *segp)
 	Assert( (seg2p != NULL) );
 	if ( seg2p == NULL ) return;
 
-	Assert( Num_fuelcenters < MAX_NUM_FUELCENS );
 	Assert( Num_fuelcenters > -1 );
+
+	if (Num_fuelcenters >= MAX_NUM_FUELCENS)
+		Error("Too many special segments (maximum is %d).\n", MAX_NUM_FUELCENS);
 
 	seg2p->value = Num_fuelcenters;
 	Station[Num_fuelcenters].Type = station_type;
@@ -172,8 +174,10 @@ void matcen_create( segment *segp)
 	Assert(station_type == SEGMENT_IS_ROBOTMAKER);
 	if ( seg2p == NULL ) return;
 
-	Assert( Num_fuelcenters < MAX_NUM_FUELCENS );
 	Assert( Num_fuelcenters > -1 );
+
+	if (Num_fuelcenters >= MAX_NUM_FUELCENS)
+		Error("Too many special segments (maximum is %d).\n", MAX_NUM_FUELCENS);
 
 	seg2p->value = Num_fuelcenters;
 	Station[Num_fuelcenters].Type = station_type;
