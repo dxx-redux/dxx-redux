@@ -3909,6 +3909,8 @@ void show_HUD_names()
 
 	int my_pnum = get_pnum_for_hud();
 
+	gr_set_curfont(GAME_FONT);
+
 	if(Netgame.BlackAndWhitePyros)
 		selected_player_rgb = player_rgb_alt;
 	else
