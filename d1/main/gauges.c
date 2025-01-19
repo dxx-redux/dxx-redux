@@ -3992,7 +3992,8 @@ void show_HUD_names()
 						y1 = f2i(y-dy)+FSPACY(1);
 						gr_string (x1, y1, s);
 					}
-					if (is_observer() && PlayerCfg.ObsShowShieldBar[get_observer_game_mode()]) {
+					if (is_observer() && PlayerCfg.ObsShowShieldBar[get_observer_game_mode()] &&
+						(!is_observing_player() || Obs_at_distance || Current_obs_player != pnum)) {
 #ifdef OGL
 						glLineWidth(1);
 #endif
