@@ -1,4 +1,4 @@
-Redux 1.1
+2025-01-25 Redux 1.1
 General:
 - Automatic demo improvements
 - Allow using joystick axis as buttons
