@@ -51,6 +51,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "byteswap.h"
 #include "makesig.h"
 #include "console.h"
+#include "effects.h"
 
 //#define NO_DUMP_SOUNDS        1   //if set, dump bitmaps but not sounds
 
@@ -1938,12 +1939,21 @@ void load_d1_bitmap_replacements()
 		return;
 	}
 
+	ubyte *is_effect = (ubyte *)calloc(Num_bitmap_files, 1);
+	for (int ei = 0; ei < Num_effects; ei++) {
+		eclip *e = &Effects[ei];
+		for (int i = 0; i < e->vc.num_frames; i++)
+			is_effect[e->vc.frames[i].index] = 1;
+		if (e->dest_bm_num != -1)
+			is_effect[Textures[e->dest_bm_num].index] = 1;
+	}
+
 	next_bitmap = Bitmap_replacement_data;
 
 	for (d1_index = 1; d1_index <= N_bitmaps; d1_index++ ) {
 		d2_index = d2_index_for_d1_index(d1_index);
 		// only change bitmaps which are unique to d1
-		if (d2_index != -1) {
+		if (d2_index != -1 && !is_effect[d2_index]) {
 			PHYSFSX_fseek(d1_Piggy_fp, bitmap_header_start + (d1_index-1) * DISKBITMAPHEADER_D1_SIZE, SEEK_SET);
 			DiskBitmapHeader_d1_read(&bmh, d1_Piggy_fp);
 
@@ -1966,6 +1976,8 @@ void load_d1_bitmap_replacements()
 			}
 		}
 	}
+
+	free(is_effect);
 
 	PHYSFS_close(d1_Piggy_fp);
 
