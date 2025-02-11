@@ -19,6 +19,9 @@ jobs:
       - name: Clone Repository
         uses: actions/checkout@v3
 
+      - name: Fetch tags
+        run: git fetch --tags
+
       - name: Install dependencies
         run: |
           sudo apt-get update

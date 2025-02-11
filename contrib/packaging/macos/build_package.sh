@@ -31,7 +31,7 @@ build_app() {
     srcdir="${name:0:2}"
     contents="${prettyname}.app/Contents"
 
-    zipfilename="${name}-${version}-mac.zip"
+    zipfilename="${name}-${version}-mac${ARCHIVE_EXT}.zip"
 
     mkdir -p $contents/MacOS
     mkdir -p $contents/Resources
