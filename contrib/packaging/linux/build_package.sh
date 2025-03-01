@@ -35,7 +35,7 @@ build_appimage() {
 
     appdir="${name}.appdir"
     appimagename="${prettyname}.AppImage"
-    archivefilename="${prettyname}-${version}-linux.tar.gz"
+    archivefilename="${prettyname}-${version}-linux-sdl12compat.tar.gz"
     tmpdir="packagetemp"
     inipath="${dir}/${name:0:3}-default.ini"
 
@@ -55,6 +55,9 @@ build_appimage() {
     mkdir -p ${appdir}/usr/share/icons/hicolor/128x128/apps/
     cp ${dir}/${name}.png ${appdir}/usr/share/icons/hicolor/128x128/apps/
     cp ${dir}/${name}.png ${appdir}/
+
+    # Needed for SetIcon
+    cp ${dir}/${name}.bmp ${appdir}/usr/
 
     # Menu item
     mkdir -p ${appdir}/usr/share/applications
