@@ -1178,7 +1178,7 @@ void ogl_start_frame(void){
 	glClear(GL_DEPTH_BUFFER_BIT);
 
 	glEnable(GL_CULL_FACE);
-	glCullFace(GL_FRONT);
+	glFrontFace(GL_CW);
 
 	glShadeModel(GL_SMOOTH);
 	glMatrixMode(GL_PROJECTION);
