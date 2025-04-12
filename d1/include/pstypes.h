@@ -58,9 +58,11 @@ typedef unsigned int uint;
 #endif
 
 #ifndef __cplusplus
+#if __STDC_VERSION__ < 202311L
 #ifndef bool
 //define a boolean
 typedef ubyte bool;
+#endif
 #endif
 #endif
 
