@@ -44,6 +44,7 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "text.h"
 #include "newmenu.h"
 #include "custom.h"
+#include "robot.h"
 
 int piggy_is_substitutable_bitmap( char * name, char * subst_name );
 
@@ -538,6 +539,16 @@ void piggy_read_sounds(int pc_shareware)
 	ptr = SoundBits;
 	sbytes = 0;
 
+	ubyte is_robot_sound[MAX_SOUND_FILES];
+	memset(is_robot_sound, 0, sizeof(is_robot_sound));
+	for (i=0; i<N_robot_types; i++ ) {
+		is_robot_sound[Sounds[Robot_info[i].see_sound]] = 1;
+		is_robot_sound[Sounds[Robot_info[i].attack_sound]] = 1;
+		if (Robot_info[1].attack_type == 1)
+			is_robot_sound[Sounds[Robot_info[i].claw_sound]] = 1;
+	}
+
+
 	for (i=0; i<Num_sound_files; i++ )
 	{
 		digi_sound *snd = &GameSounds[i];
@@ -573,6 +584,10 @@ void piggy_read_sounds(int pc_shareware)
 #else
 					PHYSFS_read( Piggy_fp, snd->data, snd->length, 1 );
 #endif
+				if (!is_robot_sound[i]) {
+					extern void mixdigi_convert_sound(int i);
+					mixdigi_convert_sound(i);
+				}
 			}
 		}
 	}

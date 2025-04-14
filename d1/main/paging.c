@@ -162,6 +162,14 @@ void paging_touch_robot( int robot_index )
 
 		paging_touch_vclip( &Vclip[VCLIP_MORPHING_ROBOT] );
 	}
+
+	extern void mixdigi_convert_sound(int i);
+	if ((i = Sounds[Robot_info[robot_index].see_sound]) != 255)
+		mixdigi_convert_sound(i);
+	if ((i = Sounds[Robot_info[robot_index].attack_sound]) != 255)
+		mixdigi_convert_sound(i);
+	if (Robot_info[robot_index].attack_type == 1 && (i = Sounds[Robot_info[robot_index].claw_sound]) != 255)
+		mixdigi_convert_sound(i);
 }
 
 
