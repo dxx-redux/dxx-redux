@@ -4,6 +4,9 @@
 cmake_minimum_required (VERSION 3.21)
 project(d1x-redux VERSION 1.1)
 
+set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_STANDARD_REQUIRED TRUE)
+
 option(OPENGL "Build with OpenGL support [default: ON]" ON)
 option(SDLMIXER "Build with SDL_Mixer support for sound and music (includes external music support) [default: ON]" ON)
 option(ASM "Build with ASSEMBLER code (only with OpenGL OFF, requires NASM and x86) [default: OFF]" OFF)
