@@ -1235,7 +1235,9 @@ void build_object_lists(int n_segs)
 {
 	int nn;
 
-	for (nn=0;nn<MAX_RENDER_SEGS+N_EXTRA_OBJ_LISTS;nn++)
+	for (nn=0;nn<n_segs;nn++)
+		render_obj_list[nn][0] = -1;
+	for (nn=MAX_RENDER_SEGS;nn<MAX_RENDER_SEGS+N_EXTRA_OBJ_LISTS;nn++)
 		render_obj_list[nn][0] = -1;
 
 	for (nn=0;nn<n_segs;nn++) {
