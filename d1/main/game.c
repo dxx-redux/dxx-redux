@@ -408,17 +408,27 @@ void calc_frame_time()
 	start_usec = timer_value_usec;
 	last_usec = last_timer_value_usec;
 
+	int tries = 0;
+	int64_t pre_timer = timer_value_usec;
 	if (timer_value_usec < next_timer_value_usec) {
 		// split in coarse and fine delay
-		if (GameArg.SysUseNiceFPS && !GameCfg.VSync && next_timer_value_usec - timer_value_usec > 1000) {
-			timer_delay_usec(next_timer_value_usec - timer_value_usec - 1000);
+		if (GameArg.SysUseNiceFPS && next_timer_value_usec - timer_value_usec > 1000) {
+			timer_delay_usec(next_timer_value_usec - timer_value_usec - 500);
 			timer_update();
 			timer_value_usec = timer_query_usec();
 		}
+		pre_timer = timer_value_usec;
 		while (timer_value_usec < next_timer_value_usec)
 		{
+			#ifdef __linux__
 			if (GameArg.SysUseNiceFPS && !GameCfg.VSync)
 				timer_delay_usec(next_timer_value_usec - timer_value_usec);
+			#else
+			#if defined(__GNUC__) && defined(__x86_64__)
+			asm("pause");
+			#endif
+			#endif
+			tries++;
 			timer_update();
 			timer_value_usec = timer_query_usec();
 		}
@@ -437,8 +447,10 @@ void calc_frame_time()
 	FrameTime = timer_query() - last_timer_value;
 	last_timer_value = timer_query();
 
-	//printf("%x %f %lld (%lld %lld %d)\n", FrameTime, f2fl(FrameTime), (long long)(timer_value_usec - last_usec),
-	//	(long long)(next_timer_value_usec - last_usec), (long long)(next_timer_value_usec - start_usec), tries);
+	//con_printf(CON_DEBUG,"ft %x=%f, cur %lld (next %lld abs %lld tries %d) pre %lld\n", FrameTime,
+	//	f2fl(FrameTime), (long long)(timer_value_usec - last_usec),
+	//	(long long)(next_timer_value_usec - last_usec), (long long)(next_timer_value_usec - start_usec), tries,
+	//	(long long)(pre_timer - last_usec));
 
 	if ( cheats.turbo )
 		FrameTime *= 2;
