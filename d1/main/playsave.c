@@ -117,7 +117,7 @@ int new_player_config()
 	PlayerCfg.ShowCustomColors = 1; 
 	PlayerCfg.PreferMyTeamColors = 0;
 	PlayerCfg.QuietPlasma = 1; 
-	PlayerCfg.maxFps = GameArg.SysMaxFPS; 
+	PlayerCfg.maxFps = DEFAULT_FPS;
 	PlayerCfg.ShipColor = 8;
 	PlayerCfg.MissileColor = 8;
 	PlayerCfg.MyTeamColor = 8;
@@ -465,7 +465,7 @@ int read_player_d1x(char *filename)
 				if(!strcmp(word,"MAXFPS")) {
 					PlayerCfg.maxFps = atoi(line);
 					if(PlayerCfg.maxFps < 25) { PlayerCfg.maxFps = 25; }
-					if(PlayerCfg.maxFps > 200) { PlayerCfg.maxFps = 200; }
+					if(PlayerCfg.maxFps > MAXIMUM_FPS) { PlayerCfg.maxFps = MAXIMUM_FPS; }
 				}
 				if(!strcmp(word,"NOCHATSOUND"))
 					PlayerCfg.NoChatSound = atoi(line);
