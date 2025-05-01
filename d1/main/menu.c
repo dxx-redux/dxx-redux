@@ -1274,6 +1274,9 @@ void graphics_config()
 	newmenu_item m[6];
 #endif
 	int nitems = 0;
+	int orig_texfilt = GameCfg.TexFilt;
+	int orig_vsync = GameCfg.VSync;
+	int orig_multisample = GameCfg.Multisample;
 
 #ifdef OGL
 	m[nitems].type = NM_TYPE_TEXT; m[nitems].text = "Texture Filtering:"; nitems++;
@@ -1339,12 +1342,15 @@ void graphics_config()
 
 	if(PlayerCfg.maxFps < 25) {
 		PlayerCfg.maxFps = 25;
-	} else if (PlayerCfg.maxFps > 200) {
-		PlayerCfg.maxFps = 200; 
+	} else if (PlayerCfg.maxFps > MAXIMUM_FPS) {
+		PlayerCfg.maxFps = MAXIMUM_FPS;
 	}
 
 #ifdef OGL
-	gr_set_attributes();
+	if (GameCfg.TexFilt != orig_texfilt ||
+		GameCfg.VSync != orig_vsync ||
+		GameCfg.Multisample != orig_multisample)
+		gr_set_attributes();
 	gr_set_mode(Game_screen_mode);
 #endif
 }

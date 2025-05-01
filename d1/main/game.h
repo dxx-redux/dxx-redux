@@ -25,8 +25,9 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "window.h"
 #include "vecmat.h"
 
+#define DEFAULT_FPS 200
 #ifdef NDEBUG
-#define MAXIMUM_FPS 200
+#define MAXIMUM_FPS 400
 #else
 #define MAXIMUM_FPS 1000
 #endif

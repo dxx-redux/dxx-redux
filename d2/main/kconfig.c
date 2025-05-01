@@ -1424,7 +1424,7 @@ void kconfig_read_controls(d_event *event, int automap_flag)
 			/* Old School Mouse */
 			else if(PlayerCfg.MouseControlStyle == MOUSE_CONTROL_OLDSCHOOL)
 			{
-				/* Emulate mouse sampling between 200 FPS and 20 FPS */ 
+				/* Emulate mouse sampling between FrameTime and 20 FPS */
 				int impulse_factor = ((F1_0/20 / (FrameTime) - 1 ) * PlayerCfg.MouseImpulse) / 15 + 1; 
 
 				event_mouse_get_delta( event, &Controls.raw_mouse_axis[0], &Controls.raw_mouse_axis[1], &Controls.raw_mouse_axis[2] );
