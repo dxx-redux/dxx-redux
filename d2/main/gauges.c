@@ -4517,8 +4517,8 @@ void draw_hud()
 	{
 		if (Players[pnum].homing_object_dist >= 0)
 			newdemo_record_homing_distance(Players[pnum].homing_object_dist);
-		if (Players[pnum].primary_weapon == VULCAN_INDEX)
-			newdemo_record_primary_ammo(Players[pnum].primary_ammo[Players[pnum].primary_weapon]);
+		if (Players[pnum].primary_weapon == VULCAN_INDEX || Players[pnum].primary_weapon == GAUSS_INDEX)
+			newdemo_record_primary_ammo(Players[pnum].primary_ammo[VULCAN_INDEX]);
 		if (Players[pnum].primary_weapon == OMEGA_INDEX)
 			newdemo_record_primary_ammo(Omega_charge);
 		newdemo_record_secondary_ammo(Players[pnum].secondary_ammo[Players[pnum].secondary_weapon]);
