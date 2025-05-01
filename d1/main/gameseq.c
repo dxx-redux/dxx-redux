@@ -214,17 +214,15 @@ gameseq_init_network_players()
 	if (Game_mode & GM_MULTI) {
 		// Ensure we have 8 starting locations, even if there aren't 8 in the file.  This makes observer mode work in all levels.
 		for (; k < MAX_PLAYERS; k++) {
-			i = obj_allocate();
-
-			Objects[i].type = OBJ_PLAYER;
-
 			Player_init[k].pos = Objects[k % NumNetPlayerPositions].pos;
 			Player_init[k].orient = Objects[k % NumNetPlayerPositions].orient;
 			Player_init[k].segnum = Objects[k % NumNetPlayerPositions].segnum;
-			Players[k].objnum = i;
-			Objects[i].id = k;
 
-			Objects[i].attached_obj = -1;
+			i = obj_create(OBJ_PLAYER, k, Player_init[k].segnum, &Player_init[k].pos,
+				&Player_init[k].orient, Polygon_models[Player_ship->model_num].rad,
+				CT_NONE, MT_PHYSICS, RT_POLYOBJ);
+
+			Players[k].objnum = i;
 		}
 
 		NumNetPlayerPositions = MAX_PLAYERS;
