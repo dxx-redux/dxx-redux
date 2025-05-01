@@ -1997,25 +1997,22 @@ int newdemo_read_frame_information(int rewrite)
 				nd_write_int(objnum);
 				nd_write_int(shot);
 			}
-			if (Newdemo_vcr_state != ND_STATE_PAUSED)
-			{
-				if (Triggers[Walls[Segments[segnum].sides[side].wall_num].trigger].type == TT_SECRET_EXIT) {
-					int truth;
+			if (Triggers[Walls[Segments[segnum].sides[side].wall_num].trigger].type == TT_SECRET_EXIT) {
+				int truth;
 
-					nd_read_byte(&c);
-					Assert(c == ND_EVENT_SECRET_THINGY);
-					nd_read_int(&truth);
-					if (rewrite)
-					{
-						nd_write_byte(c);
-						nd_write_int(truth);
-						break;
-					}
-					if (!truth)
-						check_trigger(&Segments[segnum], side, objnum,shot);
-				} else if (!rewrite)
+				nd_read_byte(&c);
+				Assert(c == ND_EVENT_SECRET_THINGY);
+				nd_read_int(&truth);
+				if (rewrite)
+				{
+					nd_write_byte(c);
+					nd_write_int(truth);
+					break;
+				}
+				if (!truth && Newdemo_vcr_state != ND_STATE_PAUSED)
 					check_trigger(&Segments[segnum], side, objnum,shot);
-			}
+			} else if (!rewrite && Newdemo_vcr_state != ND_STATE_PAUSED)
+				check_trigger(&Segments[segnum], side, objnum,shot);
 			break;
 
 		case ND_EVENT_HOSTAGE_RESCUED: {
