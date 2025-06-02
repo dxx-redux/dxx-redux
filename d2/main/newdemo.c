@@ -186,7 +186,7 @@ static ubyte nd_playback_v_dead = 0, nd_playback_v_rear = 0, nd_playback_v_guide
 int nd_playback_v_juststarted=0;
 
 // record variables
-#define REC_DELAY F1_0/20
+#define REC_DELAY F1_0/400
 static int nd_record_v_start_frame = -1;
 static int nd_record_v_frame_number = -1;
 static short nd_record_v_framebytes_written = 0;
