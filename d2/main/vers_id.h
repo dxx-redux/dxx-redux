@@ -22,7 +22,7 @@
 
 #define BASED_VERSION "Full Version v1.2"
 #define VERSION D2XMAJOR "." D2XMINOR "." D2XMICRO
-#define DESCENT_VERSION "D2X-Redux " RH_VERSION "hitim4"
+#define DESCENT_VERSION "D2X-Redux " RH_VERSION "-hitim4-hidem2-vel"
 
 extern const char g_descent_build_datetime[21];
 
