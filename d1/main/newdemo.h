@@ -48,6 +48,8 @@ extern int Newdemo_game_mode;
 extern sbyte Newdemo_do_interpolate;
 extern int Newdemo_show_percentage;
 
+struct morph_data;
+
 // Functions called during recording process...
 extern void newdemo_record_start_demo();
 extern void newdemo_record_start_frame(fix frame_time );
@@ -59,7 +61,7 @@ extern void newdemo_record_sound_once( int soundno );
 extern void newdemo_record_sound( int soundno );
 extern void newdemo_record_wall_hit_process( int segnum, int side, int damage, int playernum );
 extern void newdemo_record_hostage_rescued( int hostage_num );
-extern void newdemo_record_morph_frame();
+extern void newdemo_record_morph_frame(struct morph_data *);
 extern void newdemo_record_player_stats(int shields, int energy, int score );
 extern void newdemo_record_wall_toggle(int segnum, int side );
 extern void newdemo_record_control_center_destroyed();

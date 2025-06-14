@@ -159,6 +159,8 @@ int Newdemo_vcr_state = 0;
 int Newdemo_show_percentage=1;
 sbyte Newdemo_do_interpolate = 1;
 int Newdemo_num_written;
+fix newdemo_last_rewind_time;
+fix nd_recorded_time;
 
 // local var used for swapping endian demos
 static int swap_endian = 0;
@@ -170,7 +172,7 @@ static sbyte nd_playback_v_at_eof;
 static sbyte nd_playback_v_cntrlcen_destroyed = 0;
 static sbyte nd_playback_v_bad_read;
 static int nd_playback_v_framecount;
-static fix nd_playback_total, nd_recorded_total, nd_recorded_time;
+static fix nd_playback_total, nd_recorded_total;
 static sbyte nd_playback_v_style;
 static ubyte nd_playback_v_dead = 0, nd_playback_v_rear = 0;
 
@@ -441,12 +443,35 @@ static void nd_read_shortpos(object *obj)
 
 }
 
+static void nd_read_longpos(object *obj)
+{
+	nd_read_vector(&obj->orient.rvec);
+	nd_read_vector(&obj->orient.uvec);
+	nd_read_vector(&obj->orient.fvec);
+	nd_read_short(&obj->segnum);
+	nd_read_vector(&obj->pos);
+	nd_read_vector(&obj->mtype.phys_info.velocity);
+}
+
+static void nd_write_longpos(object *obj)
+{
+	nd_write_vector(&obj->orient.rvec);
+	nd_write_vector(&obj->orient.uvec);
+	nd_write_vector(&obj->orient.fvec);
+	nd_write_short(obj->segnum);
+	nd_write_vector(&obj->pos);
+	nd_write_vector(&obj->mtype.phys_info.velocity);
+}
+
+
 object *prev_obj=NULL;      //ptr to last object read in
 static int shareware = 0;	// reading shareware demo?
 
 void nd_read_object(object *obj)
 {
 	short shortsig = 0;
+	ubyte render_type;
+	int long_pos;
 
 	memset(obj, 0, sizeof(object));
 
@@ -454,7 +479,9 @@ void nd_read_object(object *obj)
 	 * Do render type first, since with render_type == RT_NONE, we
 	 * blow by all other object information
 	 */
-	nd_read_byte((sbyte *) &(obj->render_type));
+	nd_read_byte((sbyte *) &render_type);
+	obj->render_type = render_type & 0x7f;
+	long_pos = render_type & 0x80;
 	nd_read_byte((sbyte *) &(obj->type));
 	if ((obj->render_type == RT_NONE) && (obj->type != OBJ_CAMERA))
 		return;
@@ -463,7 +490,7 @@ void nd_read_object(object *obj)
 	nd_read_byte((sbyte *) &(obj->flags));
 	nd_read_short(&shortsig);
 	obj->signature = shortsig;  // It's OKAY! We made sure, obj->signature is never has a value which short cannot handle!!! We cannot do this otherwise, without breaking the demo format!
-	nd_read_shortpos(obj);
+	long_pos ? nd_read_longpos(obj) : nd_read_shortpos(obj);
 
 	obj->attached_obj = -1;
 
@@ -674,7 +701,7 @@ void nd_write_object(object *obj)
 	 * Do render_type first so on read, we can make determination of
 	 * what else to read in
 	 */
-	nd_write_byte(obj->render_type);
+	nd_write_byte(obj->render_type | 0x80);
 	nd_write_byte(obj->type);
 	if ((obj->render_type == RT_NONE) && (obj->type != OBJ_CAMERA))
 		return;
@@ -683,7 +710,8 @@ void nd_write_object(object *obj)
 	nd_write_byte(obj->flags);
 	shortsig = obj->signature;  // It's OKAY! We made sure, obj->signature is never has a value which short cannot handle!!! We cannot do this otherwise, without breaking the demo format!
 	nd_write_short(shortsig);
-	nd_write_shortpos(obj);
+	nd_write_longpos(obj);
+	//nd_write_shortpos(obj);
 
 	if ((obj->type != OBJ_HOSTAGE) && (obj->type != OBJ_ROBOT) && (obj->type != OBJ_PLAYER) && (obj->type != OBJ_POWERUP) && (obj->type != OBJ_CLUTTER)) {
 		nd_write_byte(obj->control_type);
@@ -819,6 +847,7 @@ void newdemo_record_start_demo()
 	int i;
 
 	nd_record_v_recordframe_last_time=GameTime64-REC_DELAY; // make sure first frame is recorded!
+	nd_record_v_framebytes_written=0;
 
 	stop_time();
 	nd_write_byte(ND_EVENT_START_DEMO);
@@ -3468,6 +3497,7 @@ void newdemo_start_playback(char * filename)
 	newdemo_playback_one_frame();       // get all of the objects to renderb game
 	if (!Game_wind)
 		Game_wind = game_setup();							// create game environment
+	newdemo_last_rewind_time = GameTime64;
 }
 
 void newdemo_stop_playback()

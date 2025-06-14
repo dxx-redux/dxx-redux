@@ -149,14 +149,17 @@ void do_weapon_n_item_stuff(void);
 // Control Functions
 
 fix64 newdemo_single_frame_time;
+extern fix64 newdemo_last_rewind_time;
+extern fix nd_recorded_time;
 
 void update_vcr_state(void)
 {
 	if ((keyd_pressed[KEY_LSHIFT] || keyd_pressed[KEY_RSHIFT]) && keyd_pressed[KEY_RIGHT] && d_tick_step)
 		Newdemo_vcr_state = ND_STATE_FASTFORWARD;
-	else if ((keyd_pressed[KEY_LSHIFT] || keyd_pressed[KEY_RSHIFT]) && keyd_pressed[KEY_LEFT] && d_tick_step)
+	else if ((keyd_pressed[KEY_LSHIFT] || keyd_pressed[KEY_RSHIFT]) && keyd_pressed[KEY_LEFT] && GameTime64 - newdemo_last_rewind_time > nd_recorded_time * 3) {
+		newdemo_last_rewind_time = GameTime64;
 		Newdemo_vcr_state = ND_STATE_REWINDING;
-	else if (!(keyd_pressed[KEY_LCTRL] || keyd_pressed[KEY_RCTRL]) && keyd_pressed[KEY_RIGHT] && ((GameTime64 - newdemo_single_frame_time) >= F1_0) && d_tick_step)
+	} else if (!(keyd_pressed[KEY_LCTRL] || keyd_pressed[KEY_RCTRL]) && keyd_pressed[KEY_RIGHT] && ((GameTime64 - newdemo_single_frame_time) >= F1_0) && d_tick_step)
 		Newdemo_vcr_state = ND_STATE_ONEFRAMEFORWARD;
 	else if (!(keyd_pressed[KEY_LCTRL] || keyd_pressed[KEY_RCTRL]) && keyd_pressed[KEY_LEFT] && ((GameTime64 - newdemo_single_frame_time) >= F1_0) && d_tick_step)
 		Newdemo_vcr_state = ND_STATE_ONEFRAMEBACKWARD;
