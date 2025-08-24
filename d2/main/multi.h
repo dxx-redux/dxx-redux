@@ -570,7 +570,7 @@ typedef struct netgame_info
 	ubyte						DarkSmartBlobs;
 	ubyte						LowVulcan;
 	ubyte						AllowPreferredColors;
-	ubyte						RebalancedWeapons;
+	ubyte						OriginalD1Weapons;
 #ifdef USE_TRACKER
 	ubyte						Tracker;
 #endif
@@ -580,6 +580,7 @@ typedef struct netgame_info
 	ubyte						ReducedFlash;
 	ubyte						DisableGaussSplash;
 	ubyte						team_color[2];
+	ubyte						RebalancedWeapons;
 } __pack__ netgame_info;
 
 extern int Host_is_obs; // Reminder for host only that they are an observer.  Do not set for other players or observers.

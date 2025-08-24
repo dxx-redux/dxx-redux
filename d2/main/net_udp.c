@@ -3065,7 +3065,7 @@ void net_udp_send_game_info(struct _sockaddr sender_addr, ubyte info_upid, ubyte
 		buf[len] = Netgame.AllowPreferredColors;                len++;
 		buf[len] = Netgame.BornWithBurner;						len++; 
 		buf[len] = Netgame.GaussAmmoStyle;						len++; 
-		buf[len] = Netgame.RebalancedWeapons;                   len++;
+		buf[len] = Netgame.OriginalD1Weapons;                   len++;
 		buf[len] = Netgame.obs_min; len++;
 		buf[len] = Netgame.host_is_obs; len++;
 		buf[len] = Netgame.HomingUpdateRate; len++;
@@ -3075,6 +3075,7 @@ void net_udp_send_game_info(struct _sockaddr sender_addr, ubyte info_upid, ubyte
 		buf[len] = Netgame.DisableGaussSplash; len++;
 		buf[len] = Netgame.team_color[0];						len++;
 		buf[len] = Netgame.team_color[1];						len++;
+		buf[len] = Netgame.RebalancedWeapons; len++;
 
 		if(info_upid == UPID_SYNC) {
 			PUT_INTEL_INT(buf + len, player_tokens[to_player]); len += 4; 
@@ -3316,7 +3317,7 @@ int net_udp_process_game_info(ubyte *data, int data_len, struct _sockaddr game_a
 		Netgame.AllowPreferredColors = data[len];                len++; 
 		Netgame.BornWithBurner = data[len];                len++; 		
 		Netgame.GaussAmmoStyle = data[len];                len++;
-		Netgame.RebalancedWeapons = data[len];             len++;
+		Netgame.OriginalD1Weapons = data[len];             len++;
 		Netgame.obs_min = data[len]; len++;
 		Netgame.host_is_obs = data[len]; len++;
 		Netgame.HomingUpdateRate = data[len]; len++;
@@ -3326,6 +3327,7 @@ int net_udp_process_game_info(ubyte *data, int data_len, struct _sockaddr game_a
 		Netgame.DisableGaussSplash = data[len]; len++;
 		Netgame.team_color[0] = data[len];						len++;
 		Netgame.team_color[1] = data[len];						len++;
+		Netgame.RebalancedWeapons = data[len]; len++;
 
 		if (Netgame.host_is_obs) {
 			multi_make_player_ghost(0);
@@ -3827,7 +3829,7 @@ static int opt_difficulty,opt_packets,opt_shortpack,opt_bright, opt_show_names, 
 static int opt_primary_dup, opt_secondary_dup, opt_secondary_cap; 
 static int opt_spawn_no_invul, opt_spawn_short_invul, opt_spawn_long_invul, opt_spawn_preview; 
 static int opt_burner_spawn; 
-static int opt_allowprefcolor, opt_ow;
+static int opt_allowprefcolor, opt_ow, opt_rw;
 //static int opt_dark_smarts;
 static int opt_low_vulcan;
 static int opt_gauss_duplicating, opt_gauss_depleting, opt_gauss_steady_recharge, opt_gauss_steady_respawn; 
@@ -3869,9 +3871,9 @@ void net_udp_more_game_options ()
 	char HomingUpdateRateText[80];
 	
 #ifdef USE_TRACKER
-	newmenu_item m[49];
+	newmenu_item m[50];
 #else
-	newmenu_item m[48];
+	newmenu_item m[49];
 #endif
 
 	snprintf(packstring,sizeof(char)*4,"%d",Netgame.PacketsPerSec);
@@ -3940,7 +3942,10 @@ void net_udp_more_game_options ()
 	m[opt].type = NM_TYPE_CHECK; m[opt].text = "Low Vulcan Ammo"; m[opt].value = Netgame.LowVulcan; opt++;	
 
 	opt_ow = opt;
-	m[opt].type = NM_TYPE_CHECK; m[opt].text = "Rebalanced Weapons"; m[opt].value = Netgame.RebalancedWeapons; opt++;
+	m[opt].type = NM_TYPE_CHECK; m[opt].text = "Original D1 Weapons"; m[opt].value = Netgame.OriginalD1Weapons; opt++;
+
+	opt_rw = opt;
+	m[opt].type = NM_TYPE_CHECK; m[opt].text = "Rebalanced Weapons (beta)"; m[opt].value = Netgame.RebalancedWeapons; opt++;
 
 
 	m[opt].type = NM_TYPE_TEXT; m[opt].text = ""; opt++;
@@ -4087,12 +4092,13 @@ menu:
 	//Netgame.DarkSmartBlobs = m[opt_dark_smarts].value;
 	Netgame.LowVulcan = m[opt_low_vulcan].value;
 	Netgame.AllowPreferredColors = m[opt_allowprefcolor].value;
-	Netgame.RebalancedWeapons = m[opt_ow].value;
+	Netgame.OriginalD1Weapons = m[opt_ow].value;
 	Netgame.HomingUpdateRate = m[opt_homing_update_rate].value + 20;
 	Netgame.RemoteHitSpark = m[opt_remote_hit_spark].value;
 	Netgame.AllowCustomModelsTextures = m[opt_allow_custom_models_textures].value;
 	Netgame.ReducedFlash = m[opt_reduced_flash].value;
 	Netgame.DisableGaussSplash = m[opt_disable_gauss_splash].value;
+	Netgame.RebalancedWeapons = m[opt_rw].value;
 }
 
 int net_udp_more_options_handler( newmenu *menu, d_event *event, void *userdata )
@@ -4402,12 +4408,13 @@ void netgame_set_defaults()
 	Netgame.GaussAmmoStyle = GAUSS_STYLE_STEADY_RECHARGING;
 	Netgame.LowVulcan = 0; 
 	Netgame.AllowPreferredColors = 0;
-	Netgame.RebalancedWeapons = 0;
+	Netgame.OriginalD1Weapons = 0;
 	Netgame.HomingUpdateRate = 25;
 	Netgame.RemoteHitSpark = 0;
 	Netgame.AllowCustomModelsTextures = 0;
 	Netgame.ReducedFlash = 0;
 	Netgame.DisableGaussSplash = 0;
+	Netgame.RebalancedWeapons = 0;
 
 #ifdef USE_TRACKER
 	Netgame.Tracker = 1;

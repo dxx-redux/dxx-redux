@@ -352,7 +352,7 @@ int ok_to_do_omega_damage(object *weapon)
 }
 
 // For rebalanced weapons - Omega cannon damage falls off with distance to the target
-fix get_rebalance_omega_damage_scale(object* weapon)
+fix get_rebalanced_omega_damage_scale(object* weapon)
 {
 	int parent_sig = weapon->ctype.laser_info.parent_signature;
 	int parent_num = weapon->ctype.laser_info.parent_num;
@@ -706,7 +706,7 @@ int Laser_create_new( vms_vector * direction, vms_vector * position, int segnum,
 		obj->mtype.phys_info.flags |= PF_STICK;		//this obj sticks to walls
 
 	obj->shields = Weapon_info[obj->id].strength[Difficulty_level];
-	if ((Game_mode & GM_MULTI) && Netgame.RebalancedWeapons) {
+	if ((Game_mode & GM_MULTI) && Netgame.OriginalD1Weapons) {
 		if (obj->id == LASER_ID_L1) {
 			obj->shields = 10 * F1_0;
 		} else if (obj->id == LASER_ID_L2) {
@@ -849,7 +849,7 @@ int Laser_create_new( vms_vector * direction, vms_vector * position, int segnum,
 	if (Weapon_info[obj->id].thrust != 0)
 		weapon_speed /= 2;
 
-	if ((Game_mode & GM_MULTI) && Netgame.RebalancedWeapons) {
+	if ((Game_mode & GM_MULTI) && Netgame.OriginalD1Weapons) {
 		if (obj->id == SPREADFIRE_ID) {
 			weapon_speed = 200 * F1_0;
 		}
@@ -1305,7 +1305,7 @@ void Laser_player_fire_spread_delay(object *obj, int laser_type, int gun_num, fi
 	vm_vec_add(&LaserPos,&obj->pos,&gun_point);
 
 	fix weapon_speed = Weapon_info[laser_type].speed[Difficulty_level];
-	if ((Game_mode & GM_MULTI) && Netgame.RebalancedWeapons) {
+	if ((Game_mode & GM_MULTI) && Netgame.OriginalD1Weapons) {
 		if (laser_type == SPREADFIRE_ID) {
 			weapon_speed = 200 * F1_0;
 		}
@@ -1572,7 +1572,7 @@ void Laser_do_weapon_sequence(object *obj, int doHomerFrame, fix idealHomerFrame
 				temp_vec = obj->mtype.phys_info.velocity;
 				speed = vm_vec_normalize_quick(&temp_vec);
 				max_speed = Weapon_info[obj->id].speed[Difficulty_level];
-				if ((Game_mode & GM_MULTI) && Netgame.RebalancedWeapons) {
+				if ((Game_mode & GM_MULTI) && Netgame.OriginalD1Weapons) {
 					if (obj->id == SPREADFIRE_ID) {
 						max_speed = 200 * F1_0;
 					}
@@ -1655,7 +1655,7 @@ void Laser_do_weapon_sequence(object *obj, int doHomerFrame, fix idealHomerFrame
 		fix	weapon_speed;
 
 		fix max_weapon_speed = Weapon_info[obj->id].speed[Difficulty_level];
-		if ((Game_mode & GM_MULTI) && Netgame.RebalancedWeapons) {
+		if ((Game_mode & GM_MULTI) && Netgame.OriginalD1Weapons) {
 			if (obj->id == SPREADFIRE_ID) {
 				max_weapon_speed = 200 * F1_0;
 			}

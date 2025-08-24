@@ -662,9 +662,9 @@ void do_physics_sim(object *obj)
 
 						if (bounced && (Game_mode & GM_MULTI) && Netgame.RebalancedWeapons) {
 							if (obj->type == OBJ_WEAPON && obj->id == PHOENIX_ID) {
-								// Halve power and reduce speed by 10%
+								// Halve power and reduce speed by 20%
 								obj->shields /= 2;
-								vm_vec_scale2(&obj->mtype.phys_info.velocity, 9, 10);
+								vm_vec_scale2(&obj->mtype.phys_info.velocity, 8, 10);
 							}
 						}
 
