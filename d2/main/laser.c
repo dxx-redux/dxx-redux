@@ -716,15 +716,22 @@ int Laser_create_new( vms_vector * direction, vms_vector * position, int segnum,
 		} else if (obj->id == LASER_ID_L4) {
 			obj->shields = 13 * F1_0;
 		} else if (obj->id == LASER_ID_L5) {
-			obj->shields = 13.25 * F1_0;
+			obj->shields = 13 * F1_0;
 		} else if (obj->id == LASER_ID_L6) {
-			obj->shields = 13.5 * F1_0;
+			obj->shields = 13 * F1_0;
 		} else if (obj->id == SPREADFIRE_ID) {
 			obj->shields = 10 * F1_0;
 		} else if (obj->id == FUSION_ID) {
 			// Note: This actually just cancels out the multi_damage_scale applied to fusion,
 			// but it works, so no real reason to change it right now.
 			obj->shields = 60 * F1_0;
+		}
+	}
+	if ((Game_mode & GM_MULTI) && Netgame.RebalancedWeapons) {
+		if (obj->id == LASER_ID_L5) {
+			obj->shields = 13.25 * F1_0;
+		} else if (obj->id == LASER_ID_L6) {
+			obj->shields = 13.5 * F1_0;
 		} else if (obj->id == SUPERPROX_ID) {
 			// Smart mine; down from 30
 			obj->shields = 10 * F1_0;
