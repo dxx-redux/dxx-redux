@@ -3045,6 +3045,7 @@ void net_udp_send_game_info(struct _sockaddr sender_addr, ubyte info_upid, ubyte
 		buf[len] = Netgame.GaussAmmoStyle; len++;
 		buf[len] = Netgame.team_color[0];						len++;
 		buf[len] = Netgame.team_color[1];						len++;
+		buf[len] = Netgame.NewSpawnAlgorithm; len++;
 
 		if(info_upid == UPID_SYNC) {
 			PUT_INTEL_INT(buf + len, player_token); len += 4; 
@@ -3277,6 +3278,7 @@ int net_udp_process_game_info(ubyte *data, int data_len, struct _sockaddr game_a
 		Netgame.GaussAmmoStyle = data[len]; len++;
 		Netgame.team_color[0] = data[len];						len++;
 		Netgame.team_color[1] = data[len];						len++;
+		Netgame.NewSpawnAlgorithm = data[len]; len++;
 
 		if (Netgame.host_is_obs) {
 			multi_make_player_ghost(0);
@@ -3779,6 +3781,7 @@ static int opt_cinvul, opt_show_on_map;
 static int opt_show_on_map, opt_difficulty, opt_setpower, opt_playtime, opt_killgoal, opt_port, opt_packets, opt_shortpack, opt_show_names, opt_bright, opt_ffire, opt_retroproto, opt_respawnconcs, opt_allowcolor, opt_faircolors, opt_blackwhite;
 static int opt_primary_dup, opt_secondary_dup, opt_secondary_cap; 
 static int opt_spawn_no_invul, opt_spawn_short_invul, opt_spawn_long_invul, opt_spawn_preview; 
+static int opt_spawn_algorithm;
 //static int opt_dark_smarts;
 static int opt_allowprefcolor; 
 static int opt_low_vulcan;
@@ -3819,9 +3822,9 @@ void net_udp_more_game_options ()
 	char PrimDupText[80],SecDupText[80],SecCapText[80]; 
 	char HomingUpdateRateText[80];
 #ifdef USE_TRACKER
-	newmenu_item m[44];
+	newmenu_item m[45];
 #else
-	newmenu_item m[43];
+	newmenu_item m[44];
 #endif
 
 	snprintf(packstring,sizeof(char)*4,"%d",Netgame.PacketsPerSec);
@@ -3874,7 +3877,9 @@ void net_udp_more_game_options ()
 	m[opt].type = NM_TYPE_RADIO; m[opt].text = "Two Second Invuln"; m[opt].value = Netgame.SpawnStyle == SPAWN_STYLE_LONG_INVUL; m[opt].group = 0; opt++;
 	opt_spawn_preview = opt; 
 	m[opt].type = NM_TYPE_RADIO; m[opt].text = "Preview"; m[opt].value = Netgame.SpawnStyle == SPAWN_STYLE_PREVIEW; m[opt].group = 0; opt++;
-		
+	opt_spawn_algorithm = opt;
+	m[opt].type = NM_TYPE_CHECK; m[opt].text = "Use New Spawn Location Algorithm"; m[opt].value = Netgame.NewSpawnAlgorithm; opt++;
+
 	m[opt].type = NM_TYPE_TEXT; m[opt].text = ""; opt++;
 
 	m[opt].type = NM_TYPE_TEXT; m[opt].text = "Vulcan Ammo Style"; opt++;
@@ -4020,7 +4025,7 @@ menu:
 	Netgame.RemoteHitSpark = m[opt_remote_hit_spark].value;
 	Netgame.AllowCustomModelsTextures = m[opt_allow_custom_models_textures].value;
 	Netgame.ReducedFlash = m[opt_reduced_flash].value;
-
+	Netgame.NewSpawnAlgorithm = m[opt_spawn_algorithm].value;
 }
 
 int net_udp_more_options_handler( newmenu *menu, d_event *event, void *userdata )
@@ -4338,6 +4343,7 @@ void netgame_set_defaults(void)
 	Netgame.AllowCustomModelsTextures = 0;
 	Netgame.ReducedFlash = 0;
 	Netgame.GaussAmmoStyle = GAUSS_STYLE_DEPLETING;
+	Netgame.NewSpawnAlgorithm = 0;
 
 #ifdef USE_TRACKER
 	Netgame.Tracker = 1;
@@ -7524,12 +7530,14 @@ static int show_game_rules_handler(window *wind, d_event *event, netgame_info *n
 			gr_set_fontcolor(label_color,-1);
 			gr_printf( FSPACX( 25),FSPACY(y+ 0), "Confirmed Sparks:");
 			gr_printf( FSPACX( 25),FSPACY(y+ 6), "Custom Mods:");
+            gr_printf( FSPACX( 25),FSPACY(y+12), "New Spawns:");
 			gr_printf( FSPACX(155),FSPACY(y+ 0), "Reduced Flash:");
 			gr_printf( FSPACX(155),FSPACY(y+ 6), "Vulcan Ammo Style:");
 
 			gr_set_fontcolor(value_color,-1);
 			gr_printf( FSPACX(115),FSPACY(y+ 0), netgame->RemoteHitSpark?"ON":"OFF");
 			gr_printf( FSPACX(115),FSPACY(y+ 6), netgame->AllowCustomModelsTextures?"ON":"OFF");
+			gr_printf( FSPACX(115),FSPACY(y+12), netgame->NewSpawnAlgorithm ? "ON" : "OFF");
 			gr_printf( FSPACX(275),FSPACY(y+ 0), netgame->ReducedFlash?"ON":"OFF");
 			gr_printf( FSPACX(275),FSPACY(y+ 6), ammo_style[netgame->GaussAmmoStyle]);
 			
