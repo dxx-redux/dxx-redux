@@ -1320,13 +1320,34 @@ int choose_multi_spawn_point()
 
 		for (int i = 0; i < N_players; i++) {
 			if ((i != Player_num) && (Objects[Players[i].objnum].type == OBJ_PLAYER)) {
-				fix distance = find_connected_distance(&Objects[Players[i].objnum].pos, Objects[Players[i].objnum].segnum,
-					&Player_init[start_num].pos, Player_init[start_num].segnum, -1, WID_FLY_FLAG);
-				// find_connected_distance returns -1 if it can't find a path to that location.
-				// We used a max_depth of -1 to reduce the chances of that happening, but just in
-				// case it still does, treat invalid distances as 1000 (since that's what's written
-				// into the FCD cache anyway - we just don't want to call the function twice).
-				if (distance < 0) distance = i2f(1000);
+				fix distance;
+
+				// If the start point is visible to this player, use the straight line distance.
+				// Also divide it by 2; we want to discourage the selection of spawns within
+				// line-of-sight of other players.
+				fvi_query fq;
+				fq.p0 = &Objects[Players[i].objnum].pos;
+				fq.p1 = &Player_init[start_num].pos;
+				fq.rad = 0x10;
+				fq.thisobjnum = Players[i].objnum;
+				fq.ignore_obj_list = NULL;
+				fq.flags = FQ_TRANSWALL;
+				fvi_info hit_data;
+				if (find_vector_intersection(&fq, &hit_data) == HIT_NONE) {
+					distance = vm_vec_dist(&Objects[Players[i].objnum].pos, &Player_init[start_num].pos) / 2;
+				}
+				else {
+					// Path-find from this player to the start point, and use that distance.
+					distance = find_connected_distance(&Objects[Players[i].objnum].pos, Objects[Players[i].objnum].segnum,
+						&Player_init[start_num].pos, Player_init[start_num].segnum, -1, WID_FLY_FLAG);
+					// find_connected_distance returns -1 if it can't find a path to that location.
+					// We used a max_depth of -1 to reduce the chances of that happening, but just
+					// in case it still does, treat invalid distances as 1000 (since that's what's
+					// written into the FCD cache anyway - we just don't want to call the function
+					// twice).
+					if (distance < 0) distance = i2f(1000);
+				}
+
 				if (distance < candidates[start_num].closest_distance ||
 					candidates[start_num].closest_distance < 0)
 					candidates[start_num].closest_distance = distance;
@@ -1343,14 +1364,24 @@ int choose_multi_spawn_point()
 	// Figure out weights for the best half of the candidates
 	// (uses closest distance but scaled so they sum to 1, for RNG purposes)
 	int num_candidates = NumNetPlayerPositions / 2;
-	fix cumulative_distance = 0;
-	for (int start_num = 0; start_num < num_candidates; start_num++) {
-		cumulative_distance += candidates[start_num].closest_distance;
-		candidates[start_num].cumulative_weight = cumulative_distance;
+	fix total_cumulative_weight = 0;
+	fix weight_adjustment = 0;
+	if (num_candidates > 1)
+	{
+		// This is a little fudge to ensure that the most likely candidate is no more than twice as
+        // likely to be chosen as the least likely candidate.
+		fix min_closest_distance = candidates[num_candidates - 1].closest_distance;
+		fix max_closest_distance = candidates[0].closest_distance;
+		if (max_closest_distance > 2 * min_closest_distance) {
+			weight_adjustment = max_closest_distance - 2 * min_closest_distance;
+		}
 	}
-	fix scale_factor = fixdiv(cumulative_distance, F1_0);
 	for (int start_num = 0; start_num < num_candidates; start_num++) {
-		candidates[start_num].cumulative_weight = fixdiv(candidates[start_num].cumulative_weight, scale_factor);
+		total_cumulative_weight += candidates[start_num].closest_distance + weight_adjustment;
+		candidates[start_num].cumulative_weight = total_cumulative_weight;
+	}
+	for (int start_num = 0; start_num < num_candidates; start_num++) {
+		candidates[start_num].cumulative_weight = fixdiv(candidates[start_num].cumulative_weight, total_cumulative_weight);
 		con_printf(CON_VERBOSE, "Start %d: nearest player %.1f, cumulative weight %.3f\n", candidates[start_num].start_num,
 			f2fl(candidates[start_num].closest_distance), f2fl(candidates[start_num].cumulative_weight));
 	}
