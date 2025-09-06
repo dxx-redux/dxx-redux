@@ -8,8 +8,6 @@ jobs:
     uses: dxx-redux/dxx-redux/.github/workflows/package-linux.yml@main
   windows:
     uses: dxx-redux/dxx-redux/.github/workflows/package-windows.yml@main
-  windows32:
-    uses: dxx-redux/dxx-redux/.github/workflows/package-windows32.yml@main
   msvc:
     uses: dxx-redux/dxx-redux/.github/workflows/package-msvc.yml@main
   macos:
