@@ -660,6 +660,14 @@ void do_physics_sim(object *obj)
 
 						vm_vec_scale_add2(&obj->mtype.phys_info.velocity,&hit_info.hit_wallnorm,-wall_part);
 
+						if (bounced && (Game_mode & GM_MULTI) && Netgame.RebalancedWeapons) {
+							if (obj->type == OBJ_WEAPON && obj->id == PHOENIX_ID) {
+								// Halve power and reduce speed by 20%
+								obj->shields /= 2;
+								vm_vec_scale2(&obj->mtype.phys_info.velocity, 8, 10);
+							}
+						}
+
 						if (check_vel) {
 							fix vel = vm_vec_mag_quick(&obj->mtype.phys_info.velocity);
 

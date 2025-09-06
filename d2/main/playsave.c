@@ -1301,6 +1301,8 @@ int read_netgame_settings_file(const char *filename, netgame_info *ng, int no_na
 				ng->BornWithBurner = strtol(value, NULL, 10);	
 			else if (!strcmp(token, "OriginalD1Weapons"))
 				ng->OriginalD1Weapons = strtol(value, NULL, 10);
+			else if (!strcmp(token, "RebalancedWeapons"))
+				ng->RebalancedWeapons = strtol(value, NULL, 10);
 			else if (!strcmp(token, "PrimaryDupFactor"))
 				ng->PrimaryDupFactor = strtol(value, NULL, 10);
 			else if (!strcmp(token, "SecondaryDupFactor"))
@@ -1385,6 +1387,7 @@ int write_netgame_settings_file(const char *filename, netgame_info *ng, int no_n
 	PHYSFSX_printf(file, "BlackAndWhitePyros=%i\n", ng->BlackAndWhitePyros);
 	PHYSFSX_printf(file, "BornWithBurner=%i\n", ng->BornWithBurner);
 	PHYSFSX_printf(file, "OriginalD1Weapons=%i\n", ng->OriginalD1Weapons);
+	PHYSFSX_printf(file, "RebalancedWeapons=%i\n", ng->RebalancedWeapons);
 	PHYSFSX_printf(file, "PrimaryDupFactor=%i\n", ng->PrimaryDupFactor);
 	PHYSFSX_printf(file, "SecondaryDupFactor=%i\n", ng->SecondaryDupFactor);
 	PHYSFSX_printf(file, "SecondaryCapFactor=%i\n", ng->SecondaryCapFactor);

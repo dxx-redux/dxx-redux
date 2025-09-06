@@ -161,6 +161,10 @@ int laser_are_related( int o1, int o2 )
 			if ((Objects[o1].id == PHOENIX_ID && (GameTime64 > Objects[o1].ctype.laser_info.creation_time + F1_0/4)) ||
 			   (Objects[o1].id == GUIDEDMISS_ID && (GameTime64 > Objects[o1].ctype.laser_info.creation_time + F1_0*2)) ||
 				(((Objects[o1].id == PROXIMITY_ID) || (Objects[o1].id == SUPERPROX_ID)) && (GameTime64 > Objects[o1].ctype.laser_info.creation_time + F1_0*4))) {
+				// Rebalanced Phoenix: It won't hit you until it's bounced at least once
+				if (Objects[o1].id == PHOENIX_ID && (Game_mode & GM_MULTI) && Netgame.RebalancedWeapons &&
+					(Objects[o1].mtype.phys_info.flags & PF_BOUNCES_TWICE) && !(Objects[o1].mtype.phys_info.flags & PF_BOUNCED_ONCE))
+					return 1;
 				return 0;
 			} else
 				return 1;
@@ -345,6 +349,29 @@ int ok_to_do_omega_damage(object *weapon)
 			return 0;
 
 	return 1;
+}
+
+// For rebalanced weapons - Omega cannon damage falls off with distance to the target
+fix get_rebalanced_omega_damage_scale(object* weapon)
+{
+	int parent_sig = weapon->ctype.laser_info.parent_signature;
+	int parent_num = weapon->ctype.laser_info.parent_num;
+
+	if (weapon->type != OBJ_WEAPON || weapon->id != OMEGA_ID)
+		return F1_0;
+	if (!(Game_mode & GM_MULTI) || !Netgame.RebalancedWeapons)
+		return F1_0;
+
+	if (Objects[parent_num].signature == parent_sig) {
+		fix max_dist_fraction = fixdiv(vm_vec_dist(&Objects[parent_num].pos, &weapon->pos), MAX_OMEGA_DIST);
+		if (max_dist_fraction > F1_0)
+		{
+			return 0;
+		}
+		return F1_0 - max_dist_fraction;
+	}
+
+	return F1_0;
 }
 
 // ---------------------------------------------------------------------------------
@@ -679,19 +706,38 @@ int Laser_create_new( vms_vector * direction, vms_vector * position, int segnum,
 		obj->mtype.phys_info.flags |= PF_STICK;		//this obj sticks to walls
 
 	obj->shields = Weapon_info[obj->id].strength[Difficulty_level];
-	if( (Game_mode & GM_MULTI) && Netgame.OriginalD1Weapons) {
-		if(obj->id == 0) {        // Laser 1
-			obj->shields = 10 * F1_0; 
-		} else if(obj->id == 1) { // Laser 2
-			obj->shields = 11 * F1_0; 
-		} else if(obj->id == 2) { // Laser 3
-			obj->shields = 12 * F1_0; 
-		} else if(obj->id == 3 || obj->id == 30 || obj->id == 31) { // Laser 4
-			obj->shields = 13 * F1_0; 
-		} else if(obj->id == 12) { // Spread
-			obj->shields = 10 * F1_0; 
-		} else if(obj->id == 14) { // Fusion
-			obj->shields = 60 * F1_0; 
+	if ((Game_mode & GM_MULTI) && Netgame.OriginalD1Weapons) {
+		if (obj->id == LASER_ID_L1) {
+			obj->shields = 10 * F1_0;
+		} else if (obj->id == LASER_ID_L2) {
+			obj->shields = 11 * F1_0;
+		} else if (obj->id == LASER_ID_L3) {
+			obj->shields = 12 * F1_0;
+		} else if (obj->id == LASER_ID_L4) {
+			obj->shields = 13 * F1_0;
+		} else if (obj->id == LASER_ID_L5) {
+			obj->shields = 13 * F1_0;
+		} else if (obj->id == LASER_ID_L6) {
+			obj->shields = 13 * F1_0;
+		} else if (obj->id == SPREADFIRE_ID) {
+			obj->shields = 10 * F1_0;
+		} else if (obj->id == FUSION_ID) {
+			// Note: This actually just cancels out the multi_damage_scale applied to fusion,
+			// but it works, so no real reason to change it right now.
+			obj->shields = 60 * F1_0;
+		}
+	}
+	if ((Game_mode & GM_MULTI) && Netgame.RebalancedWeapons) {
+		if (obj->id == LASER_ID_L5) {
+			obj->shields = 13.25 * F1_0;
+		} else if (obj->id == LASER_ID_L6) {
+			obj->shields = 13.5 * F1_0;
+		} else if (obj->id == SUPERPROX_ID) {
+			// Smart mine; down from 30
+			obj->shields = 10 * F1_0;
+		} else if (obj->id == SMART_MINE_HOMING_ID) {
+			// Smart mine blob; down from 25
+			obj->shields = 3 * F1_0;
 		}
 	}
 
@@ -810,10 +856,10 @@ int Laser_create_new( vms_vector * direction, vms_vector * position, int segnum,
 	if (Weapon_info[obj->id].thrust != 0)
 		weapon_speed /= 2;
 
-	if( (Game_mode & GM_MULTI) && Netgame.OriginalD1Weapons) {
-		if(obj->id == 12) { // Spread
-			weapon_speed = 200 * F1_0; 
-		} 
+	if ((Game_mode & GM_MULTI) && Netgame.OriginalD1Weapons) {
+		if (obj->id == SPREADFIRE_ID) {
+			weapon_speed = 200 * F1_0;
+		}
 	}
 
 	vm_vec_copy_scale( &obj->mtype.phys_info.velocity, direction, weapon_speed + parent_speed );
@@ -1266,10 +1312,10 @@ void Laser_player_fire_spread_delay(object *obj, int laser_type, int gun_num, fi
 	vm_vec_add(&LaserPos,&obj->pos,&gun_point);
 
 	fix weapon_speed = Weapon_info[laser_type].speed[Difficulty_level];
-	if( (Game_mode & GM_MULTI) && Netgame.OriginalD1Weapons) {
-		if(laser_type == 12) { // Spread
-			weapon_speed = 200 * F1_0; 
-		} 
+	if ((Game_mode & GM_MULTI) && Netgame.OriginalD1Weapons) {
+		if (laser_type == SPREADFIRE_ID) {
+			weapon_speed = 200 * F1_0;
+		}
 	}
 
 	//	If supposed to fire at a delayed time (delay_time), then move this point backwards.
@@ -1533,10 +1579,10 @@ void Laser_do_weapon_sequence(object *obj, int doHomerFrame, fix idealHomerFrame
 				temp_vec = obj->mtype.phys_info.velocity;
 				speed = vm_vec_normalize_quick(&temp_vec);
 				max_speed = Weapon_info[obj->id].speed[Difficulty_level];
-				if( (Game_mode & GM_MULTI) && Netgame.OriginalD1Weapons) {
-					if(obj->id == 12) { // Spread
-						max_speed = 200 * F1_0; 
-					} 
+				if ((Game_mode & GM_MULTI) && Netgame.OriginalD1Weapons) {
+					if (obj->id == SPREADFIRE_ID) {
+						max_speed = 200 * F1_0;
+					}
 				}
 				if (speed+F1_0 < max_speed) {
 					speed += fixmul(max_speed, idealHomerFrameTime/2);
@@ -1616,10 +1662,10 @@ void Laser_do_weapon_sequence(object *obj, int doHomerFrame, fix idealHomerFrame
 		fix	weapon_speed;
 
 		fix max_weapon_speed = Weapon_info[obj->id].speed[Difficulty_level];
-		if( (Game_mode & GM_MULTI) && Netgame.OriginalD1Weapons) {
-			if(obj->id == 12) { // Spread
-				max_weapon_speed = 200 * F1_0; 
-			} 
+		if ((Game_mode & GM_MULTI) && Netgame.OriginalD1Weapons) {
+			if (obj->id == SPREADFIRE_ID) {
+				max_weapon_speed = 200 * F1_0;
+			}
 		}
 
 		weapon_speed = vm_vec_mag_quick(&obj->mtype.phys_info.velocity);
@@ -1647,7 +1693,7 @@ void do_laser_firing_player(void)
 	player	*plp = &Players[Player_num];
 	fix		energy_used;
 	int		ammo_used,primary_ammo;
-	int		weapon_index;
+	int		weapon_id;
 	int		rval = 0;
 	int 		nfires = 1;
 	static int Spreadfire_toggle=0;
@@ -1656,8 +1702,8 @@ void do_laser_firing_player(void)
 	if (Player_is_dead)
 		return;
 
-	weapon_index = Primary_weapon_to_weapon_info[Players[Player_num].primary_weapon];
-	energy_used = Weapon_info[weapon_index].energy_usage;
+	weapon_id = Primary_weapon_to_weapon_info[Players[Player_num].primary_weapon];
+	energy_used = Weapon_info[weapon_id].energy_usage;
 	if (Players[Player_num].primary_weapon == OMEGA_INDEX)
 		energy_used = 0;	//	Omega consumes energy when recharging, not when firing.
 
@@ -1665,11 +1711,19 @@ void do_laser_firing_player(void)
 		energy_used = fixmul(energy_used, i2f(Difficulty_level+2)/4);
 
 	//	MK, 01/26/96, Helix use 2x energy in multiplayer.  bitmaps.tbl parm should have been reduced for single player.
-	if (weapon_index == HELIX_INDEX)
-		if (Game_mode & GM_MULTI)
+	// Note: This didn't work in vanilla because the ID check was written incorrectly;
+	// fixing specifically for rebalanced weapons.
+	if ((Game_mode & GM_MULTI) && Netgame.RebalancedWeapons) {
+		if (weapon_id == HELIX_ID)
 			energy_used *= 2;
+	}
 
-	ammo_used = Weapon_info[weapon_index].ammo_usage;
+	ammo_used = Weapon_info[weapon_id].ammo_usage;
+
+	if ((Game_mode & GM_MULTI) && Netgame.RebalancedWeapons) {
+		if (weapon_id == GAUSS_ID)
+			ammo_used *= 3; // 2 -> 6
+	}
 
 	primary_ammo = (Players[Player_num].primary_weapon == GAUSS_INDEX)?(plp->primary_ammo[VULCAN_INDEX]):(plp->primary_ammo[Players[Player_num].primary_weapon]);
 
@@ -1679,14 +1733,20 @@ void do_laser_firing_player(void)
 	while (Next_laser_fire_time <= GameTime64) {
 		if	((plp->energy >= energy_used) && (primary_ammo >= ammo_used)) {
 			int	laser_level, flags, fire_frame_overhead = 0;
+			fix fire_wait = Weapon_info[weapon_id].fire_wait;
+
+			if ((Game_mode & GM_MULTI) && Netgame.RebalancedWeapons) {
+				if (Players[Player_num].primary_weapon == HELIX_INDEX)
+					fire_wait = 0.2 * F1_0; // default is 0.15
+			}
 
 			if (GameTime64 - Next_laser_fire_time <= FrameTime) // if firing is prolonged by FrameTime overhead, let's try to fix that.
 				fire_frame_overhead = GameTime64 - Next_laser_fire_time;
 
-                        Last_laser_fired_time = GameTime64;
+			Last_laser_fired_time = GameTime64;
 
 			if (!cheats.rapidfire)
-				Next_laser_fire_time = GameTime64 + Weapon_info[weapon_index].fire_wait - fire_frame_overhead;
+				Next_laser_fire_time = GameTime64 + fire_wait - fire_frame_overhead;
 			else
 				Next_laser_fire_time = GameTime64 + (F1_0/25) - fire_frame_overhead;
 
@@ -1732,7 +1792,7 @@ void do_laser_firing_player(void)
 			}
 
 			pre_ammo = (Players[Player_num].energy)/F1_0; 
-			post_ammo = (Players[Player_num].energy - (energy_used * rval) / Weapon_info[weapon_index].fire_count)/F1_0; 
+			post_ammo = (Players[Player_num].energy - (energy_used * rval) / Weapon_info[weapon_id].fire_count)/F1_0; 
 			warning_increment = 5; 
 			if(Players[Player_num].primary_weapon != VULCAN_INDEX && Players[Player_num].primary_weapon != GAUSS_INDEX && PlayerCfg.VulcanAmmoWarnings) {
 			
@@ -1754,7 +1814,7 @@ void do_laser_firing_player(void)
 				}					
 			}
 
-			plp->energy -= (energy_used * rval) / Weapon_info[weapon_index].fire_count;
+			plp->energy -= (energy_used * rval) / Weapon_info[weapon_id].fire_count;
 			if (plp->energy < 0)
 				plp->energy = 0;
 
