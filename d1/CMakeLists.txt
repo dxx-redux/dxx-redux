@@ -91,6 +91,7 @@ endif()
 
 add_subdirectory(2d)
 add_subdirectory(3d)
+add_subdirectory(arch/libfresample)
 add_subdirectory(arch/sdl)
 add_subdirectory(iff)
 add_subdirectory(main)

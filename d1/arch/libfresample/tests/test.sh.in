@@ -1,0 +1,69 @@
+#!/bin/sh
+
+if test $# -lt 1 ; then
+    cat 1>&2 <<EOF
+Usage: tesh.sh TEST [OPTION..] [VAR=VALUE]
+
+Tests:
+  benchmark     throughput tests (requires SoX)
+  check         correctness tests (requires SoX)
+  dumpspecs     show filter specifications (requires Python)
+  quality       bandwidth and SNR analysis (requires Python, SciPy)
+  sweep         create spectrogram images (requires SoX)
+  sweep-mono    create mono spectrograms only
+  sweep-stereo  create stereo spectrograms only
+
+Variables for all tests:
+  FR    path to fresample program
+  SOX   path to SoX program
+
+Variables for benchmark, dumpspecs, and quality tests:
+  DUMP_SPECS    dump filter specs (benchmark and quality only)
+  NCHAN         number of channels (default 1..2)
+  QUALITY       resampler quality (default 0..10)
+  FORMAT        sample format (default s16)
+  RATE_IN       input sample rate (default 48 kHz)
+  RATE_OUT      output sample rate (default 44.1 kHz)
+  ITERCOUNT     number of iterations for benchmark
+  TEST_LENGTH   length of test files, in samples
+  TEST_BETA     beta parameter of test window (default 14)
+  CPU_FEATURES  permitted cpu features (default all)
+
+The 'sweep' and 'check' tests are run by 'make', so they take any
+options that 'make' accepts, such as '-j4'.
+EOF
+    exit 1
+fi
+
+FR="@top_builddir@/fresample"
+PROG="$1"
+shift
+
+case "$PROG" in
+    check|sweep|sweep-mono|sweep-stereo)
+	exec make "$PROG" "$@"
+	;;
+
+    benchmark|dumpspecs|quality)
+	if test ! -z "$PYTHON" ; then
+	    PYTHON=`which "$PYTHON"`
+	fi
+	if test ! -x "$PYTHON" ; then
+	    PYTHON=`which python`
+	fi
+	if test ! -x "$PYTHON" ; then
+	    PYTHON=`which python3`
+	fi
+	if test ! -x "$PYTHON" ; then
+	    echo 1>&2 \
+		'error: Python 2.5 or higher required for this test'
+	    exit 1
+	fi
+	exec "$PYTHON" "@srcdir@/$PROG".py FR="$FR" "$@"
+	;;
+
+    *)
+	echo 1>&2 "error: unknown test: $PROG"
+	exit 1
+	;;
+esac

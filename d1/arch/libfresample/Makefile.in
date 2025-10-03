@@ -1,0 +1,180 @@
+all:
+
+srcdir := @srcdir@
+
+prefix := @prefix@
+exec_prefix := @exec_prefix@
+libdir := @libdir@
+includedir := @includedir@
+
+UNAME_S := @UNAME_S@
+ARCHS := @ARCHS@
+PACKAGE_NAME := @PACKAGE_NAME@
+PACKAGE_VERSION := @PACKAGE_VERSION@
+depflags = -MF $@.d -MMD -MP
+
+# ========== Makefiles ==========
+
+.PRECIOUS: Makefile
+
+ifeq ($(ARCHS),)
+Makefile: $(srcdir)/Makefile.in config.status
+	sh config.status
+else
+Makefile: $(srcdir)/Makefile.in config.status
+	for arch in $(ARCHS) ; do \
+		sh arch-$$arch/config.status && \
+		mv arch.mak arch-$$arch/arch.mak ; \
+	done
+	sh config.status
+endif
+
+# ========== Version numbers ==========
+
+# Incremented whenever functionality is removed
+ver_maj := 1
+# Incremented whenever functionality is added
+ver_min := 0
+# Incremented whenever the code changes
+ver_rev := 0
+
+ifeq ($(UNAME_S),Darwin)
+so_name := libfresample.dylib
+so_name1 := libfresample.$(ver_maj).dylib
+so_name2 := libfresample.$(ver_maj).$(ver_min).$(ver_rev).dylib
+else
+so_name := libfresample.so
+so_name1 := libfresample.so.$(ver_maj)
+so_name2 := libfresample.so.$(ver_maj).$(ver_min).$(ver_rev)
+endif
+
+# ========== Binaries ==========
+
+ifeq ($(ARCHS),)
+
+include arch.mak
+
+else
+
+include $(foreach arch,$(ARCHS),arch-$(arch)/arch.mak)
+static_archs := $(foreach arch,$(ARCHS),arch-$(arch)/libfresample.a)
+shared_archs := $(foreach arch,$(ARCHS),arch-$(arch)/$(so_name))
+tool_archs := $(foreach arch,$(ARCHS),arch-$(arch)/fresample)
+
+libfresample.a: $(static_archs)
+	libtool -static $^ -o $@
+
+$(so_name): $(shared_archs)
+	lipo -create $^ -output $@
+
+fresample: $(tool_archs)
+	lipo -create $^ -output $@
+
+endif
+
+# ========== Framework ==========
+
+ifeq ($(UNAME_S),Darwin)
+fw_dirs := \
+fresample.framework/Versions/A/Headers \
+fresample.framework/Versions/A/Resources
+missing_fw_dirs := $(filter-out $(wildcard $(fw_dirs)),$(fw_dirs))
+$(fw_dirs):
+	mkdir -p $@
+fresample.framework/Versions/A/fresample: libfresample.dylib $(missing_fw_dirs)
+	strip -S -o $@ $<
+fresample.framework/Versions/A/Headers/fresample.h: $(srcdir)/include/fresample.h $(missing_fw_dirs)
+	cp $< $@
+fresample.framework/Versions/A/Resources/Info.plist: $(srcdir)/fresample-Info.plist $(missing_fw_dirs)
+	sed -e 's,$${EXECUTABLE_NAME},fresample,' <$< >$@
+fresample.framework/Versions/Current:
+	ln -s A $@
+fresample.framework/Headers:
+	ln -s Versions/Current/Headers $@
+fresample.framework/Resources:
+	ln -s Versions/Current/Resources $@
+fresample.framework/fresample:
+	ln -s Versions/Current/fresample $@
+fresample.framework: fresample.framework/Versions/A/fresample fresample.framework/Versions/A/Headers/fresample.h fresample.framework/Versions/A/Resources/Info.plist fresample.framework/Versions/Current fresample.framework/Headers fresample.framework/Resources fresample.framework/fresample
+	touch $@
+fresample.framework.dSYM: libfresample.dylib
+	dsymutil $< -o $@
+all: fresample.framework fresample.framework.dSYM
+endif
+
+# ========== Dist ==========
+
+distname := $(PACKAGE_NAME)-$(PACKAGE_VERSION)
+distfiles := \
+	LICENSE.txt \
+	LibFResample.xcodeproj/project.pbxproj \
+	LibFResample_Xcode3.xcodeproj/project.pbxproj \
+	Makefile.in \
+	README.txt \
+	arch.mak \
+	autogen.sh \
+	comparison.txt \
+	configure \
+	configure.ac \
+	fresample-Info.plist \
+	genmake.py \
+	include/*.h \
+	lib/*.[ch] \
+	src/*.[ch] \
+	tests/Makefile.in \
+	tests/benchmark.py \
+	tests/common.py \
+	tests/dumpspecs.py \
+	tests/genmake.py \
+	tests/quality.py \
+	tests/test.sh.in
+
+dist_tar := tar c -C "$(srcdir)" $(distfiles) --transform 's,^,$(distname)/,'
+
+$(distname).tar.gz:
+	$(dist_tar) | gzip -9 > $@
+
+$(distname).tar.xz:
+	$(dist_tar) | xz > $@
+
+dist-gz: $(distname).tar.gz
+
+dist-xz: $(distname).tar.xz
+
+# ========== Install ==========
+
+install-lib: libfresample.a $(so_name)
+	test -d "$(DESTDIR)$(libdir)" || \
+		mkdir -p "$(DESTDIR)$(libdir)"
+	install -s -m 644 libfresample.a \
+		"$(DESTDIR)$(libdir)/libfresample.a"
+	install -s -m 644 $(so_name) \
+		"$(DESTDIR)$(libdir)/$(so_name2)"
+	cd "$(DESTDIR)$(libdir)" && \
+		ln -s -f $(so_name2) $(so_name1)
+	cd "$(DESTDIR)$(libdir)" && \
+		ln -s -f $(so_name2) $(so_name)
+
+install-include:
+	test -d "$(DESTDIR)$(includedir)/fresample" || \
+		mkdir -p "$(DESTDIR)$(includedir)/fresample"
+	install -m 644 "$(srcdir)/include/fresample.h" \
+		"$(DESTDIR)$(includedir)/fresample/fresample.h"
+
+install: install-lib install-include
+
+# ========== Simple pseudo targets ==========
+
+all: fresample libfresample.a $(so_name)
+
+clean:
+	rm -f fresample libfresample.a $(so_name)
+	rm -f arch-*/fresample* arch-*/libfresample.a arch-*/$(so_name)
+	rm -rf arch-*/shared arch-*/static arch-*/tool
+	rm -rf fresample.framework
+	rm -rf shared static tool
+	rm -f tests/*.wav tests/*.png \
+		$(addprefix "$(distname)",.tar.gz .tar.xz)
+
+check: fresample
+	cd tests; $(MAKE) check

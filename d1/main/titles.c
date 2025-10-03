@@ -76,6 +76,7 @@ typedef struct title_screen
 	grs_bitmap title_bm;
 	fix64 timer;
 	int allow_keys;
+	int drawn;
 } title_screen;
 
 static int title_handler(window *wind, d_event *event, title_screen *ts)
@@ -99,6 +100,9 @@ static int title_handler(window *wind, d_event *event, title_screen *ts)
 			return 1;
 
 		case EVENT_IDLE:
+			if (!ts->drawn)
+				break;
+
 			timer_delay2(50);
 
 			if (timer_query() > ts->timer)
@@ -111,6 +115,7 @@ static int title_handler(window *wind, d_event *event, title_screen *ts)
 		case EVENT_WINDOW_DRAW:
 			gr_set_current_canvas( NULL );
 			show_fullscr(&ts->title_bm);
+			ts->drawn = 1;
 			break;
 
 		case EVENT_WINDOW_CLOSE:
@@ -125,7 +130,7 @@ static int title_handler(window *wind, d_event *event, title_screen *ts)
 	return 0;
 }
 
-static int show_title_screen( char * filename, int allow_keys, int from_hog_only )
+static int show_title_screen( char * filename, int allow_keys, int from_hog_only, int wait )
 {
 	title_screen *ts;
 	window *wind;
@@ -137,6 +142,7 @@ static int show_title_screen( char * filename, int allow_keys, int from_hog_only
 		return 0;
 
 	ts->allow_keys = allow_keys;
+	ts->drawn = 0;
 
 #ifdef RELEASE
 	if (from_hog_only)
@@ -152,7 +158,7 @@ static int show_title_screen( char * filename, int allow_keys, int from_hog_only
 		Error( "Error loading briefing screen <%s>, PCX load error: %s (%i)\n",filename, pcx_errormsg(pcx_error), pcx_error);
 	}
 
-	ts->timer = timer_query() + i2f(3);
+	ts->timer = timer_query() + i2f(wait ? 3 : 0);
 
 	gr_palette_load( gr_palette );
 
@@ -185,9 +191,9 @@ void show_titles(void)
 	if (!PHYSFSX_exists(publisher,1))
 		strcpy(publisher, "iplogo1.pcx");	// PC. Only down here because it's lowres ;-)
 
-	show_title_screen( publisher, 1, 1 );
-	show_title_screen( (((SWIDTH>=640&&SHEIGHT>=480) && PHYSFSX_exists("logoh.pcx",1))?"logoh.pcx":"logo.pcx"), 1, 1 );
-	show_title_screen( (((SWIDTH>=640&&SHEIGHT>=480) && PHYSFSX_exists("descenth.pcx",1))?"descenth.pcx":"descent.pcx"), 1, 1 );
+	show_title_screen( publisher, 1, 1, 1 );
+	show_title_screen( (((SWIDTH>=640&&SHEIGHT>=480) && PHYSFSX_exists("logoh.pcx",1))?"logoh.pcx":"logo.pcx"), 1, 1, 1 );
+	show_title_screen( (((SWIDTH>=640&&SHEIGHT>=480) && PHYSFSX_exists("descenth.pcx",1))?"descenth.pcx":"descent.pcx"), 1, 1, 0 );
 }
 
 void show_order_form()
@@ -202,7 +208,7 @@ void show_order_form()
 		strcpy(exit_screen, "apple.pcx");	// D1 Mac OEM Demo
 	if (! PHYSFSX_exists(exit_screen,1))
 		strcpy(exit_screen, "order01.pcx"); // D1 Demo
-	show_title_screen(exit_screen, 1, 1);
+	show_title_screen(exit_screen, 1, 1, 1);
 }
 
 

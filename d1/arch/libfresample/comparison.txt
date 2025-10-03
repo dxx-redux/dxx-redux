@@ -1,0 +1,86 @@
+Comparison and resources
+========================
+
+Comparisons of resamplers
+-------------------------
+
+Resampling comparisons: http://src.infinitewave.ca/
+
+Tests designed by Alexey Lukin, who is associated with iZotope and
+RightMark.
+
+Note the highest quality converters, according to this test:
+
+      Adobe Audition 5.5 and CS6
+      Awave Studio 10.3
+      eac3to (SSRC)
+      FinalCD 0.12
+      IRCAM SuperVP (160dB SNR)
+      iZotope 64 bit SRC Steep, No Alias
+  [1] iZotope 64 bit SRC Intermed. Phase
+      iZotope RX Adv 2 (High Steepness)
+      libfsrc (alpha)
+  [2] r8brain Free
+  [3] r8brain Pro Minimum Phase
+      Signalyst (Sinc)
+      Sound Sculptor Pro 3.0.2
+      SoX 14.4 VHQ Linear Phase
+  [3] SoX 14.4 VHQ Intermediate Phase
+  [3] SoX 14.4 VHQ Minimum Phase
+      Wave Editor 1.4.6 (Steep No Aliasing)
+
+All converters in the list show linear phase, with the following
+exceptions:
+
+  [1] mostly linear phase filter, up to around 15 kHz
+  [2] linear phase filter, but inverted output
+  [3] not linear phase filter (pronounced impulse response asymmetry)
+
+The above comparison has the drawback that it is visual.  Invisible
+artifacts might be audible, and visible artifacts might be inaudible.
+In particular, the graphs might show artifacts which are masked by the
+signal, at least to the human ear.  The author of the test also claims
+that the effect of ringing is "smearing of the stereo image and
+reducing the clarity of bass", but I am skeptical.
+
+As an example, the "Secret Rabbit Code 0.1.3 (Best Sinc)" has visible
+artifacts, but it appears to be harmonics below -150 dB, which are
+almost certainly inaudioble.  "Secret Rabbit Code 0.1.2 (Best Sinc)"
+shows nasty looking artifacts, but the harmonics are below -100 dB.
+The filters which score the best appear somewhat overdesigned.  For
+example, libfsrc has a transition band that looks to be about 200-300
+Hz wide, which one might call "unreasonably sharp".
+
+RightMark
+---------
+
+RightMark: http://audio.rightmark.org/
+
+RightMark is used for testing audio quality and correctness, but I'm
+not sure if it can be used to test a program's sample rate conversion.
+It's commercial, and only available for Windows.
+
+libfsrc
+-------
+
+libfsrc: http://libfsrc.sourceforge.net/ (GPL)
+
+This appears to be a very high quality resampler, which uses a
+different (more sophisticated) filter design technique than windowing.
+It's GPL, but not release quality yet.
+
+SoX
+---
+
+SoX: http://sox.sourceforge.net/ (GPL)
+
+SoX is also GPL, and includes a high quality resampler.  I'm not sure
+what algorithm SoX uses.
+
+Secret Rabbit Code
+------------------
+
+Secret Rabbit Code: http://www.mega-nerd.com/SRC/ (GPL)
+
+Secret Rabbit Code includes a program for testing sample rate
+conversion, which calculates bandwidth and SNR.

@@ -1,0 +1,49 @@
+#!/bin/sh
+UNAME_S=`uname -s`
+if test "x$UNAME_S" != xDarwin ; then
+  echo 2>&1 'Universal build only supported on Darwin'
+  exit 1
+fi
+if test "x$1" == x--help ; then
+  echo 'Usage: configure-universal [--archs ARCHS] [config-opts...]'
+  exit
+fi
+if test "x$1" == x--archs ; then
+  ARCHS=$2
+  shift 2
+  for ARCH in $ARCHS ; do
+    if gcc -arch $ARCH -c -o /dev/null -x c /dev/null 2>/dev/null ; then
+      :
+    else
+      echo 2>&1 "error: cannot compile for arch: $ARCH"
+      exit 1
+    fi
+  done
+  if test "x$ARCHS" == x ; then
+    echo 2>&1 "error: no architectures specified"
+    exit 1
+  fi
+else
+  ARCHS=
+  for ARCH in ppc i386 x86_64 ; do
+    if gcc -arch $ARCH -c -o /dev/null -x c /dev/null 2>/dev/null ; then
+      ARCHS="$ARCHS $ARCH"
+    fi
+  done
+  if test "x$ARCHS" == x ; then
+    echo 2>&1 'error: could not find any working architectures'
+    exit 1
+  fi
+fi
+echo "ARCHS: $ARCHS"
+
+CONFIGURE=`dirname "$0"`/configure
+set -e
+for ARCH in $ARCHS ; do
+  test -d arch-$ARCH || mkdir arch-$ARCH
+  ./configure "lfr_arch=$ARCH" "$@"
+  mv arch.mak arch-$ARCH/arch.mak
+  mv config.status arch-$ARCH/config.status
+done
+./configure "lfr_archs=$ARCHS" "$@"
+rm arch.mak

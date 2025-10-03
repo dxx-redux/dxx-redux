@@ -1,0 +1,45 @@
+# Build directory and products
+/arch-*
+/arch.mak*
+*.o
+*.so
+*.a
+*.dylib
+*.framework
+/fresample
+/shared
+/static
+/tool
+
+# Archives
+*.gz
+*.bz2
+*.lz
+*.lzma
+*.Z
+*.xz
+*.zip
+
+# Autotools
+/aclocal.m4
+/autom4te.cache
+/config.log
+/config.status
+/configure
+Makefile
+
+# Xcode
+*.mode1v3
+*.pbxuser
+project.xcworkspace
+xcuserdata
+
+# Visual C++
+/x64
+/Debug
+/Release
+/ipch
+*.vcxproj.filters
+*.vcxproj.user
+*.suo
+*.sdf

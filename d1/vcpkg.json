@@ -7,7 +7,8 @@
     "sdl1",
     "sdl1-mixer",
     "libpng",
-    "glew"
+    "glew",
+    "libsamplerate"
   ],
   "vcpkg-configuration": {
     "default-registry": {

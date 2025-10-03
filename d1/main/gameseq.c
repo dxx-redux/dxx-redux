@@ -654,7 +654,7 @@ void LoadLevel(int level_num,int page_in_textures)
 
 	show_boxed_message(TXT_LOADING, 0);
 #ifdef RELEASE
-	timer_delay(F1_0);
+	//timer_delay(F1_0);
 #endif
 
 #ifdef NETWORK

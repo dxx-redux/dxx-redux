@@ -1,0 +1,5 @@
+*.wav
+*.png
+*.pyc
+/test.sh
+/Makefile.in
