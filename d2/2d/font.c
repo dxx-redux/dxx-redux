@@ -1072,18 +1072,20 @@ grs_font * gr_init_font( const char * fontname )
 	if (font->ft_flags & FT_KERNED)
 		font->ft_kerndata = (unsigned char *) &font_data[(size_t)font->ft_kerndata];
 
+	ubyte palette[256*3];
 	if (font->ft_flags & FT_COLOR) {		//remap palette
-		ubyte palette[256*3];
 		ubyte colormap[256];
 		int freq[256];
 
 		PHYSFS_read(fontfile,palette,3,256);		//read the palette
 
+#ifndef OGL
 		build_colormap_good( (ubyte *)&palette, colormap, freq );
 
 		colormap[TRANSPARENCY_COLOR] = TRANSPARENCY_COLOR;              // changed from colormap[255] = 255 to this for macintosh
 
 		decode_data(font->ft_data, ptr - font->ft_data, colormap, freq );
+#endif
 	}
 
 	PHYSFS_close(fontfile);
@@ -1095,7 +1097,11 @@ grs_font * gr_init_font( const char * fontname )
 	grd_curcanv->cv_font_bg_color    = 0;
 
 #ifdef OGL
+	if (font->ft_flags & FT_COLOR)
+		ogl_pal = palette;
 	ogl_init_font(font);
+	if (font->ft_flags & FT_COLOR)
+		ogl_pal = gr_palette;
 #endif
 
 	return font;

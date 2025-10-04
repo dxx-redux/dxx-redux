@@ -79,6 +79,8 @@ extern int gl_initialized;
 extern int active_texture_unit;
 extern GLfloat ogl_maxanisotropy;
 
+extern unsigned char *ogl_pal;
+
 void ogl_setActiveTexture(int t);
 
 int ogl_init_window(int x, int y);//create a window/switch modes/etc
