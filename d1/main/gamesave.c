@@ -785,7 +785,7 @@ int load_game_data(PHYSFS_file *LoadFile)
 		N_save_pof_names = PHYSFSX_readShort(LoadFile);
 		if (N_save_pof_names != 0x614d && N_save_pof_names != 0x5547 && N_save_pof_names != 0x5053) { // "Ma"de w/DMB beta/"GU"ILE/"SP"IKE
 			if (N_save_pof_names >= 0 && N_save_pof_names < MAX_POLYGON_MODELS_NEW)
-				PHYSFS_read(LoadFile,Save_pof_names,N_save_pof_names,FILENAME_LEN);
+				PHYSFS_read(LoadFile,Save_pof_names,FILENAME_LEN,N_save_pof_names);
 			else
 				con_printf(CON_NORMAL, "Invalid number of pof names %x\n", N_save_pof_names);
 		}
