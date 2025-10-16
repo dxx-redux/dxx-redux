@@ -1266,7 +1266,9 @@ int read_netgame_settings_file(const char *filename, netgame_info *ng, int no_na
 			else if (!strcmp(token, "BrightPlayers"))
 				ng->BrightPlayers = strtol(value, NULL, 10);
 			else if (!strcmp(token, "SpawnStyle"))
-				ng->SpawnStyle = strtol(value, NULL, 10);	
+				ng->SpawnStyle = strtol(value, NULL, 10);
+			else if (!strcmp(token, "NewSpawnAlgorithm"))
+				ng->NewSpawnAlgorithm = strtol(value, NULL, 10);
 			else if (!strcmp(token, "GaussAmmoStyle"))
 				ng->GaussAmmoStyle = strtol(value, NULL, 10);
 			else if (!strcmp(token, "KillGoal"))
@@ -1370,6 +1372,7 @@ int write_netgame_settings_file(const char *filename, netgame_info *ng, int no_n
 	PHYSFSX_printf(file, "ShowEnemyNames=%i\n", ng->ShowEnemyNames);
 	PHYSFSX_printf(file, "BrightPlayers=%i\n", ng->BrightPlayers);
 	PHYSFSX_printf(file, "SpawnStyle=%i\n", ng->SpawnStyle);
+	PHYSFSX_printf(file, "NewSpawnAlgorithm=%i\n", ng->NewSpawnAlgorithm);
 	PHYSFSX_printf(file, "GaussAmmoStyle=%i\n", ng->GaussAmmoStyle);
 	PHYSFSX_printf(file, "KillGoal=%i\n", ng->KillGoal);
 	PHYSFSX_printf(file, "PlayTimeAllowed=%i\n", ng->PlayTimeAllowed);

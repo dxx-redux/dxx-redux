@@ -7530,7 +7530,7 @@ static int show_game_rules_handler(window *wind, d_event *event, netgame_info *n
 			gr_set_fontcolor(label_color,-1);
 			gr_printf( FSPACX( 25),FSPACY(y+ 0), "Confirmed Sparks:");
 			gr_printf( FSPACX( 25),FSPACY(y+ 6), "Custom Mods:");
-            gr_printf( FSPACX( 25),FSPACY(y+12), "New Spawns:");
+			gr_printf( FSPACX( 25),FSPACY(y+12), "New Spawns:");
 			gr_printf( FSPACX(155),FSPACY(y+ 0), "Reduced Flash:");
 			gr_printf( FSPACX(155),FSPACY(y+ 6), "Vulcan Ammo Style:");
 
