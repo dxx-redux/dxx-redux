@@ -1659,10 +1659,12 @@ void ogl_loadpngmask(png_data *pdata, grs_bitmap *bm, int texfilt)
 }
 #endif
 
-void ogl_loadbmtexture_f(grs_bitmap *bm, int texfilt)
+void ogl_loadbmtexture_f(grs_bitmap *bm, int texfilt, const char *bitmapname)
 {
 	unsigned char *buf;
-	const char *bitmapname = piggy_game_bitmap_name(bm);
+
+	if (!bitmapname)
+		bitmapname = piggy_game_bitmap_name(bm);
 
 	while (bm->bm_parent)
 		bm=bm->bm_parent;
@@ -1683,7 +1685,16 @@ void ogl_loadbmtexture_f(grs_bitmap *bm, int texfilt)
 			{
 				if (bm->gltexture == NULL)
 					ogl_init_texture(bm->gltexture = ogl_get_free_texture(), pdata.width, pdata.height, ((pdata.alpha || bm->bm_flags & BM_FLAG_TRANSPARENT) ? OGL_FLAG_ALPHA : 0));
-				ogl_loadtexture(pdata.data, 0, 0, bm->gltexture, bm->bm_flags, pdata.paletted ? 0 : pdata.channels, texfilt);
+				unsigned char *data = pdata.data;
+				if (pdata.palette) {
+					int size = pdata.width * pdata.height;
+					data = malloc(size * 3);
+					for (int i = 0; i < size; i++)
+						memcpy(&data[i * 3], &pdata.palette[pdata.data[i] * 3], 3);
+					free(pdata.data);
+					pdata.data = data;
+				}
+				ogl_loadtexture(pdata.data, 0, 0, bm->gltexture, bm->bm_flags, pdata.paletted ? 3 : pdata.channels, texfilt);
 				#ifdef OGL_MERGE
 				if (bm->bm_flags & BM_FLAG_SUPER_TRANSPARENT)
 					ogl_loadpngmask(&pdata, bm, texfilt);
@@ -1841,7 +1852,7 @@ void ogl_loadbmtexture_f(grs_bitmap *bm, int texfilt)
 
 void ogl_loadbmtexture(grs_bitmap *bm)
 {
-	ogl_loadbmtexture_f(bm, GameCfg.TexFilt);
+	ogl_loadbmtexture_f(bm, GameCfg.TexFilt, NULL);
 }
 
 void ogl_freetexture(ogl_texture *gltexture)
