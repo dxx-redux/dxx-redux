@@ -48,6 +48,8 @@ extern int Newdemo_game_mode;
 extern sbyte Newdemo_do_interpolate;
 extern int Newdemo_show_percentage;
 
+struct morph_data;
+
 // Functions called during recording process...
 extern void newdemo_record_start_demo();
 extern void newdemo_record_start_frame(fix frame_time );
