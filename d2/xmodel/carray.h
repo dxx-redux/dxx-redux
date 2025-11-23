@@ -124,7 +124,7 @@ class CArray /*: public CQuickSort < _T >*/ {
 
 		void Init (void) {
 			*m_data.szName = 0;
-			m_data.buffer = reinterpret_cast<_T *> (NULL);
+			m_data.buffer = NULL;
 			m_data.length = 0;
 			m_data.pos = 0;
 			m_data.nMode = 0;
@@ -229,7 +229,7 @@ class CArray /*: public CQuickSort < _T >*/ {
 					TrackMemory (b);
 #endif
 #if DBG_ARRAYS
-					m_data.buffer = reinterpret_cast<_T *> (NULL);
+					m_data.buffer = NULL;
 #endif
 					}
 				Init ();
