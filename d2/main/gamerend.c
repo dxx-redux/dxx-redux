@@ -247,7 +247,12 @@ void show_netplayerinfo()
 	draw_flag("ReduFlas", Netgame.ReducedFlash,                                    base_flags_left + word_spacing*0, y);
 	const char *ammo_style[] = {"AmmoDupl", "AmmoDepl", "AmmoDrop", "AmmoSpaw"};
 	draw_flag(ammo_style[Netgame.GaussAmmoStyle], Netgame.GaussAmmoStyle != 2,     base_flags_left + word_spacing*1, y);
-	draw_flag("WeakGaus", Netgame.DisableGaussSplash,                              base_flags_left + word_spacing*2, y);
+	draw_flag("NewSpawn", Netgame.NewSpawnAlgorithm,                               base_flags_left + word_spacing*2, y);
+
+	set_font_newline();
+	y += LINE_SPACING;
+
+	draw_flag("WeakGaus", Netgame.DisableGaussSplash,                              base_flags_left + word_spacing*0, y);
 
 	set_font_newline();
 	y+=LINE_SPACING;
