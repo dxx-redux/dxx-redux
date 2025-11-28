@@ -581,6 +581,7 @@ typedef struct netgame_info
 	ubyte						DisableGaussSplash;
 	ubyte						team_color[2];
 	ubyte						RebalancedWeapons;
+	ubyte						NewSpawnAlgorithm;
 } __pack__ netgame_info;
 
 extern int Host_is_obs; // Reminder for host only that they are an observer.  Do not set for other players or observers.
