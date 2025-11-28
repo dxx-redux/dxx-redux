@@ -1834,6 +1834,7 @@ int choose_multi_spawn_point()
 				fvi_query fq;
 				fq.p0 = &Objects[Players[i].objnum].pos;
 				fq.p1 = &Player_init[start_num].pos;
+				fq.startseg = Objects[Players[i].objnum].segnum;
 				fq.rad = 0x10;
 				fq.thisobjnum = Players[i].objnum;
 				fq.ignore_obj_list = NULL;
