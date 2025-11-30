@@ -35,11 +35,7 @@
 #define MIX_OUTPUT_CHANNELS	2
 
 #define MAX_SOUND_SLOTS 64
-#if !((defined(__APPLE__) && defined(__MACH__)) || defined(macintosh))
-#define SOUND_BUFFER_SIZE 2048
-#else
-#define SOUND_BUFFER_SIZE 1024
-#endif
+#define SOUND_BUFFER_SIZE 512 // sample frames, so 44100/512 = 86 updates/second
 #define MIN_VOLUME 10
 
 static int digi_initialised = 0;
