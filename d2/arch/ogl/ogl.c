@@ -73,6 +73,8 @@
 #define sinf(a) sin(a)
 #endif
 
+#define MAX_VERTS 128
+
 unsigned char *ogl_pal=gr_palette;
 
 int last_width=-1,last_height=-1;
@@ -712,10 +714,10 @@ bool g3_draw_poly(int nv,const g3s_point **pointlist)
 {
 	int c, index3, index4;
 	float color_r, color_g, color_b, color_a;
-	GLfloat *vertex_array, *color_array;
+	GLfloat vertex_array[MAX_VERTS * 3], color_array[MAX_VERTS * 4];
 
-	MALLOC(vertex_array, GLfloat, nv*3);
-	MALLOC(color_array, GLfloat, nv*4);
+	if (nv > MAX_VERTS)
+		Error("Too many vertices %d", nv);
 
 	r_polyc++;
 	glEnableClientState(GL_VERTEX_ARRAY);
@@ -749,9 +751,6 @@ bool g3_draw_poly(int nv,const g3s_point **pointlist)
 	glDisableClientState(GL_VERTEX_ARRAY);
 	glDisableClientState(GL_COLOR_ARRAY);
 
-	d_free(vertex_array);
-	d_free(color_array);
-
 	return 0;
 }
 
@@ -765,13 +764,18 @@ void draw_tmap_flat(grs_bitmap *bm,int nv,g3s_point **vertlist){
 
 extern void (*tmap_drawer_ptr)(grs_bitmap *bm,int nv,g3s_point **vertlist);
 
+
 /*
  * Everything texturemapped (walls, robots, ship)
  */ 
 bool g3_draw_tmap(int nv,const g3s_point **pointlist,g3s_uvl *uvl_list,g3s_lrgb *light_rgb,grs_bitmap *bm)
 {
 	int c, index2, index3, index4;
-	GLfloat *vertex_array, *color_array, *texcoord_array, color_alpha = 1.0;
+	GLfloat vertex_array[MAX_VERTS * 3], color_array[MAX_VERTS * 4], texcoord_array[MAX_VERTS * 2];
+	GLfloat color_alpha = 1.0;
+
+	if (nv > MAX_VERTS)
+		Error("Too many vertices: %d", nv);
 
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_COLOR_ARRAY);
@@ -791,10 +795,6 @@ bool g3_draw_tmap(int nv,const g3s_point **pointlist,g3s_uvl *uvl_list,g3s_lrgb 
 		glmprintf((0,"g3_draw_tmap: unhandled tmap_drawer %p\n",tmap_drawer_ptr));
 		return 0;
 	}
-
-	MALLOC(vertex_array, GLfloat, nv*3);
-	MALLOC(color_array, GLfloat, nv*4);
-	MALLOC(texcoord_array, GLfloat, nv*2);
 
 	for (c=0; c<nv; c++) {
 		index2 = c * 2;
@@ -832,10 +832,6 @@ bool g3_draw_tmap(int nv,const g3s_point **pointlist,g3s_uvl *uvl_list,g3s_lrgb 
 	glDisableClientState(GL_COLOR_ARRAY);
 	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 
-	d_free(vertex_array);
-	d_free(color_array);
-	d_free(texcoord_array);
-
 	return 0;
 }
 
@@ -845,18 +841,14 @@ bool g3_draw_tmap(int nv,const g3s_point **pointlist,g3s_uvl *uvl_list,g3s_lrgb 
 bool g3_draw_tmap_2(int nv, const g3s_point **pointlist, g3s_uvl *uvl_list, g3s_lrgb *light_rgb, grs_bitmap *bmbot, grs_bitmap *bmovl, int orient)
 {
 	int c, index2, index3, index4;
-	GLfloat *vertex_array, *color_array, *texcoordovl_array;
+	GLfloat vertex_array[MAX_VERTS * 3], color_array[MAX_VERTS * 4], texcoordovl_array[MAX_VERTS * 2];
 #ifdef OGL_MERGE
-	GLfloat *texcoordbot_array;
+	GLfloat texcoordbot_array[MAX_VERTS * 2];
 	int super = bmovl->bm_flags & BM_FLAG_SUPER_TRANSPARENT;
 #endif
 
-	MALLOC(vertex_array, GLfloat, nv*3);
-	MALLOC(color_array, GLfloat, nv*4);
-	MALLOC(texcoordovl_array, GLfloat, nv*2);
-#ifdef OGL_MERGE
-	MALLOC(texcoordbot_array, GLfloat, nv*2);
-#endif
+	if (nv > MAX_VERTS)
+		Error("Too many vertices: %d", nv);
 
 #ifndef OGL_MERGE
 	g3_draw_tmap(nv,pointlist,uvl_list,light_rgb,bmbot);//draw the bottom texture first.. could be optimized with multitexturing..
@@ -953,13 +945,6 @@ bool g3_draw_tmap_2(int nv, const g3s_point **pointlist, g3s_uvl *uvl_list, g3s_
 	glUseProgram(0);
 #endif
 	r_tpolyc++;
-
-#ifdef OGL_MERGE
-	d_free(texcoordbot_array);
-#endif
-	d_free(texcoordovl_array);
-	d_free(color_array);
-	d_free(vertex_array);
 
 	return 0;
 }
