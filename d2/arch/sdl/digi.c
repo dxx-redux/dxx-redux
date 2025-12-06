@@ -48,6 +48,7 @@ int  (*fptr_is_sound_playing)(int) = NULL;
 int  (*fptr_is_channel_playing)(int) = NULL;
 void (*fptr_stop_all_channels)() = NULL;
 void (*fptr_set_digi_volume)(int) = NULL;
+void (*fptr_free_cached_sounds)() = NULL;
 
 void digi_select_system(int n) {
 	switch (n) {
@@ -66,6 +67,7 @@ void digi_select_system(int n) {
 	fptr_is_channel_playing = digi_mixer_is_channel_playing;
 	fptr_stop_all_channels = digi_mixer_stop_all_channels;
 	fptr_set_digi_volume = digi_mixer_set_digi_volume;
+	fptr_free_cached_sounds = digi_mixer_free_cached_sounds;
 	break;
 #endif
 	case SDLAUDIO_SYSTEM:
@@ -83,6 +85,7 @@ void digi_select_system(int n) {
         fptr_is_channel_playing = digi_audio_is_channel_playing;
         fptr_stop_all_channels = digi_audio_stop_all_channels;
 	fptr_set_digi_volume = digi_audio_set_digi_volume;
+	fptr_free_cached_sounds = digi_audio_free_cached_sounds;
  	break;
 	}
 }
@@ -123,6 +126,7 @@ int  digi_is_sound_playing(int soundno) { return fptr_is_sound_playing(soundno);
 int  digi_is_channel_playing(int channel) { return fptr_is_channel_playing(channel); }
 void digi_stop_all_channels() { fptr_stop_all_channels(); }
 void digi_set_digi_volume(int dvolume) { fptr_set_digi_volume(dvolume); }
+void digi_free_cached_sounds() { fptr_free_cached_sounds(); }
 
 #ifndef NDEBUG
 void digi_debug()

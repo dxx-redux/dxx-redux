@@ -100,6 +100,8 @@ int Num_sound_files_new = 0;
 BitmapFile AllBitmaps[ MAX_BITMAP_FILES ];
 static SoundFile AllSounds[ MAX_SOUND_FILES ];
 
+char LastSndfileDir[ PATH_MAX ];
+
 int Piggy_hamfile_version = 0;
 
 int Piggy_bitmap_cache_size = 0;
@@ -871,6 +873,25 @@ int read_hamfile()
 
 }
 
+// return 1 if the current location of the soundfile is different from when read_sndfile() ran
+int sndfile_dir_changed()
+{
+	const char *dir;
+	char filename[PATH_MAX];
+
+	if (Piggy_hamfile_version < 3) // no separate sound file
+		return 0;
+
+	snprintf(filename, sizeof(filename), "%s", DEFAULT_SNDFILE);
+	PHYSFSEXT_locateCorrectCase(filename);
+
+	dir = PHYSFS_getRealDir(filename);
+	if (!dir)
+		dir = "";
+
+	return strcmp(LastSndfileDir, dir) != 0;
+}
+
 int read_sndfile()
 {
 	PHYSFS_file * snd_fp = NULL;
@@ -883,6 +904,13 @@ int read_sndfile()
 	digi_sound temp_sound;
 	char temp_name_read[16];
 	int sbytes = 0;
+	char filename[PATH_MAX];
+	const char *sndfile_dir;
+
+	snprintf(filename, sizeof(filename), "%s", DEFAULT_SNDFILE);
+	PHYSFSEXT_locateCorrectCase(filename);
+	sndfile_dir = PHYSFS_getRealDir(filename);
+	snprintf(LastSndfileDir, sizeof(LastSndfileDir), "%s", sndfile_dir ? sndfile_dir : "");
 
 	snd_fp = PHYSFSX_openReadBuffered(DEFAULT_SNDFILE);
 	
@@ -904,6 +932,8 @@ int read_sndfile()
 
 	//Read sounds
 
+	Num_sound_files = 0;
+
 	for (i=0; i<N_sounds; i++ ) {
 		DiskSoundHeader_read(&sndh, snd_fp);
 		temp_sound.length = sndh.length;
@@ -916,6 +946,8 @@ int read_sndfile()
 			sbytes += sndh.length;
 	}
 
+	if ( SoundBits )
+		d_free( SoundBits );
 	SoundBits = d_malloc( sbytes + 16 );
 	if ( SoundBits == NULL )
 		Error( "Not enough memory to load sounds\n" );

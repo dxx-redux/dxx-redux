@@ -116,6 +116,8 @@ extern int digi_volume;
 extern int digi_sample_rate;
 void digi_select_system(int);
 
+void digi_free_cached_sounds();
+
 #ifdef _WIN32
 // Windows native-MIDI stuff.
 void digi_win32_set_midi_volume( int mvolume );
