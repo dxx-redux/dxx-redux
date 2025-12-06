@@ -233,3 +233,13 @@ int digi_mixer_get_max_channels() { return digi_max_channels; }
 #ifndef NDEBUG
 void digi_mixer_debug() {}
 #endif
+
+void digi_mixer_free_cached_sounds()
+{
+	for (int i = 0; i < MAX_SOUNDS; i++)
+		if (SoundChunks[i].allocated) {
+			free(SoundChunks[i].abuf);
+			SoundChunks[i].abuf = NULL;
+			SoundChunks[i].allocated = 0;
+		}
+}

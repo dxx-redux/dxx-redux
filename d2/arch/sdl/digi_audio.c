@@ -414,6 +414,10 @@ void digi_audio_end_sound(int channel)
 	SoundSlots[channel].persistent = 0;
 }
 
+void digi_audio_free_cached_sounds()
+{
+}
+
 #ifndef NDEBUG
 void digi_audio_debug()
 {
