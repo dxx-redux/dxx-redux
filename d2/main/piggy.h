@@ -138,4 +138,7 @@ extern int Num_bitmap_files;
 extern const char space[3];
 extern const char equal_space[4];
 
+extern int read_sndfile();
+extern int sndfile_dir_changed();
+
 #endif //_PIGGY_H

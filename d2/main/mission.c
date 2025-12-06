@@ -685,6 +685,13 @@ int load_mission_ham()
 {
 	void bm_read_extra_robots(const char *fname,int type);
 	read_hamfile();
+
+	if (sndfile_dir_changed()) {
+		read_sndfile();
+		piggy_read_sounds();
+		digi_free_cached_sounds();
+	}
+
 	if (Current_mission->enhanced == 3 && Current_mission->alternate_ham_file) {
 		/*
 		 * If an alternate HAM is specified, map a HOG of the same name
