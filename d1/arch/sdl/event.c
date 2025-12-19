@@ -85,6 +85,10 @@ void event_poll()
 				call_default_handler(&qevent);
 				idle = 0;
 			} break;
+			case SDL_VIDEORESIZE: {
+				void gr_video_resized();
+				gr_video_resized();
+			} break;
 		}
 	}
 

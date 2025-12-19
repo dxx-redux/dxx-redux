@@ -322,6 +322,8 @@ typedef struct briefing
 	sbyte	guy_bitmap_show;
 	sbyte   door_dir, door_div_count, animating_bitmap_type;
 	sbyte	prev_ch;
+	float   prev_fnt_scale_x;
+	float   prev_fnt_scale_y;
 } briefing;
 
 static void briefing_init(briefing *br, short level_num)
@@ -341,6 +343,8 @@ static void briefing_init(briefing *br, short level_num)
 	br->door_dir = 1;
 	br->door_div_count = 0;
 	br->animating_bitmap_type = 0;
+	br->prev_fnt_scale_x = FNTScaleX;
+	br->prev_fnt_scale_y = FNTScaleY;
 }
 
 //-----------------------------------------------------------------------------
@@ -998,6 +1002,32 @@ static int new_briefing_screen(briefing *br, int first)
 	return 1;
 }
 
+static void briefing_check_resolution(briefing *br)
+{
+	if (br->prev_fnt_scale_x == FNTScaleX && br->prev_fnt_scale_y == FNTScaleY)
+		return;
+	float scalex = FNTScaleX / br->prev_fnt_scale_x;
+	float scaley = FNTScaleY / br->prev_fnt_scale_y;
+	for (int i = 0; i < br->streamcount; i++) {
+		br->messagestream[i].x *= scalex;
+		br->messagestream[i].y *= scaley;
+	}
+	br->prev_fnt_scale_x = FNTScaleX;
+	br->prev_fnt_scale_y = FNTScaleY;
+	br->text_x = br->text_x * scalex;
+	br->text_y = br->text_y * scaley;
+	br->screen->text_ulx *= scalex;
+	br->screen->text_uly *= scaley;
+	br->screen->text_width *= scalex;
+	br->screen->text_height *= scaley;
+
+	if (br->robot_canv != NULL) {
+		d_free(br->robot_canv);
+		br->robot_canv=NULL;
+		init_spinning_robot(br);
+	}
+}
+
 //-----------------------------------------------------------------------------
 static int briefing_handler(window *wind, d_event *event, briefing *br)
 {
@@ -1065,6 +1095,8 @@ static int briefing_handler(window *wind, d_event *event, briefing *br)
 		}
 
 		case EVENT_WINDOW_DRAW:
+			briefing_check_resolution(br);
+
 			gr_set_current_canvas(NULL);
 
 			timer_delay2(50);

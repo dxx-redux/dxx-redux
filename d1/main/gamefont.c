@@ -86,6 +86,8 @@ static void gamefont_unloadfont(int gf)
 
 static void gamefont_loadfont(int gf,int fi)
 {
+	if (Gamefonts[gf] && font_conf[gf].cur==fi)
+		return;
 	if (PHYSFSX_exists(font_conf[gf].font[fi].f.name,1)){
 		gamefont_unloadfont(gf);
 		Gamefonts[gf]=gr_init_font(font_conf[gf].font[fi].f.name);

@@ -78,7 +78,7 @@ static DISPMANX_DISPLAY_HANDLE_T dispman_display=DISPMANX_NO_HANDLE;
 #endif
 
 #else
-int sdl_video_flags = SDL_OPENGL;
+int sdl_video_flags = SDL_OPENGL | SDL_RESIZABLE;
 #endif
 int gr_installed = 0;
 int gl_initialized=0;
@@ -283,6 +283,156 @@ void ogles_destroy(void)
 }
 #endif
 
+#ifdef WIN32
+struct {
+	long PositionX, PositionY, SizeW, SizeH;
+	int Maximized;
+	int Fullscreen;
+} WindowSaved;
+HWND WindowHandle;
+static char *WindowClass = "AppWindowClass";
+static HBRUSH BackgroundBrush;
+
+void gr_video_resized() {
+	RECT client;
+	GetClientRect(WindowHandle, &client);
+	int w = client.right - client.left, h = client.bottom - client.top;
+	if (w == grd_curscreen->sc_w && h == grd_curscreen->sc_h)
+		return;
+	grd_curscreen->sc_mode = SM(w, h);
+	grd_curscreen->sc_w = w;
+	grd_curscreen->sc_h = h;
+	grd_curscreen->sc_canvas.cv_bitmap.bm_w = w;
+	grd_curscreen->sc_canvas.cv_bitmap.bm_h = h;
+	gr_set_current_canvas(NULL);
+	Game_screen_mode = grd_curscreen->sc_mode;
+	gamefont_choose_game_font(w, h);
+	game_init_render_buffers(w, h);
+	init_cockpit();
+	if (gl_initialized) {
+		glViewport(0, 0, w, h);
+		ogl_end_frame();
+	}
+}
+
+void SetFullscreen(HWND hWnd, int fullscreen, int force) {
+	if (fullscreen == WindowSaved.Fullscreen && !force)
+		return;
+	if (!fullscreen) {
+		// Restore window position and size
+		SetWindowLongPtr(hWnd, GWL_STYLE, WS_OVERLAPPEDWINDOW | WS_VISIBLE);
+		SetWindowLongPtr(hWnd, GWL_EXSTYLE, 0);
+
+		/*
+		int desktopWidth = GetSystemMetrics(SM_CXSCREEN);
+		int desktopHeight = GetSystemMetrics(SM_CYSCREEN);
+
+		if (WindowPositionX > desktopWidth)
+		WindowPositionX = desktopWidth;
+		if (WindowPositionY > desktopHeight)
+		WindowPositionY = desktopHeight;
+		*/
+
+		// Account for window borders
+		RECT windowRect = { 0, 0, WindowSaved.SizeW, WindowSaved.SizeH };
+		AdjustWindowRectEx(&windowRect, WS_OVERLAPPEDWINDOW, 0, 0);
+		int width = windowRect.right - windowRect.left;
+		int height = windowRect.bottom - windowRect.top;
+
+		SetWindowPos(hWnd, HWND_TOP, WindowSaved.PositionX, WindowSaved.PositionY, width, height, SWP_NOZORDER | SWP_FRAMECHANGED);
+		ShowWindow(hWnd, WindowSaved.Maximized ? SW_SHOWMAXIMIZED : SW_SHOW);
+		printf("restore max=%d\n", WindowSaved.Maximized);
+	} else {
+		int style = GetWindowLongPtr(hWnd, GWL_STYLE);
+		printf("style %x\n", style);
+		if (style & WS_BORDER) {
+			WINDOWPLACEMENT placement;
+			placement.length = sizeof(placement);
+			GetWindowPlacement(hWnd, &placement);
+			WindowSaved.Maximized = placement.showCmd == SW_SHOWMAXIMIZED;
+
+			if (!WindowSaved.Maximized && !force && placement.showCmd != SW_SHOWMINIMIZED) {
+				RECT windowRect;
+				GetWindowRect(hWnd, &windowRect);
+
+				// account for borders
+				RECT client;
+				GetClientRect(hWnd, &client);
+
+				WindowSaved.PositionX = windowRect.left;
+				WindowSaved.PositionY = windowRect.top;
+				WindowSaved.SizeW = client.right - client.left;
+				WindowSaved.SizeH = client.bottom - client.top;
+				printf("show %d saved pos %d,%d size %d,%d\n", placement.showCmd, WindowSaved.PositionX, WindowSaved.PositionY, WindowSaved.SizeW, WindowSaved.SizeH);
+			} else
+				printf("was maximized\n");
+		} else
+			printf("was full\n");
+
+		SetWindowLongPtr(hWnd, GWL_STYLE, WS_POPUP | WS_VISIBLE);
+		SetWindowLongPtr(hWnd, GWL_EXSTYLE, WS_EX_APPWINDOW | WS_EX_TOPMOST);
+
+		SetWindowPos(hWnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+		ShowWindow(hWnd, SW_SHOWMAXIMIZED);
+
+		RECT client;
+		GetClientRect(hWnd, &client);
+		printf("client rect now %d,%d size %d,%d\n", client.left, client.top, client.right - client.left, client.bottom - client.top);
+
+	}
+	WindowSaved.Fullscreen = fullscreen;
+
+	gr_video_resized();
+}
+
+int RegisterWindowClass(HINSTANCE hInstance) {
+	WNDCLASSEX wc;
+	if (GetClassInfoEx(hInstance, WindowClass, &wc))
+		return 1;
+
+	BackgroundBrush = CreateSolidBrush(RGB(0, 0, 0));
+
+	// Register class
+	memset(&wc, 0, sizeof(wc));
+	wc.cbSize = sizeof(WNDCLASSEX);
+	wc.style = CS_HREDRAW | CS_VREDRAW;
+	wc.lpfnWndProc = DefWindowProc;
+	wc.hInstance = hInstance;
+	wc.hIcon = LoadIcon(hInstance, "IDI_ICON");
+	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+	wc.hbrBackground = BackgroundBrush;
+	wc.lpszClassName = WindowClass;
+	wc.hIconSm = LoadIcon(wc.hInstance, "IDI_ICON");
+
+	return RegisterClassEx(&wc) != 0;
+}
+
+void InitWindow() {
+	HINSTANCE hInst = GetModuleHandle(NULL);
+	if (!RegisterWindowClass(hInst)) {
+		fprintf(stderr, "RegisterWindowClass failed %d\n", GetLastError());
+		exit( 1 );
+	}
+	WindowSaved.SizeW = 640;
+	WindowSaved.SizeH = 480;
+	RECT windowRect = { 0, 0, WindowSaved.SizeW, WindowSaved.SizeH };
+	AdjustWindowRectEx(&windowRect, WS_OVERLAPPEDWINDOW, 0, 0);
+	HWND wnd = CreateWindow(WindowClass, WindowClass,
+		(WS_OVERLAPPED|WS_CAPTION|WS_SYSMENU|WS_MINIMIZEBOX|WS_MAXIMIZEBOX|WS_THICKFRAME),
+		CW_USEDEFAULT, CW_USEDEFAULT, windowRect.right - windowRect.left, windowRect.bottom - windowRect.top, NULL, NULL, hInst, NULL);
+	if (!wnd) {
+		fprintf(stderr, "CreateWindow failed %d\n", GetLastError());
+		exit( 1 );
+	}
+	WindowHandle = wnd;
+
+	char buf[64];
+	sprintf(buf, "SDL_WINDOWID=%llu", (DWORD_PTR)wnd);
+
+	SDL_putenv(buf);
+}
+#endif
+
 int ogl_init_window(int x, int y)
 {
 	int use_x,use_y,use_bpp;
@@ -334,6 +484,10 @@ int ogl_init_window(int x, int y)
 		}
 	}
 
+#ifdef WIN32
+	use_flags &= ~SDL_FULLSCREEN & ~SDL_NOFRAME;
+#endif
+
 	if (!SDL_SetVideoMode(use_x, use_y, use_bpp, use_flags))
 	{
 #ifdef RPI
@@ -343,6 +497,16 @@ int ogl_init_window(int x, int y)
 		Error("Could not set %dx%dx%d opengl video mode: %s\n", x, y, GameArg.DbgBpp, SDL_GetError());
 #endif
 	}
+
+#ifdef WIN32
+	/*
+	if (!(sdl_video_flags & SDL_FULLSCREEN)) {
+		WindowSaved.SizeW = x;
+		WindowSaved.SizeH = y;
+	}
+	*/
+	SetFullscreen(WindowHandle, !!(sdl_video_flags & SDL_FULLSCREEN), 1);
+#endif
 
 #ifdef OGLES
 #ifndef RPI
@@ -447,6 +611,9 @@ int gr_toggle_fullscreen(void)
 
 	if (gl_initialized)
 	{
+#ifdef WIN32
+		SetFullscreen(WindowHandle, !!(sdl_video_flags & SDL_FULLSCREEN), 0);
+#else
 		if (sdl_no_modeswitch == 0) {
 			if (!SDL_VideoModeOK(SM_W(Game_screen_mode), SM_H(Game_screen_mode), GameArg.DbgBpp, sdl_video_flags))
 			{
@@ -462,6 +629,7 @@ int gr_toggle_fullscreen(void)
 		if (rpi_setup_element(SM_W(Game_screen_mode), SM_H(Game_screen_mode), sdl_video_flags, 1)) {
 			 Error("RPi: Could not set up %dx%d element\n", SM_W(Game_screen_mode), SM_H(Game_screen_mode));
 		}
+#endif
 #endif
 	}
 
@@ -481,12 +649,14 @@ int gr_toggle_fullscreen(void)
 		glLoadIdentity();//clear matrix
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+#ifndef WIN32
 		ogl_smash_texture_list_internal();//if we are or were fullscreen, changing vid mode will invalidate current textures
 #ifdef OGL_MERGE
 		ogl_init_prog();
 #endif
 		if (Game_wind)
 			ogl_cache_level_textures();
+#endif
 	}
 	GameCfg.WindowMode = (sdl_video_flags & SDL_FULLSCREEN)?0:1;
 	return (sdl_video_flags & SDL_FULLSCREEN)?1:0;
@@ -633,7 +803,7 @@ int gr_check_mode(u_int32_t mode)
 int gr_set_mode(u_int32_t mode)
 {
 	unsigned int w, h;
-	char *gr_bm_data;
+	//char *gr_bm_data;
 
 	if (mode<=0)
 		return 0;
@@ -649,13 +819,13 @@ int gr_set_mode(u_int32_t mode)
 		Game_screen_mode=mode=SM(w,h);
 	}
 
-	gr_bm_data=(char *)grd_curscreen->sc_canvas.cv_bitmap.bm_data;//since we use realloc, we want to keep this pointer around.
+	//gr_bm_data=(char *)grd_curscreen->sc_canvas.cv_bitmap.bm_data;//since we use realloc, we want to keep this pointer around.
 	memset( grd_curscreen, 0, sizeof(grs_screen));
 	grd_curscreen->sc_mode = mode;
 	grd_curscreen->sc_w = w;
 	grd_curscreen->sc_h = h;
-	grd_curscreen->sc_aspect = fixdiv(grd_curscreen->sc_w*GameCfg.AspectX,grd_curscreen->sc_h*GameCfg.AspectY);
-	gr_init_canvas(&grd_curscreen->sc_canvas, d_realloc(gr_bm_data,w*h), BM_OGL, w, h);
+	grd_curscreen->sc_aspect = F1_0; //fixdiv(grd_curscreen->sc_w*GameCfg.AspectX,grd_curscreen->sc_h*GameCfg.AspectY);
+	gr_init_canvas(&grd_curscreen->sc_canvas, NULL/*d_realloc(gr_bm_data,w*h)*/, BM_OGL, w, h);
 	gr_set_current_canvas(NULL);
 
 	sdl_video_flags = (sdl_video_flags & ~SDL_NOFRAME) | (GameCfg.BorderlessWindow ? SDL_NOFRAME : 0);

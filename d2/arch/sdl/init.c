@@ -38,6 +38,11 @@ void arch_init(void)
 {
 	int t;
 
+#ifdef WIN32
+	void InitWindow();
+	InitWindow();
+#endif
+
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
 		Error("SDL library initialisation failed: %s.",SDL_GetError());
 

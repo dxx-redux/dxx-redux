@@ -906,7 +906,9 @@ void change_res()
 	int i = 0, mc = 0, num_presets = 0, citem = -1, opt_cval = -1, opt_fullscr = -1, opt_borderless = -1;
 	int cur_borderless, new_borderless;
 
+#ifndef WIN32
 	num_presets = gr_list_modes( modes );
+#endif
 
 	{
 	newmenu_item m[50+9];
@@ -924,6 +926,7 @@ void change_res()
 		mc++;
 	}
 
+#ifndef WIN32
 	m[mc].type = NM_TYPE_TEXT; m[mc].text = ""; mc++; // little space for overview
 	// the fields for custom resolution and aspect
 	opt_cval = mc;
@@ -935,12 +938,16 @@ void change_res()
 	snprintf(casptext, sizeof(casptext), "%ix%i", GameCfg.AspectY, GameCfg.AspectX);
 	m[mc].type = NM_TYPE_INPUT; m[mc].text = casptext; m[mc].text_len = 11; modes[mc] = 0; mc++;
 	m[mc].type = NM_TYPE_TEXT; m[mc].text = ""; mc++; // little space for overview
+#endif
+
 	// fullscreen
 	opt_fullscr = mc;
 	m[mc].type = NM_TYPE_CHECK; m[mc].text = "Fullscreen"; m[mc].value = gr_check_fullscreen(); mc++;
 
+#ifndef WIN32
 	opt_borderless = mc;
 	m[mc].type = NM_TYPE_CHECK; m[mc].text = "Borderless window"; m[mc].value = GameCfg.BorderlessWindow; mc++;
+#endif
 
 	Assert(mc <= SDL_arraysize(m));
 
@@ -955,7 +962,7 @@ void change_res()
 			break;
 
 	cur_borderless = GameCfg.BorderlessWindow;
-	new_borderless = GameCfg.BorderlessWindow = m[opt_borderless].value;
+	new_borderless = GameCfg.BorderlessWindow = opt_borderless >= 0 ? m[opt_borderless].value : cur_borderless;
 
 	// now check for fullscreen toggle and apply if necessary
 	if (m[opt_fullscr].value != gr_check_fullscreen())
