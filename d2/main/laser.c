@@ -495,7 +495,7 @@ fix	Omega_charge = MAX_OMEGA_CHARGE;
 
 #define	OMEGA_CHARGE_SCALE	4
 
-int	Last_omega_fire_time=0;
+fix64	Last_omega_fire_time=0;
 
 // ---------------------------------------------------------------------------------
 //	Call this every frame to recharge the Omega Cannon.

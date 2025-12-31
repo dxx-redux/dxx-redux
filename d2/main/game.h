@@ -44,6 +44,7 @@ extern fix64 Next_laser_fire_time;    // Time at which player can next fire his 
 extern fix64 Last_laser_fired_time;
 extern fix64 Next_missile_fire_time;  // Time at which player can next fire his selected missile.
 extern fix64 Next_flare_fire_time;
+extern fix64 Last_omega_fire_time;
 extern fix Laser_delay_time;        // Delay between laser fires.
 
 extern struct object *Missile_viewer;
