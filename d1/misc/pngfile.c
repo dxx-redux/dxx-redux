@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <png.h>
-#include <SDL/SDL.h>
+#include <SDL.h>
 #include <physfs.h>
 
 #include "pngfile.h"

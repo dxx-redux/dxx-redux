@@ -62,7 +62,7 @@
 #include <EGL/egl.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
-#include <SDL/SDL_syswm.h>
+#include <SDL_syswm.h>
 #else
 #include <GL/glu.h>
 #endif

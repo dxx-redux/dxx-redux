@@ -17,6 +17,6 @@ if(APPLE)
     target_compile_options(3d PRIVATE -fno-common)
 endif()
 
-find_package(SDL)
+find_package(SDL2 REQUIRED)
 find_package(PhysFS)
-target_include_directories(3d PUBLIC ${SDL_INCLUDE_DIR} ${PHYSFS_INCLUDE_DIR})
+target_include_directories(3d PUBLIC ${SDL2_INCLUDE_DIRS} ${PHYSFS_INCLUDE_DIR})
