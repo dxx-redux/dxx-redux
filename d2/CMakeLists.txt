@@ -18,6 +18,8 @@ option(TRACKER "Enable Tracker support (requires UDP) [default: ON]" ON)
 option(PNG "Build with PNG support for screenshots and textures [default: ON]" ON)
 option(OPENGLMERGE "Use an OpenGL shader for texmerge [default: ON]" ON)
 
+find_package(SDL2 REQUIRED)
+
 set(CMAKE_C_FLAGS_MINSIZEREL "${CMAKE_C_FLAGS_MINSIZEREL} -DRELEASE")
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -DRELEASE")
 set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} -DRELEASE")
@@ -43,18 +45,7 @@ elseif(ASM)
 endif()
 if(SDLMIXER)
     add_definitions(/DUSE_SDLMIXER)
-    if (APPLE)
-        include(FetchContent)
-        FetchContent_Declare(
-            SDL_mixer-1.2-cmake
-            GIT_REPOSITORY https://github.com/arbruijn/SDL_mixer-1.2-cmake
-            GIT_TAG master
-        )
-        FetchContent_MakeAvailable(SDL_mixer-1.2-cmake)
-        set(SDL_MIXER_LIBRARY SDL_mixer-1.2-cmake::SDL_mixer-1.2-cmake)
-    else()
-        find_package(SDL_mixer REQUIRED)
-    endif()
+    find_package(SDL2_mixer REQUIRED)
 endif()
 if(EDITOR)
     add_definitions(/DEDITOR)
