@@ -191,10 +191,19 @@ void event_process(void)
 
 void event_toggle_focus(int activate_focus)
 {
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+	SDL_Window *window = SDL_GetMouseFocus();
+	if (!window)
+		window = SDL_GetKeyboardFocus();
+	if (window)
+		SDL_SetWindowGrab(window, (activate_focus && GameCfg.Grabinput) ? SDL_TRUE : SDL_FALSE);
+	SDL_SetRelativeMouseMode((activate_focus && GameCfg.Grabinput) ? SDL_TRUE : SDL_FALSE);
+#else
 	if (activate_focus && GameCfg.Grabinput)
 		SDL_WM_GrabInput(SDL_GRAB_ON);
 	else
 		SDL_WM_GrabInput(SDL_GRAB_OFF);
+#endif
 	mouse_toggle_cursor(!activate_focus);
 }
 
@@ -209,4 +218,3 @@ fix event_get_idle_seconds()
 {
 	return (timer_query() - last_event)/F1_0;
 }
-
