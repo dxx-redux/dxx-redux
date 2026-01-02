@@ -19,7 +19,12 @@
 #include "args.h"
 #include "config.h"
 
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+int sdl_video_flags = SDL_WINDOW_SHOWN;
+static SDL_Window *sdl_window = NULL;
+#else
 int sdl_video_flags = SDL_SWSURFACE | SDL_HWPALETTE | SDL_DOUBLEBUF;
+#endif
 SDL_Surface *screen,*canvas;
 int gr_installed = 0;
 
@@ -32,7 +37,11 @@ void gr_flip()
 	dest.h = src.h = canvas->h;
 
 	SDL_BlitSurface(canvas, &src, screen, &dest);
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+	SDL_UpdateWindowSurface(sdl_window);
+#else
 	SDL_Flip(screen);
+#endif
 }
 
 // Set the buffer to draw to. 0 is front, 1 is back
@@ -45,6 +54,29 @@ void gr_set_draw_buffer(int buf)
 // returns possible (fullscreen) resolutions if any.
 int gr_list_modes( u_int32_t gsmodes[] )
 {
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+	int i = 0, modesnum = 0;
+	int display_index = 0;
+	int num_modes = SDL_GetNumDisplayModes(display_index);
+	SDL_DisplayMode mode;
+
+	if (num_modes < 1)
+		return 0;
+
+	for (i = 0; i < num_modes; ++i)
+	{
+		if (SDL_GetDisplayMode(display_index, i, &mode) != 0)
+			continue;
+		if (mode.w > 0xFFF0 || mode.h > 0xFFF0
+			|| mode.w < 320 || mode.h < 200)
+			continue;
+		gsmodes[modesnum] = SM(mode.w, mode.h);
+		modesnum++;
+		if (modesnum >= 50)
+			break;
+	}
+	return modesnum;
+#else
 	SDL_Rect** modes;
 	int i = 0, modesnum = 0;
 	int sdl_check_flags = sdl_video_flags;
@@ -75,6 +107,7 @@ int gr_list_modes( u_int32_t gsmodes[] )
 		}
 		return modesnum;
 	}
+#endif
 }
 
 int gr_check_mode(u_int32_t mode)
@@ -84,7 +117,11 @@ int gr_check_mode(u_int32_t mode)
 	w=SM_W(mode);
 	h=SM_H(mode);
 
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+	return 32;
+#else
 	return SDL_VideoModeOK(w,h,GameArg.DbgBpp,sdl_video_flags);
+#endif
 }
 
 int gr_set_mode(u_int32_t mode)
@@ -98,6 +135,39 @@ int gr_set_mode(u_int32_t mode)
 	h=SM_H(mode);
 	screen=NULL;
 
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+	sdl_video_flags = SDL_WINDOW_SHOWN;
+	if (!GameCfg.WindowMode && !GameArg.SysWindow)
+		sdl_video_flags |= SDL_WINDOW_FULLSCREEN;
+	if (GameCfg.BorderlessWindow)
+		sdl_video_flags |= SDL_WINDOW_BORDERLESS;
+
+	if (!sdl_window)
+	{
+		sdl_window = SDL_CreateWindow(DESCENT_VERSION, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, w, h, sdl_video_flags);
+		if (!sdl_window)
+			Error("Could not create SDL window: %s\n", SDL_GetError());
+		SDL_Surface *icon = SDL_LoadBMP("d2x-redux.bmp");
+		if (icon)
+		{
+			SDL_SetWindowIcon(sdl_window, icon);
+			SDL_FreeSurface(icon);
+		}
+	}
+	else
+	{
+		SDL_SetWindowSize(sdl_window, w, h);
+		SDL_SetWindowFullscreen(sdl_window, (sdl_video_flags & SDL_WINDOW_FULLSCREEN) ? SDL_WINDOW_FULLSCREEN : 0);
+		SDL_SetWindowBordered(sdl_window, (sdl_video_flags & SDL_WINDOW_BORDERLESS) ? SDL_FALSE : SDL_TRUE);
+	}
+
+	screen = SDL_GetWindowSurface(sdl_window);
+	if (screen == NULL)
+	{
+		Error("Could not get SDL window surface: %s\n", SDL_GetError());
+		exit(1);
+	}
+#else
 	sdl_video_flags = (sdl_video_flags & ~SDL_NOFRAME) | (GameCfg.BorderlessWindow ? SDL_NOFRAME : 0);
 
 	SDL_WM_SetCaption(DESCENT_VERSION, "Descent II");
@@ -121,8 +191,9 @@ int gr_set_mode(u_int32_t mode)
 		Error("Could not set %dx%dx%d video mode\n",w,h,GameArg.DbgBpp);
 		exit(1);
 	}
+#endif
 
-	canvas = SDL_CreateRGBSurface(sdl_video_flags, w, h, 8, 0, 0, 0, 0);
+	canvas = SDL_CreateRGBSurface(0, w, h, 8, 0, 0, 0, 0);
 	if (canvas == NULL)
 	{
 		Error("Could not create canvas surface\n");
@@ -149,17 +220,32 @@ int gr_set_mode(u_int32_t mode)
 
 int gr_check_fullscreen(void)
 {
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+	return (sdl_video_flags & SDL_WINDOW_FULLSCREEN)?1:0;
+#else
 	return (sdl_video_flags & SDL_FULLSCREEN)?1:0;
+#endif
 }
 
 int gr_toggle_fullscreen(void)
 {
 	gr_remap_color_fonts();
 	gr_remap_mono_fonts();
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+	if (sdl_video_flags & SDL_WINDOW_FULLSCREEN)
+		sdl_video_flags &= ~SDL_WINDOW_FULLSCREEN;
+	else
+		sdl_video_flags |= SDL_WINDOW_FULLSCREEN;
+	if (sdl_window)
+		SDL_SetWindowFullscreen(sdl_window, (sdl_video_flags & SDL_WINDOW_FULLSCREEN) ? SDL_WINDOW_FULLSCREEN : 0);
+	GameCfg.WindowMode = (sdl_video_flags & SDL_WINDOW_FULLSCREEN)?0:1;
+	return (sdl_video_flags & SDL_WINDOW_FULLSCREEN)?1:0;
+#else
 	sdl_video_flags^=SDL_FULLSCREEN;
 	SDL_WM_ToggleFullScreen(screen);
 	GameCfg.WindowMode = (sdl_video_flags & SDL_FULLSCREEN)?0:1;
 	return (sdl_video_flags & SDL_FULLSCREEN)?1:0;
+#endif
 }
 
 void gr_set_attributes(void)
@@ -182,16 +268,28 @@ int gr_init(int mode)
 	CALLOC( grd_curscreen,grs_screen,1 );
 
 	if (!GameCfg.WindowMode && !GameArg.SysWindow)
-		sdl_video_flags|=SDL_FULLSCREEN;
+		sdl_video_flags|=
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+			SDL_WINDOW_FULLSCREEN;
+#else
+			SDL_FULLSCREEN;
+#endif
 
 	if (GameArg.SysNoBorders)
-		sdl_video_flags|=SDL_NOFRAME;
+		sdl_video_flags|=
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+			SDL_WINDOW_BORDERLESS;
+#else
+			SDL_NOFRAME;
+#endif
 
+#if !SDL_VERSION_ATLEAST(2, 0, 0)
 	if (GameArg.DbgSdlHWSurface)
 		sdl_video_flags|=SDL_HWSURFACE;
 
 	if (GameArg.DbgSdlASyncBlit)
 		sdl_video_flags|=SDL_ASYNCBLIT;
+#endif
 
 	// Set the mode.
 	if ((retcode=gr_set_mode(mode)))
@@ -219,6 +317,13 @@ void gr_close()
 		d_free(grd_curscreen);
 		SDL_ShowCursor(1);
 		SDL_FreeSurface(canvas);
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+		if (sdl_window)
+		{
+			SDL_DestroyWindow(sdl_window);
+			sdl_window = NULL;
+		}
+#endif
 	}
 }
 

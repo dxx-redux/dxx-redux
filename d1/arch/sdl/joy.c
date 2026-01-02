@@ -208,7 +208,11 @@ void joy_init()
 
 	con_printf(CON_NORMAL, "sdl-joystick: found %d joysticks\n", n);
 	for (i = 0; i < n; i++) {
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+		con_printf(CON_NORMAL, "sdl-joystick %d: %s\n", i, SDL_JoystickNameForIndex(i));
+#else
 		con_printf(CON_NORMAL, "sdl-joystick %d: %s\n", i, SDL_JoystickName(i));
+#endif
 		SDL_Joysticks[num_joysticks].handle = SDL_JoystickOpen(i);
 		if (SDL_Joysticks[num_joysticks].handle) {
 

@@ -30,6 +30,23 @@
 
 #include <errno.h>
 #include <SDL.h>
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+#ifndef SDL_FULLSCREEN
+#define SDL_FULLSCREEN SDL_WINDOW_FULLSCREEN
+#endif
+#ifndef SDL_NOFRAME
+#define SDL_NOFRAME SDL_WINDOW_BORDERLESS
+#endif
+#ifndef SDL_OPENGL
+#define SDL_OPENGL SDL_WINDOW_OPENGL
+#endif
+#ifndef SDL_SWSURFACE
+#define SDL_SWSURFACE 0
+#endif
+#ifndef SDL_ANYFORMAT
+#define SDL_ANYFORMAT 0
+#endif
+#endif
 #include "hudmsg.h"
 #include "game.h"
 #include "text.h"
@@ -78,7 +95,13 @@ static DISPMANX_DISPLAY_HANDLE_T dispman_display=DISPMANX_NO_HANDLE;
 #endif
 
 #else
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+int sdl_video_flags = SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN;
+static SDL_Window *sdl_window = NULL;
+static SDL_GLContext sdl_gl_context = NULL;
+#else
 int sdl_video_flags = SDL_OPENGL;
+#endif
 #endif
 int gr_installed = 0;
 int gl_initialized=0;
@@ -114,7 +137,12 @@ void ogl_swap_buffers_internal(void)
 #ifdef OGLES
 	eglSwapBuffers(eglDisplay, eglSurface);
 #else
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+	if (sdl_window)
+		SDL_GL_SwapWindow(sdl_window);
+#else
 	SDL_GL_SwapBuffers();
+#endif
 #endif
 }
 
@@ -315,6 +343,42 @@ int ogl_init_window(int x, int y)
 	if (gl_initialized)
 		ogl_smash_texture_list_internal();//if we are or were fullscreen, changing vid mode will invalidate current textures
 
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+	use_x = x;
+	use_y = y;
+	use_flags = sdl_video_flags;
+	(void)use_bpp;
+	if (sdl_no_modeswitch) {
+		SDL_DisplayMode current_mode;
+		if (SDL_GetCurrentDisplayMode(0, &current_mode) == 0) {
+			use_x = current_mode.w;
+			use_y = current_mode.h;
+		} else {
+			con_printf(CON_URGENT, "Could not query display info\n");
+		}
+	}
+
+	if (!sdl_window) {
+		sdl_window = SDL_CreateWindow(DESCENT_VERSION, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, use_x, use_y, use_flags);
+		if (!sdl_window)
+			Error("Could not create SDL window: %s\n", SDL_GetError());
+		SDL_Surface *icon = SDL_LoadBMP("d2x-redux.bmp");
+		if (icon) {
+			SDL_SetWindowIcon(sdl_window, icon);
+			SDL_FreeSurface(icon);
+		}
+	} else {
+		SDL_SetWindowSize(sdl_window, use_x, use_y);
+		SDL_SetWindowFullscreen(sdl_window, (use_flags & SDL_WINDOW_FULLSCREEN) ? SDL_WINDOW_FULLSCREEN : 0);
+		SDL_SetWindowBordered(sdl_window, (use_flags & SDL_WINDOW_BORDERLESS) ? SDL_FALSE : SDL_TRUE);
+	}
+
+	if (!sdl_gl_context) {
+		sdl_gl_context = SDL_GL_CreateContext(sdl_window);
+		if (!sdl_gl_context)
+			Error("Could not create OpenGL context: %s\n", SDL_GetError());
+	}
+#else
 	SDL_WM_SetCaption(DESCENT_VERSION, "Descent II");
 	SDL_WM_SetIcon( SDL_LoadBMP( "d2x-redux.bmp" ), NULL );
 
@@ -343,6 +407,7 @@ int ogl_init_window(int x, int y)
 		Error("Could not set %dx%dx%d opengl video mode: %s\n", x, y, GameArg.DbgBpp, SDL_GetError());
 #endif
 	}
+#endif
 
 #ifdef OGLES
 #ifndef RPI
@@ -352,7 +417,16 @@ int ogl_init_window(int x, int y)
 #endif
 
 	SDL_VERSION(&info.version);
-	
+
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+	if (sdl_window && SDL_GetWindowWMInfo(sdl_window, &info)) {
+		if (info.subsystem == SDL_SYSWM_X11) {
+			x11Display = info.info.x11.display;
+			x11Window = info.info.x11.window;
+			con_printf (CON_DEBUG, "Display: %p, Window: %i ===\n", (void*)x11Display, (int)x11Window);
+		}
+	}
+#else
 	if (SDL_GetWMInfo(&info) > 0) {
 		if (info.subsystem == SDL_SYSWM_X11) {
 			x11Display = info.info.x11.display;
@@ -360,6 +434,7 @@ int ogl_init_window(int x, int y)
 			con_printf (CON_DEBUG, "Display: %p, Window: %i ===\n", (void*)x11Display, (int)x11Window);
 		}
 	}
+#endif
 
 	if (eglDisplay == EGL_NO_DISPLAY) {
 #ifdef RPI
@@ -435,18 +510,33 @@ int ogl_init_window(int x, int y)
 
 int gr_check_fullscreen(void)
 {
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+	return (sdl_video_flags & SDL_WINDOW_FULLSCREEN)?1:0;
+#else
 	return (sdl_video_flags & SDL_FULLSCREEN)?1:0;
+#endif
 }
 
 int gr_toggle_fullscreen(void)
 {
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+	if (sdl_video_flags & SDL_WINDOW_FULLSCREEN)
+		sdl_video_flags &= ~SDL_WINDOW_FULLSCREEN;
+	else
+		sdl_video_flags |= SDL_WINDOW_FULLSCREEN;
+#else
 	if (sdl_video_flags & SDL_FULLSCREEN)
 		sdl_video_flags &= ~SDL_FULLSCREEN;
 	else
 		sdl_video_flags |= SDL_FULLSCREEN;
+#endif
 
 	if (gl_initialized)
 	{
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+		if (sdl_window)
+			SDL_SetWindowFullscreen(sdl_window, (sdl_video_flags & SDL_WINDOW_FULLSCREEN) ? SDL_WINDOW_FULLSCREEN : 0);
+#else
 		if (sdl_no_modeswitch == 0) {
 			if (!SDL_VideoModeOK(SM_W(Game_screen_mode), SM_H(Game_screen_mode), GameArg.DbgBpp, sdl_video_flags))
 			{
@@ -458,6 +548,7 @@ int gr_toggle_fullscreen(void)
 				Error("Could not set %dx%dx%d opengl video mode: %s\n", SM_W(Game_screen_mode), SM_H(Game_screen_mode), GameArg.DbgBpp, SDL_GetError());
 			}
 		}
+#endif
 #ifdef RPI
 		if (rpi_setup_element(SM_W(Game_screen_mode), SM_H(Game_screen_mode), sdl_video_flags, 1)) {
 			 Error("RPi: Could not set up %dx%d element\n", SM_W(Game_screen_mode), SM_H(Game_screen_mode));
@@ -488,8 +579,13 @@ int gr_toggle_fullscreen(void)
 		if (Game_wind)
 			ogl_cache_level_textures();
 	}
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+	GameCfg.WindowMode = (sdl_video_flags & SDL_WINDOW_FULLSCREEN)?0:1;
+	return (sdl_video_flags & SDL_WINDOW_FULLSCREEN)?1:0;
+#else
 	GameCfg.WindowMode = (sdl_video_flags & SDL_FULLSCREEN)?0:1;
 	return (sdl_video_flags & SDL_FULLSCREEN)?1:0;
+#endif
 }
 
 static void ogl_init_state(void)
@@ -576,6 +672,33 @@ void ogl_get_verinfo(void)
 // returns possible (fullscreen) resolutions if any.
 int gr_list_modes( u_int32_t gsmodes[] )
 {
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+	int i = 0, modesnum = 0;
+	int display_index = 0;
+	int num_modes = SDL_GetNumDisplayModes(display_index);
+	SDL_DisplayMode mode;
+
+	if (sdl_no_modeswitch) {
+		return 0;
+	}
+
+	if (num_modes < 1)
+		return 0;
+
+	for (i = 0; i < num_modes; ++i)
+	{
+		if (SDL_GetDisplayMode(display_index, i, &mode) != 0)
+			continue;
+		if (mode.w > 0xFFF0 || mode.h > 0xFFF0
+			|| mode.w < 320 || mode.h < 200)
+			continue;
+		gsmodes[modesnum] = SM(mode.w, mode.h);
+		modesnum++;
+		if (modesnum >= 50)
+			break;
+	}
+	return modesnum;
+#else
 	SDL_Rect** modes;
 	int i = 0, modesnum = 0;
 #ifdef OGLES
@@ -613,6 +736,7 @@ int gr_list_modes( u_int32_t gsmodes[] )
 		}
 		return modesnum;
 	}
+#endif
 }
 
 int gr_check_mode(u_int32_t mode)
@@ -623,7 +747,11 @@ int gr_check_mode(u_int32_t mode)
 	h=SM_H(mode);
 
 	if (sdl_no_modeswitch == 0) {
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+		return 32;
+#else
 		return SDL_VideoModeOK(w, h, GameArg.DbgBpp, sdl_video_flags);
+#endif
 	} else {
 		// just tell the caller that any mode is valid...
 		return 32;
@@ -658,7 +786,11 @@ int gr_set_mode(u_int32_t mode)
 	gr_init_canvas(&grd_curscreen->sc_canvas, d_realloc(gr_bm_data,w*h), BM_OGL, w, h);
 	gr_set_current_canvas(NULL);
 
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+	sdl_video_flags = (sdl_video_flags & ~SDL_WINDOW_BORDERLESS) | (GameCfg.BorderlessWindow ? SDL_WINDOW_BORDERLESS : 0);
+#else
 	sdl_video_flags = (sdl_video_flags & ~SDL_NOFRAME) | (GameCfg.BorderlessWindow ? SDL_NOFRAME : 0);
+#endif
 
 	ogl_init_window(w,h);//platform specific code
 	ogl_get_verinfo();
@@ -723,7 +855,11 @@ void gr_set_attributes(void)
 	SDL_GL_SetAttribute(SDL_GL_ACCUM_BLUE_SIZE,0);
 	SDL_GL_SetAttribute(SDL_GL_ACCUM_ALPHA_SIZE,0);
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER,1);
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+	SDL_GL_SetSwapInterval(GameCfg.VSync);
+#else
 	SDL_GL_SetAttribute(SDL_GL_SWAP_CONTROL,GameCfg.VSync);
+#endif
 	if (GameCfg.Multisample)
 	{
 		SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
@@ -765,7 +901,11 @@ int gr_init(int mode)
 	bcm_host_init();
 
 	// Check if we are running with SDL directfb driver ...
+	#if SDL_VERSION_ATLEAST(2, 0, 0)
+	sdl_driver_ret = SDL_GetCurrentVideoDriver();
+	#else
 	sdl_driver_ret=SDL_VideoDriverName(sdl_driver,32);
+	#endif
 	if (sdl_driver_ret) {
 		if (strcmp(sdl_driver_ret,"x11")) {
 			con_printf(CON_URGENT,"RPi: activating hack for console driver\n");
@@ -779,10 +919,20 @@ int gr_init(int mode)
 #endif
 
 	if (!GameCfg.WindowMode && !GameArg.SysWindow)
-		sdl_video_flags|=SDL_FULLSCREEN;
+		sdl_video_flags|=
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+			SDL_WINDOW_FULLSCREEN;
+#else
+			SDL_FULLSCREEN;
+#endif
 
 	if (GameArg.SysNoBorders)
-		sdl_video_flags|=SDL_NOFRAME;
+		sdl_video_flags|=
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+			SDL_WINDOW_BORDERLESS;
+#else
+			SDL_NOFRAME;
+#endif
 
 	gr_set_attributes();
 
@@ -827,6 +977,18 @@ void gr_close()
 		d_free(grd_curscreen);
 	}
 	ogl_close_pixel_buffers();
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+	if (sdl_gl_context)
+	{
+		SDL_GL_DeleteContext(sdl_gl_context);
+		sdl_gl_context = NULL;
+	}
+	if (sdl_window)
+	{
+		SDL_DestroyWindow(sdl_window);
+		sdl_window = NULL;
+	}
+#endif
 #ifdef _WIN32
 	if (ogl_rt_loaded)
 		OpenGL_LoadLibrary(false);

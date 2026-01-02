@@ -30,6 +30,10 @@ void event_poll()
 	int clean_uniframe=1;
 	window *wind = window_get_front();
 	int idle = 1;
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+	int i = 0;
+	int j = 0;
+#endif
 	
 	// If the front window changes, exit this loop, otherwise unintended behavior can occur
 	// like pressing 'Return' really fast at 'Difficulty Level' causing multiple games to be started
@@ -44,6 +48,29 @@ void event_poll()
 				key_handler((SDL_KeyboardEvent *)&event);
 				idle = 0;
 				break;
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+			case SDL_TEXTINPUT:
+				if (clean_uniframe)
+					memset(unicode_frame_buffer,'\0',sizeof(unsigned char)*KEY_BUFFER_SIZE);
+				clean_uniframe=0;
+				for (i = 0; event.text.text[i] != '\0'; i++)
+				{
+					unsigned char ch = (unsigned char)event.text.text[i];
+					if (ch > 31 && ch < 255)
+					{
+						for (j = 0; j < KEY_BUFFER_SIZE; j++)
+						{
+							if (unicode_frame_buffer[j] == '\0')
+							{
+								unicode_frame_buffer[j] = ch;
+								break;
+							}
+						}
+					}
+				}
+				idle = 0;
+				break;
+#endif
 			case SDL_MOUSEBUTTONDOWN:
 			case SDL_MOUSEBUTTONUP:
 				if (GameArg.CtlNoMouse)
