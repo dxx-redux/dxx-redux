@@ -23,14 +23,22 @@
 #include <stdio.h>  /* used for SEEK_SET, SEEK_CUR, SEEK_END ... */
 #include "physfsrwops.h"
 
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+static Sint64 physfsrwops_seek(SDL_RWops *rw, Sint64 offset, int whence)
+#else
 static int physfsrwops_seek(SDL_RWops *rw, int offset, int whence)
+#endif
 {
     PHYSFS_file *handle = (PHYSFS_file *) rw->hidden.unknown.data1;
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+    Sint64 pos = 0;
+#else
     int pos = 0;
+#endif
 
     if (whence == SEEK_SET)
     {
-        pos = offset;
+        pos = (Sint64)offset;
     } /* if */
 
     else if (whence == SEEK_CUR)
@@ -43,12 +51,14 @@ static int physfsrwops_seek(SDL_RWops *rw, int offset, int whence)
             return(-1);
         } /* if */
 
-        pos = (int) current;
+        pos = (Sint64) current;
+#if !SDL_VERSION_ATLEAST(2, 0, 0)
         if ( ((PHYSFS_sint64) pos) != current )
         {
             SDL_SetError("Can't fit current file position in an int!");
             return(-1);
         } /* if */
+#endif
 
         if (offset == 0)  /* this is a "tell" call. We're done. */
             return(pos);
@@ -65,12 +75,14 @@ static int physfsrwops_seek(SDL_RWops *rw, int offset, int whence)
             return(-1);
         } /* if */
 
-        pos = (int) len;
+        pos = (Sint64) len;
+#if !SDL_VERSION_ATLEAST(2, 0, 0)
         if ( ((PHYSFS_sint64) pos) != len )
         {
             SDL_SetError("Can't fit end-of-file position in an int!");
             return(-1);
         } /* if */
+#endif
 
         pos += offset;
     } /* else if */
@@ -97,28 +109,36 @@ static int physfsrwops_seek(SDL_RWops *rw, int offset, int whence)
 } /* physfsrwops_seek */
 
 
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+static size_t physfsrwops_read(SDL_RWops *rw, void *ptr, size_t size, size_t maxnum)
+#else
 static int physfsrwops_read(SDL_RWops *rw, void *ptr, int size, int maxnum)
+#endif
 {
     PHYSFS_file *handle = (PHYSFS_file *) rw->hidden.unknown.data1;
-    PHYSFS_sint64 rc = PHYSFS_read(handle, ptr, size, maxnum);
-    if (rc != maxnum)
+    PHYSFS_sint64 rc = PHYSFS_read(handle, ptr, (PHYSFS_uint32)size, (PHYSFS_uint32)maxnum);
+    if (rc != (PHYSFS_sint64)maxnum)
     {
         if (!PHYSFS_eof(handle)) /* not EOF? Must be an error. */
             SDL_SetError("PhysicsFS error: %s", PHYSFS_getLastError());
     } /* if */
 
-    return((int) rc);
+    return((size_t) rc);
 } /* physfsrwops_read */
 
 
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+static size_t physfsrwops_write(SDL_RWops *rw, const void *ptr, size_t size, size_t num)
+#else
 static int physfsrwops_write(SDL_RWops *rw, const void *ptr, int size, int num)
+#endif
 {
     PHYSFS_file *handle = (PHYSFS_file *) rw->hidden.unknown.data1;
-    PHYSFS_sint64 rc = PHYSFS_write(handle, ptr, size, num);
-    if (rc != num)
+    PHYSFS_sint64 rc = PHYSFS_write(handle, ptr, (PHYSFS_uint32)size, (PHYSFS_uint32)num);
+    if (rc != (PHYSFS_sint64)num)
         SDL_SetError("PhysicsFS error: %s", PHYSFS_getLastError());
 
-    return((int) rc);
+    return((size_t) rc);
 } /* physfsrwops_write */
 
 
@@ -190,4 +210,3 @@ SDL_RWops *PHYSFSRWOPS_openAppend(const char *fname)
 
 
 /* end of physfsrwops.c ... */
-
