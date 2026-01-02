@@ -151,9 +151,9 @@ void ReadCmdArgs(void)
 	GameArg.CtlNoJoystick 		= FindArg("-nojoystick");
 	GameArg.CtlNoStickyKeys		= FindArg("-nostickykeys");
 	if (GameArg.CtlNoStickyKeys) // Must happen before SDL_Init!
-		SDL_putenv("SDL_DISABLE_LOCK_KEYS=1");
+		SDL_setenv("SDL_DISABLE_LOCK_KEYS", "1", 1);
 	else
-		SDL_putenv("SDL_DISABLE_LOCK_KEYS=0");
+		SDL_setenv("SDL_DISABLE_LOCK_KEYS", "0", 1);
 
 	// Sound Options
 

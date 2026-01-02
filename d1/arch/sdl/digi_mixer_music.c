@@ -48,7 +48,7 @@ int mix_play_file(char *filename, int loop, void (*hook_finished_track)())
 	{
 		hmp2mid(filename, &current_music_hndlbuf, &bufsize);
 		rw = SDL_RWFromConstMem(current_music_hndlbuf,bufsize*sizeof(char));
-		current_music = Mix_LoadMUS_RW(rw);
+		current_music = Mix_LoadMUS_RW(rw, 1);
 	}
 
 	// try loading music via given filename
@@ -87,7 +87,7 @@ int mix_play_file(char *filename, int loop, void (*hook_finished_track)())
 			bufsize = PHYSFS_read(filehandle, current_music_hndlbuf, sizeof(char), PHYSFS_fileLength(filehandle));
 			rw = SDL_RWFromConstMem(current_music_hndlbuf,bufsize*sizeof(char));
 			PHYSFS_close(filehandle);
-			current_music = Mix_LoadMUS_RW(rw);
+			current_music = Mix_LoadMUS_RW(rw, 1);
 		}
 	}
 

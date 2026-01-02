@@ -13,6 +13,9 @@
 #include "libmve.h"
 
 static SDL_Surface *g_screen;
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+static SDL_Window *g_window;
+#endif
 static unsigned char g_palette[768];
 static int g_truecolor;
 
@@ -86,10 +89,15 @@ static void showFrame(unsigned char *buf, int dstx, int dsty, int bufw, int bufh
 
 	SDL_BlitSurface(sprite, &srcRect, g_screen, &destRect);
 
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+	if (g_window)
+		SDL_UpdateWindowSurface(g_window);
+#else
 	if ( (g_screen->flags & SDL_DOUBLEBUF) == SDL_DOUBLEBUF )
 		SDL_Flip(g_screen);
 	else
 		SDL_UpdateRects(g_screen, 1, &destRect);
+#endif
 
 	SDL_FreeSurface(sprite);
 }
@@ -125,7 +133,15 @@ static int pollEvents()
 			case SDLK_q:
 				return 1;
 			case SDLK_f:
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+				if (g_window)
+				{
+					Uint32 flags = SDL_GetWindowFlags(g_window);
+					SDL_SetWindowFullscreen(g_window, (flags & SDL_WINDOW_FULLSCREEN) ? 0 : SDL_WINDOW_FULLSCREEN);
+				}
+#else
 				SDL_WM_ToggleFullScreen(g_screen);
+#endif
 				break;
 			default:
 				break;
@@ -167,7 +183,17 @@ static int doPlay(const char *filename)
 
 	bpp = vSpec.truecolor?16:8;
 
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+	g_window = SDL_CreateWindow("Movie Playback", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+		vSpec.screenWidth, vSpec.screenHeight, SDL_WINDOW_SHOWN);
+	if (!g_window) {
+		fprintf(stderr, "could not create window: %s\n", SDL_GetError());
+		return 1;
+	}
+	g_screen = SDL_GetWindowSurface(g_window);
+#else
 	g_screen = SDL_SetVideoMode(vSpec.screenWidth, vSpec.screenHeight, bpp, SDL_ANYFORMAT);
+#endif
 
 	g_truecolor = vSpec.truecolor;
 
@@ -179,6 +205,14 @@ static int doPlay(const char *filename)
 	MVE_rmEndMovie();
 
 	fclose(mve);
+
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+	if (g_window)
+	{
+		SDL_DestroyWindow(g_window);
+		g_window = NULL;
+	}
+#endif
 
 	return 0;
 }

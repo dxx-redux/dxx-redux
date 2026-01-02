@@ -18,6 +18,152 @@
 #include "console.h"
 #include "args.h"
 
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+#ifndef SDLK_NUMLOCK
+#define SDLK_NUMLOCK SDLK_NUMLOCKCLEAR
+#endif
+#ifndef SDLK_SCROLLOCK
+#define SDLK_SCROLLOCK SDLK_SCROLLLOCK
+#endif
+#ifndef SDLK_KP0
+#define SDLK_KP0 SDLK_KP_0
+#endif
+#ifndef SDLK_KP1
+#define SDLK_KP1 SDLK_KP_1
+#endif
+#ifndef SDLK_KP2
+#define SDLK_KP2 SDLK_KP_2
+#endif
+#ifndef SDLK_KP3
+#define SDLK_KP3 SDLK_KP_3
+#endif
+#ifndef SDLK_KP4
+#define SDLK_KP4 SDLK_KP_4
+#endif
+#ifndef SDLK_KP5
+#define SDLK_KP5 SDLK_KP_5
+#endif
+#ifndef SDLK_KP6
+#define SDLK_KP6 SDLK_KP_6
+#endif
+#ifndef SDLK_KP7
+#define SDLK_KP7 SDLK_KP_7
+#endif
+#ifndef SDLK_KP8
+#define SDLK_KP8 SDLK_KP_8
+#endif
+#ifndef SDLK_KP9
+#define SDLK_KP9 SDLK_KP_9
+#endif
+#ifndef SDLK_PRINT
+#define SDLK_PRINT SDLK_PRINTSCREEN
+#endif
+#ifndef SDLK_LMETA
+#define SDLK_LMETA SDLK_LGUI
+#endif
+#ifndef SDLK_RMETA
+#define SDLK_RMETA SDLK_RGUI
+#endif
+#ifndef SDLK_WORLD_0
+#define SDLK_WORLD_0 SDLK_UNKNOWN
+#define SDLK_WORLD_1 SDLK_UNKNOWN
+#define SDLK_WORLD_2 SDLK_UNKNOWN
+#define SDLK_WORLD_3 SDLK_UNKNOWN
+#define SDLK_WORLD_4 SDLK_UNKNOWN
+#define SDLK_WORLD_5 SDLK_UNKNOWN
+#define SDLK_WORLD_6 SDLK_UNKNOWN
+#define SDLK_WORLD_7 SDLK_UNKNOWN
+#define SDLK_WORLD_8 SDLK_UNKNOWN
+#define SDLK_WORLD_9 SDLK_UNKNOWN
+#define SDLK_WORLD_10 SDLK_UNKNOWN
+#define SDLK_WORLD_11 SDLK_UNKNOWN
+#define SDLK_WORLD_12 SDLK_UNKNOWN
+#define SDLK_WORLD_13 SDLK_UNKNOWN
+#define SDLK_WORLD_14 SDLK_UNKNOWN
+#define SDLK_WORLD_15 SDLK_UNKNOWN
+#define SDLK_WORLD_16 SDLK_UNKNOWN
+#define SDLK_WORLD_17 SDLK_UNKNOWN
+#define SDLK_WORLD_18 SDLK_UNKNOWN
+#define SDLK_WORLD_19 SDLK_UNKNOWN
+#define SDLK_WORLD_20 SDLK_UNKNOWN
+#define SDLK_WORLD_21 SDLK_UNKNOWN
+#define SDLK_WORLD_22 SDLK_UNKNOWN
+#define SDLK_WORLD_23 SDLK_UNKNOWN
+#define SDLK_WORLD_24 SDLK_UNKNOWN
+#define SDLK_WORLD_25 SDLK_UNKNOWN
+#define SDLK_WORLD_26 SDLK_UNKNOWN
+#define SDLK_WORLD_27 SDLK_UNKNOWN
+#define SDLK_WORLD_28 SDLK_UNKNOWN
+#define SDLK_WORLD_29 SDLK_UNKNOWN
+#define SDLK_WORLD_30 SDLK_UNKNOWN
+#define SDLK_WORLD_31 SDLK_UNKNOWN
+#define SDLK_WORLD_32 SDLK_UNKNOWN
+#define SDLK_WORLD_33 SDLK_UNKNOWN
+#define SDLK_WORLD_34 SDLK_UNKNOWN
+#define SDLK_WORLD_35 SDLK_UNKNOWN
+#define SDLK_WORLD_36 SDLK_UNKNOWN
+#define SDLK_WORLD_37 SDLK_UNKNOWN
+#define SDLK_WORLD_38 SDLK_UNKNOWN
+#define SDLK_WORLD_39 SDLK_UNKNOWN
+#define SDLK_WORLD_40 SDLK_UNKNOWN
+#define SDLK_WORLD_41 SDLK_UNKNOWN
+#define SDLK_WORLD_42 SDLK_UNKNOWN
+#define SDLK_WORLD_43 SDLK_UNKNOWN
+#define SDLK_WORLD_44 SDLK_UNKNOWN
+#define SDLK_WORLD_45 SDLK_UNKNOWN
+#define SDLK_WORLD_46 SDLK_UNKNOWN
+#define SDLK_WORLD_47 SDLK_UNKNOWN
+#define SDLK_WORLD_48 SDLK_UNKNOWN
+#define SDLK_WORLD_49 SDLK_UNKNOWN
+#define SDLK_WORLD_50 SDLK_UNKNOWN
+#define SDLK_WORLD_51 SDLK_UNKNOWN
+#define SDLK_WORLD_52 SDLK_UNKNOWN
+#define SDLK_WORLD_53 SDLK_UNKNOWN
+#define SDLK_WORLD_54 SDLK_UNKNOWN
+#define SDLK_WORLD_55 SDLK_UNKNOWN
+#define SDLK_WORLD_56 SDLK_UNKNOWN
+#define SDLK_WORLD_57 SDLK_UNKNOWN
+#define SDLK_WORLD_58 SDLK_UNKNOWN
+#define SDLK_WORLD_59 SDLK_UNKNOWN
+#define SDLK_WORLD_60 SDLK_UNKNOWN
+#define SDLK_WORLD_61 SDLK_UNKNOWN
+#define SDLK_WORLD_62 SDLK_UNKNOWN
+#define SDLK_WORLD_63 SDLK_UNKNOWN
+#define SDLK_WORLD_64 SDLK_UNKNOWN
+#define SDLK_WORLD_65 SDLK_UNKNOWN
+#define SDLK_WORLD_66 SDLK_UNKNOWN
+#define SDLK_WORLD_67 SDLK_UNKNOWN
+#define SDLK_WORLD_68 SDLK_UNKNOWN
+#define SDLK_WORLD_69 SDLK_UNKNOWN
+#define SDLK_WORLD_70 SDLK_UNKNOWN
+#define SDLK_WORLD_71 SDLK_UNKNOWN
+#define SDLK_WORLD_72 SDLK_UNKNOWN
+#define SDLK_WORLD_73 SDLK_UNKNOWN
+#define SDLK_WORLD_74 SDLK_UNKNOWN
+#define SDLK_WORLD_75 SDLK_UNKNOWN
+#define SDLK_WORLD_76 SDLK_UNKNOWN
+#define SDLK_WORLD_77 SDLK_UNKNOWN
+#define SDLK_WORLD_78 SDLK_UNKNOWN
+#define SDLK_WORLD_79 SDLK_UNKNOWN
+#define SDLK_WORLD_80 SDLK_UNKNOWN
+#define SDLK_WORLD_81 SDLK_UNKNOWN
+#define SDLK_WORLD_82 SDLK_UNKNOWN
+#define SDLK_WORLD_83 SDLK_UNKNOWN
+#define SDLK_WORLD_84 SDLK_UNKNOWN
+#define SDLK_WORLD_85 SDLK_UNKNOWN
+#define SDLK_WORLD_86 SDLK_UNKNOWN
+#define SDLK_WORLD_87 SDLK_UNKNOWN
+#define SDLK_WORLD_88 SDLK_UNKNOWN
+#define SDLK_WORLD_89 SDLK_UNKNOWN
+#define SDLK_WORLD_90 SDLK_UNKNOWN
+#define SDLK_WORLD_91 SDLK_UNKNOWN
+#define SDLK_WORLD_92 SDLK_UNKNOWN
+#define SDLK_WORLD_93 SDLK_UNKNOWN
+#define SDLK_WORLD_94 SDLK_UNKNOWN
+#define SDLK_WORLD_95 SDLK_UNKNOWN
+#endif
+#endif
+
 static unsigned char Installed = 0;
 
 //-------- Variable accessed by outside functions ---------
@@ -359,20 +505,8 @@ void key_handler(SDL_KeyboardEvent *kevent)
 	int keycode, event_keysym=-1, key_state;
 
 	// Read SDLK symbol and state
-        event_keysym = kevent->keysym.sym;
-        key_state = (kevent->state == SDL_PRESSED)?1:0;
-
-	// fill the unicode frame-related unicode buffer 
-	if (key_state && kevent->keysym.unicode > 31 && kevent->keysym.unicode < 255)
-	{
-		int i = 0;
-		for (i = 0; i < KEY_BUFFER_SIZE; i++)
-			if (unicode_frame_buffer[i] == '\0')
-			{
-				unicode_frame_buffer[i] = kevent->keysym.unicode;
-				break;
-			}
-	}
+	event_keysym = kevent->keysym.sym;
+	key_state = (kevent->state == SDL_PRESSED)?1:0;
 
 	//=====================================================
 	for (keycode = 255; keycode > 0; keycode--)
@@ -431,6 +565,9 @@ void key_handler(SDL_KeyboardEvent *kevent)
 void key_close()
 {
       Installed = 0;
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+	SDL_StopTextInput();
+#endif
 }
 
 void key_init()
@@ -438,7 +575,11 @@ void key_init()
 	if (Installed) return;
 
 	Installed=1;
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+	SDL_StartTextInput();
+#else
 	SDL_EnableUNICODE(1);
+#endif
 	key_toggle_repeat(1);
 
 	keyd_time_when_last_pressed = timer_query();
@@ -449,7 +590,11 @@ void key_init()
 void key_flush()
 {
  	int i;
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+	const Uint8 *keystate = SDL_GetKeyboardState(NULL);
+#else
 	Uint8 *keystate = SDL_GetKeyState(NULL);
+#endif
 
 	if (!Installed)
 		key_init();
@@ -458,6 +603,27 @@ void key_flush()
 	for (i=0; i<KEY_BUFFER_SIZE; i++ )
 		unicode_frame_buffer[i] = '\0';
 
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+	for (i=0; i<256; i++ ) {
+		if (key_properties[i].sym == -1)
+		{
+			keyd_pressed[i] = 0;
+			key_data.state[i] = 1;
+			continue;
+		}
+		SDL_Scancode scancode = SDL_GetScancodeFromKey(key_properties[i].sym);
+		if (key_ismodlck(i) == KEY_ISLCK && keystate[scancode] && !GameArg.CtlNoStickyKeys) // do not flush status of sticky keys
+		{
+			keyd_pressed[i] = 1;
+			key_data.state[i] = 0;
+		}
+		else
+		{
+			keyd_pressed[i] = 0;
+			key_data.state[i] = 1;
+		}
+	}
+#else
 	for (i=0; i<256; i++ )	{
 		if (key_ismodlck(i) == KEY_ISLCK && keystate[key_properties[i].sym] && !GameArg.CtlNoStickyKeys) // do not flush status of sticky keys
 		{
@@ -470,6 +636,7 @@ void key_flush()
 			key_data.state[i] = 1;
 		}
 	}
+#endif
 }
 
 int event_key_get(d_event *event)
@@ -493,6 +660,9 @@ int event_key_get_raw(d_event *event)
 
 void key_toggle_repeat(int enable)
 {
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+	keyd_repeat = enable ? 1 : 0;
+#else
 	if (enable)
 	{
 		if (SDL_EnableKeyRepeat(KEY_REPEAT_DELAY, KEY_REPEAT_INTERVAL) == 0)
@@ -503,5 +673,6 @@ void key_toggle_repeat(int enable)
 		SDL_EnableKeyRepeat(0, 0);
 		keyd_repeat = 0;
 	}
+#endif
 	key_flush();
 }
