@@ -1724,6 +1724,16 @@ int maybe_detonate_weapon(object *weapon1, object *weapon2, vms_vector *collisio
 
 void collide_weapon_and_weapon( object * weapon1, object * weapon2, vms_vector *collision_point )
 {
+	// Special case: Vulcan cannon can detonate Mega Missiles (Ack-Ack Mode)
+	if (Netgame.AckAckMode && ((weapon1->id == VULCAN_ID && weapon2->id == MEGA_ID) || (weapon1->id == MEGA_ID && weapon2->id == VULCAN_ID))) {
+		object *mega = (weapon1->id == MEGA_ID) ? weapon1 : weapon2;
+		explode_badass_weapon(mega);
+		digi_link_sound_to_pos(Weapon_info[MEGA_ID].robot_hit_sound, mega->segnum, 0, collision_point, 0, F1_0);
+		weapon1->flags |= OF_SHOULD_BE_DEAD;
+		weapon2->flags |= OF_SHOULD_BE_DEAD;
+		return;
+	}
+
 	if ((Weapon_info[weapon1->id].destroyable) || (Weapon_info[weapon2->id].destroyable)) {
 		// shooting Plasma will make bombs explode one drops at the same time since hitboxes overlap. Small HACK to get around this issue. if the player moves away from the bomb at least...
 		if ((GameTime64 < weapon1->ctype.laser_info.creation_time + (F1_0/5)) && (GameTime64 < weapon2->ctype.laser_info.creation_time + (F1_0/5)) && (weapon1->ctype.laser_info.parent_num == weapon2->ctype.laser_info.parent_num))

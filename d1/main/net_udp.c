@@ -3046,6 +3046,7 @@ void net_udp_send_game_info(struct _sockaddr sender_addr, ubyte info_upid, ubyte
 		buf[len] = Netgame.team_color[0];						len++;
 		buf[len] = Netgame.team_color[1];						len++;
 		buf[len] = Netgame.NewSpawnAlgorithm; len++;
+		buf[len] = Netgame.AckAckMode; len++;
 
 		if(info_upid == UPID_SYNC) {
 			PUT_INTEL_INT(buf + len, player_token); len += 4; 
@@ -3279,6 +3280,7 @@ int net_udp_process_game_info(ubyte *data, int data_len, struct _sockaddr game_a
 		Netgame.team_color[0] = data[len];						len++;
 		Netgame.team_color[1] = data[len];						len++;
 		Netgame.NewSpawnAlgorithm = data[len]; len++;
+		Netgame.AckAckMode = data[len]; len++;
 
 		if (Netgame.host_is_obs) {
 			multi_make_player_ghost(0);
@@ -3790,6 +3792,7 @@ static int opt_remote_hit_spark;
 static int opt_allow_custom_models_textures;
 static int opt_reduced_flash;
 static int opt_gauss_duplicating, opt_gauss_depleting, opt_gauss_steady_recharge, opt_gauss_steady_respawn;
+static int opt_ackack_mode;
 
 #ifdef USE_TRACKER
 static int opt_tracker;
@@ -3964,6 +3967,9 @@ void net_udp_more_game_options ()
 	opt_allow_custom_models_textures=opt;
 	m[opt].type = NM_TYPE_CHECK; m[opt].text = "Allow custom models and textures"; m[opt].value = Netgame.AllowCustomModelsTextures; opt++;
 
+	opt_ackack_mode=opt;
+	m[opt].type = NM_TYPE_CHECK; m[opt].text = "Ack-Ack Mode (Vulcan hits Mega)"; m[opt].value = Netgame.AckAckMode; opt++;
+
 	opt_reduced_flash=opt;
 	m[opt].type = NM_TYPE_CHECK; m[opt].text = "Reduced flash effects"; m[opt].value = Netgame.ReducedFlash; opt++;
 
@@ -4026,6 +4032,7 @@ menu:
 	Netgame.AllowCustomModelsTextures = m[opt_allow_custom_models_textures].value;
 	Netgame.ReducedFlash = m[opt_reduced_flash].value;
 	Netgame.NewSpawnAlgorithm = m[opt_spawn_algorithm].value;
+	Netgame.AckAckMode = m[opt_ackack_mode].value;
 }
 
 int net_udp_more_options_handler( newmenu *menu, d_event *event, void *userdata )
@@ -4344,6 +4351,7 @@ void netgame_set_defaults(void)
 	Netgame.ReducedFlash = 0;
 	Netgame.GaussAmmoStyle = GAUSS_STYLE_DEPLETING;
 	Netgame.NewSpawnAlgorithm = 0;
+	Netgame.AckAckMode = 0;
 
 #ifdef USE_TRACKER
 	Netgame.Tracker = 1;
