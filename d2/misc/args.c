@@ -19,6 +19,7 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 
 #include <stdlib.h>
 #include <string.h>
+#include <SDL.h>
 #include <SDL_stdinc.h>
 #include "physfsx.h"
 #include "args.h"
@@ -42,6 +43,10 @@ char * Args[MAX_ARGS];
 struct Arg GameArg;
 
 void ReadCmdArgs(void);
+
+#if !SDL_VERSION_ATLEAST(2, 0, 0)
+#define SDL_setenv(n, v, ow) SDL_putenv(n "=" v)
+#endif
 
 static int FindArg(const char *const s)
 {

@@ -23,6 +23,9 @@ extern int digi_win32_play_midi_song( char * filename, int loop );
 Mix_Music *current_music = NULL;
 static unsigned char *current_music_hndlbuf = NULL;
 
+#if !SDL_VERSION_ATLEAST(2, 0, 0)
+#define Mix_LoadMUS_RW(rw, f) Mix_LoadMUS_RW(f)
+#endif
 
 /*
  *  Plays a music file from an absolute path or a relative path
