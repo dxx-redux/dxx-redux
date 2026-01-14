@@ -19,14 +19,8 @@ if(SDLMIXER)
         digi_mixer_music.c
         jukebox.c
         )
-    if(SDL2_MIXER_INCLUDE_DIRS)
-        target_include_directories(arch_sdl PUBLIC ${SDL2_MIXER_INCLUDE_DIRS})
-    endif()
-    if(SDL2_MIXER_TARGET)
-        target_link_libraries(arch_sdl PUBLIC ${SDL2_MIXER_TARGET})
-    elseif(SDL2_MIXER_LIBRARIES)
-        target_link_libraries(arch_sdl PUBLIC ${SDL2_MIXER_LIBRARIES})
-    endif()
+    target_include_directories(arch_sdl PUBLIC ${SDL_MIXER_INCLUDE_DIRS})
+    target_link_libraries(arch_sdl ${SDL_MIXER_LIBRARY})
 endif()
 
 include_directories(${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/arch/include ${CMAKE_SOURCE_DIR}/main)
@@ -37,6 +31,6 @@ target_compile_definitions(arch_sdl PUBLIC
     DXX_VERSION_MICROi=$<IF:$<BOOL:${PROJECT_VERSION_MICRO}>,${PROJECT_VERSION_MICRO},0>
     )
 
-find_package(SDL2 REQUIRED)
+find_package(SDL)
 find_package(PhysFS)
-target_include_directories(arch_sdl PUBLIC ${SDL2_INCLUDE_DIRS} ${PHYSFS_INCLUDE_DIR})
+target_include_directories(arch_sdl PUBLIC ${SDL_INCLUDE_DIR} ${PHYSFS_INCLUDE_DIR})

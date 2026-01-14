@@ -8,17 +8,13 @@ add_library(libmve STATIC
 
 include_directories(../include ../arch/include ../main)
 
-find_package(SDL2 REQUIRED)
-target_include_directories(libmve PUBLIC ${SDL2_INCLUDE_DIRS})
+find_package(SDL)
+target_include_directories(libmve PUBLIC ${SDL_INCLUDE_DIR})
 
 if(SDLMIXER)
     #find_package(SDL_mixer)
-    #target_include_directories(libmve PUBLIC ${SDL2_MIXER_INCLUDE_DIRS})
-    if(SDL2_MIXER_TARGET)
-        target_link_libraries(libmve PUBLIC ${SDL2_MIXER_TARGET})
-    elseif(SDL2_MIXER_LIBRARIES)
-        target_link_libraries(libmve PUBLIC ${SDL2_MIXER_LIBRARIES})
-    endif()
+    #target_include_directories(libmve PUBLIC ${SDL_MIXER_INCLUDE_DIRS})
+    target_link_libraries(libmve PUBLIC ${SDL_MIXER_LIBRARY})
 endif()
 
 include(CheckStructHasMember)
