@@ -69,8 +69,6 @@ add_executable (d2x-redux
     weapon.c
     )
 
-include_directories(${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/arch/include)
-
 target_compile_definitions(d2x-redux PUBLIC
     DXX_VERSION_MAJORi=${PROJECT_VERSION_MAJOR}
     DXX_VERSION_MINORi=${PROJECT_VERSION_MINOR}
@@ -85,10 +83,6 @@ endif()
 
 if(OPENGL)
     target_link_libraries(d2x-redux PRIVATE arch_ogl xmodel)
-endif()
-
-if(SDLMIXER)
-    target_link_libraries(d2x-redux PUBLIC ${SDL_MIXER_LIBRARIES})
 endif()
 
 if(EDITOR)
@@ -161,7 +155,6 @@ if(NOT WIN32)
     list(APPEND EXTRA_LIBRARIES "m")
 endif()
 
-find_package(SDL 1.2 REQUIRED)
 find_package(PhysFS REQUIRED)
 if(OPENGL)
     find_package(OpenGL REQUIRED)
@@ -171,9 +164,8 @@ endif()
 if(PNG)
     find_package(PNG REQUIRED)
 endif()
-target_include_directories(d2x-redux PUBLIC ${SDL_INCLUDE_DIR} ${PHYSFS_INCLUDE_DIR})
 target_link_libraries(d2x-redux PRIVATE 2d 3d arch_sdl iff libmve maths mem misc texmap)
-target_link_libraries(d2x-redux PUBLIC ${OPENGL_LIBRARY} ${SDL_LIBRARY} ${SDL_MIXER_LIBRARY} ${PHYSFS_LIBRARY} ${PNG_LIBRARY} ${EXTRA_LIBRARIES})
+target_link_libraries(d2x-redux PUBLIC ${OPENGL_LIBRARY} ${PNG_LIBRARY} ${EXTRA_LIBRARIES})
 target_sources(d2x-redux PRIVATE vers_id.c)
 install(TARGETS d2x-redux RUNTIME DESTINATION .)
 if(SDLMIXER AND MSVC AND NOT VCPKG_PREFIX STREQUAL "")
