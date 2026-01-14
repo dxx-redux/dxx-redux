@@ -21,6 +21,9 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #define _KEY_H 
 
 #include <SDL.h>
+#if !SDL_VERSION_ATLEAST(2, 0, 0)
+#include <SDL_keysym.h>
+#endif
 #include "pstypes.h"
 #include "fix.h"
 #include "event.h"
@@ -187,7 +190,11 @@ extern void key_toggle_repeat(int enable);
 typedef struct key_props {
 	const char *key_text;
 	unsigned char ascii_value;
+#if SDL_VERSION_ATLEAST(2, 0, 0)
 	SDL_Keycode sym;
+#else
+	SDLKey sym;
+#endif
 } key_props;
 
 extern const key_props key_properties[256];
