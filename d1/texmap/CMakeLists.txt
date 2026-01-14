@@ -3,8 +3,6 @@ add_library(texmap STATIC
     scanline.c
     )
 
-include_directories(../include ../arch/include ../main)
-
 if(NOT OPENGL)
     target_sources(texmap PRIVATE tmapflat.c)
     if(ASM)
@@ -24,7 +22,3 @@ if(NOT OPENGL)
 else()
     target_compile_definitions(texmap PUBLIC NO_ASM)
 endif()
-
-find_package(SDL)
-find_package(PhysFS)
-target_include_directories(texmap PUBLIC ${SDL_INCLUDE_DIR} ${PHYSFS_INCLUDE_DIR})

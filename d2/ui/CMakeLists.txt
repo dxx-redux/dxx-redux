@@ -20,9 +20,3 @@ add_library(ui STATIC
     uidraw.c
     userbox.c
     )
-
-include_directories(../include ../arch/include ../main)
-
-find_package(SDL)
-find_package(PhysFS)
-target_include_directories(ui PUBLIC ${SDL_INCLUDE_DIR} ${PHYSFS_INCLUDE_DIR})
