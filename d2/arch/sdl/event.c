@@ -24,10 +24,16 @@ extern void mouse_cursor_autohide();
 
 static int initialised=0;
 
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+#define SUBEVENT(event, type, field) &event.field
+#else
+#define SUBEVENT(event, type, field) (type *)&event
+#endif
+
 void event_poll()
 {
 	SDL_Event event;
-	int clean_uniframe=1;
+	int clean_uniframe=0;
 	window *wind = window_get_front();
 	int idle = 1;
 #if SDL_VERSION_ATLEAST(2, 0, 0)
@@ -45,7 +51,7 @@ void event_poll()
 				if (clean_uniframe)
 					memset(unicode_frame_buffer,'\0',sizeof(unsigned char)*KEY_BUFFER_SIZE);
 				clean_uniframe=0;
-				key_handler((SDL_KeyboardEvent *)&event);
+				key_handler(SUBEVENT(event, SDL_KeyboardEvent, key));
 				idle = 0;
 				break;
 #if SDL_VERSION_ATLEAST(2, 0, 0)
@@ -69,40 +75,54 @@ void event_poll()
 					}
 				}
 				idle = 0;
+				d_event text_event;
+				text_event.type = EVENT_KEY_TEXT;
+				event_send((d_event *)&text_event);
 				break;
 #endif
 			case SDL_MOUSEBUTTONDOWN:
 			case SDL_MOUSEBUTTONUP:
 				if (GameArg.CtlNoMouse)
 					break;
-				mouse_button_handler((SDL_MouseButtonEvent *)&event);
+				mouse_button_handler(SUBEVENT(event, SDL_MouseButtonEvent, button));
 				idle = 0;
 				break;
 			case SDL_MOUSEMOTION:
+#ifdef WIN32
+				static int lastmove;
+				int cur = SDL_GetTicks();
+				if (!lastmove) lastmove = cur;
+				char buf[64];
+				snprintf(buf,sizeof(buf),"%d move\n", cur-lastmove);
+				extern void __stdcall OutputDebugStringA(const char *);
+				OutputDebugStringA(buf);
+				lastmove = cur;
+#endif
+
 				if (GameArg.CtlNoMouse)
 					break;
-				mouse_motion_handler((SDL_MouseMotionEvent *)&event);
+				mouse_motion_handler(SUBEVENT(event, SDL_MouseMotionEvent, motion));
 				idle = 0;
 				break;
 			case SDL_JOYBUTTONDOWN:
 			case SDL_JOYBUTTONUP:
 				if (GameArg.CtlNoJoystick)
 					break;
-				joy_button_handler((SDL_JoyButtonEvent *)&event);
+				joy_button_handler(SUBEVENT(event, SDL_JoyButtonEvent, jbutton));
 				idle = 0;
 				break;
 			case SDL_JOYAXISMOTION:
 				if (GameArg.CtlNoJoystick)
 					break;
-				if (joy_axisbutton_handler((SDL_JoyAxisEvent *)&event))
+				if (joy_axisbutton_handler(SUBEVENT(event, SDL_JoyAxisEvent, jaxis)))
 					idle = 0;
-				if (joy_axis_handler((SDL_JoyAxisEvent *)&event))
+				if (joy_axis_handler(SUBEVENT(event, SDL_JoyAxisEvent, jaxis)))
 					idle = 0;
 				break;
 			case SDL_JOYHATMOTION:
 				if (GameArg.CtlNoJoystick)
 					break;
-				joy_hat_handler((SDL_JoyHatEvent *)&event);
+				joy_hat_handler(SUBEVENT(event, SDL_JoyHatEvent, jhat));
 				idle = 0;
 				break;
 			case SDL_JOYBALLMOTION:

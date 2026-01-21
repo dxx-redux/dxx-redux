@@ -507,6 +507,20 @@ void key_handler(SDL_KeyboardEvent *kevent)
 			return;
 	key_state = (kevent->state == SDL_PRESSED)?1:0;
 
+#if !SDL_VERSION_ATLEAST(2, 0, 0)
+	// fill the unicode frame-related unicode buffer 
+	if (key_state && kevent->keysym.unicode > 31 && kevent->keysym.unicode < 255)
+	{
+		int i = 0;
+		for (i = 0; i < KEY_BUFFER_SIZE; i++)
+			if (unicode_frame_buffer[i] == '\0')
+			{
+				unicode_frame_buffer[i] = kevent->keysym.unicode;
+				break;
+			}
+	}
+#endif
+
 	//=====================================================
 	for (keycode = 255; keycode > 0; keycode--)
 		if (key_properties[keycode].sym == event_keysym)

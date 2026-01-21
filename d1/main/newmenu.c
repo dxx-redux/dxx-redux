@@ -872,7 +872,11 @@ int newmenu_mouse(window *wind, d_event *event, newmenu *menu, int button)
 int newmenu_key_command(window *wind, d_event *event, newmenu *menu)
 {
 	newmenu_item *item = &menu->items[menu->citem];
-	int k = event_key_get(event);
+	int k =
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+		event->type == EVENT_KEY_TEXT ? 0 :
+#endif
+		event_key_get(event);
 	int old_choice, i;
 	char *Temp,TempVal;
 	int changed = 0;
@@ -1524,6 +1528,9 @@ int newmenu_handler(window *wind, d_event *event, newmenu *menu)
 		}
 
 		case EVENT_KEY_COMMAND:
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+		case EVENT_KEY_TEXT:
+#endif
 			return newmenu_key_command(wind, event, menu);
 			break;
 
