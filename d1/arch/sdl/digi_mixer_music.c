@@ -24,7 +24,7 @@ Mix_Music *current_music = NULL;
 static unsigned char *current_music_hndlbuf = NULL;
 
 #if !SDL_VERSION_ATLEAST(2, 0, 0)
-#define Mix_LoadMUS_RW(rw, f) Mix_LoadMUS_RW(f)
+#define Mix_LoadMUS_RW(rw, f) Mix_LoadMUS_RW(rw)
 #endif
 
 /*

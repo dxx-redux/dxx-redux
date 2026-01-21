@@ -471,7 +471,7 @@ unsigned char key_ascii()
 {
 	static unsigned char unibuffer[KEY_BUFFER_SIZE] = { '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0' };
 	int i=0, offset=0, count=0;
-	
+
 	offset=strlen((const char*)unibuffer);
 
 	// move temporal chars from unicode_frame_buffer to empty space behind last unibuffer char (if any)
@@ -506,6 +506,20 @@ void key_handler(SDL_KeyboardEvent *kevent)
 		if (event_keysym == SDLK_UNKNOWN)
 			return;
 	key_state = (kevent->state == SDL_PRESSED)?1:0;
+
+#if !SDL_VERSION_ATLEAST(2, 0, 0)
+	// fill the unicode frame-related unicode buffer
+	if (key_state && kevent->keysym.unicode > 31 && kevent->keysym.unicode < 255)
+	{
+		int i = 0;
+		for (i = 0; i < KEY_BUFFER_SIZE; i++)
+			if (unicode_frame_buffer[i] == '\0')
+			{
+				unicode_frame_buffer[i] = kevent->keysym.unicode;
+				break;
+			}
+	}
+#endif
 
 	//=====================================================
 	for (keycode = 255; keycode > 0; keycode--)
