@@ -4,14 +4,13 @@ add_library(arch_sdl STATIC
     joy.c
     key.c
     mouse.c
-    rbaudio.c
     timer.c
     window.c
     digi.c
     digi_audio.c
     )
-if(NOT OPENGL)
-    target_sources(arch_sdl PRIVATE gr.c)
+if(NOT SDL2 OR NOT WIN32)
+    target_sources(arch_sdl PRIVATE rbaudio.c)
 endif()
 if(SDLMIXER)
     target_sources(arch_sdl PRIVATE
