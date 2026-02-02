@@ -65,6 +65,8 @@ Building in msys2 / Linux
   - Linux: `cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DOpenGL_GL_PREFERENCE=LEGACY`
   - Other platforms: `cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo`
 
+  (also add `-DCMAKE_EXPORT_COMPILE_COMMANDS=1` if you're using the language server [`clangd`](https://clangd.llvm.org/) with an IDE like [VSCode](https://github.com/clangd/vscode-clangd))
+
   (see `cmake -B build -L` for more options)
 
 - Build the code
