@@ -28,9 +28,10 @@ Building in msys2 / Linux
 
   - msys2 (use the 'MSYS2 MINGW64' entry in the Start menu)
 
-    `pacman -S git mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake
+    `pacman -S git mingw-w64-x86_64-pkgconf mingw-w64-x86_64-cmake
     mingw-w64-x86_64-physfs mingw-w64-x86_64-SDL mingw-w64-x86_64-SDL_mixer
-    mingw-w64-x86_64-libpng mingw-w64-x86_64-glew`
+    mingw-w64-x86_64-libpng mingw-w64-x86_64-glew mingw-w64-x86_64-clang
+    mingw-w64-x86_64-lld`
 
   - Debian/Ubuntu
 
@@ -60,7 +61,9 @@ Building in msys2 / Linux
 
 - Set the build options
 
-  `cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo`
+  - Windows: `CC=clang CXX=clang++ cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo`
+  - Linux: `cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DOpenGL_GL_PREFERENCE=LEGACY`
+  - Other platforms: `cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo`
 
   (see `cmake -B build -L` for more options)
 
