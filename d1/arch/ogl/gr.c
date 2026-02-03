@@ -690,7 +690,8 @@ int gr_list_modes( u_int32_t gsmodes[] )
 		if (SDL_GetDisplayMode(display_index, i, &mode) != 0)
 			continue;
 		if (mode.w > 0xFFF0 || mode.h > 0xFFF0
-			|| mode.w < 320 || mode.h < 200)
+			|| mode.w < 320 || mode.h < 200 ||
+			(SDL_BITSPERPIXEL(mode.format) != 24 && SDL_BITSPERPIXEL(mode.format) != 32))
 			continue;
 		gsmodes[modesnum] = SM(mode.w, mode.h);
 		modesnum++;
