@@ -52,6 +52,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "editor/editor.h"
 #endif
 #include "playsave.h"
+#include "xmodel.h"
 
 int N_powerup_types = 0;
 powerup_type_info Powerup_info[MAX_POWERUP_TYPES];
@@ -114,6 +115,29 @@ void draw_blob_outline(void)
 
 void draw_powerup(object *obj)
 {
+	if ((!(Game_mode & GM_MULTI) || Netgame.AllowCustomModelsTextures) &&
+		xmodel_exists(XM_POWERUP, obj->id)) {
+		vms_matrix orient;
+		vms_angvec angles;
+		fix light = F1_0;
+		g3s_lrgb lrgb = { light, light, light };
+		int vclip_num = obj->rtype.vclip_info.vclip_num;
+
+		angles.p = obj->id == POW_LASER || obj->id == POW_SUPER_LASER ||
+			(obj->id >= POW_VULCAN_WEAPON && obj->id <= POW_FUSION_WEAPON) ||
+			(obj->id >= POW_GAUSS_WEAPON && obj->id <= POW_OMEGA_WEAPON) ?
+			F1_0 / 4 - F1_0 / 20 : F1_0 * 7 / 8;
+		angles.b = 0;
+		angles.h = (fixang)
+			(GameTime64 * F1_0 / (Vclip[vclip_num].num_frames * Vclip[vclip_num].frame_time));
+		vm_angles_2_matrix(&orient, &angles);
+
+		//compute_object_light(obj, NULL);
+
+		if (xmodel_show_if_loaded(XM_POWERUP, obj->id, &obj->pos, &orient, -1, &lrgb))
+			return;
+	}
+
 	#ifdef EDITOR
 	blob_vertices[0] = 0x80000;
 	#endif

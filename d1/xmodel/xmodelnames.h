@@ -28,19 +28,15 @@ enum modelnums {
 	model_exit01 = -1,
 	model_exit01_destr = -1,
 	model_pyrogl_destr = -1,
-	model_laser1_outer = -1,
 	model_laser1_lod = -1,
 	model_laser1_lod2 = -1,
 	model_laser1_inner = -1,
-	model_laser2_outer = -1,
 	model_laser2_lod = -1,
 	model_laser2_lod2 = -1,
 	model_laser2_inner = -1,
-	model_laser3_outer = -1,
 	model_laser3_lod = -1,
 	model_laser3_lod2 = -1,
 	model_laser3_inner = -1,
-	model_laser4_outer = -1,
 	model_laser4_lod = -1,
 	model_laser4_lod2 = -1,
 	model_laser4_inner = -1,
@@ -58,6 +54,10 @@ enum modelnums {
 	model_smartmsl,
 	model_mega,
 	model_fusion_outer,
+	model_laser1_outer,
+	model_laser2_outer,
+	model_laser3_outer,
+	model_laser4_outer,
 };
 
 const char *xmodelnames[] = {
@@ -67,6 +67,10 @@ const char *xmodelnames[] = {
 	"smartmsl.ase",
 	"mega.ase",
 	"fusion.ase",
+	"laser1.ase",
+	"laser2.ase",
+	"laser3.ase",
+	"laser4.ase"
 };
 
 #define NUM_XMODELS ((int)(sizeof(xmodelnames) / sizeof(xmodelnames[0])))

@@ -92,12 +92,14 @@ inline void WriteShort(short) {}
 inline void WriteVector(CFloatVector3 const&) { }
 inline int Write(void const*buf, int a, int b, int c=0) { return 0;}
 inline size_t Seek(PHYSFS_sint64 ofs, int method) {
+	int ret = 0;
 	switch (method) {
-		case 0: PHYSFS_seek(f, ofs); break;
-		case 1: PHYSFS_seek(f, PHYSFS_tell(f) + ofs); break;
-		case 2: PHYSFS_seek(f, PHYSFS_fileLength(f) + ofs); break;
+		case 0: ret = PHYSFS_seek(f, ofs); break;
+		case 1: ret = PHYSFS_seek(f, PHYSFS_tell(f) + ofs); break;
+		case 2: ret = PHYSFS_seek(f, PHYSFS_fileLength(f) + ofs); break;
 	}
-	return PHYSFS_tell(f);
+	//return PHYSFS_tell(f);
+	return ret ? 0 : -1;
 }
 inline bool File() { return f; }
 };
