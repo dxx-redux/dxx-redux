@@ -71,6 +71,7 @@
 #include "game.h"
 #include "pngfile.h"
 #include "oglprog.h"
+#include "oglfbo.h"
 
 #if defined(__APPLE__) && defined(__MACH__)
 #include <OpenGL/glu.h>
@@ -139,7 +140,10 @@ void ogl_swap_buffers_internal(void)
 #else
 #if SDL_VERSION_ATLEAST(2, 0, 0)
 	if (sdl_window)
-		SDL_GL_SwapWindow(sdl_window);
+		if (ogl_fbo_is_active())
+			ogl_fbo_swap(sdl_window);
+		else
+			SDL_GL_SwapWindow(sdl_window);
 #else
 	SDL_GL_SwapBuffers();
 #endif
@@ -311,6 +315,13 @@ void ogles_destroy(void)
 }
 #endif
 
+int mode_is_desktop(int x, int y)
+{
+	SDL_DisplayMode mode;
+	return SDL_GetDesktopDisplayMode(0, &mode) == 0 &&
+		x == mode.w && y == mode.h;
+}
+
 int ogl_init_window(int x, int y)
 {
 	int use_x,use_y,use_bpp;
@@ -359,7 +370,8 @@ int ogl_init_window(int x, int y)
 	}
 
 	if (!sdl_window) {
-		sdl_window = SDL_CreateWindow(DESCENT_VERSION, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, use_x, use_y, use_flags);
+		sdl_window = SDL_CreateWindow(DESCENT_VERSION, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, use_x, use_y,
+			SDL_WINDOW_OPENGL | (use_flags & SDL_WINDOW_FULLSCREEN ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0));
 		if (!sdl_window)
 			Error("Could not create SDL window: %s\n", SDL_GetError());
 		SDL_Surface *icon = SDL_LoadBMP("d1x-redux.bmp");
@@ -367,9 +379,14 @@ int ogl_init_window(int x, int y)
 			SDL_SetWindowIcon(sdl_window, icon);
 			SDL_FreeSurface(icon);
 		}
+	}
+
+	int use_fbo = (use_flags & SDL_WINDOW_FULLSCREEN) && !mode_is_desktop(x, y);
+	if (use_fbo) {
+		SDL_SetWindowFullscreen(sdl_window, SDL_WINDOW_FULLSCREEN_DESKTOP);
 	} else {
 		SDL_SetWindowSize(sdl_window, use_x, use_y);
-		SDL_SetWindowFullscreen(sdl_window, (use_flags & SDL_WINDOW_FULLSCREEN) ? SDL_WINDOW_FULLSCREEN : 0);
+		SDL_SetWindowFullscreen(sdl_window, (use_flags & SDL_WINDOW_FULLSCREEN) ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
 		SDL_SetWindowBordered(sdl_window, (use_flags & SDL_WINDOW_BORDERLESS) ? SDL_FALSE : SDL_TRUE);
 	}
 
@@ -377,7 +394,12 @@ int ogl_init_window(int x, int y)
 		sdl_gl_context = SDL_GL_CreateContext(sdl_window);
 		if (!sdl_gl_context)
 			Error("Could not create OpenGL context: %s\n", SDL_GetError());
+		glewInit();
 	}
+	if (use_fbo)
+		ogl_fbo_setup(sdl_window, use_x, use_y);
+	else
+		ogl_fbo_release();
 #else
 	SDL_WM_SetCaption(DESCENT_VERSION, "Descent");
 	SDL_WM_SetIcon( SDL_LoadBMP( "d1x-redux.bmp" ), NULL );
@@ -534,8 +556,16 @@ int gr_toggle_fullscreen(void)
 	if (gl_initialized)
 	{
 #if SDL_VERSION_ATLEAST(2, 0, 0)
-		if (sdl_window)
-			SDL_SetWindowFullscreen(sdl_window, (sdl_video_flags & SDL_WINDOW_FULLSCREEN) ? SDL_WINDOW_FULLSCREEN : 0);
+		int use_fbo = (sdl_video_flags & SDL_WINDOW_FULLSCREEN) && !mode_is_desktop(SM_W(Game_screen_mode), SM_H(Game_screen_mode));
+		ogl_fbo_release();
+		if (sdl_window) {
+			SDL_SetWindowFullscreen(sdl_window, (sdl_video_flags & SDL_WINDOW_FULLSCREEN) ?
+				SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+			if (use_fbo)
+				ogl_fbo_setup(sdl_window, SM_W(Game_screen_mode), SM_H(Game_screen_mode));
+			if (!(sdl_video_flags & SDL_WINDOW_FULLSCREEN))
+				SDL_SetWindowSize(sdl_window, SM_W(Game_screen_mode), SM_H(Game_screen_mode));
+		}
 #else
 		if (sdl_no_modeswitch == 0) {
 			if (!SDL_VideoModeOK(SM_W(Game_screen_mode), SM_H(Game_screen_mode), GameArg.DbgBpp, sdl_video_flags))
@@ -972,6 +1002,7 @@ void gr_close()
 	}
 	ogl_close_pixel_buffers();
 #if SDL_VERSION_ATLEAST(2, 0, 0)
+	ogl_fbo_release();
 	if (sdl_gl_context)
 	{
 		SDL_GL_DeleteContext(sdl_gl_context);
