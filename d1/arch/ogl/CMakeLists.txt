@@ -1,6 +1,7 @@
 add_library(arch_ogl STATIC
     gr.c
     ogl.c
+    oglfbo.c
     )
 
 if(OPENGLMERGE)
