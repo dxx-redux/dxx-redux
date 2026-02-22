@@ -174,3 +174,18 @@ target_link_libraries(d1x-redux PRIVATE 2d 3d arch_sdl iff maths mem misc texmap
 target_link_libraries(d1x-redux PUBLIC ${OPENGL_LIBRARY} ${SDL_LIBRARY} ${SDL_MIXER_LIBRARY} ${PHYSFS_LIBRARY} ${PNG_LIBRARY} ${EXTRA_LIBRARIES})
 target_sources(d1x-redux PRIVATE vers_id.c)
 install(TARGETS d1x-redux RUNTIME DESTINATION .)
+if(SDLMIXER AND MSVC AND NOT VCPKG_PREFIX STREQUAL "")
+    find_file(MPG123 NAMES mpg123.dll REQUIRED PATHS ${VCPKG_PREFIX}/bin)
+    find_file(FLAC NAMES flac.dll REQUIRED PATHS ${VCPKG_PREFIX}/bin)
+    find_file(MIKMOD NAMES mikmod.dll REQUIRED PATHS ${VCPKG_PREFIX}/bin)
+    find_file(OGG NAMES ogg.dll REQUIRED PATHS ${VCPKG_PREFIX}/bin)
+    find_file(VORBIS NAMES vorbis.dll REQUIRED PATHS ${VCPKG_PREFIX}/bin)
+    find_file(VORBISFILE NAMES vorbisfile.dll REQUIRED PATHS ${VCPKG_PREFIX}/bin)
+
+    foreach (lib IN LISTS MPG123 FLAC MIKMOD OGG VORBIS VORBISFILE)
+        add_custom_command(TARGET d1x-redux POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${lib}"
+                $<TARGET_FILE_DIR:d1x-redux>)
+    endforeach(name)
+endif()
