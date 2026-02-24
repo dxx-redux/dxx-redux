@@ -173,6 +173,7 @@ void mouse_get_pos( int *x, int *y, int *z )
 	*x=Mouse.x;
 	*y=Mouse.y;
 	*z=Mouse.z;
+	gr_scale_position(x, y);
 }
 
 int mouse_in_window(window *wind)

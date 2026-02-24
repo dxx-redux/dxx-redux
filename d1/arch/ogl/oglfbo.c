@@ -251,3 +251,31 @@ void ogl_fbo_swap(SDL_Window *VideoWindow)
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, OpenGLCurrentReadFBO);
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, OpenGLCurrentDrawFBO);
 }
+
+/* Scale a point (e.g. absolute mouse position) to the logical scaling size */
+void ogl_fbo_scale_position(SDL_Window *window, int *x, int *y)
+{
+    SDL_Rect viewport;
+    int physical_w, physical_h;
+    float scale_x, scale_y;
+    int adjusted_x, adjusted_y;
+
+    /* Don't adjust anything if we're not using Logical Scaling */
+    if (!OpenGLLogicalScalingFBO || !window) {
+        return;
+    }
+
+    /* we want to scale based on the window size, which is dpi-scaled */
+    SDL_GetWindowSize(window, &physical_w, &physical_h);
+    viewport = GetOpenGLLogicalScalingViewport(physical_w, physical_h);
+
+    scale_x = (float)OpenGLLogicalScalingWidth / viewport.w;
+    scale_y = (float)OpenGLLogicalScalingHeight / viewport.h;
+
+    adjusted_x = (int) ((*x - viewport.x) * scale_x);
+    adjusted_y = (int) ((*y - viewport.y) * scale_y);
+
+    /* Clamp the result to the visible window */
+    *x = SDL_max(SDL_min(adjusted_x, OpenGLLogicalScalingWidth), 0);
+    *y = SDL_max(SDL_min(adjusted_y, OpenGLLogicalScalingHeight), 0);
+}
