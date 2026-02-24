@@ -444,3 +444,7 @@ void gr_palette_read(ubyte * pal)
 		pal[j++] = palette->colors[i].b / 4;
 	}
 }
+
+void gr_scale_position(int *x, int *y)
+{
+}

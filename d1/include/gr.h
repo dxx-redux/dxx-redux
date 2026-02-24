@@ -415,5 +415,6 @@ int gr_toggle_fullscreen(void);
 void ogl_do_palfx(void);
 void ogl_init_pixel_buffers(int w, int h);
 void ogl_close_pixel_buffers(void);
+void gr_scale_position(int *x, int *y);
 
 #endif /* def _GR_H */

@@ -1358,3 +1358,8 @@ void save_screen_shot(int automap_flag)
 
 	start_time();
 }
+
+void gr_scale_position(int *x, int *y)
+{
+	ogl_fbo_scale_position(sdl_window, x, y);
+}
