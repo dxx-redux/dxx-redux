@@ -452,7 +452,7 @@ void draw_polygon_object(object *obj)
 			#ifdef OGL
 			if (obj->type == OBJ_WEAPON && (Weapon_info[obj->id].model_num_inner > -1) &&
 				(((Game_mode & GM_MULTI) && !Netgame.AllowCustomModelsTextures) ||
-					!xmodel_exists(obj->rtype.pobj_info.model_num)) &&
+					!xmodel_exists(XM_POLYOBJ, obj->rtype.pobj_info.model_num)) &&
 				!GameCfg.ClassicDepth) {
 				fix dist_to_eye = vm_vec_dist_quick(&Viewer->pos, &obj->pos);
 				gr_settransblend(GR_FADE_OFF, GR_BLEND_ADDITIVE_A);

@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stddef.h>
+#include <SDL.h>
 
 #include "xdescent.h"
 #include "carray.h"
@@ -302,16 +303,24 @@ void xmodel_free_gl_all() {
 			xmodel_free_gl(xmodels[i]);
 }
 
+static int xmodel_xlate(enum xmodel_type mt, int modelnum) {
+	if (mt == XM_POLYOBJ && modelnum >= 0 && modelnum < SDL_arraysize(xmodel_polyobj_xlate))
+		return xmodel_polyobj_xlate[modelnum];
+	if (mt == XM_POWERUP && modelnum >= 0 && modelnum < SDL_arraysize(xmodel_powerup_xlate))
+		return xmodel_powerup_xlate[modelnum];
+	return -1;
+}
+
 // returns 1 if drawn
-int xmodel_show_if_loaded(int modelnum, vms_vector *pos, vms_matrix *orient, int mpcolor, g3s_lrgb *light) {
-	int xmodelnum = xmodel_xlate[modelnum];
+int xmodel_show_if_loaded(enum xmodel_type mt, int modelnum, vms_vector *pos, vms_matrix *orient, int mpcolor, g3s_lrgb *light) {
+	int xmodelnum = xmodel_xlate(mt, modelnum);
 	if (xmodelnum == -1 || !xmodels[xmodelnum])
 		return 0;
 	xmodel_show_at(xmodels[xmodelnum], pos, orient, xmodelnum == model_pyrogl ? mpcolor : -1, light);
 	return 1;
 }
 
-int xmodel_exists(int modelnum) {
-	int xmodelnum = xmodel_xlate[modelnum];
+int xmodel_exists(enum xmodel_type mt, int modelnum) {
+	int xmodelnum = xmodel_xlate(mt, modelnum);
 	return xmodelnum != -1 && xmodels[xmodelnum];
 }

@@ -58,6 +58,23 @@ enum modelnums {
 	model_laser2_outer,
 	model_laser3_outer,
 	model_laser4_outer,
+	model_pow_extralife,
+	model_pow_laser,
+	model_pow_vulcan,
+	model_pow_spreadfire,
+	model_pow_plasma,
+	model_pow_fusion,
+	model_pow_pminepack,
+	model_weapon_proxmine,
+	model_pow_concussion4,
+	model_pow_homer4,
+	model_pow_quadlaser,
+	model_pow_cloak,
+	model_pow_invul,
+	model_pow_bluekey,
+	model_pow_redkey,
+	model_pow_goldkey,
+	model_pow_vulcanammo
 };
 
 const char *xmodelnames[] = {
@@ -66,16 +83,37 @@ const char *xmodelnames[] = {
 	"homer.ase",
 	"smartmsl.ase",
 	"mega.ase",
-	"fusion.ase",
+	"fusionblob.ase",
 	"laser1.ase",
 	"laser2.ase",
 	"laser3.ase",
-	"laser4.ase"
+	"laser4.ase",
+	"extralife.ase",
+	"laser.ase",
+	"vulcan.ase",
+	"spreadfire.ase",
+	"plasma.ase",
+	"fusion.ase",
+	"pminepack.ase",
+	"proxmine.ase",
+	"concussion4.ase",
+	"homer4.ase",
+	"quadlaser.ase",
+	"cloak.ase",
+	"invul.ase",
+	"bluekey.ase",
+	"redkey.ase",
+	"goldkey.ase",
+	"vulcanammo.ase",
+	"concussion.ase",
+	"homer.ase",
+	"smartmsl.ase",
+	"mega.ase"
 };
 
 #define NUM_XMODELS ((int)(sizeof(xmodelnames) / sizeof(xmodelnames[0])))
 
-short xmodel_xlate[] = {
+short xmodel_polyobj_xlate[] = {
 	model_mediumhulk,
 	model_mediumhulk,
 	model_mediumlifter,
@@ -154,4 +192,46 @@ short xmodel_xlate[] = {
 	model_botlas4_outer,
 	model_botlas4_inner,
 	model_mega
+};
+
+enum {
+	model_pow_energy = -1,
+	model_pow_shield = -1,
+	model_pow_radar_robots = -1,
+	model_pow_radar_powerups = -1,
+	model_pow_full_map = -1,
+	model_pow_turbo = -1,
+	model_pow_headlight = -1,
+	model_pow_megawow = -1
+};
+
+short xmodel_powerup_xlate[] = {
+	model_pow_extralife,
+	model_pow_energy,
+	model_pow_shield,
+	model_pow_laser,
+	model_pow_bluekey,
+	model_pow_redkey,
+	model_pow_goldkey,
+	model_pow_radar_robots,
+	model_pow_radar_powerups,
+	model_pow_full_map,
+	model_concussion,
+	model_pow_concussion4,
+	model_pow_quadlaser,
+	model_pow_vulcan,
+	model_pow_spreadfire,
+	model_pow_plasma,
+	model_pow_fusion,
+	model_pow_pminepack,
+	model_homer,
+	model_pow_homer4,
+	model_smartmsl,
+	model_mega,
+	model_pow_vulcanammo,
+	model_pow_cloak,
+	model_pow_turbo,
+	model_pow_invul,
+	model_pow_headlight,
+	model_pow_megawow
 };
