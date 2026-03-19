@@ -13,7 +13,7 @@
 
 struct d_event;
 
-#define MAX_JOYSTICKS				8
+#define MAX_JOYSTICKS				16
 #define MAX_AXES_PER_JOYSTICK		128
 #define MAX_BUTTONS_PER_JOYSTICK	128
 #define MAX_HATS_PER_JOYSTICK		4
