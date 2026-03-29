@@ -1454,6 +1454,8 @@ int read_netgame_settings_file(const char *filename, netgame_info *ng, int no_na
 			//	ng->DarkSmartBlobs = strtol(value, NULL, 10);
 			else if (!strcmp(token, "LowVulcan"))
 				ng->LowVulcan = strtol(value, NULL, 10);
+			else if (!strcmp(token, "AckAckMode"))
+				ng->AckAckMode = strtol(value, NULL, 10);
 			else if (!strcmp(token, "AllowPreferredColors"))
 				ng->AllowPreferredColors = strtol(value, NULL, 10);		
 			else if (!strcmp(token, "AllowColoredLighting"))
@@ -1537,6 +1539,7 @@ int write_netgame_settings_file(const char *filename, netgame_info *ng, int no_n
 	PHYSFSX_printf(file, "RespawnConcs=%i\n", ng->RespawnConcs);
 	//PHYSFSX_printf(file, "DarkSmartBlobs=%i\n", ng->DarkSmartBlobs);
 	PHYSFSX_printf(file, "LowVulcan=%i\n", ng->LowVulcan);
+	PHYSFSX_printf(file, "AckAckMode=%i\n", ng->AckAckMode);
 	PHYSFSX_printf(file, "AllowPreferredColors=%i\n", ng->AllowPreferredColors);
 	PHYSFSX_printf(file, "AllowColoredLighting=%i\n", ng->AllowColoredLighting);
 	PHYSFSX_printf(file, "FairColors=%i\n", ng->FairColors);
