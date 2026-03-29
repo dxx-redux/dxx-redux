@@ -384,6 +384,12 @@ void collide_player_and_wall( object * playerobj, fix hitspeed, short hitseg, sh
 					con_printf(CON_NORMAL, "You took %.1f damage from hitting a wall, shields now %.1f\n", f2fl(damage), f2fl(Players[Player_num].shields - damage));
 
 					multi_send_damage(damage, Players[Player_num].shields, OBJ_WALL, 0, DAMAGE_WALL, NULL);
+					
+					// Record wall collision kill
+					if (Players[Player_num].shields - damage < 0)
+					{
+						multi_record_killer_weapon(Player_num, 3, 0);  // 3 = environment
+					}
 				}
 			  	#endif
 			  	apply_damage_to_player( playerobj, playerobj, damage, 0 );			  	
@@ -442,6 +448,11 @@ int check_volatile_wall(object *obj,int segnum,int sidenum,vms_vector *hitpt)
 						con_printf(CON_NORMAL, "You took %.1f damage from lava, shields now %.1f\n", f2fl(damage), f2fl(Players[Player_num].shields - damage));
 
 						multi_send_damage(damage, Players[Player_num].shields, OBJ_WALL, 0, DAMAGE_LAVA, NULL);
+						
+						if (Players[Player_num].shields - damage < 0)
+						{
+							multi_record_killer_weapon(Player_num, 3, 1);  // 3 = environment, 1 = lava
+						}
 					}
 					#endif
 					  	
@@ -2447,6 +2458,11 @@ void collide_player_and_weapon( object * playerobj, object * weapon, vms_vector 
 						f2fl(damage), killer_name, weapon_name, f2fl(Players[Player_num].shields - damage));
 
 					multi_send_damage(damage, Players[Player_num].shields, killer->type, killer->id, DAMAGE_WEAPON, weapon);
+					
+					if (Players[Player_num].shields - damage < 0)
+					{
+						multi_record_killer_weapon(Player_num, 0, weapon->id);  // 0 = weapon kill
+					}
 				}
 				#endif
 			}
@@ -2485,6 +2501,11 @@ void collide_player_and_nasty_robot( object * playerobj, object * robot, vms_vec
 			con_printf(CON_NORMAL, "You took %.1f damage from bumping a robot, shields now %.1f\n", f2fl(damage), f2fl(Players[Player_num].shields - damage));
 
 			multi_send_damage(damage, Players[Player_num].shields, OBJ_ROBOT, 0, DAMAGE_COLLISION, NULL);
+			
+			if (Players[Player_num].shields - damage < 0)
+			{
+				multi_record_killer_weapon(Player_num, 1, robot->id);  // 1 = robot kill
+			}
 		}
 	#endif
 	apply_damage_to_player( playerobj, robot, damage, 0);
@@ -2525,6 +2546,16 @@ void collide_player_and_materialization_center(object *objp)
 
 	bump_one_object(objp, &exit_dir, 64*F1_0);
 
+	#ifdef NETWORK
+	if (Game_mode & GM_MULTI)
+	{
+		// Record materialization center kill
+		if (Players[Player_num].shields - 4*F1_0 < 0)
+		{
+			multi_record_killer_weapon(Player_num, 3, 2);  // 3 = environment, 2 = matcen
+		}
+	}
+	#endif
 	apply_damage_to_player( objp, objp, 4*F1_0, 0);	//	Changed, MK, 2/19/96, make killer the player, so if you die in matcen, will say you killed yourself
 
 	return;

@@ -277,6 +277,12 @@ object *object_create_explosion_sub(object *objp, short segnum, vms_vector * pos
 										con_printf(CON_NORMAL, "You took %.1f damage from %s's %s blast, shields now %.1f\n", f2fl(damage), killer_name, weapon_name, f2fl(Players[Player_num].shields - damage));
 
 										multi_send_damage(damage, obj0p->shields, killer->type, killer->id, DAMAGE_BLAST, objp);
+										
+										// Record explosion kill (missile, smart, mega, etc.)
+										if (obj0p->shields - damage < 0 && objp != NULL && objp->type == OBJ_WEAPON)
+										{
+											multi_record_killer_weapon(obj0p->id, 0, objp->id);  // 0 = weapon kill
+										}
 									} else if ((obj0p->id == Player_num) && (! Player_is_dead)) {
 										con_printf(CON_NORMAL, "You took %.1f damage from a %s blast, shields now %.1f\n",
 											f2fl(damage),
@@ -284,6 +290,15 @@ object *object_create_explosion_sub(object *objp, short segnum, vms_vector * pos
 											f2fl(Players[Player_num].shields - damage));
 
 										multi_send_damage(damage, obj0p->shields, obj_type, 0, DAMAGE_BLAST, objp);
+										
+										// Record explosion kill from environment/other sources
+										if (obj0p->shields - damage < 0)
+										{
+											if (objp != NULL && objp->type == OBJ_WEAPON)
+												multi_record_killer_weapon(obj0p->id, 0, objp->id);  // Weapon explosion
+											else
+												multi_record_killer_weapon(obj0p->id, 3, obj_type);  // 3 = environment
+										}
 									}
 
 									// Explosions CAN be friendly fire.

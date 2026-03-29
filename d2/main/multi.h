@@ -288,6 +288,7 @@ void multi_send_play_sound(int sound_num, fix volume);
 void multi_send_audio_taunt(int taunt_num);
 void multi_send_score(void);
 void multi_send_trigger(int trigger);
+void multi_record_killer_weapon(int player_num, int weapon_type, int weapon_id);
 void multi_send_hostage_door_status(int wallnum);
 void multi_send_drop_weapon (int objnum,int seed);
 void multi_send_drop_marker (int player,vms_vector position,char messagenum,char text[]);

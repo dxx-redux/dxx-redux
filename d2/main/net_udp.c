@@ -151,6 +151,10 @@ void add_message_to_obs_buffer(ubyte *data, int data_len, int needack);
 void check_obs_buffer(fix64 now);
 void forward_to_observers_nodelay(ubyte *data, int data_len, int needack);
 void net_udp_process_obs_quit(ubyte *data, int data_len, struct _sockaddr sender_addr);
+void net_udp_send_gamelog_kill(int killer_id, int killed_id, int weapon_type, int weapon_id);
+void net_udp_send_gamelog_chat(int player_id, const char *message);
+void net_udp_process_gamelog_kill(ubyte *data, int data_len);
+void net_udp_process_gamelog_chat(ubyte *data, int data_len);
 
 void net_udp_reset_connection_statuses(); 
 
@@ -3605,6 +3609,14 @@ void net_udp_process_packet(ubyte *data, struct _sockaddr sender_addr, int lengt
 		case UPID_REATTEMPT_DIRECT:
 			net_udp_process_p2p_reattempt_direct( data, sender_addr, length);
 			break; 
+
+		case UPID_GAMELOG_KILL:
+			net_udp_process_gamelog_kill(data, length);
+			break;
+
+		case UPID_GAMELOG_CHAT:
+			net_udp_process_gamelog_chat(data, length);
+			break;
 
 		default:
 			con_printf(CON_DEBUG, "unknown packet type received - type %i\n", data[0]);
@@ -7849,4 +7861,148 @@ void net_udp_process_obs_quit(ubyte *data, int data_len, struct _sockaddr sender
 	memset(&Netgame.observers[obsnum], 0, sizeof(netplayer_info));
 	Netgame.numobservers--;
 	multi_send_obs_update(1, 0);
+}
+// Send kill event to all players for gamelog synchronization
+void net_udp_send_gamelog_kill(int killer_id, int killed_id, int weapon_type, int weapon_id)
+{
+	if (!multi_i_am_master())
+		return;
+	
+	ubyte buf[UPID_GAMELOG_KILL_SIZE];
+	int len = 0;
+	
+	buf[len] = UPID_GAMELOG_KILL; len++;
+	
+	// Send timestamp as fix64 (8 bytes)
+	memcpy(buf + len, &GameTime64, sizeof(fix64)); len += sizeof(fix64);
+	
+	buf[len] = (ubyte)killer_id; len++;
+	buf[len] = (ubyte)killed_id; len++;
+	buf[len] = (ubyte)weapon_type; len++;
+	buf[len] = (ubyte)weapon_id; len++;
+	
+	// Send to tracker
+#ifdef USE_TRACKER
+	if (GameArg.MplTrackerAddr && GameArg.MplTrackerAddr[0])
+	{
+		dxx_sendto(UDP_Socket[2], buf, len, 0, (struct sockaddr *)&TrackerSocket, sizeof(TrackerSocket));
+	}
+#endif
+	
+	// Send to all players
+	for (int i = 1; i < N_players; i++)
+	{
+		if (Players[i].connected == CONNECT_PLAYING)
+			dxx_sendto(UDP_Socket[0], buf, len, 0, (struct sockaddr *)&Netgame.players[i].protocol.udp.addr, sizeof(struct _sockaddr));
+	}
+	
+	// Also forward to observers
+	for (int i = 0; i < Netgame.max_numobservers; i++)
+	{
+		if (Netgame.observers[i].connected)
+			dxx_sendto(UDP_Socket[0], buf, len, 0, (struct sockaddr *)&Netgame.observers[i].protocol.udp.addr, sizeof(struct _sockaddr));
+	}
+}
+
+// Send chat message to all players for gamelog synchronization
+void net_udp_send_gamelog_chat(int player_id, const char *message)
+{
+	if (!multi_i_am_master())
+		return;
+	
+	ubyte buf[128];
+	int len = 0;
+	
+	buf[len] = UPID_GAMELOG_CHAT; len++;
+	
+	// Send timestamp as fix64 (8 bytes)
+	memcpy(buf + len, &GameTime64, sizeof(fix64)); len += sizeof(fix64);
+	
+	buf[len] = (ubyte)player_id; len++;
+	
+	// Copy message
+	int msg_len = strlen(message);
+	if (msg_len > MAX_MESSAGE_LEN - 1)
+		msg_len = MAX_MESSAGE_LEN - 1;
+	memcpy(&buf[len], message, msg_len);
+	len += msg_len;
+	buf[len] = '\0'; len++;
+	
+	// Send to tracker
+#ifdef USE_TRACKER
+	if (GameArg.MplTrackerAddr && GameArg.MplTrackerAddr[0])
+	{
+		dxx_sendto(UDP_Socket[2], buf, len, 0, (struct sockaddr *)&TrackerSocket, sizeof(TrackerSocket));
+	}
+#endif
+	
+	// Send to all players
+	for (int i = 1; i < N_players; i++)
+	{
+		if (Players[i].connected == CONNECT_PLAYING)
+			dxx_sendto(UDP_Socket[0], buf, len, 0, (struct sockaddr *)&Netgame.players[i].protocol.udp.addr, sizeof(struct _sockaddr));
+	}
+	
+	// Also forward to observers
+	for (int i = 0; i < Netgame.max_numobservers; i++)
+	{
+		if (Netgame.observers[i].connected)
+			dxx_sendto(UDP_Socket[0], buf, len, 0, (struct sockaddr *)&Netgame.observers[i].protocol.udp.addr, sizeof(struct _sockaddr));
+	}
+}
+
+// Process received kill event
+void net_udp_process_gamelog_kill(ubyte *data, int data_len)
+{
+	int len = 1; // Skip packet type
+	fix64 timestamp;
+	int killer_id, killed_id, weapon_type, weapon_id;
+	
+	if (data_len < UPID_GAMELOG_KILL_SIZE)
+		return;
+	
+	// Read timestamp
+	memcpy(&timestamp, data + len, sizeof(fix64)); len += sizeof(fix64);
+	
+	killer_id = data[len]; len++;
+	killed_id = data[len]; len++;
+	weapon_type = data[len]; len++;
+	weapon_id = data[len]; len++;
+	
+	// Log to game log if available
+	// This is processed by clients to keep their gamelogs synchronized
+	// The actual logging is handled by the existing gamelog system
+	
+	con_printf(CON_DEBUG, "Gamelog: Player %d killed Player %d with weapon %d (type %d) at time %d\n", 
+			   killer_id, killed_id, weapon_id, weapon_type, (int)timestamp);
+}
+
+// Process received chat message
+void net_udp_process_gamelog_chat(ubyte *data, int data_len)
+{
+	int len = 1; // Skip packet type
+	fix64 timestamp;
+	int player_id;
+	char message[MAX_MESSAGE_LEN];
+	
+	if (data_len < 10) // Minimum size check
+		return;
+	
+	// Read timestamp
+	memcpy(&timestamp, data + len, sizeof(fix64)); len += sizeof(fix64);
+	
+	player_id = data[len]; len++;
+	
+	// Copy message
+	int remaining = data_len - len;
+	if (remaining > MAX_MESSAGE_LEN - 1)
+		remaining = MAX_MESSAGE_LEN - 1;
+	memcpy(message, &data[len], remaining);
+	message[remaining] = '\0';
+	
+	// Log to game log if available
+	// This is processed by clients to keep their gamelogs synchronized
+	
+	con_printf(CON_DEBUG, "Gamelog: Player %d sent message at time %d: %s\n", 
+			   player_id, (int)timestamp, message);
 }
