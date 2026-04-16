@@ -131,6 +131,7 @@ int new_player_config()
 	PlayerCfg.DisableCockpit = 0;  /* DisableCockpit */ 
 	PlayerCfg.StickyRearview = 0; /* StickyRearview */ 
 	PlayerCfg.SelectAfterFire = 1;  /* SelectAfterFire */
+	PlayerCfg.AutoselectOnlyOnce = 0;
 	PlayerCfg.VulcanAmmoWarnings = 1; 
 	PlayerCfg.ShieldWarnings = 0; 
 	PlayerCfg.AutoDemoSp = 0;
@@ -407,6 +408,8 @@ int read_player_d2x(char *filename)
 					PlayerCfg.NoFireAutoselect = atoi(line);
 				if(!strcmp(word,"CYCLEAUTOSELECTONLY"))
 					PlayerCfg.CycleAutoselectOnly = atoi(line);
+				if(!strcmp(word,"AUTOSELECTONLYFIRSTWEAPONPICKUP"))
+					PlayerCfg.AutoselectOnlyOnce = atoi(line);
 				if(!strcmp(word,"VULCANAMMOWARNINGS"))
 					PlayerCfg.VulcanAmmoWarnings = atoi(line);	
 				if(!strcmp(word,"SHIELDWARNINGS"))
@@ -697,6 +700,7 @@ int write_player_d2x(char *filename)
 		PHYSFSX_printf(fout,"selectafterfire=%i\n",PlayerCfg.SelectAfterFire); /* SelectAfterFire */ 		
 		PHYSFSX_printf(fout,"nofireautoselect=%i\n",PlayerCfg.NoFireAutoselect);
 		PHYSFSX_printf(fout,"cycleautoselectonly=%i\n",PlayerCfg.CycleAutoselectOnly);
+		PHYSFSX_printf(fout,"autoselectonlyfirstweaponpickup=%i\n",PlayerCfg.AutoselectOnlyOnce);
 		PHYSFSX_printf(fout,"vulcanammowarnings=%i\n",PlayerCfg.VulcanAmmoWarnings);		
 		PHYSFSX_printf(fout,"shieldwarnings=%i\n",PlayerCfg.ShieldWarnings);
 		PHYSFSX_printf(fout,"autodemosp=%i\n",PlayerCfg.AutoDemoSp);

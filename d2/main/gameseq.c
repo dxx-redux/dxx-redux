@@ -439,6 +439,9 @@ void init_player_stats_new_ship(ubyte pnum)
 		Missile_viewer=NULL; //reset missile camera if out there
 		Missile_viewer_sig=-1;
 		init_ai_for_ship();
+
+		PrimaryWeaponPickedUp = 0;
+		SecondaryWeaponPickedUp = 0;
 	}
 
 	Players[pnum].energy = INITIAL_ENERGY;
