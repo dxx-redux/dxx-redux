@@ -136,6 +136,7 @@ typedef struct player_config
 	ubyte ObsHideEnergyWeaponMuzzle[NUM_OBS_MODES];
 	ubyte NoChatSound;
 	ubyte ClassicAutoselectWeapon;
+	ubyte AutoselectOnlyOnce;
 } __pack__ player_config;
 
 extern struct player_config PlayerCfg;

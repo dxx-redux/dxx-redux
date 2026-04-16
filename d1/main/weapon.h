@@ -168,6 +168,9 @@ int pick_up_quads();
 // Run a delayed autoselect, if one is waiting
 void delayed_autoselect();
 
+extern int PrimaryWeaponPickedUp;
+extern int SecondaryWeaponPickedUp;
+
 //called when ammo (for the vulcan cannon) is picked up
 int pick_up_ammo(int class_flag,int weapon_index,int ammo_count);
 
