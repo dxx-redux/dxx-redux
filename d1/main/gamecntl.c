@@ -831,6 +831,7 @@ int HandleGameKey(int key)
 void kill_and_so_forth(void)
 {
 	int     i, j;
+	vms_vector exit_fvec;
 
 	HUD_init_message_literal(HM_DEFAULT, "Killing, awarding, etc.!");
 
@@ -852,6 +853,13 @@ void kill_and_so_forth(void)
 			for (j=0; j<Num_walls; j++) {
 				if (Walls[j].trigger == i) {
 					compute_segment_center(&ConsoleObject->pos, &Segments[Walls[j].segnum]);
+#ifdef COMPACT_SEGS
+					get_side_normal(&Segments[Walls[j].segnum], Walls[j].sidenum, 0, &exit_fvec);
+#else
+					exit_fvec = Segments[Walls[j].segnum].sides[Walls[j].sidenum].normals[0];
+#endif
+					vm_vec_negate(&exit_fvec);
+					vm_vector_2_matrix(&ConsoleObject->orient, &exit_fvec, NULL, NULL);
 					obj_relink(ConsoleObject-Objects,Walls[j].segnum);
 					goto kasf_done;
 				}
