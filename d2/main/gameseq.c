@@ -721,6 +721,14 @@ void load_level_robots(int level_num)
 	Robot_replacements_loaded |= multi_change_weapon_info();
 }
 
+void verify_objects()
+{
+	int i;
+
+	for (i = 0; i <= Highest_object_index; i++)
+		verify_object(&Objects[i]);
+}
+
 //load a level off disk. level numbers start at 1.  Secret levels are -1,-2,-3
 void LoadLevel(int level_num,int page_in_textures)
 {
@@ -770,6 +778,8 @@ void LoadLevel(int level_num,int page_in_textures)
 		load_bitmap_replacements(level_name);
 
 	load_level_robots(level_num);
+
+	verify_objects(); // set proper robot properties if customized
 
 	if ( page_in_textures ) {
 		piggy_load_level_data();
