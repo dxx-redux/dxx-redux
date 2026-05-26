@@ -1512,10 +1512,7 @@ try_again:
 				int iff_error;
 				ubyte pal[768];
 
-				if (terrain_bm_instance.bm_data)
-					d_free(terrain_bm_instance.bm_data);
-
-				Assert(terrain_bm_instance.bm_data == NULL);
+				gr_free_bitmap_data(&terrain_bm_instance);
 
 				iff_error = iff_read_bitmap(p,&terrain_bm_instance,BM_LINEAR,pal);
 				if (iff_error != IFF_NO_ERROR) {
@@ -1553,8 +1550,7 @@ try_again:
 				int iff_error;
 				ubyte pal[768];
 
-				if (satellite_bm_instance.bm_data)
-					d_free(satellite_bm_instance.bm_data);
+				gr_free_bitmap_data(&satellite_bm_instance);
 
 				iff_error = iff_read_bitmap(p,&satellite_bm_instance,BM_LINEAR,pal);
 				if (iff_error != IFF_NO_ERROR) {
