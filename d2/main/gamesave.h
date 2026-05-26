@@ -39,4 +39,6 @@ extern void write_game_text_file(char *filename);
 
 extern int Errors_in_mine;
 
+extern void verify_object(object *obj);
+
 #endif /* _GAMESAVE_H */
