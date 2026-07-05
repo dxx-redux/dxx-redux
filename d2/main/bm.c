@@ -588,6 +588,8 @@ int load_exit_models()
 		return 0;
 	}
 
+	Robot_replacements_loaded = 1; // indicate extra robots need to be reloaded
+
 	return 1;
 }
 
