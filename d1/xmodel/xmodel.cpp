@@ -250,15 +250,17 @@ void xmodel_show_at(void *model, vms_vector *pos, vms_matrix *orient, int mpcolo
 
 	// create 4x4 lookat matrix
 	float fm[16];
-	fix *xp = &vmat.rvec.x;
+	fix vmat_elem[] = { vmat.rvec.x, vmat.rvec.y, vmat.rvec.z,
+		vmat.uvec.x, vmat.uvec.y, vmat.uvec.z,
+		vmat.fvec.x, vmat.fvec.y, vmat.fvec.z };
 	for (int i = 0; i < 3; i++) {
 		for (int j = 0; j < 3; j++)
-			fm[i * 4 + j] = f2fl(xp[j * 3 + i]);
+			fm[i * 4 + j] = f2fl(vmat_elem[j * 3 + i]);
 		fm[i * 4 + 3] = 0;
 	}
-	xp = &vpos.x;
+	fix vpos_elem[] = { vpos.x, vpos.y, vpos.z };
 	for (int j = 0; j < 3; j++)
-		fm[3 * 4 + j] = -f2fl(xp[j]);
+		fm[3 * 4 + j] = -f2fl(vpos_elem[j]);
 	fm[15] = 1;
 
 	// forward vec -> backward vec
