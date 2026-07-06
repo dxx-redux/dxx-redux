@@ -3204,6 +3204,8 @@ void observer_maybe_show_kill_graph() {
 		char reason[20];
 		char damage_info_text[40];
 
+		gr_set_curfont(GAME_FONT);
+
 		if (drawn_players <= 2) {
 			// Show top 3 damage done sources per pilot.
 			y -= (LINE_SPACING * 5);
