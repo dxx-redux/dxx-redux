@@ -14,7 +14,7 @@ on:
 jobs:
   macos:
     name: macOS Apps
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - name: Clone repository
         uses: actions/checkout@v3
