@@ -316,7 +316,11 @@ int ogl_init_window(int x, int y)
 		ogl_smash_texture_list_internal();//if we are or were fullscreen, changing vid mode will invalidate current textures
 
 	SDL_WM_SetCaption(DESCENT_VERSION, "Descent II");
-	SDL_WM_SetIcon( SDL_LoadBMP( "d2x-redux.bmp" ), NULL );
+	SDL_Surface *icon = SDL_LoadBMP( "d2x-redux.bmp" );
+	if (icon) {
+		SDL_WM_SetIcon( icon, NULL );
+		SDL_FreeSurface( icon );
+	}
 
 	use_x=x;
 	use_y=y;
