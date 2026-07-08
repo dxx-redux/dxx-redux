@@ -101,7 +101,11 @@ int gr_set_mode(u_int32_t mode)
 	sdl_video_flags = (sdl_video_flags & ~SDL_NOFRAME) | (GameCfg.BorderlessWindow ? SDL_NOFRAME : 0);
 
 	SDL_WM_SetCaption(DESCENT_VERSION, "Descent");
-	SDL_WM_SetIcon( SDL_LoadBMP( "d1x-redux.bmp" ), NULL );
+	SDL_Surface *icon = SDL_LoadBMP( "d1x-redux.bmp" );
+	if (icon) {
+		SDL_WM_SetIcon( icon, NULL );
+		SDL_FreeSurface( icon );
+	}
 
 	if(SDL_VideoModeOK(w,h,GameArg.DbgBpp,sdl_video_flags))
 	{
