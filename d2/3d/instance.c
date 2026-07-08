@@ -22,7 +22,7 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "3d.h"
 #include "globvars.h"
 
-#define MAX_INSTANCE_DEPTH	5
+#define MAX_INSTANCE_DEPTH	10
 
 struct instance_context {
 	vms_matrix m;
