@@ -181,6 +181,7 @@ static int nd_record_v_frame_number = -1;
 static short nd_record_v_framebytes_written = 0;
 static int nd_record_v_recordframe = 1;
 static fix64 nd_record_v_recordframe_last_time = 0;
+static ubyte nd_record_v_obj_recorded[MAX_OBJECTS];	// per-frame dedup: object already written to this demo frame (union of surround views)
 static sbyte nd_record_v_no_space;
 static int nd_record_v_player_energy = -1;
 static int nd_record_v_player_shields = -1;
@@ -912,6 +913,7 @@ void newdemo_record_start_frame(fix frame_time )
 			frame_time = REC_DELAY;
 		nd_record_v_recordframe_last_time = GameTime64-(GameTime64-(nd_record_v_recordframe_last_time + REC_DELAY));
 		nd_record_v_recordframe=1;
+		memset(nd_record_v_obj_recorded, 0, sizeof(nd_record_v_obj_recorded));
 
 		stop_time();
 		nd_record_v_frame_number -= nd_record_v_start_frame;
@@ -935,6 +937,12 @@ void newdemo_record_render_object(object * obj)
 {
 	if (!nd_record_v_recordframe)
 		return;
+	{
+		int objnum = obj - Objects;
+		if (nd_record_v_obj_recorded[objnum])
+			return;
+		nd_record_v_obj_recorded[objnum] = 1;
+	}
 	stop_time();
 	nd_write_byte(ND_EVENT_RENDER_OBJECT);
 	nd_write_object(obj);
