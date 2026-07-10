@@ -28,6 +28,8 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "texmap.h"
 #include "render.h"
 #include "game.h"
+#include "config.h"
+#include "surround.h"
 #include "object.h"
 #include "laser.h"
 #include "textures.h"
@@ -1356,6 +1358,77 @@ extern int Total_pixels;
 
 int Rear_view=0;
 
+int Surround_view = -1;		//which surround view is being rendered: -1=off, 0=left, 1=center, 2=right
+
+static grs_canvas Surround_ui_canvas;
+
+extern vms_vector Window_scale;		//3d/globvars.c; set by g3_start_frame() for the current canvas
+
+int surround_enabled(void)
+{
+	return GameCfg.SurroundMode &&
+		(GameCfg.SurroundAngle == 150 || GameCfg.SurroundAngle == 180 || GameCfg.SurroundAngle == 270);
+}
+
+fixang surround_view_angle(void)
+{
+	return (fixang)((0x10000L * (GameCfg.SurroundAngle / 3)) / 360);
+}
+
+void surround_ui_rect(int *x, int *w)
+{
+	if (surround_enabled()) {
+		*w = grd_curscreen->sc_canvas.cv_bitmap.bm_w / 3;
+		*x = *w;
+	} else {
+		*x = 0;
+		*w = grd_curscreen->sc_canvas.cv_bitmap.bm_w;
+	}
+}
+
+void surround_set_ui_canvas(void)
+{
+	int x, w;
+
+	if (!surround_enabled()) {
+		gr_set_current_canvas(NULL);
+		return;
+	}
+
+	gr_set_current_canvas(NULL);
+	gr_clear_canvas(BM_XRGB(0,0,0));	//blank the side monitors
+	surround_ui_rect(&x, &w);
+	gr_init_sub_canvas(&Surround_ui_canvas, &grd_curscreen->sc_canvas, x, 0, w, grd_curscreen->sc_canvas.cv_bitmap.bm_h);
+	gr_set_current_canvas(&Surround_ui_canvas);
+}
+
+//set the view matrix for a player-eye view. When a surround view is active,
+//yaw by -A/0/+A (A = per-monitor angle) and set zoom so the horizontal FOV is
+//exactly A - adjacent frustum edges then coincide, making seams invisible.
+//Must be called after g3_start_frame() (uses Window_scale of the current canvas).
+void g3_set_player_view_matrix(vms_vector *view_pos, vms_matrix *view_matrix, fix zoom)
+{
+	vms_angvec av;
+	vms_matrix rotm, viewm;
+	fixang a;
+	fix s, c;
+
+	if (Surround_view < 0) {
+		g3_set_view_matrix(view_pos, view_matrix, zoom);
+		return;
+	}
+
+	a = surround_view_angle();
+
+	av.p = av.b = 0;
+	av.h = (fixang)((Surround_view - 1) * (int)a);
+	vm_angles_2_matrix(&rotm, &av);
+	vm_matrix_x_matrix(&viewm, view_matrix, &rotm);
+
+	fix_sincos((fix)(a / 2), &s, &c);
+	g3_set_view_matrix(view_pos, &viewm, fixmul(fixdiv(s, c), Window_scale.x));
+}
+
 void start_lighting_frame(object *viewer);
 
 #ifdef JOHN_ZOOM
@@ -1372,13 +1445,14 @@ void render_frame(fix eye_offset)
 	}
 
 	if ( Newdemo_state == ND_STATE_RECORDING )	{
-		if (eye_offset >= 0 )	{
+		if (eye_offset >= 0 && Surround_view <= 0)	{	//in surround, only the first view records
 			newdemo_record_start_frame(FrameTime );
 			newdemo_record_viewer_object(Viewer);
 		}
 	}
 
-	start_lighting_frame(Viewer);		//this is for ugly light-smoothing hack
+	if (Surround_view <= 0)		//in surround, once per frame, not per view
+		start_lighting_frame(Viewer);		//this is for ugly light-smoothing hack
 
 	g3_start_frame();
 
@@ -1407,7 +1481,7 @@ void render_frame(fix eye_offset)
 		Player_head_angles.h = 0x7fff;
 		vm_angles_2_matrix(&headm,&Player_head_angles);
 		vm_matrix_x_matrix(&viewm,&Viewer->orient,&headm);
-		g3_set_view_matrix(&Viewer_eye,&viewm,Render_zoom);
+		g3_set_player_view_matrix(&Viewer_eye,&viewm,Render_zoom);
 	} else	{
 #ifdef JOHN_ZOOM
 		if (keyd_pressed[KEY_RSHIFT] )	{
@@ -1417,9 +1491,9 @@ void render_frame(fix eye_offset)
 			Zoom_factor -= FrameTime*4;
 			if (Zoom_factor < F1_0 ) Zoom_factor = F1_0;
 		}
-		g3_set_view_matrix(&Viewer_eye,&Viewer->orient,fixdiv(Render_zoom,Zoom_factor));
+		g3_set_player_view_matrix(&Viewer_eye,&Viewer->orient,fixdiv(Render_zoom,Zoom_factor));
 #else
-		g3_set_view_matrix(&Viewer_eye,&Viewer->orient,Render_zoom);
+		g3_set_player_view_matrix(&Viewer_eye,&Viewer->orient,Render_zoom);
 #endif
 	}
 
