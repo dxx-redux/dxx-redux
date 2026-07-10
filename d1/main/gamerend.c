@@ -36,6 +36,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "fix.h"
 #include "robot.h"
 #include "game.h"
+#include "surround.h"
 #include "gauges.h"
 #include "gamefont.h"
 #include "newdemo.h"
@@ -466,9 +467,26 @@ void update_cockpits();
 //render a frame for the game
 void game_render_frame_mono(int flip)
 {
-	gr_set_current_canvas(&Screen_3d_window);
-	
-	render_frame(0);
+	if (surround_enabled())	{
+		static grs_canvas surround_canv;
+		int vw = Screen_3d_window.cv_bitmap.bm_w / 3;
+		int vh = Screen_3d_window.cv_bitmap.bm_h;
+		int i;
+
+		for (i = 0; i < 3; i++)	{
+			int w = (i == 2) ? (Screen_3d_window.cv_bitmap.bm_w - 2 * vw) : vw;	//last view absorbs the rounding remainder
+
+			gr_init_sub_canvas(&surround_canv, &Screen_3d_window, i * vw, 0, w, vh);
+			gr_set_current_canvas(&surround_canv);
+			Surround_view = i;
+			render_frame(0);
+		}
+		Surround_view = -1;
+	} else	{
+		gr_set_current_canvas(&Screen_3d_window);
+
+		render_frame(0);
+	}
 
 	update_cockpits();
 
@@ -485,7 +503,14 @@ void game_render_frame_mono(int flip)
 	if (Newdemo_state == ND_STATE_PLAYBACK)
 		Game_mode = GM_NORMAL | (Game_mode & GM_OBSERVER);
 
-	gr_set_current_canvas(&Screen_3d_window);
+	if (surround_enabled())	{
+		static grs_canvas surround_hud_canv;
+		int vw = Screen_3d_window.cv_bitmap.bm_w / 3;
+
+		gr_init_sub_canvas(&surround_hud_canv, &Screen_3d_window, vw, 0, vw, Screen_3d_window.cv_bitmap.bm_h);
+		gr_set_current_canvas(&surround_hud_canv);
+	} else
+		gr_set_current_canvas(&Screen_3d_window);
 
 	game_draw_hud_stuff();
 
