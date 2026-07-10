@@ -65,6 +65,8 @@ static const char ClassicDepthStr[] ="ClassicDepth";
 static const char FPSIndicatorStr[] ="FPSIndicator";
 static const char GrabinputStr[] ="GrabInput";
 static const char BorderlessWindowStr[] ="BorderlessWindow";
+static const char SurroundModeStr[] ="SurroundMode";
+static const char SurroundAngleStr[] ="SurroundAngle";
 
 int ReadConfigFile()
 {
@@ -115,6 +117,8 @@ int ReadConfigFile()
 	GameCfg.FPSIndicator = 0;
 	GameCfg.Grabinput = 1;
 	GameCfg.BorderlessWindow = 0;
+	GameCfg.SurroundMode = 0;
+	GameCfg.SurroundAngle = 180;
 
 	infile = PHYSFSX_openReadBuffered("descent.cfg");
 
@@ -228,6 +232,10 @@ int ReadConfigFile()
 				GameCfg.Grabinput = strtol(value, NULL, 10);
 			else if (!strcmp(token, BorderlessWindowStr))
 				GameCfg.BorderlessWindow = strtol(value, NULL, 10);
+			else if (!strcmp(token, SurroundModeStr))
+				GameCfg.SurroundMode = strtol(value, NULL, 10);
+			else if (!strcmp(token, SurroundAngleStr))
+				GameCfg.SurroundAngle = strtol(value, NULL, 10);
 		}
 		d_free(line);
 	}
@@ -236,6 +244,10 @@ int ReadConfigFile()
 
 	if ( GameCfg.DigiVolume > 8 ) GameCfg.DigiVolume = 8;
 	if ( GameCfg.MusicVolume > 8 ) GameCfg.MusicVolume = 8;
+	if (GameCfg.SurroundMode)
+		GameCfg.SurroundMode = 1;
+	if (GameCfg.SurroundAngle != 150 && GameCfg.SurroundAngle != 180 && GameCfg.SurroundAngle != 270)
+		GameCfg.SurroundAngle = 180;
 
 	if (GameCfg.ResolutionX >= 320 && GameCfg.ResolutionY >= 200)
 		Game_screen_mode = SM(GameCfg.ResolutionX,GameCfg.ResolutionY);
@@ -284,6 +296,8 @@ int WriteConfigFile()
 	PHYSFSX_printf(infile, "%s=%i\n", FPSIndicatorStr, GameCfg.FPSIndicator);
 	PHYSFSX_printf(infile, "%s=%i\n", GrabinputStr, GameCfg.Grabinput);
 	PHYSFSX_printf(infile, "%s=%i\n", BorderlessWindowStr, GameCfg.BorderlessWindow);
+	PHYSFSX_printf(infile, "%s=%i\n", SurroundModeStr, GameCfg.SurroundMode);
+	PHYSFSX_printf(infile, "%s=%i\n", SurroundAngleStr, GameCfg.SurroundAngle);
 
 	PHYSFS_close(infile);
 
