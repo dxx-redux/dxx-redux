@@ -14,14 +14,18 @@ namespace D1U.Presentation
         float frameTime;
         Material material;
         int lastFrame = -1;
+        bool loop = true;
+        float spawnTime;
 
         public static BillboardSprite Create(string name, Texture2D[] frames, float frameTime,
-                                             float radius, Shader shader, float light)
+                                             float radius, Shader shader, float light, bool loop = true)
         {
             var go = new GameObject(name);
             var sprite = go.AddComponent<BillboardSprite>();
             sprite.frames = frames;
             sprite.frameTime = Mathf.Max(0.01f, frameTime);
+            sprite.loop = loop;
+            sprite.spawnTime = Time.time;
 
             sprite.material = new Material(shader) { name = name, hideFlags = HideFlags.HideAndDontSave };
             if (sprite.material.HasProperty("_Cull")) sprite.material.SetInt("_Cull", 0);
@@ -53,8 +57,21 @@ namespace D1U.Presentation
             var cam = Camera.main;
             if (cam != null)
                 transform.rotation = cam.transform.rotation;
-            if (frames != null && frames.Length > 1)
+
+            if (!loop)
+            {
+                int frame = (int)((Time.time - spawnTime) / frameTime);
+                if (frames == null || frame >= frames.Length)
+                {
+                    Destroy(gameObject);
+                    return;
+                }
+                SetFrame(frame);
+            }
+            else if (frames != null && frames.Length > 1)
+            {
                 SetFrame((int)(Time.time / frameTime) % frames.Length);
+            }
         }
 
         void OnDestroy()

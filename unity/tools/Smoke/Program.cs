@@ -473,5 +473,95 @@ catch (Exception e)
     errors++;
 }
 
+// --- 12. combat: weapons hit robots, reactor destruction opens exit (M5) ---
+Console.WriteLine("\ncombat (M5 phase 1):");
+try
+{
+    var fsMission3 = missionList.First(m => m.CacheKey == "firststrike");
+    var fsPath3 = D1U.Convert.MissionDxu.EnsureMission(hogsDir, fsMission3, cacheDir, null);
+    var (_, _, fsLevels3) = D1U.Convert.MissionDxu.Read(fsPath3, out _);
+    var lvl3 = fsLevels3[0];
+    var world3 = new D1U.Game.SegmentWorld(lvl3);
+
+    var clips3 = new D1U.Game.WallClipInfo[pig.WClips.Length];
+    for (int i = 0; i < clips3.Length; i++)
+        clips3[i] = new D1U.Game.WallClipInfo
+        {
+            PlayTime = pig.WClips[i] != null ? (float)(double)pig.WClips[i].PlayTime : 1f,
+            NumFrames = pig.WClips[i] != null ? pig.WClips[i].NumFrames : 1,
+            Tmap1 = pig.WClips[i] != null && (pig.WClips[i].Flags & 4) != 0,
+        };
+    var runtime3 = new D1U.Game.LevelRuntime(world3, clips3);
+
+    var robotStats = new D1U.Game.RobotStats[pig.numRobots];
+    for (int i = 0; i < pig.numRobots; i++)
+        robotStats[i] = new D1U.Game.RobotStats
+        {
+            Strength = (float)(double)pig.Robots[i].Strength,
+            ModelNum = pig.Robots[i].ModelNum,
+            DeathVClip = pig.Robots[i].DeathVClipNum,
+            DeathSound = pig.Robots[i].DeathSoundNum,
+        };
+    var objs = new D1U.Game.ObjectSystem(world3,
+        record => { var v = D1U.Convert.ObjectVisuals.Resolve(pig, record); return (v.ModelNum, v.VClipNum); },
+        robotStats, 200f) { Runtime = runtime3 };
+
+    var startObj = lvl3.Objects.First(o => o.Type == 4);
+    var robots = objs.Objects.Where(o => o.Type == 2).ToList();
+    Console.WriteLine($"  objects: {objs.Objects.Count} total, {objs.RobotsAlive} robots alive");
+
+    // laser 1 stats at Hotshot
+    var laserInfo = pig.Weapons[0];
+    var laser = new D1U.Game.WeaponStats
+    {
+        Speed = (float)(double)laserInfo.Speed[D1U.Game.ObjectSystem.Difficulty],
+        Strength = (float)(double)laserInfo.Strength[D1U.Game.ObjectSystem.Difficulty],
+        Lifetime = (float)(double)laserInfo.Lifetime,
+    };
+
+    // shoot a robot from 12 units away inside its own segment (guaranteed LOS)
+    var target = robots.OrderBy(r => System.Numerics.Vector3.Distance(r.Pos, startObj.Position)).First();
+    float shieldsBefore = target.Shields;
+    var aim = System.Numerics.Vector3.Normalize(target.Pos - startObj.Position);
+    var firePos = target.Pos - aim * 12f;
+    objs.FireWeapon(laser, 0, firePos, aim, target.Segnum);
+    for (int step = 0; step < 120; step++)
+        objs.MoveWeapons(1f / 60f);
+    bool robotHit = target.Shields < shieldsBefore;
+    Console.WriteLine($"  laser at robot (id {target.SubId}, from 12 units): " +
+                      $"shields {shieldsBefore:F1} -> {target.Shields:F1} hit={robotHit} " +
+                      $"(laser dmg {laser.Strength:F1})");
+    if (!robotHit)
+        errors++;
+
+    // and confirm the player-start shot correctly stops at world geometry
+    objs.FireWeapon(laser, 0, startObj.Position, aim, startObj.Segnum);
+    int weaponsAlive = objs.Objects.Count(o => o.Type == 5 && !o.Dead);
+    for (int step = 0; step < 600; step++)
+        objs.MoveWeapons(1f / 60f);
+    int weaponsAfter = objs.Objects.Count(o => o.Type == 5 && !o.Dead);
+    Console.WriteLine($"  wall-blocked shot: weapons {weaponsAlive} -> {weaponsAfter} (expired/impacted)");
+    if (weaponsAfter != 0)
+        errors++;
+
+    // destroy the reactor -> exit wall must open
+    var reactor = objs.Objects.First(o => o.Type == 9);
+    var (exitSeg, exitSide) = lvl3.ReactorTargets[0];
+    int exitWallIdx = runtime3.WallAt(exitSeg, exitSide);
+    bool exitBefore = world3.WallPassable[exitWallIdx];
+    objs.Damage(reactor, 10000f, reactor.Pos);
+    for (int step = 0; step < 120; step++)
+        runtime3.Tick(1f / 30f, -1, default, 0f);
+    bool exitOpen = world3.WallPassable[exitWallIdx];
+    Console.WriteLine($"  reactor destroyed={runtime3.ReactorDestroyed}, exit wall passable {exitBefore} -> {exitOpen}");
+    if (!runtime3.ReactorDestroyed || !exitOpen)
+        errors++;
+}
+catch (Exception e)
+{
+    Console.Error.WriteLine($"  M5 FAIL: {e.GetType().Name}: {e.Message}\n{e.StackTrace}");
+    errors++;
+}
+
 Console.WriteLine(errors == 0 ? "\nSMOKE OK" : $"\nSMOKE FAILED: {errors} error(s)");
 return errors == 0 ? 0 : 2;

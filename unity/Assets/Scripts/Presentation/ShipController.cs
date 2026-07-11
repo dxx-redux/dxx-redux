@@ -21,6 +21,11 @@ namespace D1U.Presentation
 
         public ShipState State => state;
         public LevelRuntime Runtime { get; set; }
+        public ObjectSystem Objects { get; set; }
+        public SoundFactory Sounds { get; set; }
+        public WeaponStats[] WeaponStats { get; set; }
+        public System.Numerics.Vector3[] GunPoints { get; set; }
+        public PlayerWeapons Weapons { get; } = new PlayerWeapons();
 
         public void Init(SegmentWorld world, ShipParams p, System.Numerics.Vector3 pos, Mat3 orient, int segnum)
         {
@@ -63,6 +68,19 @@ namespace D1U.Presentation
             gameTime += ft;
             sim.Step(state, shipParams, c, ft, gameTime);
             SyncTransform();
+
+            if (Runtime != null && Objects != null && WeaponStats != null)
+            {
+                Weapons.Tick(ft);
+                if (Input.GetMouseButton(0) &&
+                    Weapons.TryFirePrimary(Objects, Runtime.Player, WeaponStats, state, GunPoints))
+                {
+                    Sounds?.PlayAt(WeaponStats[Weapons.LaserLevel].FiringSound,
+                        new Vector3(state.Pos.X, state.Pos.Y, state.Pos.Z), 0.6f);
+                }
+                Objects.MoveWeapons(ft);
+                Objects.PickupScan(state.Pos, shipParams.Size, state.Segnum, Runtime.Player, Weapons);
+            }
 
             if (Runtime != null)
             {

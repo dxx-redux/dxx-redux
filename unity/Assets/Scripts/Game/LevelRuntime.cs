@@ -51,6 +51,7 @@ namespace D1U.Game
         readonly Dictionary<(int, int), int> wallBySide = new Dictionary<(int, int), int>();
         readonly byte[] wallFlags;
         readonly byte[] wallState;
+        readonly float[] wallHps;
         readonly ushort[] triggerFlags;
         readonly List<ActiveDoor> activeDoors = new List<ActiveDoor>();
 
@@ -71,11 +72,13 @@ namespace D1U.Game
 
             wallFlags = new byte[level.Walls.Count];
             wallState = new byte[level.Walls.Count];
+            wallHps = new float[level.Walls.Count];
             for (int w = 0; w < level.Walls.Count; w++)
             {
                 var wall = level.Walls[w];
                 wallFlags[w] = wall.Flags;
                 wallState[w] = wall.State;
+                wallHps[w] = wall.HitPoints;
                 wallBySide[(wall.SegmentIndex, wall.SideIndex)] = w;
             }
 
@@ -302,6 +305,20 @@ namespace D1U.Game
                 if (opposite >= 0 && level.Walls[opposite].TriggerIndex >= 0)
                     triggerFlags[level.Walls[opposite].TriggerIndex] &= unchecked((ushort)~TrigOn);
             }
+        }
+
+        /// <summary>wall_damage (wall.c:298) simplified: blastables blow at 0 hps.</summary>
+        public void DamageWall(int seg, int side, float damage)
+        {
+            int wall = WallAt(seg, side);
+            if (wall < 0)
+                return;
+            var record = level.Walls[wall];
+            if (record.Type != TypeBlastable || (wallFlags[wall] & FlagBlasted) != 0)
+                return;
+            wallHps[wall] -= damage;
+            if (wallHps[wall] <= 0f)
+                BlastWall(wall);
         }
 
         /// <summary>wall_toggle: doors open, blastables blast (switch.c do_link).</summary>

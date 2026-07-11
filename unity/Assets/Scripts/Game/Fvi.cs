@@ -10,6 +10,9 @@ namespace D1U.Game
         public Vector3 P0, P1;
         public int StartSeg;
         public float Rad;
+        public ObjectSystem Objects;        // null = walls only
+        public int ThisObj;                 // skip self
+        public Func<GameObj, bool> ObjectFilter;
     }
 
     public sealed class FviInfo
@@ -19,6 +22,7 @@ namespace D1U.Game
         public int HitSeg;
         public int HitSide;
         public int HitSideSeg;
+        public int HitObject = -1;
         public Vector3 WallNorm;
         public int[] SegList = new int[Fvi.MaxFviSegs];
         public int NSegs;
@@ -41,8 +45,13 @@ namespace D1U.Game
         int nSegsVisited;
 
         // fvi_sub -> find_vector_intersection communication globals (fvi.c:620-625)
-        int fviHitSeg, fviHitSide, fviHitSideSeg, fviHitSeg2;
+        int fviHitSeg, fviHitSide, fviHitSideSeg, fviHitSeg2, fviHitObject;
         Vector3 wallNorm;
+
+        // per-query object-check parameters
+        ObjectSystem queryObjects;
+        int queryThisObj;
+        Func<GameObj, bool> queryFilter;
 
         public Fvi(SegmentWorld world) => this.world = world;
 
@@ -52,6 +61,10 @@ namespace D1U.Game
             fviHitSeg = -1;
             fviHitSide = -1;
             fviHitSideSeg = -1;
+            fviHitObject = -1;
+            queryObjects = q.Objects;
+            queryThisObj = q.ThisObj;
+            queryFilter = q.ObjectFilter;
 
             if (q.StartSeg < 0 || q.StartSeg >= world.SegmentCount ||
                 world.GetSegMasks(q.P0, q.StartSeg, 0f).CenterMask != 0)
@@ -117,6 +130,7 @@ namespace D1U.Game
             info.HitSeg = hitSeg;
             info.HitSide = fviHitSide;
             info.HitSideSeg = fviHitSideSeg;
+            info.HitObject = fviHitObject;
             info.WallNorm = wallNorm;
             return hitType;
         }
@@ -136,6 +150,27 @@ namespace D1U.Game
 
             seglist[0] = startseg;
             nSegs = 1;
+
+            // object collision in this segment (fvi.c:822-859, FQ_CHECK_OBJS)
+            if (queryObjects != null)
+            {
+                foreach (int objId in queryObjects.ObjectsInSeg(startseg))
+                {
+                    var obj = queryObjects.Objects[objId];
+                    if (obj.Dead || objId == queryThisObj)
+                        continue;
+                    if (queryFilter != null && !queryFilter(obj))
+                        continue;
+                    float d = CheckVectorToSphere(out var objHitPoint, p0, p1, obj.Pos, obj.Size + rad);
+                    if (d > 0f && d < closestD)
+                    {
+                        fviHitObject = objId;
+                        closestD = d;
+                        closestHitPoint = objHitPoint;
+                        hitType = FviHit.Object;
+                    }
+                }
+            }
 
             var sides = world.Sides[startseg];
 
@@ -262,6 +297,50 @@ namespace D1U.Game
         }
 
         // ---- geometric primitives (fvi.c ports) --------------------------
+
+        /// <summary>check_vector_to_sphere_1 (fvi.c:420-484). Returns hit distance, 0 = miss.</summary>
+        static float CheckVectorToSphere(out Vector3 intp, Vector3 p0, Vector3 p1, Vector3 spherePos, float sphereRad)
+        {
+            intp = p0;
+            var d = p1 - p0;
+            var w = spherePos - p0;
+
+            float magD = d.Length();
+            if (magD < 1e-9f)
+            {
+                float dist0 = w.Length();
+                return dist0 < sphereRad ? Math.Max(dist0, 1e-5f) : 0f;
+            }
+            var dn = d / magD;
+
+            float wDist = Vector3.Dot(dn, w);
+            if (wDist < 0f)
+                return 0f;              // moving away
+            if (wDist > magD + sphereRad)
+                return 0f;              // cannot hit
+
+            var closestPoint = p0 + dn * wDist;
+            float dist = Vector3.Distance(closestPoint, spherePos);
+            if (dist >= sphereRad)
+                return 0f;
+
+            float shorten = (float)Math.Sqrt(sphereRad * sphereRad - dist * dist);
+            float intDist = wDist - shorten;
+
+            if (intDist > magD || intDist < 0f)
+            {
+                // past either end — inside the sphere, or didn't quite make it
+                if (Vector3.Distance(p0, spherePos) < sphereRad)
+                {
+                    intp = p0;          // don't move at all (fvi.c:465)
+                    return 1e-5f;
+                }
+                return 0f;
+            }
+
+            intp = p0 + dn * intDist;
+            return Math.Max(intDist, 1e-5f);
+        }
 
         /// <summary>find_plane_line_intersection (fvi.c:43).</summary>
         static bool FindPlaneLineIntersection(out Vector3 newPnt, Vector3 planePnt, Vector3 planeNorm,

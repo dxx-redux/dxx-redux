@@ -45,6 +45,11 @@ namespace D1U.Presentation
         BaseArchives archives;
         BaseDxu baseDxuData;
         ModelFactory modelFactory;
+        Shader levelShader;
+        SoundFactory sounds;
+        D1U.Game.ObjectSystem objectSystem;
+        readonly Dictionary<int, GameObject> objectViews = new Dictionary<int, GameObject>();
+        Transform objectsParent;
         readonly List<(Material material, RenderChunk chunk)> allSurfaces
             = new List<(Material, RenderChunk)>();
 
@@ -80,6 +85,9 @@ namespace D1U.Presentation
             textureFactory = new LevelTextureFactory(baseDxu);
             var shader = Shader.Find("Universal Render Pipeline/Particles/Unlit")
                          ?? Shader.Find("Sprites/Default");
+            levelShader = shader;
+            modelFactory = new ModelFactory(baseDxuData, textureFactory, shader);
+            sounds = new SoundFactory(baseDxuData, archives.Pig.SoundIDs);
 
             int staticVerts = 0;
             foreach (var chunk in level.StaticChunks)
@@ -87,7 +95,9 @@ namespace D1U.Presentation
             foreach (var door in level.DoorPieces)
                 BuildChunk(door.Geometry, $"wall_{door.WallIndex}_seg{door.SegmentIndex}s{door.SideIndex}", shader, door);
 
-            if (populateObjects)
+            // in play+ship mode the ObjectSystem owns objects (dynamic views);
+            // otherwise place static previews
+            if (populateObjects && !(Application.isPlaying && shipMode))
                 PopulateObjects(level, shader);
             SetupEclips();
 
@@ -158,7 +168,6 @@ namespace D1U.Presentation
         {
             if (archives == null || baseDxuData == null)
                 return;
-            modelFactory = new ModelFactory(baseDxuData, textureFactory, shader);
             var parent = new GameObject("Objects");
             parent.transform.SetParent(transform, false);
 
@@ -250,6 +259,95 @@ namespace D1U.Presentation
 
         static Vector3 ToUnity(System.Numerics.Vector3 v) => new Vector3(v.X, v.Y, v.Z);
 
+        void CreateObjectView(D1U.Game.GameObj obj)
+        {
+            if (objectsParent == null || obj.Dead)
+                return;
+            float light = obj.Segnum >= 0 && obj.Segnum < LoadedLevel.Segments.Length
+                ? Mathf.Clamp(LoadedLevel.Segments[obj.Segnum].Light, 0.25f, 1f)
+                : 1f;
+            GameObject view = null;
+
+            if (obj.ModelNum >= 0 && obj.ModelNum < baseDxuData.Models.Count)
+            {
+                view = modelFactory.Instantiate(obj.ModelNum, $"dyn_t{obj.Type}_{obj.Id}", light);
+                if (obj.Orientation != null)
+                    view.transform.rotation = Quaternion.LookRotation(
+                        new Vector3(obj.Orientation[6], obj.Orientation[7], obj.Orientation[8]),
+                        new Vector3(obj.Orientation[3], obj.Orientation[4], obj.Orientation[5]));
+            }
+            else
+            {
+                int vclipNum = obj.VClipNum;
+                if (vclipNum == -2 && obj.SubId < archives.Pig.Powerups.Length)
+                    vclipNum = archives.Pig.Powerups[obj.SubId].VClipNum; // dropped powerups
+                if (vclipNum >= 0 && vclipNum < archives.Pig.VClips.Length)
+                {
+                    var vclip = archives.Pig.VClips[vclipNum];
+                    if (vclip != null && vclip.NumFrames > 0)
+                    {
+                        var frames = VClipFrames(vclip);
+                        view = BillboardSprite.Create($"dyn_t{obj.Type}_{obj.Id}", frames,
+                            (float)(double)vclip.FrameTime, obj.Size, levelShader, light).gameObject;
+                    }
+                }
+            }
+
+            if (view == null)
+                return;
+            view.transform.SetParent(objectsParent, false);
+            view.transform.position = ToUnity(obj.Pos);
+            objectViews[obj.Id] = view;
+        }
+
+        Texture2D[] VClipFrames(LibDescent.Data.VClip vclip)
+        {
+            var frames = new Texture2D[vclip.NumFrames];
+            for (int f = 0; f < vclip.NumFrames; f++)
+            {
+                int bitmap = vclip.Frames[f];
+                frames[f] = bitmap > 0 && bitmap < baseDxuData.Bitmaps.Count
+                    ? textureFactory.Get(bitmap, 0, 0)
+                    : frames[Mathf.Max(0, f - 1)];
+            }
+            return frames;
+        }
+
+        void OnExplosion(D1U.Game.GameObj obj, System.Numerics.Vector3 position)
+        {
+            if (obj.ExplSound >= 0)
+                sounds?.PlayAt(obj.ExplSound, ToUnity(position));
+            int vclipNum = obj.ExplVClip;
+            if (vclipNum < 0 || vclipNum >= archives.Pig.VClips.Length)
+                return;
+            var vclip = archives.Pig.VClips[vclipNum];
+            if (vclip == null || vclip.NumFrames <= 0)
+                return;
+            float radius = obj.Type == 5 ? 1.6f : Mathf.Max(2f, obj.Size * 1.2f);
+            float frameTime = (float)(double)vclip.PlayTime / Mathf.Max(1, vclip.NumFrames);
+            var sprite = BillboardSprite.Create("explosion", VClipFrames(vclip), frameTime,
+                radius, levelShader, 1f, loop: false);
+            sprite.transform.SetParent(objectsParent, false);
+            sprite.transform.position = ToUnity(position);
+        }
+
+        void Update()
+        {
+            if (objectSystem == null)
+                return;
+            foreach (var obj in objectSystem.Objects)
+            {
+                if (obj.Dead || obj.Type != 5)
+                    continue;
+                if (objectViews.TryGetValue(obj.Id, out var view) && view != null)
+                {
+                    view.transform.position = ToUnity(obj.Pos);
+                    if (obj.Vel != System.Numerics.Vector3.Zero)
+                        view.transform.rotation = Quaternion.LookRotation(ToUnity(obj.Vel));
+                }
+            }
+        }
+
         void SpawnShip(BakedLevel level, string dir)
         {
             var start = level.Objects.FirstOrDefault(o => o.Type == (byte)ObjectType.Player);
@@ -297,11 +395,81 @@ namespace D1U.Presentation
                 Forward = new System.Numerics.Vector3(start.Orientation[6], start.Orientation[7], start.Orientation[8]),
             };
 
+            // dynamic object world (robots/powerups/reactor/weapons)
+            var pig = archives.Pig;
+            var robotStats = new D1U.Game.RobotStats[pig.numRobots];
+            for (int i = 0; i < pig.numRobots; i++)
+                robotStats[i] = new D1U.Game.RobotStats
+                {
+                    Strength = (float)(double)pig.Robots[i].Strength,
+                    ModelNum = pig.Robots[i].ModelNum,
+                    DeathVClip = pig.Robots[i].DeathVClipNum,
+                    DeathSound = pig.Robots[i].DeathSoundNum,
+                };
+            float reactorShields = 200f;
+            foreach (var def in pig.ObjectTypes)
+                if (def.type == LibDescent.Data.EditorObjectType.ControlCenter)
+                {
+                    reactorShields = Mathf.Max(1f, (float)(double)def.strength);
+                    break;
+                }
+
+            objectsParent = new GameObject("Objects").transform;
+            objectsParent.SetParent(transform, false);
+            objectSystem = new D1U.Game.ObjectSystem(world,
+                record =>
+                {
+                    var visual = ObjectVisuals.Resolve(pig, record);
+                    return (visual.ModelNum, visual.VClipNum);
+                },
+                robotStats, reactorShields)
+            { Runtime = Runtime };
+            objectSystem.Message += text => messages.Add((Time.time, text));
+            objectSystem.Removed += obj =>
+            {
+                if (objectViews.TryGetValue(obj.Id, out var view) && view != null)
+                    Destroy(view);
+                objectViews.Remove(obj.Id);
+            };
+            objectSystem.Exploded += OnExplosion;
+            objectSystem.Spawned += CreateObjectView;
+            foreach (var obj in objectSystem.Objects)
+                CreateObjectView(obj);
+
             var shipGo = new GameObject("Ship");
             shipGo.transform.SetParent(transform, false);
             var controller = shipGo.AddComponent<ShipController>();
             controller.Init(world, shipParams, start.Position, orient, start.Segnum);
             controller.Runtime = Runtime;
+            controller.Objects = objectSystem;
+            controller.Sounds = sounds;
+
+            var weaponStats = new D1U.Game.WeaponStats[pig.numWeapons];
+            for (int i = 0; i < pig.numWeapons; i++)
+            {
+                var w = pig.Weapons[i];
+                weaponStats[i] = new D1U.Game.WeaponStats
+                {
+                    Speed = (float)(double)w.Speed[D1U.Game.ObjectSystem.Difficulty],
+                    Strength = (float)(double)w.Strength[D1U.Game.ObjectSystem.Difficulty],
+                    Lifetime = (float)(double)w.Lifetime,
+                    EnergyUsage = (float)(double)w.EnergyUsage,
+                    FireWait = (float)(double)w.FireWait,
+                    ModelNum = w.ModelNum,
+                    RenderType = (byte)w.RenderType,
+                    FiringSound = w.FiringSound,
+                    WallHitVClip = w.WallHitVClip,
+                    WallHitSound = w.WallHitSound,
+                };
+            }
+            controller.WeaponStats = weaponStats;
+            var gunPoints = new System.Numerics.Vector3[8];
+            for (int i = 0; i < 8; i++)
+            {
+                var gp = ship.GunPoints[i];
+                gunPoints[i] = new System.Numerics.Vector3((float)(double)gp.X, (float)(double)gp.Y, (float)(double)gp.Z);
+            }
+            controller.GunPoints = gunPoints;
 
             var cam = Camera.main;
             if (cam != null)
@@ -397,9 +565,14 @@ namespace D1U.Presentation
             doorPiecesByWall.Clear();
             allSurfaces.Clear();
             messages.Clear();
+            objectViews.Clear();
+            objectSystem = null;
+            objectsParent = null;
             Runtime = null;
             modelFactory?.Dispose();
             modelFactory = null;
+            sounds?.Dispose();
+            sounds = null;
             textureFactory?.Dispose();
             textureFactory = null;
             archives = null;
