@@ -1,10 +1,8 @@
 {
-    "name": "D1U.Presentation",
-    "rootNamespace": "D1U.Presentation",
+    "name": "D1U.Game",
+    "rootNamespace": "D1U.Game",
     "references": [
-        "LibDescent.Data",
-        "D1U.Convert",
-        "D1U.Game"
+        "D1U.Convert"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
@@ -14,5 +12,5 @@
     "autoReferenced": true,
     "defineConstraints": [],
     "versionDefines": [],
-    "noEngineReferences": false
+    "noEngineReferences": true
 }

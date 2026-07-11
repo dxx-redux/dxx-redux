@@ -24,7 +24,16 @@ namespace D1U.Convert
         public int WallIndex;
         public int SegmentIndex;
         public int SideIndex;
+        public byte WallType;   // LibDescent WallType
         public RenderChunk Geometry = new RenderChunk();
+    }
+
+    /// <summary>Every wall in the level (including invisible WALL_OPEN ones).</summary>
+    public sealed class WallRecord
+    {
+        public int SegmentIndex;
+        public int SideIndex;
+        public byte Type;       // LibDescent WallType
     }
 
     public struct SegmentRecord
@@ -53,6 +62,7 @@ namespace D1U.Convert
         public SegmentRecord[] Segments = Array.Empty<SegmentRecord>();
         public List<RenderChunk> StaticChunks = new List<RenderChunk>();
         public List<DoorPiece> DoorPieces = new List<DoorPiece>();
+        public List<WallRecord> Walls = new List<WallRecord>();
         public List<ObjectRecord> Objects = new List<ObjectRecord>();
 
         public int StaticTriangleCount
@@ -112,6 +122,16 @@ namespace D1U.Convert
                     EmitSide(baked, chunkMap, level, pig, vertexIndex, s, sideNum, side);
                 }
                 baked.Segments[s] = record;
+            }
+
+            foreach (var wall in level.Walls)
+            {
+                baked.Walls.Add(new WallRecord
+                {
+                    SegmentIndex = segmentIndex[wall.Side.Segment],
+                    SideIndex = (int)wall.Side.SideNum,
+                    Type = (byte)wall.Type,
+                });
             }
 
             foreach (var obj in level.Objects)
@@ -175,6 +195,7 @@ namespace D1U.Convert
                     WallIndex = level.Walls.IndexOf(wall),
                     SegmentIndex = segIdx,
                     SideIndex = sideNum,
+                    WallType = (byte)wall.Type,
                     Geometry = new RenderChunk
                     {
                         BaseBitmap = baseBitmap,
@@ -255,7 +276,16 @@ namespace D1U.Convert
                 bw.Write(door.WallIndex);
                 bw.Write(door.SegmentIndex);
                 bw.Write((byte)door.SideIndex);
+                bw.Write(door.WallType);
                 WriteChunk(bw, door.Geometry);
+            }
+
+            bw.Write(level.Walls.Count);
+            foreach (var wall in level.Walls)
+            {
+                bw.Write(wall.SegmentIndex);
+                bw.Write((byte)wall.SideIndex);
+                bw.Write(wall.Type);
             }
 
             bw.Write(level.Objects.Count);
@@ -305,7 +335,17 @@ namespace D1U.Convert
                     WallIndex = br.ReadInt32(),
                     SegmentIndex = br.ReadInt32(),
                     SideIndex = br.ReadByte(),
+                    WallType = br.ReadByte(),
                     Geometry = ReadChunk(br),
+                });
+
+            int wallCount = br.ReadInt32();
+            for (int i = 0; i < wallCount; i++)
+                level.Walls.Add(new WallRecord
+                {
+                    SegmentIndex = br.ReadInt32(),
+                    SideIndex = br.ReadByte(),
+                    Type = br.ReadByte(),
                 });
 
             int objectCount = br.ReadInt32();

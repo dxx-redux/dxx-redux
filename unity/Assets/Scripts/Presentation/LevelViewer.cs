@@ -24,7 +24,12 @@ namespace D1U.Presentation
         [Tooltip("1-based level number within the mission.")]
         public int levelNumber = 1;
 
+        [Tooltip("In play mode: spawn the physics ship at the player start (M3). Off = free fly-cam.")]
+        public bool shipMode = true;
+
         public bool logStats = true;
+
+        public BakedLevel LoadedLevel { get; private set; }
 
         readonly List<Material> materials = new List<Material>();
         LevelTextureFactory textureFactory;
@@ -54,6 +59,7 @@ namespace D1U.Presentation
             var (missionName, levelNames, levels) = MissionDxu.Read(missionPath, out _);
             int index = Mathf.Clamp(levelNumber - 1, 0, levels.Count - 1);
             var level = levels[index];
+            LoadedLevel = level;
 
             textureFactory = new LevelTextureFactory(baseDxu);
             var shader = Shader.Find("Universal Render Pipeline/Particles/Unlit")
@@ -65,7 +71,10 @@ namespace D1U.Presentation
             foreach (var door in level.DoorPieces)
                 BuildChunk(door.Geometry, $"wall_{door.WallIndex}_seg{door.SegmentIndex}s{door.SideIndex}", shader);
 
-            PlaceCameraAtPlayerStart(level);
+            if (Application.isPlaying && shipMode)
+                SpawnShip(level, dir);
+            else
+                PlaceCameraAtPlayerStart(level);
 
             if (logStats)
                 Log($"'{missionName}' {levelNames[index]}: {level.StaticChunks.Count} static chunks " +
@@ -115,6 +124,58 @@ namespace D1U.Presentation
             go.AddComponent<MeshFilter>().sharedMesh = mesh;
             go.AddComponent<MeshRenderer>().sharedMaterial = material;
             return vertices.Length;
+        }
+
+        void SpawnShip(BakedLevel level, string dir)
+        {
+            var start = level.Objects.FirstOrDefault(o => o.Type == (byte)ObjectType.Player);
+            if (start == null)
+            {
+                Log("no player start found — falling back to fly-cam");
+                PlaceCameraAtPlayerStart(level);
+                return;
+            }
+
+            // ship parameters live-parse from the pig (tables are not cached)
+            var archives = BaseArchives.Load(dir);
+            var ship = archives.Pig.PlayerShip;
+            var shipParams = new D1U.Game.ShipParams
+            {
+                Mass = (float)(double)ship.Mass,
+                Drag = (float)(double)ship.Drag,
+                MaxThrust = (float)(double)ship.MaxThrust,
+                MaxRotThrust = (float)(double)ship.MaxRotationThrust,
+                Wiggle = (float)(double)ship.Wiggle,
+                Size = start.Size,
+            };
+
+            var world = new D1U.Game.SegmentWorld(level);
+            var orient = new D1U.Game.Mat3
+            {
+                Right = new System.Numerics.Vector3(start.Orientation[0], start.Orientation[1], start.Orientation[2]),
+                Up = new System.Numerics.Vector3(start.Orientation[3], start.Orientation[4], start.Orientation[5]),
+                Forward = new System.Numerics.Vector3(start.Orientation[6], start.Orientation[7], start.Orientation[8]),
+            };
+
+            var shipGo = new GameObject("Ship");
+            shipGo.transform.SetParent(transform, false);
+            var controller = shipGo.AddComponent<ShipController>();
+            controller.Init(world, shipParams, start.Position, orient, start.Segnum);
+
+            var cam = Camera.main;
+            if (cam != null)
+            {
+                var flyCam = cam.GetComponent<FlyCamera>();
+                if (flyCam != null)
+                    flyCam.enabled = false;
+                cam.transform.SetParent(shipGo.transform, false);
+                cam.transform.localPosition = Vector3.zero;
+                cam.transform.localRotation = Quaternion.identity;
+                cam.nearClipPlane = 0.1f;
+                cam.farClipPlane = 4000f;
+            }
+            Log($"ship spawned at segment {start.Segnum} (mass={shipParams.Mass:F2} drag={shipParams.Drag:F4} " +
+                $"maxThrust={shipParams.MaxThrust:F2} size={shipParams.Size:F2})");
         }
 
         void PlaceCameraAtPlayerStart(BakedLevel level)

@@ -284,5 +284,92 @@ foreach (var key in new[] { "firststrike", "chaos" })
         errors++;
 }
 
+// --- 9. flight physics + fvi sanity (M3) ---
+Console.WriteLine("\nship physics (M3):");
+try
+{
+    var fsMission = missionList.First(m => m.CacheKey == "firststrike");
+    var fsPath = D1U.Convert.MissionDxu.EnsureMission(hogsDir, fsMission, cacheDir, null);
+    var (_, _, fsLevels) = D1U.Convert.MissionDxu.Read(fsPath, out _);
+    var level1 = fsLevels[0];
+
+    var world = new D1U.Game.SegmentWorld(level1);
+    var start = level1.Objects.First(o => o.Type == 4); // ObjectType.Player
+    var startOrient = new D1U.Game.Mat3
+    {
+        Right = new System.Numerics.Vector3(start.Orientation[0], start.Orientation[1], start.Orientation[2]),
+        Up = new System.Numerics.Vector3(start.Orientation[3], start.Orientation[4], start.Orientation[5]),
+        Forward = new System.Numerics.Vector3(start.Orientation[6], start.Orientation[7], start.Orientation[8]),
+    };
+
+    // fvi ray checks from the player start
+    var fvi = new D1U.Game.Fvi(world);
+    var fviInfo = new D1U.Game.FviInfo();
+    var fwdQuery = new D1U.Game.FviQuery
+    {
+        P0 = start.Position,
+        P1 = start.Position + startOrient.Forward * 2000f,
+        StartSeg = start.Segnum,
+        Rad = 0f,
+    };
+    var fwdHit = fvi.FindVectorIntersection(fwdQuery, fviInfo);
+    float fwdDist = System.Numerics.Vector3.Distance(start.Position, fviInfo.HitPoint);
+    Console.WriteLine($"  forward ray: {fwdHit} at {fwdDist:F1} units (segs traversed: {fviInfo.NSegs})");
+    if (fwdHit != D1U.Game.FviHit.Wall || fwdDist <= 1f || fwdDist >= 2000f)
+        errors++;
+
+    var downQuery = new D1U.Game.FviQuery
+    {
+        P0 = start.Position,
+        P1 = start.Position - startOrient.Up * 500f,
+        StartSeg = start.Segnum,
+        Rad = 2f,
+    };
+    var downHit = fvi.FindVectorIntersection(downQuery, fviInfo);
+    float downDist = System.Numerics.Vector3.Distance(start.Position, fviInfo.HitPoint);
+    Console.WriteLine($"  down sweep (r=2): {downHit} at {downDist:F1} units");
+    if (downHit != D1U.Game.FviHit.Wall || downDist >= 500f)
+        errors++;
+
+    // 10 seconds of full-forward flight at 60 Hz
+    var shipParams = new D1U.Game.ShipParams
+    {
+        Mass = (float)(double)pig.PlayerShip.Mass,
+        Drag = (float)(double)pig.PlayerShip.Drag,
+        MaxThrust = (float)(double)pig.PlayerShip.MaxThrust,
+        MaxRotThrust = (float)(double)pig.PlayerShip.MaxRotationThrust,
+        Wiggle = (float)(double)pig.PlayerShip.Wiggle,
+        Size = start.Size,
+    };
+    Console.WriteLine($"  ship: mass={shipParams.Mass:F2} drag={shipParams.Drag:F4} maxThrust={shipParams.MaxThrust:F2} " +
+                      $"maxRotThrust={shipParams.MaxRotThrust:F2} size={shipParams.Size:F2}");
+
+    var sim = new D1U.Game.ShipSim(world);
+    var state = new D1U.Game.ShipState { Pos = start.Position, Orient = startOrient, Segnum = start.Segnum };
+    const float step = 1f / 60f;
+    double gameTime = 0;
+    float maxSpeed = 0f;
+    for (int i = 0; i < 600; i++)
+    {
+        var controls = new D1U.Game.ShipControls { ForwardTime = step };
+        gameTime += step;
+        sim.Step(state, shipParams, controls, step, gameTime);
+        maxSpeed = Math.Max(maxSpeed, state.Vel.Length());
+    }
+    float traveled = System.Numerics.Vector3.Distance(start.Position, state.Pos);
+    bool inMine = state.Segnum >= 0 && world.GetSegMasks(state.Pos, state.Segnum, 0f).CenterMask == 0;
+    // equilibrium of v' = (v + thrust/mass) * (1 - drag) per 64 Hz tick
+    float expectedTopSpeed = shipParams.MaxThrust / shipParams.Mass * (1f - shipParams.Drag) / shipParams.Drag;
+    Console.WriteLine($"  10s full thrust: traveled {traveled:F1} units, max speed {maxSpeed:F1} " +
+                      $"(analytic top {expectedTopSpeed:F1}), final segment {state.Segnum}, in-mine={inMine}");
+    if (traveled < 20f || !inMine || maxSpeed < expectedTopSpeed * 0.5f || maxSpeed > expectedTopSpeed * 1.5f)
+        errors++;
+}
+catch (Exception e)
+{
+    Console.Error.WriteLine($"  M3 FAIL: {e.GetType().Name}: {e.Message}\n{e.StackTrace}");
+    errors++;
+}
+
 Console.WriteLine(errors == 0 ? "\nSMOKE OK" : $"\nSMOKE FAILED: {errors} error(s)");
 return errors == 0 ? 0 : 2;

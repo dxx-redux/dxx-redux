@@ -13,6 +13,7 @@
   <ItemGroup>
     <ProjectReference Include="..\LibDescent.Data\LibDescent.Data.csproj" />
     <ProjectReference Include="..\D1U.Convert\D1U.Convert.csproj" />
+    <ProjectReference Include="..\D1U.Game\D1U.Game.csproj" />
   </ItemGroup>
 
 </Project>
