@@ -823,6 +823,8 @@ void show_newdemo_help()
 //temp function until Matt cleans up game sequencing
 extern void temp_reset_stuff_on_level();
 
+int Mirror_visible = 1;		//rear mirror PiP shown; the rear-view key toggles this while PlayerCfg.MirrorMode is on
+
 #define LEAVE_TIME 0x4000		//how long until we decide key is down	(Used to be 0x4000)
 
 //deal with rear view - switch it on, or off, or whatever
@@ -833,6 +835,14 @@ void check_rear_view()
 
 	if (Newdemo_state == ND_STATE_PLAYBACK)
 		return;
+
+	if (PlayerCfg.MirrorMode) {		//mirror mode: the key only toggles the PiP mirror
+		if (Controls.rear_view_count > 0) {
+			Controls.rear_view_count = 0;
+			Mirror_visible = !Mirror_visible;
+		}
+		return;
+	}
 
 	if ( Controls.rear_view_count > 0) {	//key/button has gone down
 		Controls.rear_view_count = 0;

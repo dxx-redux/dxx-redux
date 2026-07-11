@@ -156,6 +156,8 @@ extern int Game_window_w,       // width and height of player's game window
            Game_window_h;
 
 extern int Rear_view;           // if true, looking back.
+extern int Mirror_visible;      // rear mirror PiP shown (only meaningful while PlayerCfg.MirrorMode)
+extern int Mirror_view;         // true while the PiP mirror view is being rendered this frame
 
 // initalize flying
 void fly_init(struct object *obj);

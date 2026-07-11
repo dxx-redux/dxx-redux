@@ -1357,6 +1357,7 @@ extern int Total_pixels;
 //--unused-- int Total_num_tmaps_drawn=0;
 
 int Rear_view=0;
+int Mirror_view=0;	//rendering the PiP mirror view (never set together with Rear_view)
 
 int Surround_view = -1;		//which surround view is being rendered: -1=off, 0=left, 1=center, 2=right
 
@@ -1445,13 +1446,13 @@ void render_frame(fix eye_offset)
 	}
 
 	if ( Newdemo_state == ND_STATE_RECORDING )	{
-		if (eye_offset >= 0 && Surround_view <= 0)	{	//in surround, only the first view records
+		if (eye_offset >= 0 && Surround_view <= 0 && !Mirror_view)	{	//only the first view of a frame records
 			newdemo_record_start_frame(FrameTime );
 			newdemo_record_viewer_object(Viewer);
 		}
 	}
 
-	if (Surround_view <= 0)		//in surround, once per frame, not per view
+	if (Surround_view <= 0 && !Mirror_view)		//once per frame, not per view
 		start_lighting_frame(Viewer);		//this is for ugly light-smoothing hack
 
 	g3_start_frame();
@@ -1475,12 +1476,15 @@ void render_frame(fix eye_offset)
 	if (start_seg_num==-1)
 		start_seg_num = Viewer->segnum;
 
-	if (Rear_view && (Viewer==ConsoleObject)) {
+	if ((Rear_view || Mirror_view) && (Viewer==ConsoleObject)) {
 		vms_matrix headm,viewm;
 		Player_head_angles.p = Player_head_angles.b = 0;
 		Player_head_angles.h = 0x7fff;
 		vm_angles_2_matrix(&headm,&Player_head_angles);
 		vm_matrix_x_matrix(&viewm,&Viewer->orient,&headm);
+		if (Mirror_view) {
+			vm_vec_negate(&viewm.rvec);	//negated right vector flips every projected x: true mirror image
+		}
 		g3_set_player_view_matrix(&Viewer_eye,&viewm,Render_zoom);
 	} else	{
 #ifdef JOHN_ZOOM
