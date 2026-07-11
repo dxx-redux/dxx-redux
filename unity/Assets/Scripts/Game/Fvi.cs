@@ -168,7 +168,7 @@ namespace D1U.Game
                         if (faceHitType == ItNone)
                             continue;
 
-                        if (sideData.Passable)
+                        if (world.IsPassable(sideData))
                         {
                             int newSegnum = sideData.Child;
                             int i;

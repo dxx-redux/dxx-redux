@@ -51,6 +51,7 @@ namespace D1U.Game
         readonly FviInfo hitInfo = new FviInfo();
 
         public readonly List<int> PhysSegList = new List<int>(); // phys_seglist for triggers
+        public readonly List<(int Seg, int Side)> WallHits = new List<(int, int)>(); // per-step bump list
         public FviHit LastFate { get; private set; }
 
         public ShipSim(SegmentWorld world)
@@ -66,6 +67,7 @@ namespace D1U.Game
 
             s.LastPos = s.Pos;
             PhysSegList.Clear();
+            WallHits.Clear();
 
             // ---- read_flying_controls (controls.c:40-110) ----
             var rotThrust = new Vector3(c.PitchTime, c.HeadingTime, c.BankTime);
@@ -199,6 +201,9 @@ namespace D1U.Game
 
                 if (fate == FviHit.Wall)
                 {
+                    if (hitInfo.HitSideSeg >= 0 && hitInfo.HitSide >= 0)
+                        WallHits.Add((hitInfo.HitSideSeg, hitInfo.HitSide)); // collide_player_and_wall hook
+
                     // slide along wall (physics.c:785-803)
                     float wallPart = Vector3.Dot(hitInfo.WallNorm, s.Vel);
 
@@ -224,7 +229,7 @@ namespace D1U.Game
             if (s.Segnum != origSegnum)
             {
                 int sidenum = world.FindConnectSide(origSegnum, s.Segnum);
-                if (sidenum != -1 && !world.Sides[origSegnum][sidenum].Passable)
+                if (sidenum != -1 && !world.IsPassable(world.Sides[origSegnum][sidenum]))
                 {
                     var side = world.Sides[origSegnum][sidenum];
                     int vertnum = side.NumFaces == 1
@@ -323,7 +328,7 @@ namespace D1U.Game
             var sides = world.Sides[s.Segnum];
             for (int side = 0; side < 6; side++)
             {
-                if ((masks.SideMask & (1 << side)) == 0 || sides[side].Passable)
+                if ((masks.SideMask & (1 << side)) == 0 || world.IsPassable(sides[side]))
                     continue;
                 s.Pos += sides[side].Normals[0] * (frameTime * 10f);
                 int n = world.FindPointSeg(s.Pos, s.Segnum);

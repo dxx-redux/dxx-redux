@@ -20,9 +20,11 @@ namespace D1U.Presentation
         double gameTime;
 
         public ShipState State => state;
+        public LevelRuntime Runtime { get; set; }
 
         public void Init(SegmentWorld world, ShipParams p, System.Numerics.Vector3 pos, Mat3 orient, int segnum)
         {
+            this.world = world;
             sim = new ShipSim(world);
             shipParams = p;
             state = new ShipState { Pos = pos, Orient = orient, Segnum = segnum };
@@ -55,10 +57,32 @@ namespace D1U.Presentation
             c.HeadingTime = Mathf.Clamp(c.HeadingTime, -ft, ft);
             c.BankTime = Mathf.Clamp(c.BankTime, -ft, ft);
 
+            if (Runtime != null && Runtime.Player.ExitReached)
+                return; // level over — freeze the ship
+
             gameTime += ft;
             sim.Step(state, shipParams, c, ft, gameTime);
             SyncTransform();
+
+            if (Runtime != null)
+            {
+                foreach (var (seg, side) in sim.WallHits)
+                    Runtime.BumpWall(seg, side);
+                for (int i = 1; i < sim.PhysSegList.Count; i++)
+                {
+                    // trigger check on each crossed side (object_move_one:1851)
+                    int side = world.FindConnectSide(sim.PhysSegList[i - 1], sim.PhysSegList[i]);
+                    if (side != -1)
+                        Runtime.CrossedSide(sim.PhysSegList[i - 1], side);
+                }
+                Runtime.Tick(ft, state.Segnum, state.Pos, shipParams.Size);
+
+                if (Input.GetKeyDown(KeyCode.K))
+                    Runtime.DestroyReactor(); // debug stand-in until weapons (M5)
+            }
         }
+
+        SegmentWorld world;
 
         void SyncTransform()
         {

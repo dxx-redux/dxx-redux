@@ -32,13 +32,19 @@ namespace D1U.Game
             public Vector3[] Normals = new Vector3[2];
             public int AnchorVert;                  // reference vertex for plane distances
             public bool PokesOut;                   // 2-face convexity (get_seg_masks)
-            public bool Passable;                   // WID_FLY_FLAG equivalent (M3: doors closed)
+            public int WallIndex = -1;              // index into Level.Walls, -1 none
             public int Child;                       // -1 none, -2 exit, else segment index
         }
 
         public readonly BakedLevel Level;
         public readonly Vector3[] Verts;
         public readonly SideData[][] Sides; // [segment][side]
+
+        /// <summary>
+        /// Live per-wall flyability (wall_is_doorway WID_FLY_FLAG). Owned by
+        /// LevelRuntime once gameplay starts; initialized from wall types.
+        /// </summary>
+        public readonly bool[] WallPassable;
 
         public int SegmentCount => Level.Segments.Length;
 
@@ -47,9 +53,17 @@ namespace D1U.Game
             Level = level;
             Verts = level.Vertices;
 
-            var wallTypes = new Dictionary<(int, int), byte>();
-            foreach (var wall in level.Walls)
-                wallTypes[(wall.SegmentIndex, wall.SideIndex)] = wall.Type;
+            WallPassable = new bool[level.Walls.Count];
+            var wallIndices = new Dictionary<(int, int), int>();
+            for (int w = 0; w < level.Walls.Count; w++)
+            {
+                var wall = level.Walls[w];
+                wallIndices[(wall.SegmentIndex, wall.SideIndex)] = w;
+                // open (4) and illusion (3) walls are flyable; blasted (flag 1)
+                // and opened doors (flag 2) too — wall_is_doorway rules
+                WallPassable[w] = wall.Type == 3 || wall.Type == 4 ||
+                                  (wall.Flags & 1) != 0 || (wall.Flags & 2) != 0;
+            }
 
             Sides = new SideData[level.Segments.Length][];
             for (int s = 0; s < level.Segments.Length; s++)
@@ -57,13 +71,17 @@ namespace D1U.Game
                 Sides[s] = new SideData[6];
                 for (int side = 0; side < 6; side++)
                 {
-                    byte? wallType = wallTypes.TryGetValue((s, side), out var t) ? t : (byte?)null;
-                    Sides[s][side] = BuildSide(s, side, wallType);
+                    int wallIndex = wallIndices.TryGetValue((s, side), out var w) ? w : -1;
+                    Sides[s][side] = BuildSide(s, side, wallIndex);
                 }
             }
         }
 
-        SideData BuildSide(int segIdx, int sideNum, byte? wallType)
+        /// <summary>WID_FLY_FLAG: can objects fly through this side right now?</summary>
+        public bool IsPassable(SideData side)
+            => side.Child >= 0 && (side.WallIndex < 0 || WallPassable[side.WallIndex]);
+
+        SideData BuildSide(int segIdx, int sideNum, int wallIndex)
         {
             var seg = Level.Segments[segIdx];
             var sv = SideToVerts[sideNum];
@@ -77,7 +95,7 @@ namespace D1U.Game
 
             int child = seg.Children[sideNum];
             bool hasChild = child >= 0 || child == -2;
-            var data = new SideData { Child = child };
+            var data = new SideData { Child = child, WallIndex = wallIndex };
 
             var split = SideTriangulator.Choose(pos, ids, hasChild);
             if (split == SideSplit.Quad)
@@ -115,15 +133,6 @@ namespace D1U.Game
                     : DistToPlane(Verts[data.FaceVerts[1]], data.Normals[1], Verts[data.AnchorVert]);
                 data.PokesOut = dist > PlaneDistTolerance;
             }
-
-            // WALL_IS_DOORWAY & WID_FLY_FLAG (M3: doors stay closed; illusion
-            // (3) and open (4) walls are flyable, everything else is solid)
-            if (child < 0)
-                data.Passable = false;
-            else if (wallType == null)
-                data.Passable = true;
-            else
-                data.Passable = wallType == 3 || wallType == 4;
 
             return data;
         }

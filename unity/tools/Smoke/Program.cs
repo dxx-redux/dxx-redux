@@ -371,5 +371,76 @@ catch (Exception e)
     errors++;
 }
 
+// --- 10. level runtime: doors + triggers + reactor (M4) ---
+Console.WriteLine("\nlevel runtime (M4):");
+try
+{
+    var fsMission2 = missionList.First(m => m.CacheKey == "firststrike");
+    var fsPath2 = D1U.Convert.MissionDxu.EnsureMission(hogsDir, fsMission2, cacheDir, null);
+    var (_, _, fsLevels2) = D1U.Convert.MissionDxu.Read(fsPath2, out _);
+    var lvl = fsLevels2[0];
+    var world2 = new D1U.Game.SegmentWorld(lvl);
+
+    var clips = new D1U.Game.WallClipInfo[pig.WClips.Length];
+    for (int i = 0; i < clips.Length; i++)
+        clips[i] = new D1U.Game.WallClipInfo
+        {
+            PlayTime = pig.WClips[i] != null ? (float)(double)pig.WClips[i].PlayTime : 1f,
+            NumFrames = pig.WClips[i] != null ? pig.WClips[i].NumFrames : 1,
+            Tmap1 = pig.WClips[i] != null && (pig.WClips[i].Flags & 4) != 0,
+        };
+    var runtime = new D1U.Game.LevelRuntime(world2, clips);
+    int frameEvents = 0;
+    runtime.WallFrameChanged += (w, f, t) => frameEvents++;
+
+    int doorWall = lvl.Walls.FindIndex(w =>
+        w.Type == 2 && w.Keys <= 1 && (w.Flags & 8) == 0 && (w.Flags & 2) == 0);
+    if (doorWall < 0)
+    {
+        Console.Error.WriteLine("  no plain door found in level01");
+        errors++;
+    }
+    else
+    {
+        var doorRecord = lvl.Walls[doorWall];
+        bool passableBefore = world2.WallPassable[doorWall];
+        runtime.BumpWall(doorRecord.SegmentIndex, doorRecord.SideIndex);
+        for (int i = 0; i < 60; i++)
+            runtime.Tick(1f / 30f, -1, default, 0f); // 2 s: door fully opens
+        bool openAfter = world2.WallPassable[doorWall];
+        for (int i = 0; i < 360; i++)
+            runtime.Tick(1f / 30f, -1, default, 0f); // 12 s: auto doors close again
+        bool isAuto = (doorRecord.Flags & 16) != 0;
+        bool closedAgain = !world2.WallPassable[doorWall];
+        Console.WriteLine($"  door wall {doorWall} (clip {doorRecord.ClipNum}, auto={isAuto}): " +
+                          $"before={passableBefore} open={openAfter} " +
+                          $"auto-closed={(isAuto ? closedAgain.ToString() : "n/a")} frameEvents={frameEvents}");
+        if (passableBefore || !openAfter || (isAuto && !closedAgain) || frameEvents == 0)
+            errors++;
+    }
+
+    int exitTriggers = lvl.Triggers.Count(t => (t.Flags & 8) != 0);
+    Console.WriteLine($"  triggers: {lvl.Triggers.Count} total, exit={exitTriggers}, " +
+                      $"reactor targets={lvl.ReactorTargets.Count}");
+    if (exitTriggers < 1 || lvl.ReactorTargets.Count < 1)
+        errors++;
+
+    int exitTriggerIndex = lvl.Triggers.FindIndex(t => (t.Flags & 8) != 0);
+    int exitWall = lvl.Walls.FindIndex(w => w.TriggerIndex == exitTriggerIndex);
+    if (exitWall >= 0)
+        runtime.CrossedSide(lvl.Walls[exitWall].SegmentIndex, lvl.Walls[exitWall].SideIndex);
+    Console.WriteLine($"  exit crossing -> ExitReached={runtime.Player.ExitReached}");
+    if (!runtime.Player.ExitReached)
+        errors++;
+
+    runtime.DestroyReactor();
+    Console.WriteLine($"  reactor destroyed -> {lvl.ReactorTargets.Count} target wall(s) toggled");
+}
+catch (Exception e)
+{
+    Console.Error.WriteLine($"  M4 FAIL: {e.GetType().Name}: {e.Message}\n{e.StackTrace}");
+    errors++;
+}
+
 Console.WriteLine(errors == 0 ? "\nSMOKE OK" : $"\nSMOKE FAILED: {errors} error(s)");
 return errors == 0 ? 0 : 2;

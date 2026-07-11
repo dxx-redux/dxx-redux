@@ -30,9 +30,15 @@ namespace D1U.Presentation
         public bool logStats = true;
 
         public BakedLevel LoadedLevel { get; private set; }
+        public D1U.Game.LevelRuntime Runtime { get; private set; }
 
         readonly List<Material> materials = new List<Material>();
+        readonly Dictionary<int, List<(Material material, RenderChunk chunk, GameObject go)>> doorPiecesByWall
+            = new Dictionary<int, List<(Material, RenderChunk, GameObject)>>();
+        readonly List<(float time, string text)> messages = new List<(float, string)>();
         LevelTextureFactory textureFactory;
+        LibDescent.Data.WClip[] wclips;
+        ushort[] textureTable;
 
         void Start() => Build();
         void OnDestroy() => Clear();
@@ -67,9 +73,9 @@ namespace D1U.Presentation
 
             int staticVerts = 0;
             foreach (var chunk in level.StaticChunks)
-                staticVerts += BuildChunk(chunk, $"static_{chunk.BaseBitmap}_{chunk.OverlayBitmap}_{chunk.Rotation}", shader);
+                staticVerts += BuildChunk(chunk, $"static_{chunk.BaseBitmap}_{chunk.OverlayBitmap}_{chunk.Rotation}", shader, null);
             foreach (var door in level.DoorPieces)
-                BuildChunk(door.Geometry, $"wall_{door.WallIndex}_seg{door.SegmentIndex}s{door.SideIndex}", shader);
+                BuildChunk(door.Geometry, $"wall_{door.WallIndex}_seg{door.SegmentIndex}s{door.SideIndex}", shader, door);
 
             if (Application.isPlaying && shipMode)
                 SpawnShip(level, dir);
@@ -82,7 +88,7 @@ namespace D1U.Presentation
                     $"{level.Objects.Count} objects, {level.Segments.Length} segments");
         }
 
-        int BuildChunk(RenderChunk chunk, string name, Shader shader)
+        int BuildChunk(RenderChunk chunk, string name, Shader shader, DoorPiece door)
         {
             if (chunk.Positions.Count == 0)
                 return 0;
@@ -123,6 +129,13 @@ namespace D1U.Presentation
 
             go.AddComponent<MeshFilter>().sharedMesh = mesh;
             go.AddComponent<MeshRenderer>().sharedMaterial = material;
+
+            if (door != null)
+            {
+                if (!doorPiecesByWall.TryGetValue(door.WallIndex, out var list))
+                    doorPiecesByWall[door.WallIndex] = list = new List<(Material, RenderChunk, GameObject)>();
+                list.Add((material, chunk, go));
+            }
             return vertices.Length;
         }
 
@@ -150,6 +163,23 @@ namespace D1U.Presentation
             };
 
             var world = new D1U.Game.SegmentWorld(level);
+
+            // level runtime: doors/triggers/fuelcens, clips from the pig
+            wclips = archives.Pig.WClips;
+            textureTable = archives.Pig.Textures;
+            var clipInfos = new D1U.Game.WallClipInfo[wclips.Length];
+            for (int i = 0; i < wclips.Length; i++)
+                clipInfos[i] = new D1U.Game.WallClipInfo
+                {
+                    PlayTime = wclips[i] != null ? (float)(double)wclips[i].PlayTime : 1f,
+                    NumFrames = wclips[i]?.NumFrames ?? 1,
+                    Tmap1 = wclips[i] != null && (wclips[i].Flags & LibDescent.Data.WClip.WCF_TMAP1) != 0,
+                };
+            Runtime = new D1U.Game.LevelRuntime(world, clipInfos);
+            Runtime.WallFrameChanged += OnWallFrameChanged;
+            Runtime.WallHiddenChanged += OnWallHiddenChanged;
+            Runtime.Message += text => messages.Add((Time.time, text));
+
             var orient = new D1U.Game.Mat3
             {
                 Right = new System.Numerics.Vector3(start.Orientation[0], start.Orientation[1], start.Orientation[2]),
@@ -161,6 +191,7 @@ namespace D1U.Presentation
             shipGo.transform.SetParent(transform, false);
             var controller = shipGo.AddComponent<ShipController>();
             controller.Init(world, shipParams, start.Position, orient, start.Segnum);
+            controller.Runtime = Runtime;
 
             var cam = Camera.main;
             if (cam != null)
@@ -192,6 +223,59 @@ namespace D1U.Presentation
             cam.farClipPlane = 4000f;
         }
 
+        void OnWallFrameChanged(int wallIndex, int frame, bool tmap1)
+        {
+            if (!doorPiecesByWall.TryGetValue(wallIndex, out var pieces))
+                return;
+            var record = LoadedLevel.Walls[wallIndex];
+            var clip = wclips[record.ClipNum];
+            if (clip == null || frame < 0 || frame >= clip.NumFrames)
+                return;
+            int frameBitmap = textureTable[clip.Frames[frame]];
+            foreach (var (material, chunk, _) in pieces)
+            {
+                var texture = tmap1
+                    ? textureFactory.Get(frameBitmap, chunk.OverlayBitmap, chunk.Rotation)
+                    : textureFactory.Get(chunk.BaseBitmap, frameBitmap, chunk.Rotation);
+                if (material.HasProperty("_BaseMap")) material.SetTexture("_BaseMap", texture);
+                else material.mainTexture = texture;
+            }
+        }
+
+        void OnWallHiddenChanged(int wallIndex, bool hidden)
+        {
+            if (!doorPiecesByWall.TryGetValue(wallIndex, out var pieces))
+                return;
+            foreach (var (_, _, go) in pieces)
+                if (go != null)
+                    go.SetActive(!hidden);
+        }
+
+        void OnGUI()
+        {
+            if (Runtime == null || !Application.isPlaying)
+                return;
+            var player = Runtime.Player;
+            GUI.Label(new Rect(12, 8, 500, 24),
+                $"Shields {player.Shields:F0}   Energy {player.Energy:F0}   Keys:" +
+                $"{((player.Keys & 2) != 0 ? " BLUE" : "")}{((player.Keys & 4) != 0 ? " RED" : "")}{((player.Keys & 8) != 0 ? " YELLOW" : "")}");
+
+            int y = 40;
+            for (int i = messages.Count - 1; i >= 0 && i >= messages.Count - 4; i--)
+            {
+                if (Time.time - messages[i].time > 5f)
+                    continue;
+                GUI.Label(new Rect(12, y, 600, 24), messages[i].text);
+                y += 20;
+            }
+
+            if (player.ExitReached)
+            {
+                var style = new GUIStyle(GUI.skin.label) { fontSize = 40, alignment = TextAnchor.MiddleCenter };
+                GUI.Label(new Rect(0, Screen.height / 2 - 40, Screen.width, 80), "LEVEL COMPLETE", style);
+            }
+        }
+
         public void Clear()
         {
             for (int i = transform.childCount - 1; i >= 0; i--)
@@ -200,6 +284,9 @@ namespace D1U.Presentation
                 if (material != null)
                     DestroyImmediate(material);
             materials.Clear();
+            doorPiecesByWall.Clear();
+            messages.Clear();
+            Runtime = null;
             textureFactory?.Dispose();
             textureFactory = null;
         }

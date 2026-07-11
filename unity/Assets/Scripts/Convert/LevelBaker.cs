@@ -33,7 +33,24 @@ namespace D1U.Convert
     {
         public int SegmentIndex;
         public int SideIndex;
-        public byte Type;       // LibDescent WallType
+        public byte Type;        // WallType: 0 normal, 1 blastable, 2 door, 3 illusion, 4 open, 5 closed
+        public byte Flags;       // WallFlags: 1 blasted, 2 door-opened, 8 locked, 16 auto, 32 illusion-off
+        public byte State;
+        public byte ClipNum;     // wclip index for doors/blastables
+        public byte Keys;        // 1 none, 2 blue, 4 red, 8 gold
+        public float HitPoints;
+        public short TriggerIndex = -1;
+        public short LinkedWall = -1;
+    }
+
+    /// <summary>D1 trigger (switch.h): fired when the player crosses/shoots its wall.</summary>
+    public sealed class TriggerRecord
+    {
+        // flags: 1 doors, 2 shield damage, 4 energy drain, 8 exit, 16 on,
+        //        32 one-shot, 64 matcen, 128 illusion off, 256 secret exit, 512 illusion on
+        public ushort Flags;
+        public float Value;
+        public List<(int Segment, int Side)> Targets = new List<(int, int)>();
     }
 
     public struct SegmentRecord
@@ -63,6 +80,8 @@ namespace D1U.Convert
         public List<RenderChunk> StaticChunks = new List<RenderChunk>();
         public List<DoorPiece> DoorPieces = new List<DoorPiece>();
         public List<WallRecord> Walls = new List<WallRecord>();
+        public List<TriggerRecord> Triggers = new List<TriggerRecord>();
+        public List<(int Segment, int Side)> ReactorTargets = new List<(int, int)>();
         public List<ObjectRecord> Objects = new List<ObjectRecord>();
 
         public int StaticTriangleCount
@@ -131,8 +150,30 @@ namespace D1U.Convert
                     SegmentIndex = segmentIndex[wall.Side.Segment],
                     SideIndex = (int)wall.Side.SideNum,
                     Type = (byte)wall.Type,
+                    Flags = (byte)wall.Flags,
+                    State = (byte)wall.State,
+                    ClipNum = wall.DoorClipNumber,
+                    Keys = (byte)wall.Keys,
+                    HitPoints = (float)(double)wall.HitPoints,
+                    TriggerIndex = (short)(wall.Trigger is D1Trigger trig ? level.Triggers.IndexOf(trig) : -1),
+                    LinkedWall = (short)(wall.LinkedWall != null ? level.Walls.IndexOf(wall.LinkedWall) : -1),
                 });
             }
+
+            foreach (var trigger in level.Triggers)
+            {
+                var record = new TriggerRecord
+                {
+                    Flags = (ushort)trigger.Flags,
+                    Value = (float)(double)(Fix)trigger.Value,
+                };
+                foreach (var target in trigger.Targets)
+                    record.Targets.Add((segmentIndex[target.Segment], (int)target.SideNum));
+                baked.Triggers.Add(record);
+            }
+
+            foreach (var target in level.ReactorTriggerTargets)
+                baked.ReactorTargets.Add((segmentIndex[target.Segment], (int)target.SideNum));
 
             foreach (var obj in level.Objects)
             {
@@ -286,6 +327,33 @@ namespace D1U.Convert
                 bw.Write(wall.SegmentIndex);
                 bw.Write((byte)wall.SideIndex);
                 bw.Write(wall.Type);
+                bw.Write(wall.Flags);
+                bw.Write(wall.State);
+                bw.Write(wall.ClipNum);
+                bw.Write(wall.Keys);
+                bw.Write(wall.HitPoints);
+                bw.Write(wall.TriggerIndex);
+                bw.Write(wall.LinkedWall);
+            }
+
+            bw.Write(level.Triggers.Count);
+            foreach (var trigger in level.Triggers)
+            {
+                bw.Write(trigger.Flags);
+                bw.Write(trigger.Value);
+                bw.Write(trigger.Targets.Count);
+                foreach (var (seg, side) in trigger.Targets)
+                {
+                    bw.Write(seg);
+                    bw.Write((byte)side);
+                }
+            }
+
+            bw.Write(level.ReactorTargets.Count);
+            foreach (var (seg, side) in level.ReactorTargets)
+            {
+                bw.Write(seg);
+                bw.Write((byte)side);
             }
 
             bw.Write(level.Objects.Count);
@@ -346,7 +414,32 @@ namespace D1U.Convert
                     SegmentIndex = br.ReadInt32(),
                     SideIndex = br.ReadByte(),
                     Type = br.ReadByte(),
+                    Flags = br.ReadByte(),
+                    State = br.ReadByte(),
+                    ClipNum = br.ReadByte(),
+                    Keys = br.ReadByte(),
+                    HitPoints = br.ReadSingle(),
+                    TriggerIndex = br.ReadInt16(),
+                    LinkedWall = br.ReadInt16(),
                 });
+
+            int triggerCount = br.ReadInt32();
+            for (int i = 0; i < triggerCount; i++)
+            {
+                var trigger = new TriggerRecord
+                {
+                    Flags = br.ReadUInt16(),
+                    Value = br.ReadSingle(),
+                };
+                int targetCount = br.ReadInt32();
+                for (int t = 0; t < targetCount; t++)
+                    trigger.Targets.Add((br.ReadInt32(), br.ReadByte()));
+                level.Triggers.Add(trigger);
+            }
+
+            int reactorCount = br.ReadInt32();
+            for (int i = 0; i < reactorCount; i++)
+                level.ReactorTargets.Add((br.ReadInt32(), br.ReadByte()));
 
             int objectCount = br.ReadInt32();
             for (int i = 0; i < objectCount; i++)
