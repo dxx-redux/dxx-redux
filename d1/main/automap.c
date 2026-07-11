@@ -29,6 +29,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "object.h"
 #include "vclip.h"
 #include "game.h"
+#include "surround.h"
 #include "polyobj.h"
 #include "sounds.h"
 #include "player.h"
@@ -345,28 +346,28 @@ void draw_automap(automap *am)
 	if ( am->leave_mode==0 && am->controls.automap_state && (timer_query()-am->entry_time)>LEAVE_TIME)
 		am->leave_mode = 1;
 
-	gr_set_current_canvas(NULL);
+	surround_set_ui_canvas();
 	show_fullscr(&am->automap_background);
 	gr_set_curfont(HUGE_FONT);
 	gr_set_fontcolor(BM_XRGB(20, 20, 20), -1);
 	if (!MacHog)
-		gr_string((SWIDTH/8), (SHEIGHT/16), TXT_AUTOMAP);
+		gr_string((GWIDTH/8), (GHEIGHT/16), TXT_AUTOMAP);
 	else
-		gr_string(80*(SWIDTH/640.0), 36*(SHEIGHT/480.0), TXT_AUTOMAP);
+		gr_string(80*(GWIDTH/640.0), 36*(GHEIGHT/480.0), TXT_AUTOMAP);
 	gr_set_curfont(GAME_FONT);
 	gr_set_fontcolor(BM_XRGB(20, 20, 20), -1);
 	if (!MacHog)
 	{
-		gr_string((SWIDTH/4.923), (SHEIGHT/1.126), TXT_TURN_SHIP);
-		gr_string((SWIDTH/4.923), (SHEIGHT/1.083), TXT_SLIDE_UPDOWN);
-		gr_string((SWIDTH/4.923), (SHEIGHT/1.043), "F9/F10 Changes viewing distance");
+		gr_string((GWIDTH/4.923), (GHEIGHT/1.126), TXT_TURN_SHIP);
+		gr_string((GWIDTH/4.923), (GHEIGHT/1.083), TXT_SLIDE_UPDOWN);
+		gr_string((GWIDTH/4.923), (GHEIGHT/1.043), "F9/F10 Changes viewing distance");
 	}
 	else
 	{
 		// for the Mac automap they're shown up the top, hence the different layout
-		gr_string(265*(SWIDTH/640.0), 27*(SHEIGHT/480.0), TXT_TURN_SHIP);
-		gr_string(265*(SWIDTH/640.0), 44*(SHEIGHT/480.0), TXT_SLIDE_UPDOWN);
-		gr_string(265*(SWIDTH/640.0), 61*(SHEIGHT/480.0), "F9/F10 Changes viewing distance");
+		gr_string(265*(GWIDTH/640.0), 27*(GHEIGHT/480.0), TXT_TURN_SHIP);
+		gr_string(265*(GWIDTH/640.0), 44*(GHEIGHT/480.0), TXT_SLIDE_UPDOWN);
+		gr_string(265*(GWIDTH/640.0), 61*(GHEIGHT/480.0), "F9/F10 Changes viewing distance");
 	}
 	
 	gr_set_current_canvas(&am->automap_view);
@@ -708,10 +709,15 @@ void do_automap()
 	if (pcx_error != PCX_ERROR_NONE)
 		Error("File %s - PCX error: %s", MAP_BACKGROUND_FILENAME, pcx_errormsg(pcx_error));
 	gr_remap_bitmap_good(&am->automap_background, pal, -1, -1);
-	if (!MacHog)
-		gr_init_sub_canvas(&am->automap_view, &grd_curscreen->sc_canvas, (SWIDTH/23), (SHEIGHT/6), (SWIDTH/1.1), (SHEIGHT/1.45));
-	else
-		gr_init_sub_canvas(&am->automap_view, &grd_curscreen->sc_canvas, 38*(SWIDTH/640.0), 77*(SHEIGHT/480.0), 564*(SWIDTH/640.0), 381*(SHEIGHT/480.0));
+	{
+		int ux, uw;
+
+		surround_ui_rect(&ux, &uw);
+		if (!MacHog)
+			gr_init_sub_canvas(&am->automap_view, &grd_curscreen->sc_canvas, ux+(uw/23), (SHEIGHT/6), (uw/1.1), (SHEIGHT/1.45));
+		else
+			gr_init_sub_canvas(&am->automap_view, &grd_curscreen->sc_canvas, ux+38*(uw/640.0), 77*(SHEIGHT/480.0), 564*(uw/640.0), 381*(SHEIGHT/480.0));
+	}
 
 	gr_palette_load( gr_palette );
 	Automap_active = 1;

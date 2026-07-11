@@ -29,6 +29,7 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "gr.h"
 #include "inferno.h"
 #include "game.h"
+#include "surround.h"
 #include "key.h"
 #include "object.h"
 #include "physics.h"
@@ -189,6 +190,9 @@ void init_cockpit()
 
 	if (is_observer() && !can_draw_observer_cockpit())
 		PlayerCfg.CurrentCockpitMode = CM_FULL_SCREEN;
+
+	if (surround_enabled() && PlayerCfg.CurrentCockpitMode != CM_LETTERBOX)
+		PlayerCfg.CurrentCockpitMode = CM_FULL_SCREEN;	//cockpit art can't stretch across 3 monitors
 
 	gr_set_current_canvas(NULL);
 

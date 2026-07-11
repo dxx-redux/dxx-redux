@@ -3047,6 +3047,7 @@ void net_udp_send_game_info(struct _sockaddr sender_addr, ubyte info_upid, ubyte
 		buf[len] = Netgame.team_color[1];						len++;
 		buf[len] = Netgame.NewSpawnAlgorithm; len++;
 		buf[len] = Netgame.AckAckMode; len++;
+		buf[len] = Netgame.BombFlareTimer; len++;
 
 		if(info_upid == UPID_SYNC) {
 			PUT_INTEL_INT(buf + len, player_token); len += 4; 
@@ -3281,6 +3282,7 @@ int net_udp_process_game_info(ubyte *data, int data_len, struct _sockaddr game_a
 		Netgame.team_color[1] = data[len];						len++;
 		Netgame.NewSpawnAlgorithm = data[len]; len++;
 		Netgame.AckAckMode = data[len]; len++;
+		Netgame.BombFlareTimer = data[len]; len++;
 
 		if (Netgame.host_is_obs) {
 			multi_make_player_ghost(0);
@@ -3793,6 +3795,9 @@ static int opt_allow_custom_models_textures;
 static int opt_reduced_flash;
 static int opt_gauss_duplicating, opt_gauss_depleting, opt_gauss_steady_recharge, opt_gauss_steady_respawn;
 static int opt_ackack_mode;
+static int opt_bombflare_timer;
+static const char *bombflare_labels[] = {"Never", "3 sec", "5 sec", "10 sec", "Always"};
+static char BombFlareText[50];
 
 #ifdef USE_TRACKER
 static int opt_tracker;
@@ -3825,9 +3830,9 @@ void net_udp_more_game_options ()
 	char PrimDupText[80],SecDupText[80],SecCapText[80]; 
 	char HomingUpdateRateText[80];
 #ifdef USE_TRACKER
-	newmenu_item m[45];
+	newmenu_item m[50];
 #else
-	newmenu_item m[44];
+	newmenu_item m[49];
 #endif
 
 	snprintf(packstring,sizeof(char)*4,"%d",Netgame.PacketsPerSec);
@@ -3894,6 +3899,18 @@ void net_udp_more_game_options ()
 	m[opt].type = NM_TYPE_RADIO; m[opt].text = "Dropping Picked Up"; m[opt].value = Netgame.GaussAmmoStyle == GAUSS_STYLE_STEADY_RECHARGING; m[opt].group = 1; opt++;
 	opt_gauss_steady_respawn = opt;
 	m[opt].type = NM_TYPE_RADIO; m[opt].text = "Respawning"; m[opt].value = Netgame.GaussAmmoStyle == GAUSS_STYLE_STEADY_RESPAWNING; m[opt].group = 1; opt++;
+
+	// Anti-Mega Section
+	m[opt].type = NM_TYPE_TEXT; m[opt].text = ""; opt++;
+	m[opt].type = NM_TYPE_TEXT; m[opt].text = "Anti-Mega"; opt++;
+
+	opt_ackack_mode=opt;
+	m[opt].type = NM_TYPE_CHECK; m[opt].text = "Vulcan Ack-Ack (hits Mega)"; m[opt].value = Netgame.AckAckMode; opt++;
+
+	opt_bombflare_timer=opt;
+	sprintf(BombFlareText, "Bomb flare Mega: %s", bombflare_labels[Netgame.BombFlareTimer]);
+	m[opt].type = NM_TYPE_SLIDER; m[opt].value = Netgame.BombFlareTimer;
+	m[opt].text = BombFlareText; m[opt].min_value = 0; m[opt].max_value = 4; opt++;
 
 
 	m[opt].type = NM_TYPE_TEXT; m[opt].text = ""; opt++;
@@ -3967,9 +3984,6 @@ void net_udp_more_game_options ()
 	opt_allow_custom_models_textures=opt;
 	m[opt].type = NM_TYPE_CHECK; m[opt].text = "Allow custom models and textures"; m[opt].value = Netgame.AllowCustomModelsTextures; opt++;
 
-	opt_ackack_mode=opt;
-	m[opt].type = NM_TYPE_CHECK; m[opt].text = "Ack-Ack Mode (Vulcan hits Mega)"; m[opt].value = Netgame.AckAckMode; opt++;
-
 	opt_reduced_flash=opt;
 	m[opt].type = NM_TYPE_CHECK; m[opt].text = "Reduced flash effects"; m[opt].value = Netgame.ReducedFlash; opt++;
 
@@ -4033,6 +4047,7 @@ menu:
 	Netgame.ReducedFlash = m[opt_reduced_flash].value;
 	Netgame.NewSpawnAlgorithm = m[opt_spawn_algorithm].value;
 	Netgame.AckAckMode = m[opt_ackack_mode].value;
+	Netgame.BombFlareTimer = m[opt_bombflare_timer].value;
 }
 
 int net_udp_more_options_handler( newmenu *menu, d_event *event, void *userdata )
@@ -4114,6 +4129,8 @@ int net_udp_more_options_handler( newmenu *menu, d_event *event, void *userdata 
 				Netgame.GaussAmmoStyle = GAUSS_STYLE_STEADY_RECHARGING;
 			}  else if (citem == opt_gauss_steady_respawn) {
 				Netgame.GaussAmmoStyle = GAUSS_STYLE_STEADY_RESPAWNING;
+			} else if (citem == opt_bombflare_timer) {
+				sprintf(menus[opt_bombflare_timer].text, "Bomb flare Mega: %s", bombflare_labels[menus[opt_bombflare_timer].value]);
 			}
 
 			break;
@@ -4352,6 +4369,7 @@ void netgame_set_defaults(void)
 	Netgame.GaussAmmoStyle = GAUSS_STYLE_DEPLETING;
 	Netgame.NewSpawnAlgorithm = 0;
 	Netgame.AckAckMode = 0;
+	Netgame.BombFlareTimer = 2;  // Default: 5 sec
 
 #ifdef USE_TRACKER
 	Netgame.Tracker = 1;

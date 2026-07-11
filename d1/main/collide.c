@@ -1734,6 +1734,35 @@ void collide_weapon_and_weapon( object * weapon1, object * weapon2, vms_vector *
 		return;
 	}
 
+	// Bomb Flare Mode: Recently-deployed bombs can detonate Mega Missiles
+	if (Netgame.BombFlareTimer > 0) {
+		object *bomb = NULL, *mega = NULL;
+		if (weapon1->id == PROXIMITY_ID && weapon2->id == MEGA_ID) {
+			bomb = weapon1; mega = weapon2;
+		} else if (weapon1->id == MEGA_ID && weapon2->id == PROXIMITY_ID) {
+			bomb = weapon2; mega = weapon1;
+		}
+		
+		if (bomb && mega) {
+			fix flare_window = 0;
+			switch (Netgame.BombFlareTimer) {
+				case 1: flare_window = F1_0 * 3; break;   // 3 seconds
+				case 2: flare_window = F1_0 * 5; break;   // 5 seconds
+				case 3: flare_window = F1_0 * 10; break;  // 10 seconds
+				case 4: flare_window = IMMORTAL_TIME; break; // Always
+			}
+			fix bomb_age = GameTime64 - bomb->ctype.laser_info.creation_time;
+			if (bomb_age <= flare_window) {
+				explode_badass_weapon(mega);
+				explode_badass_weapon(bomb);
+				digi_link_sound_to_pos(Weapon_info[MEGA_ID].robot_hit_sound, mega->segnum, 0, collision_point, 0, F1_0);
+				weapon1->flags |= OF_SHOULD_BE_DEAD;
+				weapon2->flags |= OF_SHOULD_BE_DEAD;
+				return;
+			}
+		}
+	}
+
 	if ((Weapon_info[weapon1->id].destroyable) || (Weapon_info[weapon2->id].destroyable)) {
 		// shooting Plasma will make bombs explode one drops at the same time since hitboxes overlap. Small HACK to get around this issue. if the player moves away from the bomb at least...
 		if ((GameTime64 < weapon1->ctype.laser_info.creation_time + (F1_0/5)) && (GameTime64 < weapon2->ctype.laser_info.creation_time + (F1_0/5)) && (weapon1->ctype.laser_info.parent_num == weapon2->ctype.laser_info.parent_num))

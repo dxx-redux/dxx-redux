@@ -23,6 +23,7 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "menu.h"
 #include "inferno.h"
 #include "game.h"
+#include "surround.h"
 #include "gr.h"
 #include "key.h"
 #include "mouse.h"
@@ -1228,6 +1229,7 @@ void reticle_config()
 
 int opt_gr_texfilt, opt_gr_brightness, opt_gr_reticlemenu, opt_gr_alphafx, opt_gr_dynlightcolor, opt_gr_vsync, opt_gr_multisample, opt_gr_fpsindi, opt_gr_disablecockpit;
 int opt_gr_classicdepth;
+int opt_gr_surround, opt_gr_surroundangle;
 int graphics_config_menuset(newmenu *menu, d_event *event, void *userdata)
 {
 	newmenu_item *items = newmenu_get_items(menu);
@@ -1268,10 +1270,10 @@ int graphics_config_menuset(newmenu *menu, d_event *event, void *userdata)
 void graphics_config()
 {
 #ifdef OGL
-	newmenu_item m[17];
+	newmenu_item m[22];
 	int i = 0;
 #else
-	newmenu_item m[6];
+	newmenu_item m[11];
 #endif
 	int nitems = 0;
 
@@ -1305,6 +1307,13 @@ void graphics_config()
 
 	opt_gr_disablecockpit = nitems;
 	m[nitems].type = NM_TYPE_CHECK; m[nitems].text="Disable Cockpit View"; m[nitems].value = PlayerCfg.DisableCockpit; nitems++;
+	opt_gr_surround = nitems;
+	m[nitems].type = NM_TYPE_CHECK; m[nitems].text="Triple-Monitor Surround"; m[nitems].value = GameCfg.SurroundMode; nitems++;
+	m[nitems].type = NM_TYPE_TEXT; m[nitems].text = "Surround Angle:"; nitems++;
+	opt_gr_surroundangle = nitems;
+	m[nitems].type = NM_TYPE_RADIO; m[nitems].text = "150 degrees"; m[nitems].value = (GameCfg.SurroundAngle == 150); m[nitems].group = 1; nitems++;
+	m[nitems].type = NM_TYPE_RADIO; m[nitems].text = "180 degrees"; m[nitems].value = (GameCfg.SurroundAngle == 180); m[nitems].group = 1; nitems++;
+	m[nitems].type = NM_TYPE_RADIO; m[nitems].text = "270 degrees"; m[nitems].value = (GameCfg.SurroundAngle == 270); m[nitems].group = 1; nitems++;
 #ifdef OGL
 	m[opt_gr_texfilt+GameCfg.TexFilt].value=1;
 #endif
@@ -1332,8 +1341,26 @@ void graphics_config()
 #endif
 	GameCfg.GammaLevel = m[opt_gr_brightness].value;
 	GameCfg.FPSIndicator = m[opt_gr_fpsindi].value;
-	PlayerCfg.DisableCockpit = m[opt_gr_disablecockpit].value; 
+	PlayerCfg.DisableCockpit = m[opt_gr_disablecockpit].value;
+	{
+		int old_surround = surround_enabled();
 
+		GameCfg.SurroundMode = m[opt_gr_surround].value;
+		if (m[opt_gr_surroundangle].value)
+			GameCfg.SurroundAngle = 150;
+		else if (m[opt_gr_surroundangle+1].value)
+			GameCfg.SurroundAngle = 180;
+		else if (m[opt_gr_surroundangle+2].value)
+			GameCfg.SurroundAngle = 270;
+
+		if (surround_enabled() != old_surround) {
+			if (surround_enabled())
+				init_cockpit();		//Task 4 makes this force the full-screen HUD style
+			else
+				select_cockpit(PlayerCfg.PreferredCockpitMode);
+			reset_cockpit();
+		}
+	}
 
 	PlayerCfg.maxFps=atoi(framerate_string);
 

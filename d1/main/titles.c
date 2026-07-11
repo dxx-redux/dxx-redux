@@ -26,6 +26,7 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "timer.h"
 #include "key.h"
 #include "gr.h"
+#include "surround.h"
 #include "palette.h"
 #include "iff.h"
 #include "pcx.h"
@@ -109,7 +110,7 @@ static int title_handler(window *wind, d_event *event, title_screen *ts)
 			break;
 
 		case EVENT_WINDOW_DRAW:
-			gr_set_current_canvas( NULL );
+			surround_set_ui_canvas();
 			show_fullscr(&ts->title_bm);
 			break;
 
@@ -681,10 +682,10 @@ static void show_animated_bitmap(briefing *br)
 #ifdef OGL
 	float scale = 1.0;
 
-	if (((float)SWIDTH/320) < ((float)SHEIGHT/200))
-		scale = ((float)SWIDTH/320);
+	if (((float)GWIDTH/320) < ((float)GHEIGHT/200))
+		scale = ((float)GWIDTH/320);
 	else
-		scale = ((float)SHEIGHT/200);
+		scale = ((float)GHEIGHT/200);
 #endif
 
 	// Only plot every nth frame.
@@ -791,18 +792,18 @@ static void show_briefing_bitmap(grs_bitmap *bmp)
 	grs_canvas	*curcanv_save, *bitmap_canv;
 #ifdef OGL
 	float scale = 1.0;
+
+	if (((float)GWIDTH/(HIRESMODE ? 640 : 320)) < ((float)GHEIGHT/(HIRESMODE ? 480 : 200)))
+		scale = ((float)GWIDTH/(HIRESMODE ? 640 : 320));
+	else
+		scale = ((float)GHEIGHT/(HIRESMODE ? 480 : 200));
 #endif
 
-	bitmap_canv = gr_create_sub_canvas(grd_curcanv, rescale_x(220), rescale_y(55), (bmp->bm_w*(SWIDTH/(HIRESMODE ? 640 : 320))),(bmp->bm_h*(SHEIGHT/(HIRESMODE ? 480 : 200))));
+	bitmap_canv = gr_create_sub_canvas(grd_curcanv, rescale_x(220), rescale_y(55), (bmp->bm_w*(GWIDTH/(HIRESMODE ? 640 : 320))),(bmp->bm_h*(GHEIGHT/(HIRESMODE ? 480 : 200))));
 	curcanv_save = grd_curcanv;
 	gr_set_current_canvas(bitmap_canv);
 
 #ifdef OGL
-	if (((float)SWIDTH/(HIRESMODE ? 640 : 320)) < ((float)SHEIGHT/(HIRESMODE ? 480 : 200)))
-		scale = ((float)SWIDTH/(HIRESMODE ? 640 : 320));
-	else
-		scale = ((float)SHEIGHT/(HIRESMODE ? 480 : 200));
-
 	ogl_ubitmapm_cs(0,0,bmp->bm_w*scale,bmp->bm_h*scale,bmp,255,F1_0);
 #else
 	gr_bitmapm(0, 0, bmp);
@@ -1065,7 +1066,7 @@ static int briefing_handler(window *wind, d_event *event, briefing *br)
 		}
 
 		case EVENT_WINDOW_DRAW:
-			gr_set_current_canvas(NULL);
+			surround_set_ui_canvas();
 
 			timer_delay2(50);
 
@@ -1144,7 +1145,7 @@ void do_briefing_screens(char *filename, int level_num)
 		songs_play_song( SONG_BRIEFING, 1 );
 
 	set_screen_mode( SCREEN_MENU );
-	gr_set_current_canvas(NULL);
+	surround_set_ui_canvas();
 
 	if (!new_briefing_screen(br, 1))
 	{
