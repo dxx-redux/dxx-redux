@@ -1230,6 +1230,7 @@ void reticle_config()
 int opt_gr_texfilt, opt_gr_brightness, opt_gr_reticlemenu, opt_gr_alphafx, opt_gr_dynlightcolor, opt_gr_vsync, opt_gr_multisample, opt_gr_fpsindi, opt_gr_disablecockpit;
 int opt_gr_classicdepth;
 int opt_gr_surround, opt_gr_surroundangle;
+int opt_gr_mirror, opt_gr_mirrorpos, opt_gr_mirrorsize;
 int graphics_config_menuset(newmenu *menu, d_event *event, void *userdata)
 {
 	newmenu_item *items = newmenu_get_items(menu);
@@ -1270,10 +1271,10 @@ int graphics_config_menuset(newmenu *menu, d_event *event, void *userdata)
 void graphics_config()
 {
 #ifdef OGL
-	newmenu_item m[22];
+	newmenu_item m[31];
 	int i = 0;
 #else
-	newmenu_item m[11];
+	newmenu_item m[20];
 #endif
 	int nitems = 0;
 
@@ -1317,6 +1318,18 @@ void graphics_config()
 #ifdef OGL
 	m[opt_gr_texfilt+GameCfg.TexFilt].value=1;
 #endif
+	opt_gr_mirror = nitems;
+	m[nitems].type = NM_TYPE_CHECK; m[nitems].text="Rear View Mirror"; m[nitems].value = PlayerCfg.MirrorMode; nitems++;
+	m[nitems].type = NM_TYPE_TEXT; m[nitems].text = "Mirror Position:"; nitems++;
+	opt_gr_mirrorpos = nitems;
+	m[nitems].type = NM_TYPE_RADIO; m[nitems].text = "Top Left"; m[nitems].value = (PlayerCfg.MirrorPos == 0); m[nitems].group = 2; nitems++;
+	m[nitems].type = NM_TYPE_RADIO; m[nitems].text = "Top Center"; m[nitems].value = (PlayerCfg.MirrorPos == 1); m[nitems].group = 2; nitems++;
+	m[nitems].type = NM_TYPE_RADIO; m[nitems].text = "Top Right"; m[nitems].value = (PlayerCfg.MirrorPos == 2); m[nitems].group = 2; nitems++;
+	m[nitems].type = NM_TYPE_TEXT; m[nitems].text = "Mirror Size:"; nitems++;
+	opt_gr_mirrorsize = nitems;
+	m[nitems].type = NM_TYPE_RADIO; m[nitems].text = "Small"; m[nitems].value = (PlayerCfg.MirrorSize == 0); m[nitems].group = 3; nitems++;
+	m[nitems].type = NM_TYPE_RADIO; m[nitems].text = "Medium"; m[nitems].value = (PlayerCfg.MirrorSize == 1); m[nitems].group = 3; nitems++;
+	m[nitems].type = NM_TYPE_RADIO; m[nitems].text = "Large"; m[nitems].value = (PlayerCfg.MirrorSize == 2); m[nitems].group = 3; nitems++;
 
 	m[nitems].type = NM_TYPE_TEXT; m[nitems].text = "Framerate"; nitems++; 
 
@@ -1359,6 +1372,30 @@ void graphics_config()
 			else
 				select_cockpit(PlayerCfg.PreferredCockpitMode);
 			reset_cockpit();
+		}
+	}
+
+	{
+		int old_mirror = PlayerCfg.MirrorMode;
+
+		PlayerCfg.MirrorMode = m[opt_gr_mirror].value;
+		if (m[opt_gr_mirrorpos].value)
+			PlayerCfg.MirrorPos = 0;
+		else if (m[opt_gr_mirrorpos+1].value)
+			PlayerCfg.MirrorPos = 1;
+		else if (m[opt_gr_mirrorpos+2].value)
+			PlayerCfg.MirrorPos = 2;
+		if (m[opt_gr_mirrorsize].value)
+			PlayerCfg.MirrorSize = 0;
+		else if (m[opt_gr_mirrorsize+1].value)
+			PlayerCfg.MirrorSize = 1;
+		else if (m[opt_gr_mirrorsize+2].value)
+			PlayerCfg.MirrorSize = 2;
+
+		if (PlayerCfg.MirrorMode && !old_mirror) {
+			if (Rear_view)
+				reset_rear_view();	//feature blocks full-screen rear view
+			Mirror_visible = 1;		//always start visible on enable
 		}
 	}
 

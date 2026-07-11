@@ -103,7 +103,10 @@ typedef struct player_config
 	int AlphaEffects;
 	int DynLightColor;
 	ubyte DisableCockpit;  /* DisableCockpit */ 
-	ubyte StickyRearview; /* StickyRearview */ 
+	ubyte StickyRearview; /* StickyRearview */
+	ubyte MirrorMode; /* RearMirror: R key toggles a PiP mirror instead of full-screen rear view */
+	ubyte MirrorPos; /* RearMirror: 0=top left, 1=top center, 2=top right */
+	ubyte MirrorSize; /* RearMirror: 0=small, 1=medium, 2=large */
 	ubyte SelectAfterFire; /* SelectAfterFire */ 
 	int maxFps;
 	int ShipColor; 

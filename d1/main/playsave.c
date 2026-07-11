@@ -107,7 +107,10 @@ int new_player_config()
 	PlayerCfg.AlphaEffects = 0;
 	PlayerCfg.DynLightColor = 0;
 	PlayerCfg.DisableCockpit = 0;  /* DisableCockpit */ 
-	PlayerCfg.StickyRearview = 0; /* StickyRearview */ 
+	PlayerCfg.StickyRearview = 0; /* StickyRearview */
+	PlayerCfg.MirrorMode = 0; /* RearMirror */
+	PlayerCfg.MirrorPos = 1; /* RearMirror */
+	PlayerCfg.MirrorSize = 1; /* RearMirror */
 	PlayerCfg.SelectAfterFire = 1;  /* SelectAfterFire */
 	PlayerCfg.VulcanAmmoWarnings = 1; 
 	PlayerCfg.ShieldWarnings = 0; 
@@ -429,7 +432,19 @@ int read_player_d1x(char *filename)
 				if(!strcmp(word,"DISABLECOCKPIT"))
 					PlayerCfg.DisableCockpit = atoi(line); /* DisableCockpit */ 
 				if(!strcmp(word,"STICKYREARVIEW"))
-					PlayerCfg.StickyRearview = atoi(line); /* StickyRearview */ 
+					PlayerCfg.StickyRearview = atoi(line); /* StickyRearview */
+				if(!strcmp(word,"MIRRORMODE"))
+					PlayerCfg.MirrorMode = atoi(line) ? 1 : 0;
+				if(!strcmp(word,"MIRRORPOS")) {
+					PlayerCfg.MirrorPos = atoi(line);
+					if (PlayerCfg.MirrorPos > 2)
+						PlayerCfg.MirrorPos = 1;
+				}
+				if(!strcmp(word,"MIRRORSIZE")) {
+					PlayerCfg.MirrorSize = atoi(line);
+					if (PlayerCfg.MirrorSize > 2)
+						PlayerCfg.MirrorSize = 1;
+				}
 				if(!strcmp(word,"SELECTAFTERFIRE"))
 					PlayerCfg.SelectAfterFire = atoi(line); /* SelectAfterFire */ 										
 				if(!strcmp(word,"NOFIREAUTOSELECT"))
@@ -907,7 +922,10 @@ int write_player_d1x(char *filename)
 		PHYSFSX_printf(fout,"bombgauge=%i\n",PlayerCfg.BombGauge);
 		PHYSFSX_printf(fout,"automapfreeflight=%i\n",PlayerCfg.AutomapFreeFlight);
 		PHYSFSX_printf(fout,"disablecockpit=%i\n",PlayerCfg.DisableCockpit); /* DisableCockpit */ 
-		PHYSFSX_printf(fout,"stickyrearview=%i\n",PlayerCfg.StickyRearview); /* StickyRearview */ 
+		PHYSFSX_printf(fout,"stickyrearview=%i\n",PlayerCfg.StickyRearview); /* StickyRearview */
+		PHYSFSX_printf(fout,"mirrormode=%i\n",PlayerCfg.MirrorMode); /* RearMirror */
+		PHYSFSX_printf(fout,"mirrorpos=%i\n",PlayerCfg.MirrorPos); /* RearMirror */
+		PHYSFSX_printf(fout,"mirrorsize=%i\n",PlayerCfg.MirrorSize); /* RearMirror */
 		PHYSFSX_printf(fout,"selectafterfire=%i\n",PlayerCfg.SelectAfterFire); /* SelectAfterFire */ 		
 		PHYSFSX_printf(fout,"nofireautoselect=%i\n",PlayerCfg.NoFireAutoselect);
 		PHYSFSX_printf(fout,"cycleautoselectonly=%i\n",PlayerCfg.CycleAutoselectOnly);

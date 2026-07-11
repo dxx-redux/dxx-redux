@@ -488,6 +488,54 @@ void game_render_frame_mono(int flip)
 		render_frame(0);
 	}
 
+	if (PlayerCfg.MirrorMode && Mirror_visible
+		&& !Player_is_dead && !Endlevel_sequence
+		&& Viewer == ConsoleObject
+		&& Newdemo_state != ND_STATE_PLAYBACK
+		&& !is_observer())
+	{
+		static grs_canvas mirror_canv;
+		static const int mirror_divisor[3] = { 6, 4, 3 };	//small, medium, large
+		int base_x = 0, base_w = Screen_3d_window.cv_bitmap.bm_w;
+		int base_h = Screen_3d_window.cv_bitmap.bm_h;
+		int size = PlayerCfg.MirrorSize;
+		int mw, mh, mgn, mx, bt, i;
+
+		if (surround_enabled())	{	//mirror lives on the center monitor
+			base_w /= 3;
+			base_x = base_w;
+		}
+
+		if (size > 2)
+			size = 1;
+		mw = base_w / mirror_divisor[size];
+		mh = base_h / mirror_divisor[size];
+		mgn = base_h / 64;
+		if (mgn < 2)
+			mgn = 2;
+		if (PlayerCfg.MirrorPos == 0)		//top left
+			mx = mgn;
+		else if (PlayerCfg.MirrorPos == 2)	//top right
+			mx = base_w - mw - mgn;
+		else					//top center
+			mx = (base_w - mw) / 2;
+
+		gr_init_sub_canvas(&mirror_canv, &Screen_3d_window, base_x + mx, mgn, mw, mh);
+		gr_set_current_canvas(&mirror_canv);
+		Mirror_view = 1;
+		render_frame(0);
+		Mirror_view = 0;
+
+		bt = base_h / 360;			//border, drawn inside the mirror's edges
+		if (bt < 2)
+			bt = 2;
+		gr_setcolor(BM_XRGB(6,6,6));
+		for (i = 0; i < bt; i++)
+			gr_box(i, i, mw - 1 - i, mh - 1 - i);
+
+		gr_set_current_canvas(&Screen_3d_window);
+	}
+
 	update_cockpits();
 
 	if (Newdemo_state == ND_STATE_PLAYBACK)

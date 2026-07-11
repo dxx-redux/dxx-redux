@@ -741,7 +741,7 @@ void render_object(object *obj)
 
 	gr_settransblend( GR_FADE_OFF, GR_BLEND_NORMAL ); // revert any transparency/blending setting back to normal
 
-	if ( obj->render_type != RT_NONE && Newdemo_state == ND_STATE_RECORDING )
+	if ( obj->render_type != RT_NONE && Newdemo_state == ND_STATE_RECORDING && !Mirror_view )
 		newdemo_record_render_object(obj);
 
 	Max_linear_depth = mld_save;
