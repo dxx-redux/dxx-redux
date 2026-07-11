@@ -78,7 +78,9 @@ PlayerCfg.MirrorMode && Mirror_visible
 
 - **Demo-record gate:** `newdemo_record_start_frame()` / `newdemo_record_viewer_object()` run
   only when `Surround_view <= 0 && !Mirror_view` (extends the existing surround gate at
-  render.c:1447) — the mirror view must never double-record a frame.
+  render.c:1447) — the mirror view must never double-record a frame. Per-object render
+  records (`newdemo_record_render_object`, object.c) carry the same `!Mirror_view` gate, so
+  demos recorded with the mirror visible are identical to mirror-off gameplay.
 - **Lighting gate:** same condition added to the `start_lighting_frame()` call (render.c:1454).
 - **View matrix:** the existing rear-view branch (render.c:1478) becomes
   `if ((Rear_view || Mirror_view) && Viewer==ConsoleObject)`; it composes the same 180° heading
@@ -93,12 +95,22 @@ PlayerCfg.MirrorMode && Mirror_visible
 Projection maps view-space x through the right vector (`x = dot(p − eye, rvec)`), so negating
 `rvec` negates every projected x — a horizontal flip of the whole image — before either
 rasterizer runs. World-space visibility (`g3_check_normal_facing` uses world normals and the
-viewer position) is unaffected. The OpenGL path rasterizes without winding-dependent culling.
-The one open risk is the **software** scanline texture mapper receiving reverse-wound
-projected polygons; the implementation plan starts with a prototype task that renders a
-negated-rvec view full-screen to verify it. If the software mapper misrenders, the negation is
-wrapped in `#ifdef OGL` (renderer choice is compile-time), and software builds get an
-unflipped mirror; the default OGL build keeps the true mirror either way.
+viewer position) is unaffected.
+
+The flip reverses every scene polygon's projected winding, and the OpenGL renderer enforces
+back-face culling with clockwise front faces (`ogl_start_frame`: `glEnable(GL_CULL_FACE)` +
+`glFrontFace(GL_CW)`) — so the mirror pass disables `GL_CULL_FACE` directly after
+`g3_start_frame()` while `Mirror_view` is set; the next `ogl_start_frame` re-enables it.
+GL-level culling is redundant for the mirror anyway (face selection already happened CPU-side
+in world space). `glFrontFace(GL_CCW)` would be the wrong fix: billboard sprite quads are
+built after the view rotation, keep their unmirrored winding, and would then be culled.
+(Caught by the whole-branch review — this spec originally claimed the OGL path has no
+winding-dependent culling, which was wrong.)
+
+The one remaining open risk is the **software** scanline texture mapper receiving
+reverse-wound projected polygons — checked in the acceptance run. If it misrenders, the
+negation (and only it) is wrapped in `#ifdef OGL` (renderer choice is compile-time), and
+software builds get an unflipped mirror; the default OGL build keeps the true mirror.
 
 Object sprites (powerups, explosions) are view-space billboards: their positions mirror
 correctly; the sprite bitmaps themselves may draw unflipped, which is imperceptible.
@@ -167,8 +179,8 @@ persisted): `int Mirror_visible` (starts 1), `int Mirror_view` (active-render fl
 No test suite; verification is build + run (per CLAUDE.md):
 
 1. Build d1 (`cmake --build build -j`, MSYS2 MinGW64 toolchain).
-2. **Prototype gate first:** negated-rvec view rendered full-screen — geometry, textures and
-   sprites correct in OGL (and checked in a software build if convenient).
+2. **OGL sanity:** mirror shows live, correct geometry (the mirror pass disables GL back-face
+   culling; without that, the flipped scene is culled to a stale/blank rectangle).
 3. Menu: toggle Rear View Mirror, sweep all 3 positions × 3 sizes; values persist across
    restart in the pilot file.
 4. **Flip correctness:** strafe left next to a landmark behind you — it must drift toward the
