@@ -34,6 +34,7 @@ add_executable (d1x-redux
     kmatrix.c
     laser.c
     lighting.c
+    mapedges.c
     menu.c
     mglobal.c
     mission.c

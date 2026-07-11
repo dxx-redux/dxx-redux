@@ -27,4 +27,7 @@ extern void do_automap();
 extern void automap_clear_visited();
 extern ubyte Automap_visited[MAX_SEGMENTS];
 
+struct object;
+extern void draw_player( struct object * obj );
+
 #endif
