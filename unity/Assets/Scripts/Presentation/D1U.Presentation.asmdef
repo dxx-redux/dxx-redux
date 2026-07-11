@@ -1,14 +1,11 @@
 {
-    "name": "D1U.Editor",
-    "rootNamespace": "D1U",
+    "name": "D1U.Presentation",
+    "rootNamespace": "D1U.Presentation",
     "references": [
         "LibDescent.Data",
-        "D1U.Convert",
-        "D1U.Presentation"
+        "D1U.Convert"
     ],
-    "includePlatforms": [
-        "Editor"
-    ],
+    "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,

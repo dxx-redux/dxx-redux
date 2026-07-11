@@ -227,5 +227,62 @@ catch (Exception e)
     errors++;
 }
 
+// --- 7. bake every level to meshes (M2) ---
+Console.WriteLine("\nlevel baking:");
+var missionList = MissionScanner.Scan(hogsDir);
+int levelBakeFailures = 0, levelsBaked = 0;
+foreach (var mission in missionList)
+{
+    var missionHog = new HOGFile(mission.HogPath);
+    long tris = 0, chunks = 0, wallPieces = 0, objects = 0;
+    foreach (var levelName in mission.LevelNames)
+    {
+        try
+        {
+            var lump = missionHog.Lumps.First(
+                l => string.Equals(l.Name, levelName, StringComparison.OrdinalIgnoreCase));
+            using var ms = new MemoryStream(missionHog.GetLumpData(lump));
+            var bakedLevel = LevelBaker.Bake(D1Level.CreateFromStream(ms), pig);
+            tris += bakedLevel.StaticTriangleCount;
+            chunks += bakedLevel.StaticChunks.Count;
+            wallPieces += bakedLevel.DoorPieces.Count;
+            objects += bakedLevel.Objects.Count;
+            levelsBaked++;
+        }
+        catch (Exception e)
+        {
+            levelBakeFailures++;
+            Console.Error.WriteLine($"  {mission.CacheKey}/{levelName} FAIL: {e.GetType().Name}: {e.Message}");
+        }
+    }
+    Console.WriteLine($"  {mission.CacheKey,-12} levels={mission.LevelNames.Count,2} tris={tris,6} " +
+                      $"chunks={chunks,4} wallPieces={wallPieces,4} objects={objects,5}");
+}
+Console.WriteLine($"  baked {levelsBaked} levels, {levelBakeFailures} failure(s)");
+errors += levelBakeFailures;
+
+// --- 8. mission DXU build + cache hit + reload (M2) ---
+Console.WriteLine("\nmission DXU:");
+foreach (var key in new[] { "firststrike", "chaos" })
+{
+    var mission = missionList.FirstOrDefault(m => m.CacheKey == key);
+    if (mission == null)
+    {
+        Console.Error.WriteLine($"  mission '{key}' not found");
+        errors++;
+        continue;
+    }
+    var missionPath = MissionDxu.EnsureMission(hogsDir, mission, cacheDir, s => Console.WriteLine("  " + s));
+    MissionDxu.EnsureMission(hogsDir, mission, cacheDir, s => Console.WriteLine("  " + s)); // expect cache hit
+    var (missionName, missionLevelNames, missionLevels) = MissionDxu.Read(missionPath, out _);
+    bool missionOk = missionLevels.Count == mission.LevelNames.Count &&
+                     missionLevelNames.Count == missionLevels.Count &&
+                     missionLevels.All(l => l.Segments.Length > 0 && l.StaticChunks.Count > 0);
+    Console.WriteLine($"  {key}: \"{missionName}\" reload {missionLevels.Count} level(s), " +
+                      $"{new FileInfo(missionPath).Length / 1024} KB {(missionOk ? "OK" : "MISMATCH")}");
+    if (!missionOk)
+        errors++;
+}
+
 Console.WriteLine(errors == 0 ? "\nSMOKE OK" : $"\nSMOKE FAILED: {errors} error(s)");
 return errors == 0 ? 0 : 2;
