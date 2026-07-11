@@ -184,5 +184,48 @@ foreach (var msnPath in Directory.GetFiles(hogsDir, "*.msn").OrderBy(p => p))
     }
 }
 
+// --- 5. DXU cache: build, cache-hit, reload roundtrip (M1) ---
+Console.WriteLine("\nDXU cache:");
+var cacheDir = Path.Combine(Path.GetTempPath(), "d1u-smoke-cache");
+if (Directory.Exists(cacheDir))
+    Directory.Delete(cacheDir, recursive: true);
+var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+var dxuPath = D1U.Convert.DxuCache.EnsureBase(hogsDir, cacheDir, s => Console.WriteLine("  " + s));
+Console.WriteLine($"  cold build: {stopwatch.ElapsedMilliseconds} ms");
+stopwatch.Restart();
+D1U.Convert.DxuCache.EnsureBase(hogsDir, cacheDir, s => Console.WriteLine("  " + s));
+Console.WriteLine($"  warm ensure: {stopwatch.ElapsedMilliseconds} ms");
+
+stopwatch.Restart();
+var baseDxu = D1U.Convert.BaseDxu.Read(dxuPath, out var dxuHeader);
+Console.WriteLine($"  reload: {stopwatch.ElapsedMilliseconds} ms -> {baseDxu.Bitmaps.Count} bitmaps, " +
+                  $"{baseDxu.Sounds.Count} sounds, {baseDxu.Models.Count} models, " +
+                  $"{baseDxu.Songs.Count} songs (order list {baseDxu.SongOrder.Count})");
+bool roundtripOk =
+    baseDxu.Bitmaps.Count == pig.Bitmaps.Count &&
+    baseDxu.Sounds.Count == pig.Sounds.Count &&
+    baseDxu.Models.Count == pig.numModels &&
+    baseDxu.Songs.Count > 20 &&
+    baseDxu.PaletteRaw.Length == 9472 &&
+    baseDxu.Bitmaps[1].Indexed.SequenceEqual(pig.Bitmaps[1].Data);
+Console.WriteLine($"  roundtrip {(roundtripOk ? "OK" : "MISMATCH")}");
+if (!roundtripOk)
+    errors++;
+
+// --- 6. gameplay tables -> JSON (debug/modding dump) ---
+try
+{
+    D1U.Smoke.TableJson.DumpAll(pig, cacheDir);
+    var jsonFiles = Directory.GetFiles(cacheDir, "*.json").Select(Path.GetFileName).ToArray();
+    Console.WriteLine($"  tables JSON: {string.Join(", ", jsonFiles)} -> {cacheDir}");
+    if (jsonFiles.Length < 4)
+        errors++;
+}
+catch (Exception e)
+{
+    Console.Error.WriteLine($"  tables JSON FAIL: {e.GetType().Name}: {e.Message}");
+    errors++;
+}
+
 Console.WriteLine(errors == 0 ? "\nSMOKE OK" : $"\nSMOKE FAILED: {errors} error(s)");
 return errors == 0 ? 0 : 2;

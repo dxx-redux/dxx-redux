@@ -16,6 +16,8 @@ namespace D1U.Convert
         {
             /// <summary>Model texture slot, or -1 for a flat-colored group.</summary>
             public int TextureSlot = -1;
+            /// <summary>Resolved pig bitmap index (set by BakeResolved), -1 if unresolved/flat.</summary>
+            public int BitmapIndex = -1;
             /// <summary>Palette index of the flat color (TextureSlot == -1).</summary>
             public int FlatColorIndex;
             public List<Vector3> Positions = new List<Vector3>();
@@ -35,6 +37,9 @@ namespace D1U.Convert
         }
 
         public List<SubmodelMesh> Submodels = new List<SubmodelMesh>();
+        public float Radius;
+        public int DyingModelnum = -1;
+        public int DeadModelnum = -1;
 
         public int TriangleCount
         {
@@ -57,7 +62,12 @@ namespace D1U.Convert
             extractor.SetModel(model);
             List<BSPModel> parts = extractor.Extract();
 
-            var baked = new BakedModel();
+            var baked = new BakedModel
+            {
+                Radius = (float)model.Radius,
+                DyingModelnum = model.DyingModelnum,
+                DeadModelnum = model.DeadModelnum,
+            };
             foreach (var part in parts)
             {
                 var sub = model.Submodels[part.SubmodelNum];
@@ -73,6 +83,19 @@ namespace D1U.Convert
                 baked.Submodels.Add(mesh);
             }
             baked.Submodels.Sort((a, b) => a.Index.CompareTo(b.Index));
+            return baked;
+        }
+
+        /// <summary>
+        /// Bake plus texture-slot resolution: fills TriangleGroup.BitmapIndex.
+        /// </summary>
+        public static BakedModel BakeResolved(Descent1PIGFile pig, Polymodel model)
+        {
+            var baked = Bake(model);
+            foreach (var sub in baked.Submodels)
+                foreach (var g in sub.Groups)
+                    if (g.TextureSlot >= 0)
+                        g.BitmapIndex = ResolveTextureSlot(pig, model, g.TextureSlot);
             return baked;
         }
 
