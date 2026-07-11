@@ -29,7 +29,8 @@ navigation over the road.
     chose this over the automap's coop/team/`NETGAME_FLAG_SHOW_MAP` gating). Exception:
     players with an active cloak are hidden while cloaked.
   - All nearby geometry is drawn, regardless of exploration state (no fog-of-war).
-  - Extra settings: size (S/M/L), range (Near/Medium/Far), opacity, bindable toggle key.
+  - Extra settings: size (S/M/L), range (Near/Medium/Far), opacity, toggle key
+    (fixed F4 — see Settings section; user approved the change from "bindable").
 
 ## Approach decision
 
@@ -105,8 +106,11 @@ changes. An edge is drawn if any adjacent segment has depth ≤ range. Range set
 maps to hops: Near/Medium/Far ≈ 4/6/9 (tuned during implementation). Edges near the
 range limit fade out (automap-style `gr_fade_table` fade) for a radar falloff.
 
-**Auto-leveling.** Map "up" = normalized average of `extract_up_vector_from_segment()`
-over in-range segments. The result is temporally smoothed (slew-rate-limited slerp
+**Auto-leveling.** Map "up" = normalized average of per-segment up vectors over
+in-range segments. A segment's up = centroid of its top side's vertices minus
+centroid of its bottom side's (`Side_to_verts[WTOP]`/`[WBOTTOM]`) — the same math
+as the editor's `extract_up_vector_from_segment`, reimplemented locally because
+editor code is only compiled with `EDITOR=ON`. The result is temporally smoothed (slew-rate-limited slerp
 toward the target, frame-time scaled) so the map re-levels gently instead of snapping
 at junctions. If the average degenerates (near-zero length, e.g. opposing ups), hold
 the previous up. No world-axis snapping in v1 — smoothing is the stability mechanism.
@@ -160,12 +164,18 @@ read-back, `menu.c:1274`). Instead: a dedicated **"Minimap" submenu in the Optio
 menu** — enable checkbox, position radio group (5), size radio group (3), range radio
 group (3), rotation radio group (2), opacity slider. Graphics Options is untouched.
 
-**Toggle key.** A bindable "toggle minimap" control flips runtime flag
-`Minimap_visible` (default 1), mirroring `Mirror_visible` (`game.c:826`,
-`check_rear_view` `game.c:839-845`). Effective visibility = `MinimapMode &&
-Minimap_visible`. Added via the existing pattern for appending kconfig controls
-(append at table end so existing pilot key layouts stay valid — exact mechanics
-resolved in the implementation plan).
+**Toggle key.** Fixed **F4** flips runtime flag `Minimap_visible` (default 1,
+mirroring `Mirror_visible`, `game.c:826`) with a HUD message, only while
+`MinimapMode` is on. Effective visibility = `MinimapMode && Minimap_visible`.
+Rationale (user-approved change from the original "bindable" wording): plain F4
+is unused in live gameplay and already reserved in kconfig's `system_keys`
+(`kconfig.c:71`) so it cannot collide with user bindings, and it sits naturally
+next to F3 (cockpit view toggle). A rebindable control was investigated and
+rejected for v1 — the D1X key table is a fixed weapon-select structure, and the
+main keyboard table is a hand-authored 50-slot config-screen grid whose entries
+hard-code UI coordinates and navigation links; extending it is disproportionate.
+Demo playback maps F4 to its percentage display, but the minimap is gated off
+during playback, so there is no conflict.
 
 ### 4. Engine changes, edge cases, risks
 
@@ -232,3 +242,4 @@ runs with retail data.
 - Minimap during demo playback or observer mode.
 - Fog-of-war / visited-only mode.
 - Marker interpolation between net updates.
+- Rebindable minimap toggle key (fixed F4 in v1).
