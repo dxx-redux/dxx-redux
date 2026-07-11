@@ -37,6 +37,7 @@ add_executable (d1x-redux
     mapedges.c
     menu.c
     mglobal.c
+    minimap.c
     mission.c
     morph.c
     multi.c
