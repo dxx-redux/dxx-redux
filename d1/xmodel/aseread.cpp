@@ -1069,7 +1069,7 @@ if (!(m_textures.m_bitmaps.Create (m_textures.m_nBitmaps, "ASE::CModel::m_textur
 
 for (i = 0; i < m_textures.m_nBitmaps; i++) {
 	if ((h = cf.ReadInt ())) {
-		char szLabel [40];
+		char szLabel [64];
 		sprintf (szLabel, "ASE::CModel::m_textures.m_names [%d]", i);
 		if (!m_textures.m_names [i].Create (h, szLabel)) {
 			cf.Close ();

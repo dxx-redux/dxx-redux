@@ -14,6 +14,8 @@ GLfloat ogl_mat_ortho[16] = {
 GLuint ogl_mk_prog(const char *vert_src, const char *frag_src) {
 	char msg[2048];
 	GLint val = 0;
+	if (!glCreateShader)
+		Error("Unsupported OpenGL version. Check if your graphics card drivers are installed.");
 	GLuint vert = glCreateShader(GL_VERTEX_SHADER);
 	if (!vert) {
 		Error("creating vert failed");

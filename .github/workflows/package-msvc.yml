@@ -53,8 +53,22 @@ jobs:
     - name: Build D2
       run: cmake --build buildd2
 
-    - name: Upload artifact
+    - name: List generated PDB files
+      shell: pwsh
+      run: Get-ChildItem -Path buildd1,buildd2 -Recurse -Filter *.pdb | ForEach-Object { $_.FullName }
+
+    - name: Upload binary artifact
       uses: actions/upload-artifact@v4
       with:
-        name: msvc-${{ matrix.arch }}
+        name: msvc-${{ matrix.arch }}-${{ github.sha }}
         path: 'buildd?/main/*.*'
+
+    - name: Upload symbol artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: msvc-symbols-${{ matrix.arch }}-${{ github.sha }}
+        path: |
+          buildd1/**/*.pdb
+          buildd2/**/*.pdb
+        if-no-files-found: error
+        retention-days: 90

@@ -345,7 +345,7 @@ int g3_draw_sphere(g3s_point *pnt,fix rad)
 		if (! (pnt->p3_flags & PF_PROJECTED))
 			g3_project_point(pnt);
 
-		if (! (pnt->p3_codes & PF_OVERFLOW)) {
+		if (! (pnt->p3_flags & PF_OVERFLOW)) {
 			fix r2,t;
 
 			r2 = fixmul(rad,Matrix_scale.x);

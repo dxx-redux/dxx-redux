@@ -268,6 +268,13 @@ int PHYSFSX_checkSupportedArchiveTypes()
 
 int PHYSFSX_getRealPath(const char *stdPath, char *realPath)
 {
+#ifdef WIN32
+	if (stdPath[0] && stdPath[1] == ':') { // absolute path
+		snprintf(realPath, PATH_MAX, "%s", stdPath);
+		return 1;
+	}
+#endif
+
 	const char *realDir = PHYSFS_getRealDir(stdPath);
 	const char *sep = PHYSFS_getDirSeparator();
 	char *p;

@@ -176,6 +176,7 @@ static inline char * PHYSFSX_fgets(char *buf, size_t n, PHYSFS_file *const fp)
 {
 	size_t i;
 	int c;
+	char *p = buf;
 
 	for (i = 0; i < n - 1; i++)
 	{
@@ -184,7 +185,10 @@ static inline char * PHYSFSX_fgets(char *buf, size_t n, PHYSFS_file *const fp)
 			c = PHYSFSX_fgetc(fp);
 			if (c == EOF)
 			{
-				*buf = 0;
+				if (p != buf) // return last unterminated line
+					break;
+
+				*p = 0;
 
 				return NULL;
 			}
@@ -207,11 +211,11 @@ static inline char * PHYSFSX_fgets(char *buf, size_t n, PHYSFS_file *const fp)
 			c = '\n';   // and anyway -- 0xod is CR on mac, not 0x0a
 		if (c == '\n')
 			break;
-		*buf++ = c;
+		*p++ = c;
 	}
-	*buf = 0;
+	*p = 0;
 
-	return buf;
+	return p;
 }
 
 static inline int PHYSFSX_printf(PHYSFS_file *file, const char *format, ...)

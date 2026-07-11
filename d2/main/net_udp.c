@@ -4305,6 +4305,17 @@ int net_udp_game_param_handler( newmenu *menu, d_event *event, param_opt *opt )
 				else if (menus[opt->team_anarchy].value) {
 					Netgame.gamemode = NETGAME_TEAM_ANARCHY;
 				}
+				else if (menus[opt->capture].value)
+					Netgame.gamemode = NETGAME_CAPTURE_FLAG;
+				else if (HoardEquipped() && menus[opt->hoard].value)
+					Netgame.gamemode = NETGAME_HOARD;
+				else if (HoardEquipped() && menus[opt->team_hoard].value)
+					Netgame.gamemode = NETGAME_TEAM_HOARD;
+				else if( menus[opt->bounty].value )
+					Netgame.gamemode = NETGAME_BOUNTY;
+				// This checks for "type = anarchy" in the mission file and blocks those missions
+				// from being played with robots. Any new game modes that don't use robots should
+				// be added ABOVE this line.
 		 		else if (ANARCHY_ONLY_MISSION) {
 					int i = 0;
 		 			nm_messagebox(NULL, 1, TXT_OK, TXT_ANARCHY_ONLY_MISSION);
@@ -4317,14 +4328,6 @@ int net_udp_game_param_handler( newmenu *menu, d_event *event, param_opt *opt )
 					Netgame.gamemode = NETGAME_ROBOT_ANARCHY;
 				else if ( menus[opt->coop].value ) 
 					Netgame.gamemode = NETGAME_COOPERATIVE;
-				else if (menus[opt->capture].value)
-					Netgame.gamemode = NETGAME_CAPTURE_FLAG;
-				else if (HoardEquipped() && menus[opt->hoard].value)
-					Netgame.gamemode = NETGAME_HOARD;
-				else if (HoardEquipped() && menus[opt->team_hoard].value)
-					Netgame.gamemode = NETGAME_TEAM_HOARD;
-				else if( menus[opt->bounty].value )
-					Netgame.gamemode = NETGAME_BOUNTY;
 				else Int3(); // Invalid mode -- see Rob
 			}
 
