@@ -157,6 +157,7 @@ extern int Game_window_w,       // width and height of player's game window
 
 extern int Rear_view;           // if true, looking back.
 extern int Mirror_visible;      // rear mirror PiP shown (only meaningful while PlayerCfg.MirrorMode)
+extern int Minimap_visible;     // HUD minimap PiP shown (only meaningful while PlayerCfg.MinimapMode)
 extern int Mirror_view;         // true while the PiP mirror view is being rendered this frame
 
 // initalize flying

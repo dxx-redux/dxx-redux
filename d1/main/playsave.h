@@ -107,6 +107,12 @@ typedef struct player_config
 	ubyte MirrorMode; /* RearMirror: R key toggles a PiP mirror instead of full-screen rear view */
 	ubyte MirrorPos; /* RearMirror: 0=top left, 1=top center, 2=top right */
 	ubyte MirrorSize; /* RearMirror: 0=small, 1=medium, 2=large */
+	ubyte MinimapMode; /* HudMinimap: draw a live PiP proximity map during gameplay */
+	ubyte MinimapPos; /* HudMinimap: 0=top left, 1=top right, 2=bottom left, 3=bottom right, 4=center */
+	ubyte MinimapSize; /* HudMinimap: 0=small, 1=medium, 2=large */
+	ubyte MinimapRange; /* HudMinimap: 0=near, 1=medium, 2=far */
+	ubyte MinimapRotate; /* HudMinimap: 0=heading-up, 1=north-up */
+	ubyte MinimapOpacity; /* HudMinimap: 1..10, alpha = value*10%% under OpenGL */
 	ubyte SelectAfterFire; /* SelectAfterFire */ 
 	int maxFps;
 	int ShipColor; 

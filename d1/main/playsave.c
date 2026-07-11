@@ -111,6 +111,12 @@ int new_player_config()
 	PlayerCfg.MirrorMode = 0; /* RearMirror */
 	PlayerCfg.MirrorPos = 1; /* RearMirror */
 	PlayerCfg.MirrorSize = 1; /* RearMirror */
+	PlayerCfg.MinimapMode = 0; /* HudMinimap */
+	PlayerCfg.MinimapPos = 1; /* HudMinimap */
+	PlayerCfg.MinimapSize = 1; /* HudMinimap */
+	PlayerCfg.MinimapRange = 1; /* HudMinimap */
+	PlayerCfg.MinimapRotate = 0; /* HudMinimap */
+	PlayerCfg.MinimapOpacity = 6; /* HudMinimap */
 	PlayerCfg.SelectAfterFire = 1;  /* SelectAfterFire */
 	PlayerCfg.VulcanAmmoWarnings = 1; 
 	PlayerCfg.ShieldWarnings = 0; 
@@ -444,6 +450,30 @@ int read_player_d1x(char *filename)
 					PlayerCfg.MirrorSize = atoi(line);
 					if (PlayerCfg.MirrorSize > 2)
 						PlayerCfg.MirrorSize = 1;
+				}
+				if(!strcmp(word,"MINIMAPMODE"))
+					PlayerCfg.MinimapMode = atoi(line) ? 1 : 0;
+				if(!strcmp(word,"MINIMAPPOS")) {
+					PlayerCfg.MinimapPos = atoi(line);
+					if (PlayerCfg.MinimapPos > 4)
+						PlayerCfg.MinimapPos = 1;
+				}
+				if(!strcmp(word,"MINIMAPSIZE")) {
+					PlayerCfg.MinimapSize = atoi(line);
+					if (PlayerCfg.MinimapSize > 2)
+						PlayerCfg.MinimapSize = 1;
+				}
+				if(!strcmp(word,"MINIMAPRANGE")) {
+					PlayerCfg.MinimapRange = atoi(line);
+					if (PlayerCfg.MinimapRange > 2)
+						PlayerCfg.MinimapRange = 1;
+				}
+				if(!strcmp(word,"MINIMAPROTATE"))
+					PlayerCfg.MinimapRotate = atoi(line) ? 1 : 0;
+				if(!strcmp(word,"MINIMAPOPACITY")) {
+					PlayerCfg.MinimapOpacity = atoi(line);
+					if (PlayerCfg.MinimapOpacity < 1 || PlayerCfg.MinimapOpacity > 10)
+						PlayerCfg.MinimapOpacity = 6;
 				}
 				if(!strcmp(word,"SELECTAFTERFIRE"))
 					PlayerCfg.SelectAfterFire = atoi(line); /* SelectAfterFire */ 										
@@ -926,6 +956,12 @@ int write_player_d1x(char *filename)
 		PHYSFSX_printf(fout,"mirrormode=%i\n",PlayerCfg.MirrorMode); /* RearMirror */
 		PHYSFSX_printf(fout,"mirrorpos=%i\n",PlayerCfg.MirrorPos); /* RearMirror */
 		PHYSFSX_printf(fout,"mirrorsize=%i\n",PlayerCfg.MirrorSize); /* RearMirror */
+		PHYSFSX_printf(fout,"minimapmode=%i\n",PlayerCfg.MinimapMode); /* HudMinimap */
+		PHYSFSX_printf(fout,"minimappos=%i\n",PlayerCfg.MinimapPos); /* HudMinimap */
+		PHYSFSX_printf(fout,"minimapsize=%i\n",PlayerCfg.MinimapSize); /* HudMinimap */
+		PHYSFSX_printf(fout,"minimaprange=%i\n",PlayerCfg.MinimapRange); /* HudMinimap */
+		PHYSFSX_printf(fout,"minimaprotate=%i\n",PlayerCfg.MinimapRotate); /* HudMinimap */
+		PHYSFSX_printf(fout,"minimapopacity=%i\n",PlayerCfg.MinimapOpacity); /* HudMinimap */
 		PHYSFSX_printf(fout,"selectafterfire=%i\n",PlayerCfg.SelectAfterFire); /* SelectAfterFire */ 		
 		PHYSFSX_printf(fout,"nofireautoselect=%i\n",PlayerCfg.NoFireAutoselect);
 		PHYSFSX_printf(fout,"cycleautoselectonly=%i\n",PlayerCfg.CycleAutoselectOnly);

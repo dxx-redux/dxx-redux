@@ -824,6 +824,7 @@ void show_newdemo_help()
 extern void temp_reset_stuff_on_level();
 
 int Mirror_visible = 1;		//rear mirror PiP shown; the rear-view key toggles this while PlayerCfg.MirrorMode is on
+int Minimap_visible = 1;	//HUD minimap PiP shown; F4 toggles this while PlayerCfg.MinimapMode is on
 
 #define LEAVE_TIME 0x4000		//how long until we decide key is down	(Used to be 0x4000)
 
