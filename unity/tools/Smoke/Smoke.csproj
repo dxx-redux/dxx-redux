@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\LibDescent.Data\LibDescent.Data.csproj" />
+    <ProjectReference Include="..\D1U.Convert\D1U.Convert.csproj" />
   </ItemGroup>
 
 </Project>

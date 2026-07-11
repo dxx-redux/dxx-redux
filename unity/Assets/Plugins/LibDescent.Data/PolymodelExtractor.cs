@@ -4,7 +4,9 @@ using System.Numerics;
 
 namespace LibDescent.Data
 {
-    class PolymodelExtractor
+    // Vendored change: made public so converter assemblies outside
+    // LibDescent.Data can bake models (upstream keeps it internal).
+    public class PolymodelExtractor
     {
         private Polymodel model;
 

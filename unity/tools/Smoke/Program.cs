@@ -1,7 +1,10 @@
-// D1U M0 smoke test: verify LibDescent parses everything in the hogs directory.
+// D1U smoke test: verify LibDescent + D1U.Convert handle everything in the
+// hogs directory (M0: parse; M1: decode textures, bake models, convert music).
 // Usage: D1U.Smoke [hogsDir]  (default: walk up from cwd looking for d1/hogs/DESCENT.HOG)
 
+using D1U.Convert;
 using LibDescent.Data;
+using LibDescent.Data.Midi;
 
 string? FindHogsDir()
 {
@@ -25,18 +28,15 @@ if (hogsDir == null || !File.Exists(Path.Combine(hogsDir, "DESCENT.HOG")))
 Console.WriteLine($"hogs dir: {hogsDir}");
 int errors = 0;
 
-// --- 1. DESCENT.HOG container ---
-var hog = new HOGFile(Path.Combine(hogsDir, "DESCENT.HOG"));
+// --- 1. base archives (DESCENT.HOG + DESCENT.PIG + palette) ---
+var archives = BaseArchives.Load(hogsDir);
+var hog = archives.Hog;
+var pig = archives.Pig;
 Console.WriteLine($"\nDESCENT.HOG: {hog.NumLumps} lumps");
 foreach (var group in hog.Lumps
              .GroupBy(l => Path.GetExtension(l.Name).ToLowerInvariant())
              .OrderByDescending(g => g.Count()))
     Console.WriteLine($"  {group.Key,-6} x{group.Count()}");
-
-// --- 2. DESCENT.PIG (bitmaps + sounds + embedded gamedata tables) ---
-var pig = new Descent1PIGFile(macPig: false, loadData: true);
-using (var fs = File.OpenRead(Path.Combine(hogsDir, "DESCENT.PIG")))
-    pig.Read(fs);
 Console.WriteLine($"\nDESCENT.PIG: {pig.Bitmaps.Count} bitmaps, {pig.Sounds.Count} sounds");
 Console.WriteLine($"  gamedata: textures={pig.numTextures} vclips={pig.numVClips} eclips={pig.numEClips} " +
                   $"wclips={pig.numWClips} robots={pig.numRobots} joints={pig.numJoints} " +
@@ -44,6 +44,80 @@ Console.WriteLine($"  gamedata: textures={pig.numTextures} vclips={pig.numVClips
 if (pig.Bitmaps.Count < 1000 || pig.numRobots <= 0 || pig.numModels <= 0)
 {
     Console.Error.WriteLine("FAIL: PIG gamedata looks empty — wrong pig version or parse failure.");
+    errors++;
+}
+
+// --- 2b. decode every bitmap to RGBA (M1) ---
+int decodeFailures = 0;
+long rgbaBytes = 0;
+foreach (var bitmap in pig.Bitmaps)
+{
+    try
+    {
+        rgbaBytes += TextureDecoder.ToRgba32(bitmap, archives.Palette).Length;
+    }
+    catch (Exception e)
+    {
+        if (decodeFailures++ < 5)
+            Console.Error.WriteLine($"  bitmap '{bitmap.Name}' FAIL: {e.Message}");
+    }
+}
+Console.WriteLine($"  textures decoded: {pig.Bitmaps.Count - decodeFailures}/{pig.Bitmaps.Count} " +
+                  $"({rgbaBytes / (1024 * 1024)} MB RGBA)");
+errors += decodeFailures;
+
+// --- 2c. bake every model to triangle lists (M1) ---
+int bakeFailures = 0, totalTriangles = 0, totalSubmodels = 0, badTextureSlots = 0;
+for (int m = 0; m < pig.numModels; m++)
+{
+    try
+    {
+        var baked = ModelBaker.Bake(pig.Models[m]);
+        totalTriangles += baked.TriangleCount;
+        totalSubmodels += baked.Submodels.Count;
+        foreach (var sub in baked.Submodels)
+            foreach (var g in sub.Groups)
+                if (g.TextureSlot >= 0)
+                {
+                    int bmp = ModelBaker.ResolveTextureSlot(pig, pig.Models[m], g.TextureSlot);
+                    if (bmp <= 0 || bmp >= pig.Bitmaps.Count)
+                        badTextureSlots++;
+                }
+    }
+    catch (Exception e)
+    {
+        if (bakeFailures++ < 5)
+            Console.Error.WriteLine($"  model {m} FAIL: {e.GetType().Name}: {e.Message}");
+    }
+}
+Console.WriteLine($"  models baked: {pig.numModels - bakeFailures}/{pig.numModels}, " +
+                  $"{totalSubmodels} submodels, {totalTriangles} triangles, bad texture slots={badTextureSlots}");
+errors += bakeFailures + (badTextureSlots > 0 ? 1 : 0);
+
+// --- 2d. HMP music -> standard MIDI (M1) ---
+try
+{
+    var hmpData = BaseArchives.GetLumpData(hog, "descent.hmp");
+    if (hmpData == null)
+    {
+        Console.Error.WriteLine("  descent.hmp not found in hog");
+        errors++;
+    }
+    else
+    {
+        var midi = MIDISequence.LoadHMP(hmpData);
+        midi.Convert(MIDIFormat.Type1); // HMI -> standard MIDI type 1
+        var midiBytes = midi.Write();
+        bool headerOk = midiBytes.Length > 4 && midiBytes[0] == 'M' && midiBytes[1] == 'T'
+                                             && midiBytes[2] == 'h' && midiBytes[3] == 'd';
+        Console.WriteLine($"  descent.hmp -> MIDI: {midiBytes.Length} bytes, header {(headerOk ? "MThd OK" : "BAD")}");
+        if (!headerOk)
+            errors++;
+    }
+}
+catch (Exception e)
+{
+    Console.Error.WriteLine($"  HMP conversion FAIL: {e.GetType().Name}: {e.Message}");
     errors++;
 }
 
