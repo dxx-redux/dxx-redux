@@ -70,6 +70,9 @@ namespace D1U.Convert
         public Vector3 Position;
         public float[] Orientation = new float[9]; // right, up, forward rows
         public byte ContainsType, ContainsId, ContainsCount;
+        public byte RenderTypeId;   // RT_* as stored in the level
+        public int ModelNum = -1;   // for polymodel/morph render types
+        public int VClipNum = -1;   // for vclip-sprite render types
     }
 
     public sealed class BakedLevel
@@ -194,6 +197,9 @@ namespace D1U.Convert
                     ContainsType = (byte)(sbyte)obj.ContainsType,
                     ContainsId = obj.ContainsId,
                     ContainsCount = obj.ContainsCount,
+                    RenderTypeId = (byte)obj.RenderTypeID,
+                    ModelNum = obj.RenderType is PolymodelRenderType poly ? poly.ModelNum : -1,
+                    VClipNum = obj.RenderType is FireballRenderType fireball ? fireball.VClipNum : -1,
                 });
             }
             return baked;
@@ -368,6 +374,9 @@ namespace D1U.Convert
                 bw.Write(obj.ContainsType);
                 bw.Write(obj.ContainsId);
                 bw.Write(obj.ContainsCount);
+                bw.Write(obj.RenderTypeId);
+                bw.Write(obj.ModelNum);
+                bw.Write(obj.VClipNum);
             }
         }
 
@@ -456,6 +465,9 @@ namespace D1U.Convert
                 obj.ContainsType = br.ReadByte();
                 obj.ContainsId = br.ReadByte();
                 obj.ContainsCount = br.ReadByte();
+                obj.RenderTypeId = br.ReadByte();
+                obj.ModelNum = br.ReadInt32();
+                obj.VClipNum = br.ReadInt32();
                 level.Objects.Add(obj);
             }
             return level;

@@ -27,6 +27,9 @@ namespace D1U.Presentation
         [Tooltip("In play mode: spawn the physics ship at the player start (M3). Off = free fly-cam.")]
         public bool shipMode = true;
 
+        [Tooltip("Place robots/powerups/reactor/hostages from the level's object records.")]
+        public bool populateObjects = true;
+
         public bool logStats = true;
 
         public BakedLevel LoadedLevel { get; private set; }
@@ -39,6 +42,11 @@ namespace D1U.Presentation
         LevelTextureFactory textureFactory;
         LibDescent.Data.WClip[] wclips;
         ushort[] textureTable;
+        BaseArchives archives;
+        BaseDxu baseDxuData;
+        ModelFactory modelFactory;
+        readonly List<(Material material, RenderChunk chunk)> allSurfaces
+            = new List<(Material, RenderChunk)>();
 
         void Start() => Build();
         void OnDestroy() => Clear();
@@ -53,7 +61,9 @@ namespace D1U.Presentation
                 throw new InvalidOperationException($"hogs directory not found: '{dir}'");
 
             var basePath = DxuCache.EnsureBase(dir, null, Log);
-            var baseDxu = BaseDxu.Read(basePath, out _);
+            baseDxuData = BaseDxu.Read(basePath, out _);
+            var baseDxu = baseDxuData;
+            archives = BaseArchives.Load(dir); // live tables: ship, wclips, vclips, robots
 
             var missions = MissionScanner.Scan(dir);
             var wantedKey = string.IsNullOrEmpty(missionKey) ? "firststrike" : missionKey.ToLowerInvariant();
@@ -76,6 +86,10 @@ namespace D1U.Presentation
                 staticVerts += BuildChunk(chunk, $"static_{chunk.BaseBitmap}_{chunk.OverlayBitmap}_{chunk.Rotation}", shader, null);
             foreach (var door in level.DoorPieces)
                 BuildChunk(door.Geometry, $"wall_{door.WallIndex}_seg{door.SegmentIndex}s{door.SideIndex}", shader, door);
+
+            if (populateObjects)
+                PopulateObjects(level, shader);
+            SetupEclips();
 
             if (Application.isPlaying && shipMode)
                 SpawnShip(level, dir);
@@ -136,8 +150,105 @@ namespace D1U.Presentation
                     doorPiecesByWall[door.WallIndex] = list = new List<(Material, RenderChunk, GameObject)>();
                 list.Add((material, chunk, go));
             }
+            allSurfaces.Add((material, chunk));
             return vertices.Length;
         }
+
+        void PopulateObjects(BakedLevel level, Shader shader)
+        {
+            if (archives == null || baseDxuData == null)
+                return;
+            modelFactory = new ModelFactory(baseDxuData, textureFactory, shader);
+            var parent = new GameObject("Objects");
+            parent.transform.SetParent(transform, false);
+
+            int modelCount = 0, spriteCount = 0;
+            foreach (var obj in level.Objects)
+            {
+                var visual = ObjectVisuals.Resolve(archives.Pig, obj);
+                float light = obj.Segnum >= 0 && obj.Segnum < level.Segments.Length
+                    ? Mathf.Clamp(level.Segments[obj.Segnum].Light, 0.25f, 1f)
+                    : 1f;
+
+                if (visual.Kind == ObjectVisualKind.Model && visual.ModelNum < baseDxuData.Models.Count)
+                {
+                    var go = modelFactory.Instantiate(visual.ModelNum, $"obj_t{obj.Type}_id{obj.SubtypeId}", light);
+                    go.transform.SetParent(parent.transform, false);
+                    go.transform.position = ToUnity(obj.Position);
+                    go.transform.rotation = Quaternion.LookRotation(
+                        new Vector3(obj.Orientation[6], obj.Orientation[7], obj.Orientation[8]),
+                        new Vector3(obj.Orientation[3], obj.Orientation[4], obj.Orientation[5]));
+                    modelCount++;
+                }
+                else if (visual.Kind == ObjectVisualKind.Sprite &&
+                         visual.VClipNum >= 0 && visual.VClipNum < archives.Pig.VClips.Length)
+                {
+                    var vclip = archives.Pig.VClips[visual.VClipNum];
+                    if (vclip == null || vclip.NumFrames <= 0)
+                        continue;
+                    var frames = new Texture2D[vclip.NumFrames];
+                    for (int f = 0; f < vclip.NumFrames; f++)
+                    {
+                        int bitmap = vclip.Frames[f];
+                        frames[f] = bitmap > 0 && bitmap < baseDxuData.Bitmaps.Count
+                            ? textureFactory.Get(bitmap, 0, 0)
+                            : frames[Mathf.Max(0, f - 1)];
+                    }
+                    var sprite = BillboardSprite.Create($"sprite_t{obj.Type}_id{obj.SubtypeId}", frames,
+                        (float)(double)vclip.FrameTime, obj.Size, shader, light);
+                    sprite.transform.SetParent(parent.transform, false);
+                    sprite.transform.position = ToUnity(obj.Position);
+                    spriteCount++;
+                }
+            }
+            Log($"objects placed: {modelCount} models, {spriteCount} sprites");
+        }
+
+        void SetupEclips()
+        {
+            if (archives == null)
+                return;
+            var animator = gameObject.GetComponent<EclipAnimator>();
+            if (animator == null)
+                animator = gameObject.AddComponent<EclipAnimator>();
+            animator.Entries.Clear();
+            animator.Textures = textureFactory;
+
+            for (int e = 0; e < archives.Pig.numEClips; e++)
+            {
+                var clip = archives.Pig.EClips[e]?.Clip;
+                if (clip == null || clip.NumFrames <= 1)
+                    continue;
+                var frames = new int[clip.NumFrames];
+                var frameSet = new HashSet<int>();
+                for (int f = 0; f < clip.NumFrames; f++)
+                {
+                    frames[f] = clip.Frames[f];
+                    frameSet.Add(clip.Frames[f]);
+                }
+                float frameTime = Mathf.Max(0.02f, (float)(double)clip.FrameTime);
+
+                foreach (var (material, chunk) in allSurfaces)
+                {
+                    if (frameSet.Contains(chunk.BaseBitmap))
+                        animator.Entries.Add(new EclipAnimator.Entry
+                        {
+                            Material = material, AnimatesBase = true, FrameBitmaps = frames,
+                            OtherBitmap = chunk.OverlayBitmap, Rotation = chunk.Rotation, FrameTime = frameTime,
+                        });
+                    else if (chunk.OverlayBitmap > 0 && frameSet.Contains(chunk.OverlayBitmap))
+                        animator.Entries.Add(new EclipAnimator.Entry
+                        {
+                            Material = material, AnimatesBase = false, FrameBitmaps = frames,
+                            OtherBitmap = chunk.BaseBitmap, Rotation = chunk.Rotation, FrameTime = frameTime,
+                        });
+                }
+            }
+            if (animator.Entries.Count > 0)
+                Log($"animated wall surfaces: {animator.Entries.Count}");
+        }
+
+        static Vector3 ToUnity(System.Numerics.Vector3 v) => new Vector3(v.X, v.Y, v.Z);
 
         void SpawnShip(BakedLevel level, string dir)
         {
@@ -150,7 +261,6 @@ namespace D1U.Presentation
             }
 
             // ship parameters live-parse from the pig (tables are not cached)
-            var archives = BaseArchives.Load(dir);
             var ship = archives.Pig.PlayerShip;
             var shipParams = new D1U.Game.ShipParams
             {
@@ -285,10 +395,15 @@ namespace D1U.Presentation
                     DestroyImmediate(material);
             materials.Clear();
             doorPiecesByWall.Clear();
+            allSurfaces.Clear();
             messages.Clear();
             Runtime = null;
+            modelFactory?.Dispose();
+            modelFactory = null;
             textureFactory?.Dispose();
             textureFactory = null;
+            archives = null;
+            baseDxuData = null;
         }
 
         static void Log(string message) => Debug.Log("D1U: " + message);

@@ -12,7 +12,7 @@ namespace D1U.Convert
     public static class DxuCache
     {
         /// <summary>Bump when converter output changes to invalidate caches.</summary>
-        public const uint ConverterVersion = 3; // v3: wall details, triggers, reactor targets
+        public const uint ConverterVersion = 4; // v4: object render info (model/vclip)
 
         public static string DefaultCacheDir =>
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),

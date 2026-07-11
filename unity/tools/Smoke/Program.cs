@@ -435,6 +435,37 @@ try
 
     runtime.DestroyReactor();
     Console.WriteLine($"  reactor destroyed -> {lvl.ReactorTargets.Count} target wall(s) toggled");
+
+    // --- 11. object visuals census ---
+    int modelObjects = 0, spriteObjects = 0, noneObjects = 0, badVisuals = 0;
+    bool reactorResolved = false;
+    foreach (var obj in lvl.Objects)
+    {
+        var visual = D1U.Convert.ObjectVisuals.Resolve(pig, obj);
+        switch (visual.Kind)
+        {
+            case D1U.Convert.ObjectVisualKind.Model:
+                modelObjects++;
+                if (visual.ModelNum < 0 || visual.ModelNum >= pig.numModels)
+                    badVisuals++;
+                if (obj.Type == 9)
+                    reactorResolved = true;
+                break;
+            case D1U.Convert.ObjectVisualKind.Sprite:
+                spriteObjects++;
+                if (visual.VClipNum < 0 || visual.VClipNum >= pig.VClips.Length ||
+                    pig.VClips[visual.VClipNum] == null || pig.VClips[visual.VClipNum].NumFrames <= 0)
+                    badVisuals++;
+                break;
+            default:
+                noneObjects++;
+                break;
+        }
+    }
+    Console.WriteLine($"  object visuals: {modelObjects} models, {spriteObjects} sprites, {noneObjects} none, " +
+                      $"bad={badVisuals}, reactor resolved={reactorResolved}");
+    if (badVisuals > 0 || !reactorResolved || modelObjects < 10 || spriteObjects < 5)
+        errors++;
 }
 catch (Exception e)
 {
