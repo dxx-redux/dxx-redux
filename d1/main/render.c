@@ -1457,6 +1457,11 @@ void render_frame(fix eye_offset)
 
 	g3_start_frame();
 
+#ifdef OGL
+	if (Mirror_view)
+		glDisable(GL_CULL_FACE);	//the flip reverses projected winding; faces are already culled CPU-side
+#endif
+
 	Viewer_eye = Viewer->pos;
 
 //	if (Viewer->type == OBJ_PLAYER && (PlayerCfg.CurrentCockpitMode!=CM_REAR_VIEW))
