@@ -59,6 +59,8 @@ namespace D1U.Presentation
         int menuMissionIndex;
         int menuLevel = 1;
         readonly Dictionary<int, GameObject> objectViews = new Dictionary<int, GameObject>();
+        readonly Dictionary<int, RobotAnimator> objectAnimators = new Dictionary<int, RobotAnimator>();
+        readonly Dictionary<int, Quaternion[][]> robotPoseCache = new Dictionary<int, Quaternion[][]>();
         Transform objectsParent;
         readonly List<(Material material, RenderChunk chunk)> allSurfaces
             = new List<(Material, RenderChunk)>();
@@ -395,6 +397,49 @@ namespace D1U.Presentation
             view.transform.SetParent(objectsParent, false);
             view.transform.position = ToUnity(obj.Pos);
             objectViews[obj.Id] = view;
+
+            if (obj.Type == 2 && obj.SubId < archives.Pig.numRobots)
+            {
+                var animator = view.AddComponent<RobotAnimator>();
+                animator.Poses = GetRobotPoses(obj.SubId);
+                objectAnimators[obj.Id] = animator;
+            }
+        }
+
+        Quaternion[][] GetRobotPoses(int robotId)
+        {
+            if (robotPoseCache.TryGetValue(robotId, out var cached))
+                return cached;
+            var robot = archives.Pig.Robots[robotId];
+            var joints = archives.Pig.Joints;
+            var poses = new Quaternion[5][];
+            for (int state = 0; state < 5; state++)
+            {
+                var pose = new Quaternion[10];
+                for (int m = 0; m < 10; m++)
+                    pose[m] = Quaternion.identity;
+                for (int gun = 0; gun < 9; gun++)
+                {
+                    var list = robot.AnimStates[gun, state];
+                    for (int j = 0; j < list.NumJoints; j++)
+                    {
+                        int idx = list.Offset + j;
+                        if (idx < 0 || idx >= joints.Length)
+                            continue;
+                        var joint = joints[idx];
+                        if (joint.JointNum <= 0 || joint.JointNum >= 10)
+                            continue;
+                        var m3 = D1U.Game.Mat3.FromAngles(
+                            joint.Angles.P / 65536f, joint.Angles.B / 65536f, joint.Angles.H / 65536f);
+                        pose[joint.JointNum] = Quaternion.LookRotation(
+                            new Vector3(m3.Forward.X, m3.Forward.Y, m3.Forward.Z),
+                            new Vector3(m3.Up.X, m3.Up.Y, m3.Up.Z));
+                    }
+                }
+                poses[state] = pose;
+            }
+            robotPoseCache[robotId] = poses;
+            return poses;
         }
 
         Texture2D[] VClipFrames(LibDescent.Data.VClip vclip)
@@ -466,8 +511,14 @@ namespace D1U.Presentation
                 if (obj.Type == 5 && obj.Vel != System.Numerics.Vector3.Zero)
                     view.transform.rotation = Quaternion.LookRotation(ToUnity(obj.Vel));
                 else if (obj.Type == 2)
+                {
                     view.transform.rotation = Quaternion.LookRotation(
                         ToUnity(obj.Orient.Forward), ToUnity(obj.Orient.Up));
+                    if (objectAnimators.TryGetValue(obj.Id, out var animator) && animator != null)
+                        animator.TargetState = obj.Aware
+                            ? (obj.NextFire > 0f && obj.NextFire < 0.35f ? 2 : 1)  // fire vs alert
+                            : 0;                                                   // rest
+                }
             }
         }
 
@@ -601,6 +652,7 @@ namespace D1U.Presentation
                 if (objectViews.TryGetValue(obj.Id, out var view) && view != null)
                     Destroy(view);
                 objectViews.Remove(obj.Id);
+                objectAnimators.Remove(obj.Id);
             };
             objectSystem.Exploded += OnExplosion;
             objectSystem.Spawned += CreateObjectView;
@@ -786,6 +838,7 @@ namespace D1U.Presentation
             allSurfaces.Clear();
             messages.Clear();
             objectViews.Clear();
+            objectAnimators.Clear();
             objectSystem = null;
             objectsParent = null;
             shipController = null;

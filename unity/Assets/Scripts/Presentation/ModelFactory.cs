@@ -19,8 +19,8 @@ namespace D1U.Presentation
         readonly Shader shader;
         readonly Color32[] palette = new Color32[256];
 
-        readonly Dictionary<int, List<(Mesh mesh, Material[] materials, Vector3 offset)>> partsCache
-            = new Dictionary<int, List<(Mesh, Material[], Vector3)>>();
+        readonly Dictionary<int, List<(Mesh mesh, Material[] materials, Vector3 relOffset, int index, int parent)>> partsCache
+            = new Dictionary<int, List<(Mesh, Material[], Vector3, int, int)>>();
         readonly Dictionary<int, Material> materialByBitmap = new Dictionary<int, Material>();
         readonly Dictionary<int, Material> materialByFlatColor = new Dictionary<int, Material>();
         readonly List<Mesh> ownedMeshes = new List<Mesh>();
@@ -38,6 +38,12 @@ namespace D1U.Presentation
                     (byte)(baseDxu.PaletteRaw[i * 3 + 2] * 255 / 63), 255);
         }
 
+        /// <summary>
+        /// Creates a hierarchical instance: submodel children parented to
+        /// their POF parents at relative pivot offsets (so pose rotations
+        /// carry attached submodels correctly). Each child gets a
+        /// SubmodelTag with its submodel index.
+        /// </summary>
         public GameObject Instantiate(int modelNum, string name, float light)
         {
             var root = new GameObject(name);
@@ -45,43 +51,46 @@ namespace D1U.Presentation
             var block = new MaterialPropertyBlock();
             block.SetColor("_BaseColor", lightColor);
 
-            foreach (var (mesh, mats, offset) in GetParts(modelNum))
+            var byIndex = new Dictionary<int, Transform>();
+            var parts = GetParts(modelNum);
+            foreach (var (mesh, mats, _, index, _) in parts)
             {
-                var child = new GameObject(mesh.name);
-                child.transform.SetParent(root.transform, false);
-                child.transform.localPosition = offset;
-                child.AddComponent<MeshFilter>().sharedMesh = mesh;
-                var renderer = child.AddComponent<MeshRenderer>();
-                renderer.sharedMaterials = mats;
-                renderer.SetPropertyBlock(block);
+                var child = new GameObject(mesh != null ? mesh.name : $"sub{index}");
+                child.AddComponent<SubmodelTag>().Index = index;
+                if (mesh != null)
+                {
+                    child.AddComponent<MeshFilter>().sharedMesh = mesh;
+                    var renderer = child.AddComponent<MeshRenderer>();
+                    renderer.sharedMaterials = mats;
+                    renderer.SetPropertyBlock(block);
+                }
+                byIndex[index] = child.transform;
+            }
+            foreach (var (_, _, relOffset, index, parent) in parts)
+            {
+                var t = byIndex[index];
+                t.SetParent(parent >= 0 && byIndex.TryGetValue(parent, out var p) ? p : root.transform, false);
+                t.localPosition = relOffset;
             }
             return root;
         }
 
-        List<(Mesh, Material[], Vector3)> GetParts(int modelNum)
+        List<(Mesh, Material[], Vector3, int, int)> GetParts(int modelNum)
         {
             if (partsCache.TryGetValue(modelNum, out var cached))
                 return cached;
 
-            var parts = new List<(Mesh, Material[], Vector3)>();
+            var parts = new List<(Mesh, Material[], Vector3, int, int)>();
             var model = baseDxu.Models[modelNum];
-
-            var absolute = new Dictionary<int, Vector3>();
-            Vector3 Abs(BakedModel.SubmodelMesh sub)
-            {
-                if (absolute.TryGetValue(sub.Index, out var v))
-                    return v;
-                var offset = new Vector3(sub.Offset.X, sub.Offset.Y, sub.Offset.Z);
-                if (sub.Parent >= 0)
-                    offset += Abs(model.Submodels.First(s => s.Index == sub.Parent));
-                absolute[sub.Index] = offset;
-                return offset;
-            }
 
             foreach (var sub in model.Submodels)
             {
+                var relOffset = new Vector3(sub.Offset.X, sub.Offset.Y, sub.Offset.Z);
                 if (sub.Groups.Count == 0)
+                {
+                    parts.Add((null, null, relOffset, sub.Index, sub.Parent));
                     continue;
+                }
 
                 var vertices = new List<Vector3>();
                 var uvs = new List<Vector2>();
@@ -113,7 +122,7 @@ namespace D1U.Presentation
                     mesh.SetTriangles(submeshes[s], s);
                 ownedMeshes.Add(mesh);
 
-                parts.Add((mesh, materials.ToArray(), Abs(sub)));
+                parts.Add((mesh, materials.ToArray(), relOffset, sub.Index, sub.Parent));
             }
 
             partsCache[modelNum] = parts;
