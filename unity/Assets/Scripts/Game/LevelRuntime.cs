@@ -62,6 +62,21 @@ namespace D1U.Game
         public PlayerState Player { get; } = new PlayerState();
         public bool ReactorDestroyed { get; private set; }
 
+        // self-destruct countdown (cntrlcen.c do_controlcen_dead_frame)
+        static readonly int[] ReactorTimes = { 50, 45, 40, 35, 30 }; // Alan_pavlish_reactor_times
+        public bool CountdownActive { get; private set; }
+        public int CountdownSecondsLeft { get; private set; } = 127;
+        public int TotalCountdown { get; private set; }
+        float countdownTimer;
+        bool mineExploded;
+        /// <summary>0..1 whiteout after T-0 (4 seconds to total whiteness).</summary>
+        public float MineFlash => CountdownActive && countdownTimer < 0f
+            ? Math.Min(1f, -countdownTimer / 4f) : 0f;
+        /// <summary>Game sound id: countdown voices 100+n, siren 32, explosion 33.</summary>
+        public event Action<int> CountdownSound;
+        /// <summary>T-0 passed without escaping: the mine goes up.</summary>
+        public event Action MineExploded;
+
         /// <summary>(wallIndex, frameIndex, tmap1) — presentation swaps door textures.</summary>
         public event Action<int, int, bool> WallFrameChanged;
         /// <summary>(wallIndex, hidden) — illusion walls turning off/on.</summary>
@@ -150,6 +165,30 @@ namespace D1U.Game
 
             Player.CloakTime = Math.Max(0f, Player.CloakTime - dt);
             Player.InvulnTime = Math.Max(0f, Player.InvulnTime - dt);
+
+            if (CountdownActive && !mineExploded)
+            {
+                float old = countdownTimer;
+                countdownTimer -= dt;
+                CountdownSecondsLeft = (int)Math.Floor(countdownTimer + 7f / 8f); // f2i(t + 7/8)
+
+                if (old > 12.75f && countdownTimer <= 12.75f)
+                    CountdownSound?.Invoke(114); // "self-destruct sequence activated"
+                if ((int)Math.Floor(old + 7f / 8f) != CountdownSecondsLeft)
+                {
+                    if (CountdownSecondsLeft >= 0 && CountdownSecondsLeft < 10)
+                        CountdownSound?.Invoke(100 + CountdownSecondsLeft);
+                    if (CountdownSecondsLeft == TotalCountdown - 1)
+                        CountdownSound?.Invoke(32); // warning siren
+                }
+
+                if (countdownTimer < -4f && !Player.ExitReached)
+                {
+                    mineExploded = true;
+                    CountdownSound?.Invoke(33); // SOUND_MINE_BLEW_UP
+                    MineExploded?.Invoke();
+                }
+            }
         }
 
         bool DoDoorOpen(ActiveDoor door, float dt)
@@ -379,6 +418,11 @@ namespace D1U.Game
             ReactorDestroyed = true;
             foreach (var (seg, side) in level.ReactorTargets)
                 WallToggle(seg, side);
+
+            TotalCountdown = ReactorTimes[Math.Min(4, Math.Max(0, ObjectSystem.Difficulty))];
+            countdownTimer = TotalCountdown;
+            CountdownSecondsLeft = TotalCountdown;
+            CountdownActive = true;
             Message?.Invoke("Control center destroyed! Get to the exit!");
         }
 
@@ -431,6 +475,10 @@ namespace D1U.Game
                 bw.Write(door.Time);
             }
             bw.Write(ReactorDestroyed);
+            bw.Write(CountdownActive);
+            bw.Write(countdownTimer);
+            bw.Write(TotalCountdown);
+            bw.Write(mineExploded);
             bw.Write(Player.Shields);
             bw.Write(Player.Energy);
             bw.Write(Player.Keys);
@@ -465,6 +513,11 @@ namespace D1U.Game
             for (int i = 0; i < doorCount; i++)
                 activeDoors.Add(new ActiveDoor { FrontWall = br.ReadInt32(), Time = br.ReadSingle() });
             ReactorDestroyed = br.ReadBoolean();
+            CountdownActive = br.ReadBoolean();
+            countdownTimer = br.ReadSingle();
+            TotalCountdown = br.ReadInt32();
+            mineExploded = br.ReadBoolean();
+            CountdownSecondsLeft = CountdownActive ? (int)Math.Floor(countdownTimer + 7f / 8f) : 127;
             Player.Shields = br.ReadSingle();
             Player.Energy = br.ReadSingle();
             Player.Keys = br.ReadInt32();

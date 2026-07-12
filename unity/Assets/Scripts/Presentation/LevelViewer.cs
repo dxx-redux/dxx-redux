@@ -54,6 +54,7 @@ namespace D1U.Presentation
         BriefingView briefingView;
         bool briefingMode;
         bool endingShown;
+        bool mineExplodedPending;
         System.IO.BinaryReader pendingLoad;
         AutomapView automapView;
         bool automapOpen;
@@ -515,6 +516,13 @@ namespace D1U.Presentation
         {
             if (menuMode || briefingMode)
                 return;
+            if (mineExplodedPending)
+            {
+                // caught by the self-destruct: the level restarts (cntrlcen.c -> DoPlayerDead)
+                mineExplodedPending = false;
+                StartLevel(levelNumber, briefing: false);
+                return;
+            }
             if (Application.isPlaying && shipMode && Input.GetKeyDown(KeyCode.Escape))
             {
                 carryLaserLevel = 0;
@@ -745,6 +753,12 @@ namespace D1U.Presentation
             objectSystem.Message += text => messages.Add((Time.time, text));
             objectSystem.Sound += (soundId, pos) => sounds?.PlayAt(soundId, ToUnity(pos), 0.7f);
             Runtime.MatcenTriggered += objectSystem.TriggerMatcen;
+            Runtime.CountdownSound += soundId =>
+            {
+                if (sounds != null && shipController != null)
+                    sounds.PlayAt(soundId, shipController.transform.position, 1f);
+            };
+            Runtime.MineExploded += () => mineExplodedPending = true; // restart next frame
             Runtime.DoorMoved += (wallIndex, opening) =>
             {
                 var record = LoadedLevel.Walls[wallIndex];
@@ -851,7 +865,7 @@ namespace D1U.Presentation
                 using (var bw = new System.IO.BinaryWriter(File.Create(SavePath)))
                 {
                     bw.Write(0x56533144); // "D1SV"
-                    bw.Write(1);          // save format version
+                    bw.Write(2);          // save format version
                     bw.Write(missionKey ?? "");
                     bw.Write(levelNumber);
                     bw.Write(returnAfterSecret);
@@ -889,8 +903,8 @@ namespace D1U.Presentation
             try
             {
                 var br = new System.IO.BinaryReader(new MemoryStream(File.ReadAllBytes(SavePath)));
-                if (br.ReadInt32() != 0x56533144 || br.ReadInt32() != 1)
-                    throw new InvalidDataException("not a D1X-Unity savegame");
+                if (br.ReadInt32() != 0x56533144 || br.ReadInt32() != 2)
+                    throw new InvalidDataException("not a D1X-Unity savegame (or an older format)");
                 missionKey = br.ReadString();
                 levelNumber = br.ReadInt32();
                 returnAfterSecret = br.ReadInt32();
@@ -963,11 +977,11 @@ namespace D1U.Presentation
         }
 
         /// <summary>Enter a level: briefing first when one exists, then Build.</summary>
-        void StartLevel(int target)
+        void StartLevel(int target, bool briefing = true)
         {
             levelNumber = target;
             endingShown = false;
-            if (Application.isPlaying && shipMode && TryShowBriefing(target))
+            if (briefing && Application.isPlaying && shipMode && TryShowBriefing(target))
                 return; // Build() runs when the briefing closes
             Build();
         }
@@ -1157,6 +1171,26 @@ namespace D1U.Presentation
                 $"Shields {player.Shields:F0}   Energy {player.Energy:F0}   Keys:" +
                 $"{((player.Keys & 2) != 0 ? " BLUE" : "")}{((player.Keys & 4) != 0 ? " RED" : "")}{((player.Keys & 8) != 0 ? " YELLOW" : "")}" +
                 ammo + robots);
+
+            // self-destruct countdown (gamerend.c "T-%d s") + whiteout after zero
+            if (Runtime.CountdownActive && !player.ExitReached)
+            {
+                var tstyle = new GUIStyle(GUI.skin.label)
+                {
+                    fontSize = 30,
+                    alignment = TextAnchor.MiddleCenter,
+                    normal = { textColor = new UnityEngine.Color(1f, 0.3f, 0.2f) },
+                };
+                GUI.Label(new Rect(0, Screen.height * 0.13f, Screen.width, 40),
+                    $"T-{Mathf.Max(0, Runtime.CountdownSecondsLeft)} s", tstyle);
+                float flash = Runtime.MineFlash;
+                if (flash > 0f)
+                {
+                    GUI.color = new UnityEngine.Color(1f, 1f, 1f, flash);
+                    GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture);
+                    GUI.color = UnityEngine.Color.white;
+                }
+            }
 
             if (automapOpen)
             {

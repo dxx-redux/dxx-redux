@@ -838,6 +838,23 @@ try
     Console.WriteLine($"  death drops: {spilled} powerups spilled (expected 16)");
     if (spilled != 16)
         errors++;
+
+    // --- 21. reactor self-destruct countdown: T-n, voices, mine explosion ---
+    // runtime3 destroyed its reactor earlier and ticked ~4 s since
+    int secondsAtStart = runtime3.CountdownSecondsLeft;
+    var voiceIds = new List<int>();
+    bool exploded = false;
+    runtimeB.CountdownSound += id => voiceIds.Add(id);
+    runtimeB.MineExploded += () => exploded = true;
+    for (int step = 0; step < 60 * 60 && !exploded; step++)
+        runtimeB.Tick(1f / 60f, -1, default, 0f);
+    Console.WriteLine($"  countdown: active={runtime3.CountdownActive} T-{secondsAtStart} of {runtime3.TotalCountdown} " +
+                      $"(Hotshot=40); loaded copy ran to explosion={exploded}, " +
+                      $"voices [{string.Join(",", voiceIds.Take(6))}...] incl 12s-warning={voiceIds.Contains(114)} zero={voiceIds.Contains(100)}");
+    if (!runtime3.CountdownActive || runtime3.TotalCountdown != 40 ||
+        secondsAtStart <= 0 || secondsAtStart >= 40 ||
+        !exploded || !voiceIds.Contains(114) || !voiceIds.Contains(100) || !voiceIds.Contains(33))
+        errors++;
 }
 catch (Exception e)
 {
