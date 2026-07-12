@@ -48,6 +48,7 @@ namespace D1U.Presentation
         Shader levelShader;
         SoundFactory sounds;
         D1U.Game.ObjectSystem objectSystem;
+        ShipController shipController;
         readonly Dictionary<int, GameObject> objectViews = new Dictionary<int, GameObject>();
         Transform objectsParent;
         readonly List<(Material material, RenderChunk chunk)> allSurfaces
@@ -259,6 +260,15 @@ namespace D1U.Presentation
 
         static Vector3 ToUnity(System.Numerics.Vector3 v) => new Vector3(v.X, v.Y, v.Z);
 
+        Vector3 SideCenter(int segIndex, int sideIndex)
+        {
+            var seg = LoadedLevel.Segments[segIndex];
+            var sum = Vector3.zero;
+            foreach (int v in D1U.Game.SegmentWorld.SideToVerts[sideIndex])
+                sum += ToUnity(LoadedLevel.Vertices[seg.Verts[v]]);
+            return sum / 4f;
+        }
+
         void CreateObjectView(D1U.Game.GameObj obj)
         {
             if (objectsParent == null || obj.Dead)
@@ -337,15 +347,61 @@ namespace D1U.Presentation
                 return;
             foreach (var obj in objectSystem.Objects)
             {
-                if (obj.Dead || obj.Type != 5)
+                if (obj.Dead || (obj.Type != 5 && obj.Type != 2))
                     continue;
-                if (objectViews.TryGetValue(obj.Id, out var view) && view != null)
-                {
-                    view.transform.position = ToUnity(obj.Pos);
-                    if (obj.Vel != System.Numerics.Vector3.Zero)
-                        view.transform.rotation = Quaternion.LookRotation(ToUnity(obj.Vel));
-                }
+                if (!objectViews.TryGetValue(obj.Id, out var view) || view == null)
+                    continue;
+                view.transform.position = ToUnity(obj.Pos);
+                if (obj.Type == 5 && obj.Vel != System.Numerics.Vector3.Zero)
+                    view.transform.rotation = Quaternion.LookRotation(ToUnity(obj.Vel));
+                else if (obj.Type == 2)
+                    view.transform.rotation = Quaternion.LookRotation(
+                        ToUnity(obj.Orient.Forward), ToUnity(obj.Orient.Up));
             }
+        }
+
+        static D1U.Game.RobotStats[] BuildRobotStats(LibDescent.Data.Descent1PIGFile pig)
+        {
+            var stats = new D1U.Game.RobotStats[pig.numRobots];
+            for (int i = 0; i < pig.numRobots; i++)
+            {
+                var r = pig.Robots[i];
+                var gunPoints = new System.Numerics.Vector3[8];
+                for (int g = 0; g < 8; g++)
+                    gunPoints[g] = new System.Numerics.Vector3(
+                        (float)(double)r.GunPoints[g].X,
+                        (float)(double)r.GunPoints[g].Y,
+                        (float)(double)r.GunPoints[g].Z);
+                stats[i] = new D1U.Game.RobotStats
+                {
+                    Strength = (float)(double)r.Strength,
+                    ModelNum = r.ModelNum,
+                    DeathVClip = r.DeathVClipNum,
+                    DeathSound = r.DeathSoundNum,
+                    WeaponType = r.WeaponType,
+                    NumGuns = r.NumGuns,
+                    GunPoints = gunPoints,
+                    FieldOfView = DiffArray(r.FieldOfView),
+                    FiringWait = DiffArray(r.FiringWait),
+                    TurnTime = DiffArray(r.TurnTime),
+                    MaxSpeed = DiffArray(r.MaxSpeed),
+                    CircleDistance = DiffArray(r.CircleDistance),
+                    RapidfireCount = (sbyte[])r.RapidfireCount.Clone(),
+                    AttackType = (int)r.AttackType != 0,
+                    SeeSound = r.SeeSound,
+                    AttackSound = r.AttackSound,
+                    ClawSound = r.ClawSound,
+                };
+            }
+            return stats;
+        }
+
+        static float[] DiffArray(LibDescent.Data.Fix[] source)
+        {
+            var result = new float[source.Length];
+            for (int i = 0; i < source.Length; i++)
+                result[i] = (float)(double)source[i];
+            return result;
         }
 
         void SpawnShip(BakedLevel level, string dir)
@@ -397,15 +453,7 @@ namespace D1U.Presentation
 
             // dynamic object world (robots/powerups/reactor/weapons)
             var pig = archives.Pig;
-            var robotStats = new D1U.Game.RobotStats[pig.numRobots];
-            for (int i = 0; i < pig.numRobots; i++)
-                robotStats[i] = new D1U.Game.RobotStats
-                {
-                    Strength = (float)(double)pig.Robots[i].Strength,
-                    ModelNum = pig.Robots[i].ModelNum,
-                    DeathVClip = pig.Robots[i].DeathVClipNum,
-                    DeathSound = pig.Robots[i].DeathSoundNum,
-                };
+            var robotStats = BuildRobotStats(pig);
             float reactorShields = 200f;
             foreach (var def in pig.ObjectTypes)
                 if (def.type == LibDescent.Data.EditorObjectType.ControlCenter)
@@ -425,6 +473,18 @@ namespace D1U.Presentation
                 robotStats, reactorShields)
             { Runtime = Runtime };
             objectSystem.Message += text => messages.Add((Time.time, text));
+            objectSystem.Sound += (soundId, pos) => sounds?.PlayAt(soundId, ToUnity(pos), 0.7f);
+            Runtime.MatcenTriggered += objectSystem.TriggerMatcen;
+            Runtime.DoorMoved += (wallIndex, opening) =>
+            {
+                var record = LoadedLevel.Walls[wallIndex];
+                var clip = wclips[record.ClipNum];
+                if (clip == null)
+                    return;
+                int soundId = opening ? clip.OpenSound : clip.CloseSound;
+                if (soundId > 0)
+                    sounds?.PlayAt(soundId, SideCenter(record.SegmentIndex, record.SideIndex), 0.8f);
+            };
             objectSystem.Removed += obj =>
             {
                 if (objectViews.TryGetValue(obj.Id, out var view) && view != null)
@@ -439,6 +499,7 @@ namespace D1U.Presentation
             var shipGo = new GameObject("Ship");
             shipGo.transform.SetParent(transform, false);
             var controller = shipGo.AddComponent<ShipController>();
+            shipController = controller;
             controller.Init(world, shipParams, start.Position, orient, start.Segnum);
             controller.Runtime = Runtime;
             controller.Objects = objectSystem;
@@ -463,6 +524,8 @@ namespace D1U.Presentation
                 };
             }
             controller.WeaponStats = weaponStats;
+            objectSystem.SetWeaponTable(weaponStats);
+            objectSystem.PlayerHit += (damage, source) => controller.ApplyPlayerDamage(damage);
             var gunPoints = new System.Numerics.Vector3[8];
             for (int i = 0; i < 8; i++)
             {
@@ -552,6 +615,16 @@ namespace D1U.Presentation
                 var style = new GUIStyle(GUI.skin.label) { fontSize = 40, alignment = TextAnchor.MiddleCenter };
                 GUI.Label(new Rect(0, Screen.height / 2 - 40, Screen.width, 80), "LEVEL COMPLETE", style);
             }
+            else if (shipController != null && shipController.IsDead)
+            {
+                var style = new GUIStyle(GUI.skin.label)
+                {
+                    fontSize = 36,
+                    alignment = TextAnchor.MiddleCenter,
+                    normal = { textColor = new UnityEngine.Color(1f, 0.3f, 0.2f) },
+                };
+                GUI.Label(new Rect(0, Screen.height / 2 - 40, Screen.width, 80), "SHIP DESTROYED", style);
+            }
         }
 
         public void Clear()
@@ -568,6 +641,7 @@ namespace D1U.Presentation
             objectViews.Clear();
             objectSystem = null;
             objectsParent = null;
+            shipController = null;
             Runtime = null;
             modelFactory?.Dispose();
             modelFactory = null;

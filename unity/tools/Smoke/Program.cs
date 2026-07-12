@@ -493,18 +493,64 @@ try
         };
     var runtime3 = new D1U.Game.LevelRuntime(world3, clips3);
 
+    static float[] DiffArray(LibDescent.Data.Fix[] source)
+    {
+        var result = new float[source.Length];
+        for (int k = 0; k < source.Length; k++)
+            result[k] = (float)(double)source[k];
+        return result;
+    }
+
     var robotStats = new D1U.Game.RobotStats[pig.numRobots];
     for (int i = 0; i < pig.numRobots; i++)
+    {
+        var r = pig.Robots[i];
+        var gunPoints = new System.Numerics.Vector3[8];
+        for (int g = 0; g < 8; g++)
+            gunPoints[g] = new System.Numerics.Vector3(
+                (float)(double)r.GunPoints[g].X, (float)(double)r.GunPoints[g].Y, (float)(double)r.GunPoints[g].Z);
         robotStats[i] = new D1U.Game.RobotStats
         {
-            Strength = (float)(double)pig.Robots[i].Strength,
-            ModelNum = pig.Robots[i].ModelNum,
-            DeathVClip = pig.Robots[i].DeathVClipNum,
-            DeathSound = pig.Robots[i].DeathSoundNum,
+            Strength = (float)(double)r.Strength,
+            ModelNum = r.ModelNum,
+            DeathVClip = r.DeathVClipNum,
+            DeathSound = r.DeathSoundNum,
+            WeaponType = r.WeaponType,
+            NumGuns = r.NumGuns,
+            GunPoints = gunPoints,
+            FieldOfView = DiffArray(r.FieldOfView),
+            FiringWait = DiffArray(r.FiringWait),
+            TurnTime = DiffArray(r.TurnTime),
+            MaxSpeed = DiffArray(r.MaxSpeed),
+            CircleDistance = DiffArray(r.CircleDistance),
+            RapidfireCount = (sbyte[])r.RapidfireCount.Clone(),
+            AttackType = (int)r.AttackType != 0,
+            SeeSound = r.SeeSound,
+            AttackSound = r.AttackSound,
+            ClawSound = r.ClawSound,
         };
+    }
+
+    var allWeaponStats = new D1U.Game.WeaponStats[pig.numWeapons];
+    for (int i = 0; i < pig.numWeapons; i++)
+    {
+        var w = pig.Weapons[i];
+        allWeaponStats[i] = new D1U.Game.WeaponStats
+        {
+            Speed = (float)(double)w.Speed[D1U.Game.ObjectSystem.Difficulty],
+            Strength = (float)(double)w.Strength[D1U.Game.ObjectSystem.Difficulty],
+            Lifetime = (float)(double)w.Lifetime,
+            FireWait = (float)(double)w.FireWait,
+            FiringSound = w.FiringSound,
+            WallHitVClip = w.WallHitVClip,
+            WallHitSound = w.WallHitSound,
+        };
+    }
+
     var objs = new D1U.Game.ObjectSystem(world3,
         record => { var v = D1U.Convert.ObjectVisuals.Resolve(pig, record); return (v.ModelNum, v.VClipNum); },
         robotStats, 200f) { Runtime = runtime3 };
+    objs.SetWeaponTable(allWeaponStats);
 
     var startObj = lvl3.Objects.First(o => o.Type == 4);
     var robots = objs.Objects.Where(o => o.Type == 2).ToList();
@@ -556,6 +602,62 @@ try
     Console.WriteLine($"  reactor destroyed={runtime3.ReactorDestroyed}, exit wall passable {exitBefore} -> {exitOpen}");
     if (!runtime3.ReactorDestroyed || !exitOpen)
         errors++;
+
+    // --- 13. robot AI: sees the player, fires, and hits (M5 phase 2) ---
+    var shooter = objs.Objects.First(o =>
+        o.Type == 2 && !o.Dead && o.SubId < robotStats.Length && robotStats[o.SubId].WeaponType >= 0);
+    var facing = shooter.Orient.Forward;
+    var probe = new D1U.Game.Fvi(world3);
+    var probeInfo = new D1U.Game.FviInfo();
+    probe.FindVectorIntersection(new D1U.Game.FviQuery
+    {
+        P0 = shooter.Pos,
+        P1 = shooter.Pos + facing * 40f,
+        StartSeg = shooter.Segnum,
+        Rad = 1f,
+    }, probeInfo);
+    float openDist = System.Numerics.Vector3.Distance(probeInfo.HitPoint, shooter.Pos);
+    objs.PlayerPos = shooter.Pos + facing * Math.Max(6f, Math.Min(15f, openDist - 4f));
+    objs.PlayerSeg = world3.FindPointSeg(objs.PlayerPos, shooter.Segnum);
+    objs.PlayerSize = 4.7f;
+    objs.PlayerVel = default;
+    objs.PlayerAlive = true;
+    float playerDamage = 0f;
+    int soundEvents = 0;
+    objs.PlayerHit += (dmg, src) => playerDamage += dmg;
+    objs.Sound += (s, p) => soundEvents++;
+    for (int step = 0; step < 600; step++)
+    {
+        objs.UpdateAi(1f / 60f);
+        objs.MoveWeapons(1f / 60f);
+    }
+    Console.WriteLine($"  robot AI: shooter robot id {shooter.SubId} (weapon {robotStats[shooter.SubId].WeaponType}) " +
+                      $"aware={shooter.Aware} playerDamage={playerDamage:F1} soundEvents={soundEvents}");
+    if (!shooter.Aware || playerDamage <= 0f)
+        errors++;
+
+    // --- 14. matcens spawn robots (level04 has them) ---
+    var lvl4 = fsLevels3[3];
+    Console.WriteLine($"  matcens in level04: {lvl4.Matcens.Count}");
+    if (lvl4.Matcens.Count == 0)
+    {
+        errors++;
+    }
+    else
+    {
+        var world4 = new D1U.Game.SegmentWorld(lvl4);
+        var objs4 = new D1U.Game.ObjectSystem(world4,
+            record => { var v = D1U.Convert.ObjectVisuals.Resolve(pig, record); return (v.ModelNum, v.VClipNum); },
+            robotStats, 200f);
+        objs4.SetWeaponTable(allWeaponStats);
+        int robotsBefore = objs4.RobotsAlive;
+        objs4.TriggerMatcen(lvl4.Matcens[0].SegmentIndex);
+        for (int step = 0; step < 60 * 30; step++)
+            objs4.TickMatcens(1f / 60f);
+        Console.WriteLine($"  matcen spawn: robots {robotsBefore} -> {objs4.RobotsAlive}");
+        if (objs4.RobotsAlive <= robotsBefore)
+            errors++;
+    }
 }
 catch (Exception e)
 {

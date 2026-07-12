@@ -18,6 +18,10 @@ namespace D1U.Presentation
         ShipState state;
         ShipParams shipParams;
         double gameTime;
+        System.Numerics.Vector3 spawnPos;
+        Mat3 spawnOrient;
+        int spawnSeg;
+        float deathTimer;
 
         public ShipState State => state;
         public LevelRuntime Runtime { get; set; }
@@ -32,8 +36,25 @@ namespace D1U.Presentation
             this.world = world;
             sim = new ShipSim(world);
             shipParams = p;
+            spawnPos = pos;
+            spawnOrient = orient;
+            spawnSeg = segnum;
             state = new ShipState { Pos = pos, Orient = orient, Segnum = segnum };
             SyncTransform();
+        }
+
+        /// <summary>Robot weapons/claws reached the player (apply_damage_to_player).</summary>
+        public void ApplyPlayerDamage(float damage)
+        {
+            if (Runtime == null || deathTimer > 0f)
+                return;
+            Runtime.Player.Shields -= damage;
+            if (Runtime.Player.Shields <= 0f)
+            {
+                deathTimer = 2.5f;
+                if (Objects != null)
+                    Objects.PlayerAlive = false;
+            }
         }
 
         void Update()
@@ -65,12 +86,28 @@ namespace D1U.Presentation
             if (Runtime != null && Runtime.Player.ExitReached)
                 return; // level over — freeze the ship
 
+            if (deathTimer > 0f)
+            {
+                deathTimer -= ft;
+                if (deathTimer <= 0f)
+                    Respawn();
+                return;
+            }
+
             gameTime += ft;
             sim.Step(state, shipParams, c, ft, gameTime);
             SyncTransform();
 
             if (Runtime != null && Objects != null && WeaponStats != null)
             {
+                // mirror player state into the object world, run AI + matcens
+                Objects.PlayerPos = state.Pos;
+                Objects.PlayerVel = state.Vel;
+                Objects.PlayerSeg = state.Segnum;
+                Objects.PlayerSize = shipParams.Size;
+                Objects.UpdateAi(ft);
+                Objects.TickMatcens(ft);
+
                 Weapons.Tick(ft);
                 if (Input.GetMouseButton(0) &&
                     Weapons.TryFirePrimary(Objects, Runtime.Player, WeaponStats, state, GunPoints))
@@ -94,11 +131,28 @@ namespace D1U.Presentation
                         Runtime.CrossedSide(sim.PhysSegList[i - 1], side);
                 }
                 Runtime.Tick(ft, state.Segnum, state.Pos, shipParams.Size);
-
-                if (Input.GetKeyDown(KeyCode.K))
-                    Runtime.DestroyReactor(); // debug stand-in until weapons (M5)
             }
         }
+
+        void Respawn()
+        {
+            state.Pos = spawnPos;
+            state.Orient = spawnOrient;
+            state.Segnum = spawnSeg;
+            state.Vel = System.Numerics.Vector3.Zero;
+            state.RotVel = System.Numerics.Vector3.Zero;
+            state.TurnRoll = 0f;
+            if (Runtime != null)
+            {
+                Runtime.Player.Shields = 100f;
+                Runtime.Player.Energy = 100f;
+            }
+            if (Objects != null)
+                Objects.PlayerAlive = true;
+            SyncTransform();
+        }
+
+        public bool IsDead => deathTimer > 0f;
 
         SegmentWorld world;
 

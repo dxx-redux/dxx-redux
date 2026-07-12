@@ -11,6 +11,18 @@ namespace D1U.Game
         public int ModelNum;
         public int DeathVClip;
         public int DeathSound;
+        // AI (robot_info per-difficulty tables, robot.h)
+        public int WeaponType;               // -1 none
+        public int NumGuns;
+        public Vector3[] GunPoints;          // submodel-local; rest-pose approximation
+        public float[] FieldOfView;          // [5] dot thresholds
+        public float[] FiringWait;           // [5] seconds
+        public float[] TurnTime;             // [5] seconds to face
+        public float[] MaxSpeed;             // [5]
+        public float[] CircleDistance;       // [5]
+        public sbyte[] RapidfireCount;       // [5]
+        public bool AttackType;              // claw robots
+        public int SeeSound, AttackSound, ClawSound;
     }
 
     public struct WeaponStats
@@ -24,7 +36,7 @@ namespace D1U.Game
     public sealed class GameObj
     {
         public int Id;
-        public byte Type;        // ObjectType values (2 robot, 3 hostage, 5 weapon, 7 powerup, 9 reactor)
+        public byte Type;        // 2 robot, 3 hostage, 5 weapon, 7 powerup, 9 reactor
         public byte SubId;
         public Vector3 Pos;
         public Vector3 Vel;
@@ -38,13 +50,22 @@ namespace D1U.Game
         public int ExplSound = -1;
         public byte ContainsType, ContainsId, ContainsCount;
         public bool Dead;
-        public float[] Orientation; // rest orientation for placed objects
+        public float[] Orientation;      // placed rest orientation
+        public Mat3 Orient = Mat3.Identity;
+        // AI state (ai_local)
+        public byte Behavior;            // AIB_* (0x80 still)
+        public bool Aware;
+        public float NextFire;
+        public float ClawTimer;
+        public int BurstLeft;
+        public int GunIdx;
+        public int ParentId = -1;        // weapons: firing object id, -1 = player
     }
 
     /// <summary>
-    /// Minimal runtime object model (M5 phase 1): placed robots/powerups/
-    /// hostages/reactor plus flying player weapons, with per-segment object
-    /// lists feeding fvi's object collision.
+    /// Runtime object world: placed objects, flying weapons, and the ai.c
+    /// essentials — visibility, chase, per-difficulty firing with aim jitter,
+    /// claw contact, matcen spawning. Player state is mirrored in via fields.
     /// </summary>
     public sealed class ObjectSystem
     {
@@ -56,23 +77,57 @@ namespace D1U.Game
         readonly List<int>[] segObjects;
         static readonly List<int> Empty = new List<int>();
 
+        readonly RobotStats[] robotStats;
+        WeaponStats[] weaponTable = Array.Empty<WeaponStats>();
+
         public readonly List<GameObj> Objects = new List<GameObj>();
         public LevelRuntime Runtime;
 
+        // player mirror (set by the controller every frame)
+        public Vector3 PlayerPos;
+        public Vector3 PlayerVel;
+        public int PlayerSeg = -1;
+        public float PlayerSize = 4.7f;
+        public bool PlayerAlive = true;
+
         public event Action<GameObj> Spawned;
         public event Action<GameObj> Removed;
-        /// <summary>Something blew up at a position (weapon impact, robot/reactor death).</summary>
         public event Action<GameObj, Vector3> Exploded;
+        /// <summary>(gameSoundId, position) — see/attack/fire sounds.</summary>
+        public event Action<int, Vector3> Sound;
+        /// <summary>(damage, source) — a robot weapon or claw reached the player.</summary>
+        public event Action<float, GameObj> PlayerHit;
         public event Action<string> Message;
 
         public int RobotsAlive { get; private set; }
         public int HostagesRescued { get; private set; }
+
+        // d_rand LCG (maths/rand.c)
+        uint randSeed = 0x1234;
+        int DRand()
+        {
+            randSeed = randSeed * 0x41c64e6d + 0x3039;
+            return (int)((randSeed >> 16) & 0x7fff);
+        }
+
+        sealed class MatcenState
+        {
+            public MatcenRecord Record;
+            public int Lives = 3;       // init_all_matcens (fuelcen.c:641)
+            public bool Active;
+            public float Timer;
+            public int SpawnRemaining;
+            public int SpawnIndex;
+        }
+
+        readonly List<MatcenState> matcens = new List<MatcenState>();
 
         public ObjectSystem(SegmentWorld world,
                             Func<ObjectRecord, (int model, int vclip)> visualResolver,
                             RobotStats[] robots, float reactorShields)
         {
             this.world = world;
+            robotStats = robots;
             fvi = new Fvi(world);
             segObjects = new List<int>[world.SegmentCount];
 
@@ -96,6 +151,8 @@ namespace D1U.Game
                     ContainsId = record.ContainsId,
                     ContainsCount = record.ContainsCount,
                     Orientation = record.Orientation,
+                    Behavior = record.AiBehavior,
+                    Orient = OrientFrom(record.Orientation),
                 };
                 if (type == 2 && record.SubtypeId < robots.Length)
                 {
@@ -111,7 +168,19 @@ namespace D1U.Game
                 }
                 Add(obj);
             }
+
+            foreach (var record in world.Level.Matcens)
+                matcens.Add(new MatcenState { Record = record });
         }
+
+        static Mat3 OrientFrom(float[] o) => o == null ? Mat3.Identity : new Mat3
+        {
+            Right = new Vector3(o[0], o[1], o[2]),
+            Up = new Vector3(o[3], o[4], o[5]),
+            Forward = new Vector3(o[6], o[7], o[8]),
+        };
+
+        public void SetWeaponTable(WeaponStats[] weapons) => weaponTable = weapons;
 
         public IReadOnlyList<int> ObjectsInSeg(int seg)
             => seg >= 0 && seg < segObjects.Length && segObjects[seg] != null ? segObjects[seg] : Empty;
@@ -139,6 +208,8 @@ namespace D1U.Game
 
         void Relink(GameObj obj, int newSeg)
         {
+            if (newSeg == obj.Segnum)
+                return;
             Unlink(obj);
             obj.Segnum = newSeg;
             Link(obj);
@@ -156,7 +227,8 @@ namespace D1U.Game
         // ------------------------------------------------------------------
         // weapons
 
-        public GameObj FireWeapon(in WeaponStats stats, byte weaponId, Vector3 pos, Vector3 dir, int segnum)
+        public GameObj FireWeapon(in WeaponStats stats, byte weaponId, Vector3 pos, Vector3 dir,
+                                  int segnum, int ownerId = -1)
         {
             int seg = world.FindPointSeg(pos, segnum);
             var obj = new GameObj
@@ -172,6 +244,7 @@ namespace D1U.Game
                 ModelNum = stats.RenderType == 2 ? stats.ModelNum : -1,
                 ExplVClip = stats.WallHitVClip,
                 ExplSound = stats.WallHitSound,
+                ParentId = ownerId,
             };
             Add(obj);
             return obj;
@@ -192,17 +265,39 @@ namespace D1U.Game
                     continue;
                 }
 
+                var end = weapon.Pos + weapon.Vel * dt;
+                int ownerId = weapon.ParentId;
                 var query = new FviQuery
                 {
                     P0 = weapon.Pos,
-                    P1 = weapon.Pos + weapon.Vel * dt,
+                    P1 = end,
                     StartSeg = weapon.Segnum,
                     Rad = weapon.Size,
                     Objects = this,
                     ThisObj = weapon.Id,
-                    ObjectFilter = target => target.Type == 2 || target.Type == 9,
+                    ObjectFilter = target =>
+                        target.Id != ownerId &&
+                        (ownerId < 0 ? target.Type == 2 || target.Type == 9  // player shots
+                                     : target.Type == 2),                    // robot shots
                 };
                 var fate = fvi.FindVectorIntersection(query, hitInfo);
+
+                // robot shots can hit the player (the player is not a GameObj)
+                if (ownerId >= 0 && PlayerAlive)
+                {
+                    float playerDist = Fvi.CheckVectorToSphere(out var playerPoint,
+                        weapon.Pos, end, PlayerPos, PlayerSize + weapon.Size);
+                    float worldDist = fate == FviHit.None
+                        ? float.MaxValue
+                        : Vector3.Distance(hitInfo.HitPoint, weapon.Pos);
+                    if (playerDist > 0f && playerDist < worldDist)
+                    {
+                        Exploded?.Invoke(weapon, playerPoint);
+                        Remove(weapon);
+                        PlayerHit?.Invoke(weapon.Shields, weapon);
+                        continue;
+                    }
+                }
 
                 switch (fate)
                 {
@@ -214,7 +309,6 @@ namespace D1U.Game
                         break;
 
                     case FviHit.Wall:
-                        // blastable walls take weapon damage (wall_damage)
                         Runtime?.DamageWall(hitInfo.HitSideSeg, hitInfo.HitSide, weapon.Shields);
                         Exploded?.Invoke(weapon, hitInfo.HitPoint);
                         Remove(weapon);
@@ -226,7 +320,7 @@ namespace D1U.Game
 
                     default:
                         weapon.Pos = hitInfo.HitPoint;
-                        if (hitInfo.HitSeg >= 0 && hitInfo.HitSeg != weapon.Segnum)
+                        if (hitInfo.HitSeg >= 0)
                             Relink(weapon, hitInfo.HitSeg);
                         break;
                 }
@@ -238,6 +332,8 @@ namespace D1U.Game
             if (obj.Dead)
                 return;
             obj.Shields -= damage;
+            if (obj.Type == 2)
+                obj.Aware = true; // being shot wakes robots
             if (obj.Shields >= 0f)
                 return;
 
@@ -258,8 +354,6 @@ namespace D1U.Game
 
         void DropContains(GameObj robot)
         {
-            // level-placed contents drop deterministically (drop probability
-            // rolls arrive with the full drop logic)
             if (robot.ContainsCount == 0 || robot.ContainsType != 7)
                 return;
             for (int i = 0; i < robot.ContainsCount; i++)
@@ -274,6 +368,218 @@ namespace D1U.Game
                     Size = 1.5f,
                     VClipNum = -2, // view resolves powerup vclip by SubId
                 });
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // robot AI (ai.c essentials)
+
+        public void UpdateAi(float dt)
+        {
+            if (!PlayerAlive)
+                return;
+
+            for (int i = 0; i < Objects.Count; i++)
+            {
+                var robot = Objects[i];
+                if (robot.Dead || robot.Type != 2 || robot.SubId >= robotStats.Length)
+                    continue;
+                var stats = robotStats[robot.SubId];
+
+                robot.NextFire -= dt;
+                robot.ClawTimer -= dt;
+
+                var toPlayer = PlayerPos - robot.Pos;
+                float dist = toPlayer.Length();
+                if (dist > 250f || dist < 1e-3f) // ai.c time-slice horizon
+                    continue;
+                var dir = toPlayer / dist;
+
+                // visibility: LOS ray (player_is_visible_from_object, rad F1_0/4)
+                var visQuery = new FviQuery
+                {
+                    P0 = robot.Pos,
+                    P1 = PlayerPos,
+                    StartSeg = robot.Segnum,
+                    Rad = 0.25f,
+                };
+                bool visible = fvi.FindVectorIntersection(visQuery, hitInfo) == FviHit.None;
+                float dot = Vector3.Dot(robot.Orient.Forward, dir);
+                bool visibleAndInFov = visible &&
+                    dot >= (stats.FieldOfView != null ? stats.FieldOfView[Difficulty] : 0.5f);
+
+                if (!robot.Aware)
+                {
+                    if (!visibleAndInFov)
+                        continue;
+                    robot.Aware = true;
+                    if (stats.SeeSound > 0)
+                        Sound?.Invoke(stats.SeeSound, robot.Pos);
+                }
+                if (!visible)
+                    continue; // aware but no line of sight: hold (path AI comes later)
+
+                // turn toward the player (ai_turn_towards_vector, ai.c:432-458)
+                float turnTime = Math.Max(0.05f, stats.TurnTime != null ? stats.TurnTime[Difficulty] : 0.5f);
+                robot.Orient.Forward = Vector3.Normalize(robot.Orient.Forward + dir * (dt / turnTime));
+                robot.Orient.Orthonormalize();
+
+                // movement (move_towards_vector, ai.c:905-943)
+                float circle = (stats.CircleDistance != null ? stats.CircleDistance[Difficulty] : 20f) + PlayerSize;
+                bool wantsClose = stats.AttackType || dist > circle;
+                if (robot.Behavior != 0x80 && wantsClose) // AIB_STILL robots hold position
+                {
+                    robot.Vel += dir * (dt * 64f * (Difficulty + 5) / 4f);
+                    float maxSpeed = stats.MaxSpeed != null ? stats.MaxSpeed[Difficulty] : 20f;
+                    if (robot.Vel.Length() > maxSpeed)
+                        robot.Vel *= 0.75f; // overspeed damp (ai.c:938-942)
+                }
+                else
+                {
+                    robot.Vel *= Math.Max(0f, 1f - 2.5f * dt); // approach-hold damping (approx.)
+                }
+                MoveRobot(robot, dt);
+
+                // claw contact (collide_player_and_robot for attack_type)
+                if (stats.AttackType && dist < robot.Size + PlayerSize + 0.5f && robot.ClawTimer <= 0f)
+                {
+                    robot.ClawTimer = 0.5f;
+                    if (stats.ClawSound > 0)
+                        Sound?.Invoke(stats.ClawSound, robot.Pos);
+                    PlayerHit?.Invoke(4f, robot); // approximate claw damage
+                }
+
+                // firing (ai_do_actual_firing_stuff: vis + dot >= 7/8, ai.c:2013-2078)
+                if (stats.WeaponType >= 0 && stats.WeaponType < weaponTable.Length &&
+                    visibleAndInFov && dot >= 7f / 8f && robot.NextFire <= 0f)
+                {
+                    FireRobotWeapon(robot, stats, dist);
+                }
+            }
+        }
+
+        void FireRobotWeapon(GameObj robot, in RobotStats stats, float dist)
+        {
+            var weapon = weaponTable[stats.WeaponType];
+
+            // rapid-fire bursts (set_next_fire_time, ai.c:743-753)
+            float wait = stats.FiringWait != null ? stats.FiringWait[Difficulty] : 1f;
+            if (robot.BurstLeft > 0)
+            {
+                robot.BurstLeft--;
+                robot.NextFire = Math.Min(1f / 8f, wait / 2f);
+            }
+            else
+            {
+                robot.BurstLeft = Math.Max(0, (stats.RapidfireCount != null ? stats.RapidfireCount[Difficulty] : 1) - 1);
+                robot.NextFire = wait;
+            }
+
+            // aim at the player, 50% velocity lead (ai_fire_laser_at_player, ai.c:846-879)
+            var aim = PlayerPos;
+            if ((DRand() & 1) != 0 && weapon.Speed > 1f)
+                aim += PlayerVel * (dist / weapon.Speed);
+            float jitterScale = (5 - Difficulty - 1) * 4f / 65536f; // (NDL-diff-1)*4, fix->float
+            aim.X += (DRand() - 16384) * jitterScale;
+            aim.Y += (DRand() - 16384) * jitterScale;
+            aim.Z += (DRand() - 16384) * jitterScale;
+
+            var gunLocal = stats.GunPoints != null && stats.NumGuns > 0
+                ? stats.GunPoints[robot.GunIdx % Math.Max(1, stats.NumGuns)]
+                : Vector3.Zero;
+            robot.GunIdx++;
+            var muzzle = robot.Pos + robot.Orient.TransformRow(gunLocal);
+            var fireDir = aim - muzzle;
+            float len = fireDir.Length();
+            if (len < 1e-3f)
+                return;
+            fireDir /= len;
+
+            FireWeapon(weapon, (byte)stats.WeaponType, muzzle, fireDir, robot.Segnum, robot.Id);
+            Sound?.Invoke(weapon.FiringSound, muzzle);
+            if (stats.AttackSound > 0 && (DRand() & 3) == 0)
+                Sound?.Invoke(stats.AttackSound, robot.Pos);
+        }
+
+        void MoveRobot(GameObj robot, float dt)
+        {
+            if (robot.Vel == Vector3.Zero)
+                return;
+            var query = new FviQuery
+            {
+                P0 = robot.Pos,
+                P1 = robot.Pos + robot.Vel * dt,
+                StartSeg = robot.Segnum,
+                Rad = robot.Size,
+            };
+            var fate = fvi.FindVectorIntersection(query, hitInfo);
+            if (fate == FviHit.BadP0)
+                return;
+            robot.Pos = hitInfo.HitPoint;
+            if (hitInfo.HitSeg >= 0)
+                Relink(robot, hitInfo.HitSeg);
+            if (fate == FviHit.Wall)
+            {
+                float wallPart = Vector3.Dot(hitInfo.WallNorm, robot.Vel);
+                robot.Vel -= hitInfo.WallNorm * wallPart; // slide
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // matcens (fuelcen.c robotmaker essentials)
+
+        public void TriggerMatcen(int segment)
+        {
+            foreach (var matcen in matcens)
+            {
+                if (matcen.Record.SegmentIndex != segment)
+                    continue;
+                if (matcen.Active || matcen.Lives <= 0 || matcen.Record.RobotIds.Length == 0)
+                    return;
+                matcen.Lives--;
+                matcen.Active = true;
+                matcen.Timer = 0.5f;
+                matcen.SpawnRemaining = Difficulty + 3;
+                Message?.Invoke("A robot generator activates!");
+                return;
+            }
+        }
+
+        public void TickMatcens(float dt)
+        {
+            foreach (var matcen in matcens)
+            {
+                if (!matcen.Active)
+                    continue;
+                matcen.Timer -= dt;
+                if (matcen.Timer > 0f)
+                    continue;
+                matcen.Timer += Math.Max(1f, matcen.Record.Interval);
+
+                int robotId = matcen.Record.RobotIds[matcen.SpawnIndex++ % matcen.Record.RobotIds.Length];
+                if (robotId >= 0 && robotId < robotStats.Length)
+                {
+                    var stats = robotStats[robotId];
+                    var robot = new GameObj
+                    {
+                        Type = 2,
+                        SubId = (byte)robotId,
+                        Pos = world.SegmentCenter(matcen.Record.SegmentIndex),
+                        Segnum = matcen.Record.SegmentIndex,
+                        Size = 4f,
+                        Shields = stats.Strength,
+                        ModelNum = stats.ModelNum,
+                        ExplVClip = stats.DeathVClip,
+                        ExplSound = stats.DeathSound,
+                        Behavior = 0x81,
+                        Aware = true,
+                    };
+                    RobotsAlive++;
+                    Add(robot);
+                }
+
+                if (--matcen.SpawnRemaining <= 0)
+                    matcen.Active = false;
             }
         }
 
@@ -320,17 +626,17 @@ namespace D1U.Game
         {
             switch (id)
             {
-                case 1: // energy
+                case 1:
                     if (player.Energy >= 200f) return false;
                     player.Energy = Math.Min(200f, player.Energy + 15f); // TODO exact powerup.c amount
                     Message?.Invoke("Energy boost!");
                     return true;
-                case 2: // shield boost
+                case 2:
                     if (player.Shields >= 200f) return false;
                     player.Shields = Math.Min(200f, player.Shields + 15f); // TODO exact powerup.c amount
                     Message?.Invoke("Shield boost!");
                     return true;
-                case 3: // laser upgrade
+                case 3:
                     if (weapons != null && weapons.LaserLevel < 3)
                     {
                         weapons.LaserLevel++;
@@ -342,7 +648,7 @@ namespace D1U.Game
                 case 4: player.Keys |= 2; Message?.Invoke("Blue key!"); return true;
                 case 5: player.Keys |= 4; Message?.Invoke("Red key!"); return true;
                 case 6: player.Keys |= 8; Message?.Invoke("Yellow key!"); return true;
-                case 12: // quad lasers
+                case 12:
                     if (weapons != null) weapons.Quad = true;
                     Message?.Invoke("Quad lasers!");
                     return true;

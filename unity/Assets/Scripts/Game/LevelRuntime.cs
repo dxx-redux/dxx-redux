@@ -63,6 +63,10 @@ namespace D1U.Game
         /// <summary>(wallIndex, hidden) — illusion walls turning off/on.</summary>
         public event Action<int, bool> WallHiddenChanged;
         public event Action<string> Message;
+        /// <summary>A matcen trigger fired for this target segment (do_matcen).</summary>
+        public event Action<int> MatcenTriggered;
+        /// <summary>(wallIndex, opening) — a door started opening/closing (for sounds).</summary>
+        public event Action<int, bool> DoorMoved;
 
         public LevelRuntime(SegmentWorld world, WallClipInfo[] clips)
         {
@@ -120,6 +124,7 @@ namespace D1U.Game
                         {
                             door.Time = 0f;
                             SetStateBothSides(door.FrontWall, StateClosing);
+                            DoorMoved?.Invoke(door.FrontWall, false);
                         }
                         break;
                     case StateClosing:
@@ -257,6 +262,7 @@ namespace D1U.Game
 
             SetStateBothSides(wall, StateOpening);
             activeDoors.Add(new ActiveDoor { FrontWall = wall });
+            DoorMoved?.Invoke(wall, true);
         }
 
         /// <summary>Player crossed from a segment through a side (check_trigger).</summary>
@@ -290,7 +296,8 @@ namespace D1U.Game
                 foreach (var (tseg, tside) in trigger.Targets)
                     WallToggle(tseg, tside);
             if ((flags & TrigMatcen) != 0)
-                Message?.Invoke("A robot generator hums..."); // do_matcen arrives with M5
+                foreach (var (tseg, _) in trigger.Targets)
+                    MatcenTriggered?.Invoke(tseg);
             if ((flags & TrigIllusionOn) != 0)
                 foreach (var (tseg, tside) in trigger.Targets)
                     SetIllusion(tseg, tside, off: false);

@@ -299,7 +299,7 @@ namespace D1U.Game
         // ---- geometric primitives (fvi.c ports) --------------------------
 
         /// <summary>check_vector_to_sphere_1 (fvi.c:420-484). Returns hit distance, 0 = miss.</summary>
-        static float CheckVectorToSphere(out Vector3 intp, Vector3 p0, Vector3 p1, Vector3 spherePos, float sphereRad)
+        public static float CheckVectorToSphere(out Vector3 intp, Vector3 p0, Vector3 p1, Vector3 spherePos, float sphereRad)
         {
             intp = p0;
             var d = p1 - p0;

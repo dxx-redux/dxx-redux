@@ -73,6 +73,14 @@ namespace D1U.Convert
         public byte RenderTypeId;   // RT_* as stored in the level
         public int ModelNum = -1;   // for polymodel/morph render types
         public int VClipNum = -1;   // for vclip-sprite render types
+        public byte AiBehavior;     // AIB_* (0x80 still .. 0x85 station), 0 = no AI
+    }
+
+    public sealed class MatcenRecord
+    {
+        public int SegmentIndex;
+        public float Interval;
+        public int[] RobotIds = Array.Empty<int>();
     }
 
     public sealed class BakedLevel
@@ -85,6 +93,7 @@ namespace D1U.Convert
         public List<WallRecord> Walls = new List<WallRecord>();
         public List<TriggerRecord> Triggers = new List<TriggerRecord>();
         public List<(int Segment, int Side)> ReactorTargets = new List<(int, int)>();
+        public List<MatcenRecord> Matcens = new List<MatcenRecord>();
         public List<ObjectRecord> Objects = new List<ObjectRecord>();
 
         public int StaticTriangleCount
@@ -178,6 +187,20 @@ namespace D1U.Convert
             foreach (var target in level.ReactorTriggerTargets)
                 baked.ReactorTargets.Add((segmentIndex[target.Segment], (int)target.SideNum));
 
+            foreach (var matcen in level.MatCenters)
+            {
+                var record = new MatcenRecord
+                {
+                    SegmentIndex = segmentIndex[matcen.Segment],
+                    Interval = (float)(double)matcen.Interval,
+                    RobotIds = new int[matcen.SpawnedRobotIds.Count],
+                };
+                int r = 0;
+                foreach (var id in matcen.SpawnedRobotIds)
+                    record.RobotIds[r++] = (int)id;
+                baked.Matcens.Add(record);
+            }
+
             foreach (var obj in level.Objects)
             {
                 var m = obj.Orientation;
@@ -200,6 +223,7 @@ namespace D1U.Convert
                     RenderTypeId = (byte)obj.RenderTypeID,
                     ModelNum = obj.RenderType is PolymodelRenderType poly ? poly.ModelNum : -1,
                     VClipNum = obj.RenderType is FireballRenderType fireball ? fireball.VClipNum : -1,
+                    AiBehavior = obj.ControlType is AIControl ai ? ai.Behavior : (byte)0,
                 });
             }
             return baked;
@@ -377,6 +401,17 @@ namespace D1U.Convert
                 bw.Write(obj.RenderTypeId);
                 bw.Write(obj.ModelNum);
                 bw.Write(obj.VClipNum);
+                bw.Write(obj.AiBehavior);
+            }
+
+            bw.Write(level.Matcens.Count);
+            foreach (var matcen in level.Matcens)
+            {
+                bw.Write(matcen.SegmentIndex);
+                bw.Write(matcen.Interval);
+                bw.Write(matcen.RobotIds.Length);
+                foreach (var id in matcen.RobotIds)
+                    bw.Write(id);
             }
         }
 
@@ -468,7 +503,22 @@ namespace D1U.Convert
                 obj.RenderTypeId = br.ReadByte();
                 obj.ModelNum = br.ReadInt32();
                 obj.VClipNum = br.ReadInt32();
+                obj.AiBehavior = br.ReadByte();
                 level.Objects.Add(obj);
+            }
+
+            int matcenCount = br.ReadInt32();
+            for (int i = 0; i < matcenCount; i++)
+            {
+                var matcen = new MatcenRecord
+                {
+                    SegmentIndex = br.ReadInt32(),
+                    Interval = br.ReadSingle(),
+                    RobotIds = new int[br.ReadInt32()],
+                };
+                for (int r = 0; r < matcen.RobotIds.Length; r++)
+                    matcen.RobotIds[r] = br.ReadInt32();
+                level.Matcens.Add(matcen);
             }
             return level;
         }
