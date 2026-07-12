@@ -56,6 +56,11 @@ namespace D1U.Presentation
         bool endingShown;
         bool mineExplodedPending;
         System.IO.BinaryReader pendingLoad;
+        int lives = 3;              // ships remaining, incl. the current one
+        int scoreCarried;           // score banked from completed levels
+        int lastTotalScore;         // extra-life threshold tracking (50k)
+        bool exitCarryDone;
+        float gameOverTimer;
         AutomapView automapView;
         bool automapOpen;
         bool[] visitedSegs;
@@ -375,6 +380,9 @@ namespace D1U.Presentation
             {
                 missionKey = selected.CacheKey;
                 returnAfterSecret = 0;
+                lives = 3;
+                scoreCarried = 0;
+                lastTotalScore = 0;
                 menuMode = false;
                 StartLevel(menuLevel);
                 return;
@@ -391,7 +399,7 @@ namespace D1U.Presentation
             }
             GUI.Label(new Rect(x, helpY, w, 80),
                 "WASD move · Space/Ctrl vertical · Q/E bank · mouse aim\n" +
-                "LMB fire · RMB missile (hold H: homing) · 1-5 weapons\n" +
+                "LMB fire · RMB missile (hold H: homing) · 1-5 weapons · F flare\n" +
                 "Tab automap · F5 save · F9 load · Esc menu");
         }
 
@@ -417,6 +425,7 @@ namespace D1U.Presentation
                 int vclipNum = obj.VClipNum;
                 if (vclipNum == -2 && obj.SubId < archives.Pig.Powerups.Length)
                     vclipNum = archives.Pig.Powerups[obj.SubId].VClipNum; // dropped powerups
+                float spriteSize = obj.BlobSize > 0f ? obj.BlobSize : obj.Size;
                 if (vclipNum >= 0 && vclipNum < archives.Pig.VClips.Length)
                 {
                     var vclip = archives.Pig.VClips[vclipNum];
@@ -424,8 +433,15 @@ namespace D1U.Presentation
                     {
                         var frames = VClipFrames(vclip);
                         view = BillboardSprite.Create($"dyn_t{obj.Type}_{obj.Id}", frames,
-                            (float)(double)vclip.FrameTime, obj.Size, levelShader, light).gameObject;
+                            (float)(double)vclip.FrameTime, spriteSize, levelShader, light).gameObject;
                     }
+                }
+                else if (obj.BitmapNum > 0 && obj.BitmapNum < baseDxuData.Bitmaps.Count)
+                {
+                    // blob weapons (spreadfire, flares): a single-frame billboard
+                    var frames = new[] { textureFactory.Get(obj.BitmapNum, 0, 0) };
+                    view = BillboardSprite.Create($"dyn_t{obj.Type}_{obj.Id}", frames,
+                        1f, spriteSize, levelShader, light).gameObject;
                 }
             }
 
@@ -540,6 +556,11 @@ namespace D1U.Presentation
                     carryLaserLevel = shipController != null ? shipController.Weapons.LaserLevel : carryLaserLevel;
                     carryQuad = shipController != null ? shipController.Weapons.Quad : carryQuad;
 
+                    if (!exitCarryDone)
+                    {
+                        exitCarryDone = true;
+                        scoreCarried += (objectSystem?.Score ?? 0) + Runtime.Player.Score;
+                    }
                     if (levelNumber > missionLevelCount)
                     {
                         // leaving a secret level: resume after the level it was entered from
@@ -573,6 +594,29 @@ namespace D1U.Presentation
                     {
                         endingShown = true;
                         ShowEnding();
+                        return;
+                    }
+                }
+            }
+
+            // lives: extra ship every 50k points; out of ships = game over
+            if (Application.isPlaying && shipMode && shipController != null &&
+                objectSystem != null && Runtime != null)
+            {
+                int total = scoreCarried + objectSystem.Score + Runtime.Player.Score;
+                if (total / 50000 > lastTotalScore / 50000)
+                {
+                    lives += total / 50000 - lastTotalScore / 50000;
+                    messages.Add((Time.time, "Extra life!"));
+                }
+                lastTotalScore = total;
+
+                if (shipController.GameOver)
+                {
+                    gameOverTimer += Time.deltaTime;
+                    if (gameOverTimer > 4f)
+                    {
+                        OpenMenu();
                         return;
                     }
                 }
@@ -789,6 +833,7 @@ namespace D1U.Presentation
             controller.Runtime = Runtime;
             controller.Objects = objectSystem;
             controller.Sounds = sounds;
+            controller.TryConsumeLife = () => --lives > 0;
 
             var weaponStats = new D1U.Game.WeaponStats[pig.numWeapons];
             for (int i = 0; i < pig.numWeapons; i++)
@@ -805,6 +850,9 @@ namespace D1U.Presentation
                     Homing = w.HomingFlag,
                     ModelNum = w.ModelNum,
                     RenderType = (byte)w.RenderType,
+                    WeaponVClip = w.WeaponVClip,
+                    BitmapNum = w.Bitmap,
+                    BlobSize = (float)(double)w.BlobSize,
                     FiringSound = w.FiringSound,
                     WallHitVClip = w.WallHitVClip,
                     WallHitSound = w.WallHitSound,
@@ -865,11 +913,13 @@ namespace D1U.Presentation
                 using (var bw = new System.IO.BinaryWriter(File.Create(SavePath)))
                 {
                     bw.Write(0x56533144); // "D1SV"
-                    bw.Write(2);          // save format version
+                    bw.Write(3);          // save format version
                     bw.Write(missionKey ?? "");
                     bw.Write(levelNumber);
                     bw.Write(returnAfterSecret);
                     bw.Write(D1U.Game.ObjectSystem.Difficulty);
+                    bw.Write(lives);
+                    bw.Write(scoreCarried);
                     var s = shipController.State;
                     D1U.Game.SaveIo.Write(bw, s.Pos);
                     D1U.Game.SaveIo.Write(bw, s.Vel);
@@ -903,12 +953,15 @@ namespace D1U.Presentation
             try
             {
                 var br = new System.IO.BinaryReader(new MemoryStream(File.ReadAllBytes(SavePath)));
-                if (br.ReadInt32() != 0x56533144 || br.ReadInt32() != 2)
+                if (br.ReadInt32() != 0x56533144 || br.ReadInt32() != 3)
                     throw new InvalidDataException("not a D1X-Unity savegame (or an older format)");
                 missionKey = br.ReadString();
                 levelNumber = br.ReadInt32();
                 returnAfterSecret = br.ReadInt32();
                 D1U.Game.ObjectSystem.Difficulty = Mathf.Clamp(br.ReadInt32(), 0, 4);
+                lives = Mathf.Max(1, br.ReadInt32());
+                scoreCarried = br.ReadInt32();
+                lastTotalScore = scoreCarried;
                 pendingLoad = br;       // consumed at the end of SpawnShip
                 menuMode = false;
                 endingShown = false;
@@ -1162,7 +1215,7 @@ namespace D1U.Presentation
                        $"   [{w.SecondaryName} {w.SecondaryCount(w.SelectedSecondary)}]";
             }
             string robots = objectSystem != null
-                ? $"   Robots {objectSystem.RobotsAlive}   Score {objectSystem.Score + player.Score}"
+                ? $"   Robots {objectSystem.RobotsAlive}   Score {scoreCarried + objectSystem.Score + player.Score}   Lives {Mathf.Max(0, lives)}"
                 : "";
             string timers = (player.CloakTime > 0f ? $"   CLOAK {player.CloakTime:F0}" : "") +
                             (player.InvulnTime > 0f ? $"   INVULN {player.InvulnTime:F0}" : "");
@@ -1236,7 +1289,7 @@ namespace D1U.Presentation
                         tally);
                 }
             }
-            else if (shipController != null && shipController.IsDead)
+            else if (shipController != null && (shipController.IsDead || shipController.GameOver))
             {
                 var style = new GUIStyle(GUI.skin.label)
                 {
@@ -1244,7 +1297,14 @@ namespace D1U.Presentation
                     alignment = TextAnchor.MiddleCenter,
                     normal = { textColor = new UnityEngine.Color(1f, 0.3f, 0.2f) },
                 };
-                GUI.Label(new Rect(0, Screen.height / 2 - 40, Screen.width, 80), "SHIP DESTROYED", style);
+                GUI.Label(new Rect(0, Screen.height / 2 - 40, Screen.width, 80),
+                    shipController.GameOver ? "GAME OVER" : "SHIP DESTROYED", style);
+                if (shipController.GameOver)
+                {
+                    var sub = new GUIStyle(GUI.skin.label) { fontSize = 20, alignment = TextAnchor.MiddleCenter };
+                    GUI.Label(new Rect(0, Screen.height / 2 + 24, Screen.width, 40),
+                        $"Final score {scoreCarried + (objectSystem?.Score ?? 0) + player.Score}", sub);
+                }
             }
         }
 
@@ -1267,6 +1327,8 @@ namespace D1U.Presentation
             shipWorld = null;
             briefingView = null;  // destroyed with the children above
             briefingMode = false;
+            exitCarryDone = false;
+            gameOverTimer = 0f;
             automapView = null;
             automapOpen = false;
             automapHidden.Clear();

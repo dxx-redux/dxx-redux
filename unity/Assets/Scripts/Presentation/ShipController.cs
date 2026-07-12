@@ -1,3 +1,4 @@
+using System;
 using D1U.Game;
 using UnityEngine;
 
@@ -26,6 +27,9 @@ namespace D1U.Presentation
         public ShipState State => state;
         /// <summary>Freeze the sim (automap open) — original automap pauses single-player time.</summary>
         public bool Paused { get; set; }
+        /// <summary>Return false to deny the respawn (out of lives) — the ship stays down.</summary>
+        public Func<bool> TryConsumeLife { get; set; }
+        public bool GameOver { get; private set; }
         public LevelRuntime Runtime { get; set; }
         public ObjectSystem Objects { get; set; }
         public SoundFactory Sounds { get; set; }
@@ -65,7 +69,7 @@ namespace D1U.Presentation
 
         void Update()
         {
-            if (sim == null || Paused)
+            if (sim == null || Paused || GameOver)
                 return;
 
             float ft = Mathf.Min(Time.deltaTime, 0.25f);
@@ -156,6 +160,14 @@ namespace D1U.Presentation
                         Sounds?.PlayAt(WeaponStats[fired].FiringSound,
                             new Vector3(state.Pos.X, state.Pos.Y, state.Pos.Z), 0.8f);
                 }
+                if (Input.GetKeyDown(KeyCode.F) && WeaponStats.Length > 9)
+                {
+                    // flare (FLARE_ID 9): free, sticks to walls
+                    var flare = WeaponStats[9];
+                    var muzzle = state.Pos + state.Orient.TransformRow(GunPoints[6]);
+                    Objects.FireWeapon(flare, 9, muzzle, state.Orient.Forward, state.Segnum);
+                    Sounds?.PlayAt(flare.FiringSound, shipPos, 0.5f);
+                }
                 Objects.MoveWeapons(ft);
                 Objects.MovePowerups(ft);
                 Objects.PickupScan(state.Pos, shipParams.Size, state.Segnum, Runtime.Player, Weapons);
@@ -188,6 +200,11 @@ namespace D1U.Presentation
 
         void Respawn()
         {
+            if (TryConsumeLife != null && !TryConsumeLife())
+            {
+                GameOver = true; // out of ships — the viewer takes it from here
+                return;
+            }
             state.Pos = spawnPos;
             state.Orient = spawnOrient;
             state.Segnum = spawnSeg;

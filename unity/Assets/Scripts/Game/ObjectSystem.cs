@@ -36,7 +36,10 @@ namespace D1U.Game
         public float DamageRadius;   // badass explosion reach
         public bool Homing;
         public int ModelNum;
-        public byte RenderType;
+        public byte RenderType;      // 0 laser blob, 1 blob, 2 model, 3 vclip
+        public int WeaponVClip;      // render type 3
+        public int BitmapNum;        // render types 0/1
+        public float BlobSize;
         public int FiringSound, WallHitVClip, WallHitSound;
     }
 
@@ -53,6 +56,8 @@ namespace D1U.Game
         public float LifeLeft;   // weapons
         public int ModelNum = -1;
         public int VClipNum = -1;
+        public int BitmapNum = -1;   // static billboard (blob weapons)
+        public float BlobSize;       // visual radius for blob/vclip weapons
         public int ExplVClip = -1;
         public int ExplSound = -1;
         public byte ContainsType, ContainsId, ContainsCount;
@@ -267,6 +272,9 @@ namespace D1U.Game
                 Shields = stats.Strength, // weapon "shields" are its damage (collide.c)
                 LifeLeft = stats.Lifetime,
                 ModelNum = stats.RenderType == 2 ? stats.ModelNum : -1,
+                VClipNum = stats.RenderType == 3 ? stats.WeaponVClip : -1,
+                BitmapNum = stats.RenderType <= 1 ? stats.BitmapNum : -1,
+                BlobSize = stats.BlobSize,
                 ExplVClip = stats.WallHitVClip,
                 ExplSound = stats.WallHitSound,
                 ParentId = ownerId,
@@ -355,6 +363,14 @@ namespace D1U.Game
                         break;
 
                     case FviHit.Wall:
+                        if (weapon.SubId == 9) // flares stick to the wall and burn out
+                        {
+                            weapon.Pos = hitInfo.HitPoint;
+                            weapon.Vel = Vector3.Zero;
+                            if (hitInfo.HitSeg >= 0)
+                                Relink(weapon, hitInfo.HitSeg);
+                            break;
+                        }
                         Runtime?.DamageWall(hitInfo.HitSideSeg, hitInfo.HitSide, weapon.Shields);
                         Exploded?.Invoke(weapon, hitInfo.HitPoint);
                         Remove(weapon);
@@ -1175,6 +1191,8 @@ namespace D1U.Game
                 bw.Write(o.LifeLeft);
                 bw.Write(o.ModelNum);
                 bw.Write(o.VClipNum);
+                bw.Write(o.BitmapNum);
+                bw.Write(o.BlobSize);
                 bw.Write(o.ExplVClip);
                 bw.Write(o.ExplSound);
                 bw.Write(o.ContainsType);
@@ -1242,6 +1260,8 @@ namespace D1U.Game
                     LifeLeft = br.ReadSingle(),
                     ModelNum = br.ReadInt32(),
                     VClipNum = br.ReadInt32(),
+                    BitmapNum = br.ReadInt32(),
+                    BlobSize = br.ReadSingle(),
                     ExplVClip = br.ReadInt32(),
                     ExplSound = br.ReadInt32(),
                     ContainsType = br.ReadByte(),
