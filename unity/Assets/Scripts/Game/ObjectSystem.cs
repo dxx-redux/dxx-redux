@@ -61,10 +61,15 @@ namespace D1U.Game
         // AI state (ai_local)
         public byte Behavior;            // AIB_* (0x80 still)
         public bool Aware;
+        public bool Provoked;            // shot at least once: still robots start chasing
         public float NextFire;
         public float ClawTimer;
         public int BurstLeft;
         public int GunIdx;
+        // out-of-sight chase (ai_path.c essentials)
+        public List<int> Path;
+        public int PathIndex;
+        public float RepathTimer;
         public int ParentId = -1;        // weapons: firing object id, -1 = player
         // weapon extras
         public float BadassRadius;
@@ -508,7 +513,10 @@ namespace D1U.Game
                 return;
             obj.Shields -= damage;
             if (obj.Type == 2)
+            {
                 obj.Aware = true; // being shot wakes robots
+                obj.Provoked = true;
+            }
             if (obj.Shields >= 0f)
                 return;
 
@@ -779,7 +787,12 @@ namespace D1U.Game
                         Sound?.Invoke(stats.SeeSound, robot.Pos);
                 }
                 if (!visible)
-                    continue; // aware but no line of sight: hold (path AI comes later)
+                {
+                    // aware but no line of sight: path through the mine to the player
+                    FollowHiddenPlayer(robot, stats, dt);
+                    continue;
+                }
+                robot.Path = null; // direct pursuit while the player is in sight
 
                 // turn toward the player (ai_turn_towards_vector, ai.c:432-458)
                 float turnTime = Math.Max(0.05f, stats.TurnTime != null ? stats.TurnTime[Difficulty] : 0.5f);
@@ -789,7 +802,7 @@ namespace D1U.Game
                 // movement (move_towards_vector, ai.c:905-943)
                 float circle = (stats.CircleDistance != null ? stats.CircleDistance[Difficulty] : 20f) + PlayerSize;
                 bool wantsClose = stats.AttackType || dist > circle;
-                if (robot.Behavior != 0x80 && wantsClose) // AIB_STILL robots hold position
+                if ((robot.Behavior != 0x80 || robot.Provoked) && wantsClose) // still robots hold until shot
                 {
                     robot.Vel += dir * (dt * 64f * (Difficulty + 5) / 4f);
                     float maxSpeed = stats.MaxSpeed != null ? stats.MaxSpeed[Difficulty] : 20f;
@@ -931,7 +944,116 @@ namespace D1U.Game
             {
                 float wallPart = Vector3.Dot(hitInfo.WallNorm, robot.Vel);
                 robot.Vel -= hitInfo.WallNorm * wallPart; // slide
+                RobotBumpDoor(hitInfo.HitSideSeg, hitInfo.HitSide);
             }
+        }
+
+        // ------------------------------------------------------------------
+        // out-of-sight chase (ai_path.c create_path_to_player + follow essentials)
+
+        /// <summary>Robots may open unlocked keyless doors (ai_door_is_openable).</summary>
+        bool DoorOpenable(int seg, int side)
+        {
+            int wallIdx = world.Sides[seg][side].WallIndex;
+            if (wallIdx < 0)
+                return false;
+            var wall = world.Level.Walls[wallIdx];
+            return wall.Type == 2 && wall.Keys <= 1 && (wall.Flags & 8) == 0;
+        }
+
+        void RobotBumpDoor(int seg, int side)
+        {
+            if (seg >= 0 && side >= 0 && DoorOpenable(seg, side))
+                Runtime?.BumpWall(seg, side);
+        }
+
+        void FollowHiddenPlayer(GameObj robot, in RobotStats stats, float dt)
+        {
+            if (robot.Behavior == 0x80 && !robot.Provoked) // still robots hold their post until shot
+                return;
+
+            robot.RepathTimer -= dt;
+            bool exhausted = robot.Path == null || robot.PathIndex >= robot.Path.Count;
+            bool stale = !exhausted && robot.Path[robot.Path.Count - 1] != PlayerSeg;
+            if ((exhausted || stale) && robot.RepathTimer <= 0f)
+            {
+                robot.Path = FindSegmentPath(robot.Segnum, PlayerSeg, 30);
+                robot.PathIndex = 0;
+                robot.RepathTimer = 2f;
+            }
+            if (robot.Path == null || robot.PathIndex >= robot.Path.Count)
+                return;
+
+            // reached (or skipped past) a waypoint: open the next door and advance
+            int at = robot.Path.IndexOf(robot.Segnum);
+            if (at >= robot.PathIndex)
+            {
+                if (at + 1 < robot.Path.Count)
+                {
+                    int side = world.FindConnectSide(robot.Segnum, robot.Path[at + 1]);
+                    if (side >= 0 && !world.IsPassable(world.Sides[robot.Segnum][side]))
+                        RobotBumpDoor(robot.Segnum, side);
+                }
+                robot.PathIndex = at + 1;
+                if (robot.PathIndex >= robot.Path.Count)
+                    return;
+            }
+
+            var goal = world.SegmentCenter(robot.Path[robot.PathIndex]);
+            var to = goal - robot.Pos;
+            float d = to.Length();
+            if (d < 1f)
+                return;
+            var dir = to / d;
+
+            float turnTime = Math.Max(0.05f, stats.TurnTime != null ? stats.TurnTime[Difficulty] : 0.5f);
+            robot.Orient.Forward = Vector3.Normalize(robot.Orient.Forward + dir * (dt / turnTime));
+            robot.Orient.Orthonormalize();
+
+            robot.Vel += dir * (dt * 64f * (Difficulty + 5) / 4f);
+            float maxSpeed = stats.MaxSpeed != null ? stats.MaxSpeed[Difficulty] : 20f;
+            if (robot.Vel.Length() > maxSpeed)
+                robot.Vel *= 0.75f;
+            MoveRobot(robot, dt);
+        }
+
+        List<int> FindSegmentPath(int from, int to, int maxDepth)
+        {
+            if (from < 0 || to < 0)
+                return null;
+            var parent = new Dictionary<int, int> { [from] = from };
+            var queue = new Queue<(int seg, int depth)>();
+            queue.Enqueue((from, 0));
+            while (queue.Count > 0)
+            {
+                var (seg, depth) = queue.Dequeue();
+                if (seg == to)
+                {
+                    var path = new List<int>();
+                    for (int s = to; ; s = parent[s])
+                    {
+                        path.Add(s);
+                        if (s == from)
+                            break;
+                    }
+                    path.Reverse();
+                    return path;
+                }
+                if (depth >= maxDepth)
+                    continue;
+                var sides = world.Sides[seg];
+                for (int sn = 0; sn < 6; sn++)
+                {
+                    int child = sides[sn].Child;
+                    if (child < 0 || parent.ContainsKey(child))
+                        continue;
+                    if (!world.IsPassable(sides[sn]) && !DoorOpenable(seg, sn))
+                        continue;
+                    parent[child] = seg;
+                    queue.Enqueue((child, depth + 1));
+                }
+            }
+            return null;
         }
 
         // ------------------------------------------------------------------

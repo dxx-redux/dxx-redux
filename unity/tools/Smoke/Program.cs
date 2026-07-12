@@ -724,6 +724,45 @@ try
     if (drops.Count != 3 || drops.Any(d => d.LifeLeft <= 0f) || speed1 >= speed0 ||
         drops.Any(d => d.Segnum < 0))
         errors++;
+
+    // --- 17. out-of-sight pathfinding: a provoked robot closes on a hidden player ---
+    var hunter = objs.Objects.First(o => o.Type == 2 && !o.Dead && !o.Aware);
+    // walk the segment graph for a spot several rooms away from the hunter
+    int farSeg = hunter.Segnum;
+    var depthOf = new Dictionary<int, int> { [hunter.Segnum] = 0 };
+    var bfs = new Queue<int>();
+    bfs.Enqueue(hunter.Segnum);
+    while (bfs.Count > 0)
+    {
+        int seg = bfs.Dequeue();
+        if (depthOf[seg] >= 6)
+            continue;
+        var ss = world3.Sides[seg];
+        for (int sn = 0; sn < 6; sn++)
+        {
+            int child = ss[sn].Child;
+            if (child < 0 || depthOf.ContainsKey(child) || !world3.IsPassable(ss[sn]))
+                continue;
+            depthOf[child] = depthOf[seg] + 1;
+            if (depthOf[child] > depthOf[farSeg])
+                farSeg = child;
+            bfs.Enqueue(child);
+        }
+    }
+    objs.PlayerPos = world3.SegmentCenter(farSeg);
+    objs.PlayerSeg = farSeg;
+    objs.PlayerVel = default;
+    hunter.Aware = true;
+    hunter.Provoked = true; // as if shot: still robots chase too
+    float distBefore = System.Numerics.Vector3.Distance(hunter.Pos, objs.PlayerPos);
+    for (int step = 0; step < 60 * 15; step++)
+        objs.UpdateAi(1f / 60f);
+    float distAfter = System.Numerics.Vector3.Distance(hunter.Pos, objs.PlayerPos);
+    Console.WriteLine($"  pathfinding: hidden player {depthOf[farSeg]} rooms away, " +
+                      $"distance {distBefore:F0} -> {distAfter:F0} " +
+                      $"(robot id {hunter.SubId}, behavior 0x{hunter.Behavior:X2})");
+    if (depthOf[farSeg] < 3 || distAfter > distBefore * 0.6f)
+        errors++;
 }
 catch (Exception e)
 {
