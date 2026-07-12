@@ -537,6 +537,8 @@ namespace D1U.Presentation
                     Lifetime = (float)(double)w.Lifetime,
                     EnergyUsage = (float)(double)w.EnergyUsage,
                     FireWait = (float)(double)w.FireWait,
+                    DamageRadius = (float)(double)w.DamageRadius,
+                    Homing = w.HomingFlag,
                     ModelNum = w.ModelNum,
                     RenderType = (byte)w.RenderType,
                     FiringSound = w.FiringSound,
@@ -620,9 +622,26 @@ namespace D1U.Presentation
             if (Runtime == null || !Application.isPlaying)
                 return;
             var player = Runtime.Player;
-            GUI.Label(new Rect(12, 8, 500, 24),
+            string ammo = shipController != null
+                ? $"   Lasers L{shipController.Weapons.LaserLevel + 1}{(shipController.Weapons.Quad ? " QUAD" : "")}" +
+                  $"   Missiles {shipController.Weapons.Concussions}   Homing {shipController.Weapons.Homings}"
+                : "";
+            GUI.Label(new Rect(12, 8, 800, 24),
                 $"Shields {player.Shields:F0}   Energy {player.Energy:F0}   Keys:" +
-                $"{((player.Keys & 2) != 0 ? " BLUE" : "")}{((player.Keys & 4) != 0 ? " RED" : "")}{((player.Keys & 8) != 0 ? " YELLOW" : "")}");
+                $"{((player.Keys & 2) != 0 ? " BLUE" : "")}{((player.Keys & 4) != 0 ? " RED" : "")}{((player.Keys & 8) != 0 ? " YELLOW" : "")}" +
+                ammo);
+
+            // reticle
+            if (shipController != null && !shipController.IsDead && !player.ExitReached)
+            {
+                float cx = Screen.width / 2f, cy = Screen.height / 2f;
+                GUI.color = new UnityEngine.Color(0.4f, 1f, 0.4f, 0.8f);
+                GUI.DrawTexture(new Rect(cx - 6, cy - 1, 4, 2), Texture2D.whiteTexture);
+                GUI.DrawTexture(new Rect(cx + 2, cy - 1, 4, 2), Texture2D.whiteTexture);
+                GUI.DrawTexture(new Rect(cx - 1, cy - 6, 2, 4), Texture2D.whiteTexture);
+                GUI.DrawTexture(new Rect(cx - 1, cy + 2, 2, 4), Texture2D.whiteTexture);
+                GUI.color = UnityEngine.Color.white;
+            }
 
             int y = 40;
             for (int i = messages.Count - 1; i >= 0 && i >= messages.Count - 4; i--)

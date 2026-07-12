@@ -541,6 +541,8 @@ try
             Strength = (float)(double)w.Strength[D1U.Game.ObjectSystem.Difficulty],
             Lifetime = (float)(double)w.Lifetime,
             FireWait = (float)(double)w.FireWait,
+            DamageRadius = (float)(double)w.DamageRadius,
+            Homing = w.HomingFlag,
             FiringSound = w.FiringSound,
             WallHitVClip = w.WallHitVClip,
             WallHitSound = w.WallHitSound,
@@ -658,6 +660,37 @@ try
         if (objs4.RobotsAlive <= robotsBefore)
             errors++;
     }
+
+    // --- 15. homing missile acquires and curves onto a robot ---
+    // use a robot the AI test never disturbed, with probed open space in front
+    var calmBot = objs.Objects.First(o => o.Type == 2 && !o.Dead && !o.Aware);
+    var botFacing = calmBot.Orient.Forward;
+    probe.FindVectorIntersection(new D1U.Game.FviQuery
+    {
+        P0 = calmBot.Pos,
+        P1 = calmBot.Pos + botFacing * 60f,
+        StartSeg = calmBot.Segnum,
+        Rad = 1f,
+    }, probeInfo);
+    float openAhead = System.Numerics.Vector3.Distance(probeInfo.HitPoint, calmBot.Pos);
+    var homingFrom = calmBot.Pos + botFacing * Math.Max(12f, Math.Min(28f, openAhead - 4f));
+    var dir0 = System.Numerics.Vector3.Normalize(calmBot.Pos - homingFrom);
+    var perp = System.Numerics.Vector3.Normalize(
+        System.Numerics.Vector3.Cross(dir0, new System.Numerics.Vector3(0, 1, 0)));
+    var offDir = System.Numerics.Vector3.Normalize(dir0 + perp * 0.35f); // ~19 degrees off
+    int homingSeg = world3.FindPointSeg(homingFrom, calmBot.Segnum);
+    var missile = objs.FireWeapon(allWeaponStats[15], 15, homingFrom, offDir, homingSeg);
+    float botShieldsBefore = calmBot.Shields;
+    bool acquired = false;
+    for (int step = 0; step < 240 && !missile.Dead; step++)
+    {
+        objs.MoveWeapons(1f / 60f);
+        acquired |= missile.HomingTarget >= 0;
+    }
+    Console.WriteLine($"  homing: fired {System.Numerics.Vector3.Distance(homingFrom, calmBot.Pos):F0} units out, " +
+                      $"acquired={acquired}, robot shields {botShieldsBefore:F1} -> {calmBot.Shields:F1}");
+    if (!acquired)
+        errors++;
 }
 catch (Exception e)
 {

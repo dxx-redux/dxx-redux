@@ -115,8 +115,26 @@ namespace D1U.Presentation
                     Sounds?.PlayAt(WeaponStats[Weapons.LaserLevel].FiringSound,
                         new Vector3(state.Pos.X, state.Pos.Y, state.Pos.Z), 0.6f);
                 }
+                if (Input.GetMouseButton(1))
+                {
+                    int fired = Weapons.TryFireSecondary(Objects, WeaponStats, state, GunPoints,
+                        preferHoming: Input.GetKey(KeyCode.H));
+                    if (fired >= 0)
+                        Sounds?.PlayAt(WeaponStats[fired].FiringSound,
+                            new Vector3(state.Pos.X, state.Pos.Y, state.Pos.Z), 0.8f);
+                }
                 Objects.MoveWeapons(ft);
                 Objects.PickupScan(state.Pos, shipParams.Size, state.Segnum, Runtime.Player, Weapons);
+
+                // ship-vs-robot separation + ram damage
+                var (push, ramDamage) = Objects.ShipCollide(state.Pos, shipParams.Size, state.Segnum, state.Vel);
+                if (push != System.Numerics.Vector3.Zero)
+                {
+                    state.Pos += push;
+                    state.Vel *= 0.6f;
+                    if (ramDamage > 0f)
+                        ApplyPlayerDamage(ramDamage);
+                }
             }
 
             if (Runtime != null)

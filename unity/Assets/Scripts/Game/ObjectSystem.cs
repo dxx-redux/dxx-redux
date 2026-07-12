@@ -28,6 +28,8 @@ namespace D1U.Game
     public struct WeaponStats
     {
         public float Speed, Strength, Lifetime, EnergyUsage, FireWait;
+        public float DamageRadius;   // badass explosion reach
+        public bool Homing;
         public int ModelNum;
         public byte RenderType;
         public int FiringSound, WallHitVClip, WallHitSound;
@@ -60,6 +62,12 @@ namespace D1U.Game
         public int BurstLeft;
         public int GunIdx;
         public int ParentId = -1;        // weapons: firing object id, -1 = player
+        // weapon extras
+        public float BadassRadius;
+        public bool Homing;
+        public int HomingTarget = -1;
+        public float HomerAccum;
+        public float Age;
     }
 
     /// <summary>
@@ -245,6 +253,8 @@ namespace D1U.Game
                 ExplVClip = stats.WallHitVClip,
                 ExplSound = stats.WallHitSound,
                 ParentId = ownerId,
+                BadassRadius = stats.DamageRadius,
+                Homing = stats.Homing,
             };
             Add(obj);
             return obj;
@@ -259,11 +269,15 @@ namespace D1U.Game
                     continue;
 
                 weapon.LifeLeft -= dt;
+                weapon.Age += dt;
                 if (weapon.LifeLeft <= 0f)
                 {
                     Remove(weapon);
                     continue;
                 }
+
+                if (weapon.Homing)
+                    UpdateHoming(weapon, dt);
 
                 var end = weapon.Pos + weapon.Vel * dt;
                 int ownerId = weapon.ParentId;
@@ -295,6 +309,7 @@ namespace D1U.Game
                         Exploded?.Invoke(weapon, playerPoint);
                         Remove(weapon);
                         PlayerHit?.Invoke(weapon.Shields, weapon);
+                        BadassDamage(weapon, playerPoint);
                         continue;
                     }
                 }
@@ -306,12 +321,14 @@ namespace D1U.Game
                         Exploded?.Invoke(weapon, hitInfo.HitPoint);
                         Remove(weapon);
                         Damage(victim, weapon.Shields, hitInfo.HitPoint);
+                        BadassDamage(weapon, hitInfo.HitPoint);
                         break;
 
                     case FviHit.Wall:
                         Runtime?.DamageWall(hitInfo.HitSideSeg, hitInfo.HitSide, weapon.Shields);
                         Exploded?.Invoke(weapon, hitInfo.HitPoint);
                         Remove(weapon);
+                        BadassDamage(weapon, hitInfo.HitPoint);
                         break;
 
                     case FviHit.BadP0:
@@ -325,6 +342,118 @@ namespace D1U.Game
                         break;
                 }
             }
+        }
+
+        /// <summary>NEWHOMER homing: fixed 25 Hz turn cadence (object.c:1893-1908).</summary>
+        void UpdateHoming(GameObj weapon, float dt)
+        {
+            if (weapon.Age < 0.125f) // HOMING_MISSILE_STRAIGHT_TIME (laser.h:65)
+                return;
+            const float homerTick = 1f / 25f;
+            weapon.HomerAccum = Math.Min(weapon.HomerAccum + dt, 3 * homerTick);
+            float speed = weapon.Vel.Length();
+            if (speed < 1e-3f)
+                return;
+
+            while (weapon.HomerAccum >= homerTick)
+            {
+                weapon.HomerAccum -= homerTick;
+                var velDir = weapon.Vel / speed;
+
+                // (re)acquire: nearest target within 250 units and 3/4 dot
+                if (weapon.HomingTarget < 0 || Objects[weapon.HomingTarget].Dead)
+                {
+                    weapon.HomingTarget = -1;
+                    float best = 250f;
+                    if (weapon.ParentId < 0) // player missiles track robots
+                    {
+                        foreach (var candidate in Objects)
+                        {
+                            if (candidate.Dead || candidate.Type != 2)
+                                continue;
+                            var to = candidate.Pos - weapon.Pos;
+                            float d = to.Length();
+                            if (d < 1f || d >= best)
+                                continue;
+                            if (Vector3.Dot(velDir, to / d) < 0.75f) // MIN_TRACKABLE_DOT
+                                continue;
+                            best = d;
+                            weapon.HomingTarget = candidate.Id;
+                        }
+                    }
+                }
+                if (weapon.HomingTarget < 0)
+                    continue;
+
+                // turn: vel = normalize(norm_vel + to_target) * speed (laser.c:1017-1023)
+                var target = Objects[weapon.HomingTarget];
+                var toTarget = Vector3.Normalize(target.Pos - weapon.Pos);
+                float dot = Vector3.Dot(velDir, toTarget);
+                weapon.Vel = Vector3.Normalize(velDir + toTarget) * speed;
+                weapon.LifeLeft -= Math.Abs(1f - dot) * 32f * homerTick; // turn life cost (laser.c:1027)
+            }
+        }
+
+        /// <summary>Badass radius damage with linear falloff (fireball.c:104-130).</summary>
+        void BadassDamage(GameObj weapon, Vector3 center)
+        {
+            float radius = weapon.BadassRadius;
+            if (radius <= 0f)
+                return;
+            float maxDamage = weapon.Shields;
+
+            for (int i = 0; i < Objects.Count; i++)
+            {
+                var obj = Objects[i];
+                if (obj.Dead || (obj.Type != 2 && obj.Type != 9))
+                    continue;
+                float dist = Vector3.Distance(obj.Pos, center);
+                if (dist >= radius)
+                    continue;
+                Damage(obj, maxDamage - dist * maxDamage / radius, obj.Pos);
+            }
+            if (PlayerAlive)
+            {
+                float dist = Vector3.Distance(PlayerPos, center);
+                if (dist < radius)
+                    PlayerHit?.Invoke((maxDamage - dist * maxDamage / radius) / 2f, weapon);
+            }
+        }
+
+        /// <summary>Ship-vs-robot/reactor overlap: separation push + ram damage.</summary>
+        public (Vector3 push, float damage) ShipCollide(Vector3 shipPos, float shipSize, int shipSeg, Vector3 shipVel)
+        {
+            var push = Vector3.Zero;
+            float damage = 0f;
+            if (shipSeg < 0)
+                return (push, damage);
+
+            void Scan(int seg)
+            {
+                foreach (int id in ObjectsInSeg(seg))
+                {
+                    var obj = Objects[id];
+                    if (obj.Dead || (obj.Type != 2 && obj.Type != 9))
+                        continue;
+                    var away = shipPos - obj.Pos;
+                    float dist = away.Length();
+                    float overlap = obj.Size + shipSize - dist;
+                    if (overlap <= 0f || dist < 1e-3f)
+                        continue;
+                    away /= dist;
+                    push += away * overlap;
+                    float closing = -Vector3.Dot(shipVel, away);
+                    if (closing > 20f) // ~wall damage threshold feel
+                        damage = Math.Max(damage, closing / 128f * 10f);
+                }
+            }
+
+            Scan(shipSeg);
+            var sides = world.Sides[shipSeg];
+            for (int s = 0; s < 6; s++)
+                if (sides[s].Child >= 0)
+                    Scan(sides[s].Child);
+            return (push, damage);
         }
 
         public void Damage(GameObj obj, float damage, Vector3 hitPos)
@@ -648,6 +777,26 @@ namespace D1U.Game
                 case 4: player.Keys |= 2; Message?.Invoke("Blue key!"); return true;
                 case 5: player.Keys |= 4; Message?.Invoke("Red key!"); return true;
                 case 6: player.Keys |= 8; Message?.Invoke("Yellow key!"); return true;
+                case 10: // 1 concussion
+                    if (weapons == null || weapons.Concussions >= 20) return false;
+                    weapons.Concussions = Math.Min(20, weapons.Concussions + 1);
+                    Message?.Invoke("Concussion missile!");
+                    return true;
+                case 11: // 4-pack
+                    if (weapons == null || weapons.Concussions >= 20) return false;
+                    weapons.Concussions = Math.Min(20, weapons.Concussions + 4);
+                    Message?.Invoke("4 concussion missiles!");
+                    return true;
+                case 18:
+                    if (weapons == null || weapons.Homings >= 10) return false;
+                    weapons.Homings = Math.Min(10, weapons.Homings + 1);
+                    Message?.Invoke("Homing missile!");
+                    return true;
+                case 19:
+                    if (weapons == null || weapons.Homings >= 10) return false;
+                    weapons.Homings = Math.Min(10, weapons.Homings + 4);
+                    Message?.Invoke("4 homing missiles!");
+                    return true;
                 case 12:
                     if (weapons != null) weapons.Quad = true;
                     Message?.Invoke("Quad lasers!");
