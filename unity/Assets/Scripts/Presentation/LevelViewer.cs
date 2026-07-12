@@ -54,6 +54,7 @@ namespace D1U.Presentation
         BriefingView briefingView;
         bool briefingMode;
         bool endingShown;
+        System.IO.BinaryReader pendingLoad;
         AutomapView automapView;
         bool automapOpen;
         bool[] visitedSegs;
@@ -365,10 +366,22 @@ namespace D1U.Presentation
                 returnAfterSecret = 0;
                 menuMode = false;
                 StartLevel(menuLevel);
+                return;
             }
-            GUI.Label(new Rect(x, rowY + 90, w, 60),
+            float helpY = rowY + 90;
+            if (File.Exists(SavePath))
+            {
+                if (GUI.Button(new Rect(x, rowY + 90, w, 32), "LOAD GAME  (F9 in game)"))
+                {
+                    LoadGame();
+                    return;
+                }
+                helpY += 42;
+            }
+            GUI.Label(new Rect(x, helpY, w, 80),
                 "WASD move · Space/Ctrl vertical · Q/E bank · mouse aim\n" +
-                "LMB fire · RMB missile (hold H: homing) · 1-5 weapons · Esc menu");
+                "LMB fire · RMB missile (hold H: homing) · 1-5 weapons\n" +
+                "Tab automap · F5 save · F9 load · Esc menu");
         }
 
         void CreateObjectView(D1U.Game.GameObj obj)
@@ -553,6 +566,14 @@ namespace D1U.Presentation
                 int shipSeg = shipController.State.Segnum;
                 if (shipSeg >= 0 && shipSeg < visitedSegs.Length)
                     visitedSegs[shipSeg] = true;
+
+                if (Input.GetKeyDown(KeyCode.F5) && !automapOpen)
+                    SaveGame();
+                if (Input.GetKeyDown(KeyCode.F9) && !automapOpen)
+                {
+                    LoadGame();
+                    return;
+                }
 
                 if (Input.GetKeyDown(KeyCode.Tab) && Runtime != null &&
                     !Runtime.Player.ExitReached && !shipController.IsDead)
@@ -797,6 +818,130 @@ namespace D1U.Presentation
             if (music == null)
                 music = new MusicPlayer(gameObject);
             music.PlayLevelSong(dir, baseDxuData, levelNumber);
+
+            if (pendingLoad != null)
+                ApplyPendingLoad();
+        }
+
+        // ------------------------------------------------------------------
+        // savegames (quicksave slot, F5/F9)
+
+        static string SavePath => Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "D1XUnity", "saves", "quick.d1sav");
+
+        void SaveGame()
+        {
+            if (shipController == null || Runtime == null || objectSystem == null ||
+                Runtime.Player.ExitReached || shipController.IsDead)
+                return;
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(SavePath));
+                using (var bw = new System.IO.BinaryWriter(File.Create(SavePath)))
+                {
+                    bw.Write(0x56533144); // "D1SV"
+                    bw.Write(1);          // save format version
+                    bw.Write(missionKey ?? "");
+                    bw.Write(levelNumber);
+                    bw.Write(returnAfterSecret);
+                    var s = shipController.State;
+                    D1U.Game.SaveIo.Write(bw, s.Pos);
+                    D1U.Game.SaveIo.Write(bw, s.Vel);
+                    D1U.Game.SaveIo.Write(bw, s.RotVel);
+                    D1U.Game.SaveIo.Write(bw, s.Orient);
+                    bw.Write(s.TurnRoll);
+                    bw.Write(s.Segnum);
+                    shipController.Weapons.Save(bw);
+                    Runtime.Save(bw);
+                    objectSystem.Save(bw);
+                    bw.Write(visitedSegs.Length);
+                    foreach (var v in visitedSegs)
+                        bw.Write(v);
+                }
+                messages.Add((Time.time, "Game saved"));
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("D1U: save failed: " + e);
+                messages.Add((Time.time, "Save failed"));
+            }
+        }
+
+        void LoadGame()
+        {
+            if (!File.Exists(SavePath))
+            {
+                messages.Add((Time.time, "No saved game"));
+                return;
+            }
+            try
+            {
+                var br = new System.IO.BinaryReader(new MemoryStream(File.ReadAllBytes(SavePath)));
+                if (br.ReadInt32() != 0x56533144 || br.ReadInt32() != 1)
+                    throw new InvalidDataException("not a D1X-Unity savegame");
+                missionKey = br.ReadString();
+                levelNumber = br.ReadInt32();
+                returnAfterSecret = br.ReadInt32();
+                pendingLoad = br;       // consumed at the end of SpawnShip
+                menuMode = false;
+                endingShown = false;
+                Build();
+            }
+            catch (Exception e)
+            {
+                pendingLoad = null;
+                Debug.LogError("D1U: load failed: " + e);
+                messages.Add((Time.time, "Load failed"));
+            }
+        }
+
+        void ApplyPendingLoad()
+        {
+            var br = pendingLoad;
+            pendingLoad = null;
+            try
+            {
+                var s = shipController.State;
+                s.Pos = D1U.Game.SaveIo.ReadVec(br);
+                s.Vel = D1U.Game.SaveIo.ReadVec(br);
+                s.RotVel = D1U.Game.SaveIo.ReadVec(br);
+                s.Orient = D1U.Game.SaveIo.ReadMat(br);
+                s.TurnRoll = br.ReadSingle();
+                s.Segnum = br.ReadInt32();
+                shipController.Weapons.Load(br);
+                Runtime.Load(br);
+                objectSystem.Load(br);
+                int visitedCount = br.ReadInt32();
+                for (int i = 0; i < visitedCount && i < visitedSegs.Length; i++)
+                    visitedSegs[i] = br.ReadBoolean();
+
+                shipController.RestoreFromLoad();
+                Runtime.EmitVisualSync();
+                RebuildObjectViews();
+                messages.Add((Time.time, "Game restored"));
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("D1U: applying save failed: " + e);
+                messages.Add((Time.time, "Load failed"));
+            }
+            finally
+            {
+                br.Dispose();
+            }
+        }
+
+        void RebuildObjectViews()
+        {
+            foreach (var view in objectViews.Values)
+                if (view != null)
+                    Destroy(view);
+            objectViews.Clear();
+            objectAnimators.Clear();
+            foreach (var obj in objectSystem.Objects)
+                if (!obj.Dead)
+                    CreateObjectView(obj);
         }
 
         MissionInfo ResolveMission(string dir)

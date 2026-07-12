@@ -202,6 +202,15 @@ namespace D1U.Presentation
 
         public bool IsDead => deathTimer > 0f;
 
+        /// <summary>After a savegame load: snap to the restored sim state.</summary>
+        public void RestoreFromLoad()
+        {
+            deathTimer = 0f;
+            if (Objects != null)
+                Objects.PlayerAlive = true;
+            SyncTransform();
+        }
+
         SegmentWorld world;
 
         void SyncTransform()

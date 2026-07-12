@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using D1U.Convert;
 
 namespace D1U.Game
@@ -406,5 +407,98 @@ namespace D1U.Game
 
         public byte GetWallState(int wall) => wallState[wall];
         public byte GetWallFlags(int wall) => wallFlags[wall];
+
+        // ------------------------------------------------------------------
+        // savegames
+
+        public void Save(BinaryWriter bw)
+        {
+            bw.Write(wallFlags.Length);
+            bw.Write(wallFlags);
+            bw.Write(wallState);
+            foreach (var hps in wallHps)
+                bw.Write(hps);
+            bw.Write(triggerFlags.Length);
+            foreach (var flags in triggerFlags)
+                bw.Write(flags);
+            bw.Write(world.WallPassable.Length);
+            foreach (var passable in world.WallPassable)
+                bw.Write(passable);
+            bw.Write(activeDoors.Count);
+            foreach (var door in activeDoors)
+            {
+                bw.Write(door.FrontWall);
+                bw.Write(door.Time);
+            }
+            bw.Write(ReactorDestroyed);
+            bw.Write(Player.Shields);
+            bw.Write(Player.Energy);
+            bw.Write(Player.Keys);
+            bw.Write(Player.CloakTime);
+            bw.Write(Player.InvulnTime);
+            bw.Write(Player.Score);
+            bw.Write(Player.ExitReached);
+            bw.Write(Player.SecretExitReached);
+        }
+
+        public void Load(BinaryReader br)
+        {
+            int wallCount = br.ReadInt32();
+            if (wallCount != wallFlags.Length)
+                throw new InvalidDataException("savegame is for a different level (wall count)");
+            br.Read(wallFlags, 0, wallCount);
+            br.Read(wallState, 0, wallCount);
+            for (int w = 0; w < wallCount; w++)
+                wallHps[w] = br.ReadSingle();
+            int triggerCount = br.ReadInt32();
+            if (triggerCount != triggerFlags.Length)
+                throw new InvalidDataException("savegame is for a different level (trigger count)");
+            for (int t = 0; t < triggerCount; t++)
+                triggerFlags[t] = br.ReadUInt16();
+            int passableCount = br.ReadInt32();
+            if (passableCount != world.WallPassable.Length)
+                throw new InvalidDataException("savegame is for a different level (passable count)");
+            for (int w = 0; w < passableCount; w++)
+                world.WallPassable[w] = br.ReadBoolean();
+            activeDoors.Clear();
+            int doorCount = br.ReadInt32();
+            for (int i = 0; i < doorCount; i++)
+                activeDoors.Add(new ActiveDoor { FrontWall = br.ReadInt32(), Time = br.ReadSingle() });
+            ReactorDestroyed = br.ReadBoolean();
+            Player.Shields = br.ReadSingle();
+            Player.Energy = br.ReadSingle();
+            Player.Keys = br.ReadInt32();
+            Player.CloakTime = br.ReadSingle();
+            Player.InvulnTime = br.ReadSingle();
+            Player.Score = br.ReadInt32();
+            Player.ExitReached = br.ReadBoolean();
+            Player.SecretExitReached = br.ReadBoolean();
+        }
+
+        /// <summary>Re-emit wall visual state (door frames, hidden illusions) after a load.</summary>
+        public void EmitVisualSync()
+        {
+            for (int w = 0; w < level.Walls.Count; w++)
+            {
+                var record = level.Walls[w];
+                if (record.Type == TypeIllusion)
+                {
+                    WallHiddenChanged?.Invoke(w, (wallFlags[w] & FlagIllusionOff) != 0);
+                }
+                else if (record.Type == TypeBlastable)
+                {
+                    if ((wallFlags[w] & FlagBlasted) != 0)
+                        WallFrameChanged?.Invoke(w, Math.Max(0, clips[record.ClipNum].NumFrames - 1),
+                            clips[record.ClipNum].Tmap1);
+                }
+                else if (record.Type == TypeDoor)
+                {
+                    int n = Math.Max(1, clips[record.ClipNum].NumFrames);
+                    bool open = world.WallPassable[w] || wallState[w] == StateWaiting ||
+                                (wallFlags[w] & FlagDoorOpened) != 0;
+                    WallFrameChanged?.Invoke(w, open ? n - 1 : 0, clips[record.ClipNum].Tmap1);
+                }
+            }
+        }
     }
 }

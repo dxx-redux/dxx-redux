@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Numerics;
 using D1U.Convert;
 
@@ -1111,6 +1112,138 @@ namespace D1U.Game
 
                 if (--matcen.SpawnRemaining <= 0)
                     matcen.Active = false;
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // savegames
+
+        public void Save(BinaryWriter bw)
+        {
+            bw.Write(randSeed);
+            bw.Write(Score);
+            bw.Write(RobotsAlive);
+            bw.Write(HostagesRescued);
+            bw.Write(Objects.Count);
+            foreach (var o in Objects)
+            {
+                bw.Write(o.Type);
+                bw.Write(o.SubId);
+                bw.Write(o.Dead);
+                SaveIo.Write(bw, o.Pos);
+                SaveIo.Write(bw, o.Vel);
+                bw.Write(o.Segnum);
+                bw.Write(o.Size);
+                bw.Write(o.Shields);
+                bw.Write(o.LifeLeft);
+                bw.Write(o.ModelNum);
+                bw.Write(o.VClipNum);
+                bw.Write(o.ExplVClip);
+                bw.Write(o.ExplSound);
+                bw.Write(o.ContainsType);
+                bw.Write(o.ContainsId);
+                bw.Write(o.ContainsCount);
+                bw.Write(o.Orientation != null);
+                if (o.Orientation != null)
+                    for (int k = 0; k < 9; k++)
+                        bw.Write(o.Orientation[k]);
+                SaveIo.Write(bw, o.Orient);
+                bw.Write(o.Behavior);
+                bw.Write(o.Aware);
+                bw.Write(o.Provoked);
+                bw.Write(o.NextFire);
+                bw.Write(o.ClawTimer);
+                bw.Write(o.BurstLeft);
+                bw.Write(o.GunIdx);
+                bw.Write(o.ParentId);
+                bw.Write(o.BadassRadius);
+                bw.Write(o.Homing);
+                bw.Write(o.HomingTarget);
+                bw.Write(o.HomerAccum);
+                bw.Write(o.Age);
+            }
+            bw.Write(matcens.Count);
+            foreach (var m in matcens)
+            {
+                bw.Write(m.Lives);
+                bw.Write(m.Active);
+                bw.Write(m.Timer);
+                bw.Write(m.SpawnRemaining);
+                bw.Write(m.SpawnIndex);
+            }
+        }
+
+        /// <summary>Replaces the object world with the saved one. The caller
+        /// rebuilds views afterwards — no Spawned/Removed events fire.</summary>
+        public void Load(BinaryReader br)
+        {
+            randSeed = br.ReadUInt32();
+            Score = br.ReadInt32();
+            RobotsAlive = br.ReadInt32();
+            HostagesRescued = br.ReadInt32();
+
+            Objects.Clear();
+            for (int i = 0; i < segObjects.Length; i++)
+                segObjects[i]?.Clear();
+            bossTeleportTimer.Clear();
+            bossTeleportSegs.Clear();
+
+            int count = br.ReadInt32();
+            for (int i = 0; i < count; i++)
+            {
+                var o = new GameObj
+                {
+                    Id = i,
+                    Type = br.ReadByte(),
+                    SubId = br.ReadByte(),
+                    Dead = br.ReadBoolean(),
+                    Pos = SaveIo.ReadVec(br),
+                    Vel = SaveIo.ReadVec(br),
+                    Segnum = br.ReadInt32(),
+                    Size = br.ReadSingle(),
+                    Shields = br.ReadSingle(),
+                    LifeLeft = br.ReadSingle(),
+                    ModelNum = br.ReadInt32(),
+                    VClipNum = br.ReadInt32(),
+                    ExplVClip = br.ReadInt32(),
+                    ExplSound = br.ReadInt32(),
+                    ContainsType = br.ReadByte(),
+                    ContainsId = br.ReadByte(),
+                    ContainsCount = br.ReadByte(),
+                };
+                if (br.ReadBoolean())
+                {
+                    o.Orientation = new float[9];
+                    for (int k = 0; k < 9; k++)
+                        o.Orientation[k] = br.ReadSingle();
+                }
+                o.Orient = SaveIo.ReadMat(br);
+                o.Behavior = br.ReadByte();
+                o.Aware = br.ReadBoolean();
+                o.Provoked = br.ReadBoolean();
+                o.NextFire = br.ReadSingle();
+                o.ClawTimer = br.ReadSingle();
+                o.BurstLeft = br.ReadInt32();
+                o.GunIdx = br.ReadInt32();
+                o.ParentId = br.ReadInt32();
+                o.BadassRadius = br.ReadSingle();
+                o.Homing = br.ReadBoolean();
+                o.HomingTarget = br.ReadInt32();
+                o.HomerAccum = br.ReadSingle();
+                o.Age = br.ReadSingle();
+                Objects.Add(o);
+                if (!o.Dead)
+                    Link(o);
+            }
+
+            int matcenCount = br.ReadInt32();
+            for (int i = 0; i < matcenCount && i < matcens.Count; i++)
+            {
+                matcens[i].Lives = br.ReadInt32();
+                matcens[i].Active = br.ReadBoolean();
+                matcens[i].Timer = br.ReadSingle();
+                matcens[i].SpawnRemaining = br.ReadInt32();
+                matcens[i].SpawnIndex = br.ReadInt32();
             }
         }
 

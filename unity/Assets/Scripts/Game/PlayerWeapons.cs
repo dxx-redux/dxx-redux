@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Numerics;
 
 namespace D1U.Game
@@ -72,6 +73,43 @@ namespace D1U.Game
         {
             nextFire = Math.Max(0f, nextFire - dt);
             nextFireSecondary = Math.Max(0f, nextFireSecondary - dt);
+        }
+
+        public void Save(BinaryWriter bw)
+        {
+            bw.Write(SelectedPrimary);
+            bw.Write(SelectedSecondary);
+            bw.Write(LaserLevel);
+            bw.Write(Quad);
+            bw.Write(HasVulcan);
+            bw.Write(HasSpread);
+            bw.Write(HasPlasma);
+            bw.Write(HasFusion);
+            bw.Write(VulcanAmmo);
+            bw.Write(Concussions);
+            bw.Write(Homings);
+            bw.Write(Proxies);
+            bw.Write(Smarts);
+            bw.Write(Megas);
+        }
+
+        public void Load(BinaryReader br)
+        {
+            SelectedPrimary = br.ReadInt32();
+            SelectedSecondary = br.ReadInt32();
+            LaserLevel = br.ReadInt32();
+            Quad = br.ReadBoolean();
+            HasVulcan = br.ReadBoolean();
+            HasSpread = br.ReadBoolean();
+            HasPlasma = br.ReadBoolean();
+            HasFusion = br.ReadBoolean();
+            VulcanAmmo = br.ReadInt32();
+            Concussions = br.ReadInt32();
+            Homings = br.ReadInt32();
+            Proxies = br.ReadInt32();
+            Smarts = br.ReadInt32();
+            Megas = br.ReadInt32();
+            FusionCharge = 0f;
         }
 
         /// <summary>Non-fusion primaries; fusion goes through FusionHold/FusionRelease.</summary>

@@ -783,6 +783,46 @@ try
                       $"level-1 screens (intro+moon) {introScreens}, ending screens {endScreens}");
     if (briefText == null || briefText.Length < 5000 || levelsWithBriefing < 27 || endScreens == 0)
         errors++;
+
+    // --- 19. savegame roundtrip: weapons + runtime + objects restore exactly ---
+    runtime3.Player.Shields = 47.5f;
+    runtime3.Player.Keys = 6;
+    var loadout = new D1U.Game.PlayerWeapons { LaserLevel = 2, Quad = true, Concussions = 7, HasVulcan = true, VulcanAmmo = 300 };
+    var saveMs = new System.IO.MemoryStream();
+    var saveBw = new System.IO.BinaryWriter(saveMs);
+    loadout.Save(saveBw);
+    runtime3.Save(saveBw);
+    objs.Save(saveBw);
+
+    var worldB = new D1U.Game.SegmentWorld(lvl3);
+    var runtimeB = new D1U.Game.LevelRuntime(worldB, clips3);
+    var objsB = new D1U.Game.ObjectSystem(worldB,
+        record => { var v = D1U.Convert.ObjectVisuals.Resolve(pig, record); return (v.ModelNum, v.VClipNum); },
+        robotStats, 200f) { Runtime = runtimeB };
+    objsB.SetWeaponTable(allWeaponStats);
+    var loadoutB = new D1U.Game.PlayerWeapons();
+    var loadBr = new System.IO.BinaryReader(new System.IO.MemoryStream(saveMs.ToArray()));
+    loadoutB.Load(loadBr);
+    runtimeB.Load(loadBr);
+    objsB.Load(loadBr);
+
+    bool passableMatch = true;
+    for (int w = 0; w < world3.WallPassable.Length; w++)
+        passableMatch &= world3.WallPassable[w] == worldB.WallPassable[w];
+    int aliveA = objs.Objects.Count(o => !o.Dead), aliveB = objsB.Objects.Count(o => !o.Dead);
+    var aliveBotA = objs.Objects.First(o => o.Type == 2 && !o.Dead);
+    var aliveBotB = objsB.Objects[aliveBotA.Id];
+    Console.WriteLine($"  savegame: weapons L{loadoutB.LaserLevel + 1} quad={loadoutB.Quad} conc={loadoutB.Concussions} vulcan={loadoutB.VulcanAmmo}, " +
+                      $"shields {runtimeB.Player.Shields}, keys {runtimeB.Player.Keys}, reactorDestroyed={runtimeB.ReactorDestroyed}");
+    Console.WriteLine($"  savegame: objects {objs.Objects.Count} -> {objsB.Objects.Count} (alive {aliveA} -> {aliveB}), " +
+                      $"walls passable match={passableMatch}, robots {objs.RobotsAlive} -> {objsB.RobotsAlive}, score {objs.Score} -> {objsB.Score}");
+    if (loadoutB.LaserLevel != 2 || !loadoutB.Quad || loadoutB.Concussions != 7 || loadoutB.VulcanAmmo != 300 ||
+        Math.Abs(runtimeB.Player.Shields - 47.5f) > 0.001f || runtimeB.Player.Keys != 6 ||
+        !runtimeB.ReactorDestroyed || !passableMatch ||
+        objsB.Objects.Count != objs.Objects.Count || aliveA != aliveB ||
+        objsB.RobotsAlive != objs.RobotsAlive || objsB.Score != objs.Score ||
+        aliveBotB.Pos != aliveBotA.Pos || aliveBotB.Aware != aliveBotA.Aware)
+        errors++;
 }
 catch (Exception e)
 {
