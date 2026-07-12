@@ -29,14 +29,19 @@ Status: v1 + progress log (2026-07-12) · branch `unity`
   20 ms/char, $-commands incl. the spinning robot window; before every
   level and the endreg.txb ending after the last), music through
   MeltySynth + user-supplied .sf2.
-- **Headless verification**: `unity/tools/Smoke` (18 sections, SMOKE OK)
-  covers parsing→physics→combat→drops→pathfinding→briefing text;
-  `unity/tools/PresentationCheck` compiles the Unity-side Presentation
-  assembly against the engine module DLLs, so all code is
-  compile-verified even while the editor holds the project lock.
-- Remaining backlog: savegames, endgame score tally, vulcan ammo spew
-  on death, homing retrack cadence details, difficulty menu
-  (Difficulty is const Hotshot), D2 support.
+- **Savegames + difficulty**: F5 quicksave / F9 quickload / menu LOAD —
+  a binary snapshot of weapons, wall/trigger/door state, reactor,
+  player, every object (incl. in-flight weapons and AI state), matcens
+  and the RNG seed; restores across missions and levels. The menu
+  cycles Trainee..Insane (persisted, recorded in saves); all
+  per-difficulty tables read through it.
+- **Headless verification**: `unity/tools/Smoke` (19 sections, SMOKE OK)
+  covers parsing→physics→combat→drops→pathfinding→briefing text→
+  savegame roundtrip; `unity/tools/PresentationCheck` compiles the
+  Unity-side Presentation assembly against the engine module DLLs, so
+  all code is compile-verified even while the editor holds the lock.
+- Remaining backlog: endgame score tally, vulcan ammo spew on death,
+  homing retrack cadence details, D2 support.
 Scope: single-player Descent 1 in Unity, fan build (non-commercial, user-supplied game data — same posture as dxx-redux).
 
 ## 1. Goals and ground rules
