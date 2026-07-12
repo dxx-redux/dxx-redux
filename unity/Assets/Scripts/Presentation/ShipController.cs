@@ -29,6 +29,8 @@ namespace D1U.Presentation
         public bool Paused { get; set; }
         /// <summary>Return false to deny the respawn (out of lives) — the ship stays down.</summary>
         public Func<bool> TryConsumeLife { get; set; }
+        /// <summary>Multiplayer: pick a respawn point (random player start).</summary>
+        public Func<(System.Numerics.Vector3 pos, Mat3 orient, int seg)?> PickRespawn { get; set; }
         public bool GameOver { get; private set; }
         public LevelRuntime Runtime { get; set; }
         public ObjectSystem Objects { get; set; }
@@ -204,6 +206,13 @@ namespace D1U.Presentation
             {
                 GameOver = true; // out of ships — the viewer takes it from here
                 return;
+            }
+            var custom = PickRespawn?.Invoke();
+            if (custom != null)
+            {
+                spawnPos = custom.Value.pos;
+                spawnOrient = custom.Value.orient;
+                spawnSeg = custom.Value.seg;
             }
             state.Pos = spawnPos;
             state.Orient = spawnOrient;

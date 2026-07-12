@@ -61,6 +61,15 @@ namespace D1U.Presentation
         int lastTotalScore;         // extra-life threshold tracking (50k)
         bool exitCarryDone;
         float gameOverTimer;
+
+        // multiplayer (anarchy)
+        D1U.Game.NetSession netSession;
+        readonly Dictionary<int, GameObject> netShips = new Dictionary<int, GameObject>();
+        string joinIp = "127.0.0.1";
+        string menuNetStatus = "";
+        bool applyingRemote;
+        int playerShipModel = -1;
+        List<ObjectRecord> playerStarts = new List<ObjectRecord>();
         AutomapView automapView;
         bool automapOpen;
         bool[] visitedSegs;
@@ -97,10 +106,15 @@ namespace D1U.Presentation
                 Build();
         }
 
-        void OnDestroy() => Clear();
+        void OnDestroy()
+        {
+            CloseNet();
+            Clear();
+        }
 
         void OpenMenu()
         {
+            CloseNet(); // leaving a netgame disconnects
             Clear();
             menuMode = true;
             var dir = string.IsNullOrEmpty(hogsDir) ? DefaultHogsDir() : hogsDir;
@@ -390,12 +404,39 @@ namespace D1U.Presentation
             float helpY = rowY + 90;
             if (File.Exists(SavePath))
             {
-                if (GUI.Button(new Rect(x, rowY + 90, w, 32), "LOAD GAME  (F9 in game)"))
+                if (GUI.Button(new Rect(x, helpY, w, 32), "LOAD GAME  (F9 in game)"))
                 {
                     LoadGame();
                     return;
                 }
                 helpY += 42;
+            }
+
+            // multiplayer: host the selected mission/level, or join by IP
+            if (netSession != null && !netSession.Connected && !netSession.Failed)
+            {
+                GUI.Label(new Rect(x, helpY, w, 28), $"Connecting to {joinIp}...");
+                if (GUI.Button(new Rect(x + w - 90, helpY, 90, 28), "CANCEL"))
+                    CloseNet();
+                helpY += 36;
+            }
+            else
+            {
+                GUI.Label(new Rect(x, helpY, 110, 28), "Anarchy:");
+                joinIp = GUI.TextField(new Rect(x + 80, helpY, 170, 28), joinIp, 45);
+                if (GUI.Button(new Rect(x + 258, helpY, 90, 28), "HOST"))
+                {
+                    StartHost(selected);
+                    return;
+                }
+                if (GUI.Button(new Rect(x + 352, helpY, 90, 28), "JOIN"))
+                    StartJoin();
+                helpY += 36;
+            }
+            if (!string.IsNullOrEmpty(menuNetStatus))
+            {
+                GUI.Label(new Rect(x, helpY, w, 24), menuNetStatus);
+                helpY += 28;
             }
             GUI.Label(new Rect(x, helpY, w, 80),
                 "WASD move · Space/Ctrl vertical · Q/E bank · mouse aim\n" +
@@ -530,6 +571,16 @@ namespace D1U.Presentation
 
         void Update()
         {
+            if (netSession != null)
+            {
+                netSession.Update(Time.timeAsDouble);
+                if (netSession.Connected && !menuMode && !briefingMode && shipController != null)
+                {
+                    var s = shipController.State;
+                    netSession.SendState(s.Pos, s.Orient, s.Vel);
+                }
+                UpdateNetShips();
+            }
             if (menuMode || briefingMode)
                 return;
             if (mineExplodedPending)
@@ -629,9 +680,9 @@ namespace D1U.Presentation
                 if (shipSeg >= 0 && shipSeg < visitedSegs.Length)
                     visitedSegs[shipSeg] = true;
 
-                if (Input.GetKeyDown(KeyCode.F5) && !automapOpen)
+                if (Input.GetKeyDown(KeyCode.F5) && !automapOpen && netSession == null)
                     SaveGame();
-                if (Input.GetKeyDown(KeyCode.F9) && !automapOpen)
+                if (Input.GetKeyDown(KeyCode.F9) && !automapOpen && netSession == null)
                 {
                     LoadGame();
                     return;
@@ -723,7 +774,10 @@ namespace D1U.Presentation
 
         void SpawnShip(BakedLevel level, string dir)
         {
-            var start = level.Objects.FirstOrDefault(o => o.Type == (byte)ObjectType.Player);
+            playerStarts = level.Objects.Where(o => o.Type == (byte)ObjectType.Player).ToList();
+            var start = playerStarts.FirstOrDefault();
+            if (netSession != null && playerStarts.Count > 0)
+                start = playerStarts[netSession.LocalSlot % playerStarts.Count];
             if (start == null)
             {
                 Log("no player start found — falling back to fly-cam");
@@ -733,6 +787,7 @@ namespace D1U.Presentation
 
             // ship parameters live-parse from the pig (tables are not cached)
             var ship = archives.Pig.PlayerShip;
+            playerShipModel = ship.ModelNum;
             var shipParams = new D1U.Game.ShipParams
             {
                 Mass = (float)(double)ship.Mass,
@@ -805,6 +860,8 @@ namespace D1U.Presentation
             Runtime.MineExploded += () => mineExplodedPending = true; // restart next frame
             Runtime.DoorMoved += (wallIndex, opening) =>
             {
+                if (opening && netSession != null && !applyingRemote)
+                    netSession.SendDoor(wallIndex);
                 var record = LoadedLevel.Walls[wallIndex];
                 var clip = wclips[record.ClipNum];
                 if (clip == null)
@@ -815,6 +872,8 @@ namespace D1U.Presentation
             };
             objectSystem.Removed += obj =>
             {
+                if (netSession != null && !applyingRemote && (obj.Type == 7 || obj.Type == 3))
+                    netSession.SendPickup(obj.Id); // picked up here: gone for everyone
                 if (objectViews.TryGetValue(obj.Id, out var view) && view != null)
                     Destroy(view);
                 objectViews.Remove(obj.Id);
@@ -822,6 +881,23 @@ namespace D1U.Presentation
             };
             objectSystem.Exploded += OnExplosion;
             objectSystem.Spawned += CreateObjectView;
+            objectSystem.Spawned += obj =>
+            {
+                // replicate locally-fired projectiles (ParentId -1 = our ship)
+                if (netSession == null || obj.Type != 5 || obj.ParentId != -1)
+                    return;
+                var vel = obj.Vel;
+                float speed = vel.Length();
+                if (speed > 1e-3f)
+                    netSession.SendFire(obj.SubId, obj.Pos, vel / speed);
+            };
+
+            if (netSession != null)
+            {
+                objectSystem.StripForAnarchy(); // no robots/hostages/matcens in anarchy
+                Runtime.DisableExit = true;
+            }
+
             foreach (var obj in objectSystem.Objects)
                 CreateObjectView(obj);
 
@@ -833,7 +909,27 @@ namespace D1U.Presentation
             controller.Runtime = Runtime;
             controller.Objects = objectSystem;
             controller.Sounds = sounds;
-            controller.TryConsumeLife = () => --lives > 0;
+            if (netSession == null)
+            {
+                controller.TryConsumeLife = () => --lives > 0;
+            }
+            else
+            {
+                // anarchy: infinite ships, respawn at a random player start
+                controller.PickRespawn = () =>
+                {
+                    if (playerStarts.Count == 0)
+                        return null;
+                    var s = playerStarts[UnityEngine.Random.Range(0, playerStarts.Count)];
+                    var o = new D1U.Game.Mat3
+                    {
+                        Right = new System.Numerics.Vector3(s.Orientation[0], s.Orientation[1], s.Orientation[2]),
+                        Up = new System.Numerics.Vector3(s.Orientation[3], s.Orientation[4], s.Orientation[5]),
+                        Forward = new System.Numerics.Vector3(s.Orientation[6], s.Orientation[7], s.Orientation[8]),
+                    };
+                    return (s.Position, o, (int)s.Segnum);
+                };
+            }
 
             var weaponStats = new D1U.Game.WeaponStats[pig.numWeapons];
             for (int i = 0; i < pig.numWeapons; i++)
@@ -861,7 +957,19 @@ namespace D1U.Presentation
             controller.WeaponStats = weaponStats;
             objectSystem.SetWeaponTable(weaponStats);
             objectSystem.Loadout = controller.Weapons;
-            objectSystem.PlayerHit += (damage, source) => controller.ApplyPlayerDamage(damage);
+            objectSystem.PlayerHit += (damage, source) =>
+            {
+                bool wasDead = controller.IsDead;
+                controller.ApplyPlayerDamage(damage);
+                if (netSession != null && !wasDead && controller.IsDead)
+                {
+                    int killer = source != null && source.ParentId >= 1000 ? source.ParentId - 1000 : -1;
+                    netSession.SendDied(killer);
+                    messages.Add((Time.time, killer >= 0
+                        ? $"You were destroyed by {NetName(killer)}"
+                        : "You self-destructed"));
+                }
+            };
             controller.Weapons.LaserLevel = carryLaserLevel; // persists across levels
             controller.Weapons.Quad = carryQuad;
             var gunPoints = new System.Numerics.Vector3[8];
@@ -1096,6 +1204,155 @@ namespace D1U.Presentation
             }
         }
 
+        // ------------------------------------------------------------------
+        // multiplayer glue
+
+        void StartHost(MissionInfo selected)
+        {
+            CloseNet();
+            try
+            {
+                netSession = D1U.Game.NetSession.Host(selected.CacheKey, menuLevel, "HOST");
+                WireNetSession();
+                missionKey = selected.CacheKey;
+                returnAfterSecret = 0;
+                menuNetStatus = $"Hosting on UDP {D1U.Game.NetSession.DefaultPort}";
+                menuMode = false;
+                StartLevel(menuLevel, briefing: false);
+            }
+            catch (Exception e)
+            {
+                menuNetStatus = "Host failed: " + e.Message;
+                CloseNet();
+            }
+        }
+
+        void StartJoin()
+        {
+            CloseNet();
+            try
+            {
+                netSession = D1U.Game.NetSession.Join(joinIp.Trim(), $"PILOT{UnityEngine.Random.Range(10, 99)}");
+                WireNetSession();
+                menuNetStatus = "";
+            }
+            catch (Exception e)
+            {
+                menuNetStatus = "Join failed: " + e.Message;
+                CloseNet();
+            }
+        }
+
+        void WireNetSession()
+        {
+            netSession.JoinAccepted += () =>
+            {
+                missionKey = netSession.MissionKey;
+                returnAfterSecret = 0;
+                menuNetStatus = "";
+                menuMode = false;
+                StartLevel(netSession.LevelNumber, briefing: false);
+            };
+            netSession.JoinFailed += why =>
+            {
+                menuNetStatus = "Connection failed: " + why;
+                messages.Add((Time.time, menuNetStatus));
+                if (!menuMode)
+                {
+                    CloseNet();
+                    OpenMenu();
+                }
+            };
+            netSession.PlayerJoined += p => messages.Add((Time.time, $"{p.Name} joined the game"));
+            netSession.PlayerLeft += slot =>
+            {
+                messages.Add((Time.time, $"{NetName(slot)} left the game"));
+                if (netShips.TryGetValue(slot, out var view) && view != null)
+                    Destroy(view);
+                netShips.Remove(slot);
+            };
+            netSession.RemoteFire += OnRemoteFire;
+            netSession.RemoteDied += (victim, killer) => messages.Add((Time.time,
+                killer >= 0 && killer != victim
+                    ? $"{NetName(victim)} was destroyed by {NetName(killer)}"
+                    : $"{NetName(victim)} self-destructed"));
+            netSession.RemoteDoor += wall =>
+            {
+                if (Runtime == null)
+                    return;
+                applyingRemote = true;
+                Runtime.OpenDoor(wall);
+                applyingRemote = false;
+            };
+            netSession.RemotePickup += id =>
+            {
+                if (objectSystem == null)
+                    return;
+                applyingRemote = true;
+                objectSystem.RemoveRemote(id);
+                applyingRemote = false;
+            };
+        }
+
+        string NetName(int slot)
+        {
+            if (netSession == null)
+                return $"PLAYER {slot + 1}";
+            if (slot == netSession.LocalSlot)
+                return "you";
+            return netSession.Players.TryGetValue(slot, out var p) ? p.Name : $"PLAYER {slot + 1}";
+        }
+
+        void OnRemoteFire(int slot, byte weaponId, System.Numerics.Vector3 pos, System.Numerics.Vector3 dir)
+        {
+            if (objectSystem == null || shipWorld == null || shipController == null ||
+                shipController.WeaponStats == null || weaponId >= shipController.WeaponStats.Length)
+                return;
+            int hint = netSession.Players.TryGetValue(slot, out var p) && p.Segnum >= 0
+                ? p.Segnum
+                : shipController.State.Segnum;
+            int seg = shipWorld.FindPointSeg(pos, hint);
+            objectSystem.FireWeapon(shipController.WeaponStats[weaponId], weaponId, pos, dir,
+                seg >= 0 ? seg : hint, 1000 + slot);
+        }
+
+        void UpdateNetShips()
+        {
+            if (netSession == null || objectsParent == null || modelFactory == null ||
+                playerShipModel < 0 || shipWorld == null)
+                return;
+            foreach (var p in netSession.Players.Values)
+            {
+                if (!netShips.TryGetValue(p.Slot, out var view) || view == null)
+                {
+                    view = modelFactory.Instantiate(playerShipModel, $"netship_{p.Slot}", 1f);
+                    view.transform.SetParent(objectsParent, false);
+                    view.transform.position = ToUnity(p.Pos);
+                    netShips[p.Slot] = view;
+                }
+                var target = ToUnity(p.Pos);
+                float t = Mathf.Clamp01(Time.deltaTime * 12f);
+                view.transform.position = Vector3.Lerp(view.transform.position, target, t);
+                var fwd = ToUnity(p.Orient.Forward);
+                var up = ToUnity(p.Orient.Up);
+                if (fwd != Vector3.zero)
+                    view.transform.rotation = Quaternion.Slerp(view.transform.rotation,
+                        Quaternion.LookRotation(fwd, up), t);
+                p.Segnum = shipWorld.FindPointSeg(p.Pos,
+                    p.Segnum >= 0 ? p.Segnum : shipController != null ? shipController.State.Segnum : 0);
+            }
+        }
+
+        void CloseNet()
+        {
+            netSession?.Dispose();
+            netSession = null;
+            foreach (var view in netShips.Values)
+                if (view != null)
+                    Destroy(view);
+            netShips.Clear();
+        }
+
         void ToggleAutomap()
         {
             if (automapOpen)
@@ -1214,9 +1471,19 @@ namespace D1U.Presentation
                        $"{(w.SelectedPrimary == 4 && w.FusionCharge > 0f ? $" charge {w.FusionCharge:F1}" : "")}]" +
                        $"   [{w.SecondaryName} {w.SecondaryCount(w.SelectedSecondary)}]";
             }
-            string robots = objectSystem != null
-                ? $"   Robots {objectSystem.RobotsAlive}   Score {scoreCarried + objectSystem.Score + player.Score}   Lives {Mathf.Max(0, lives)}"
-                : "";
+            string robots;
+            if (netSession != null && netSession.Connected)
+            {
+                robots = $"   Frags {netSession.LocalFrags}";
+                foreach (var p in netSession.Players.Values)
+                    robots += $"   {p.Name}: {p.Frags}";
+            }
+            else
+            {
+                robots = objectSystem != null
+                    ? $"   Robots {objectSystem.RobotsAlive}   Score {scoreCarried + objectSystem.Score + player.Score}   Lives {Mathf.Max(0, lives)}"
+                    : "";
+            }
             string timers = (player.CloakTime > 0f ? $"   CLOAK {player.CloakTime:F0}" : "") +
                             (player.InvulnTime > 0f ? $"   INVULN {player.InvulnTime:F0}" : "");
             robots += timers;
@@ -1329,6 +1596,8 @@ namespace D1U.Presentation
             briefingMode = false;
             exitCarryDone = false;
             gameOverTimer = 0f;
+            netShips.Clear(); // views die with the children above; the session survives
+            playerStarts.Clear();
             automapView = null;
             automapOpen = false;
             automapHidden.Clear();

@@ -839,6 +839,48 @@ try
     if (spilled != 16)
         errors++;
 
+    // --- 22. netgame loopback: join, state, fire, door, pickup, frags ---
+    using (var host = D1U.Game.NetSession.Host("firststrike", 7, "HOST", 28650))
+    using (var client = D1U.Game.NetSession.Join("127.0.0.1", "PILOT42", 28650))
+    {
+        var clientSawFire = new List<(int slot, byte weapon)>();
+        int clientDoor = -1, hostPickup = -1;
+        client.RemoteFire += (slot, weapon, p, d) => clientSawFire.Add((slot, weapon));
+        client.RemoteDoor += w => clientDoor = w;
+        host.RemotePickup += id => hostPickup = id;
+
+        double now = 0;
+        void Pump(double seconds)
+        {
+            for (double t = 0; t < seconds; t += 0.02)
+            {
+                now += 0.02;
+                host.Update(now);
+                client.Update(now);
+            }
+        }
+
+        Pump(1.5); // client knocks at t=0.., host welcomes
+        bool joined = client.Connected && client.MissionKey == "firststrike" && client.LevelNumber == 7;
+
+        host.SendState(new System.Numerics.Vector3(10, 20, 30), D1U.Game.Mat3.Identity, default);
+        host.SendFire(11, new System.Numerics.Vector3(1, 2, 3), new System.Numerics.Vector3(0, 0, 1));
+        host.SendDoor(42);
+        client.SendPickup(123);
+        client.SendDied(0); // host killed the client
+        Pump(0.5);
+
+        bool stateSeen = client.Players.TryGetValue(0, out var hostGhost) &&
+                         Math.Abs(hostGhost.Pos.X - 10f) < 0.01f;
+        bool fireSeen = clientSawFire.Count == 1 && clientSawFire[0] == (0, (byte)11);
+        bool frags = host.LocalFrags == 1 && client.Players[0].Frags == 1;
+        Console.WriteLine($"  netgame: joined={joined} (slot {client.LocalSlot}), host state seen={stateSeen}, " +
+                          $"fire relayed={fireSeen}, door={clientDoor}, pickup={hostPickup}, " +
+                          $"host frags={host.LocalFrags}/client-view={client.Players[0].Frags}");
+        if (!joined || !stateSeen || !fireSeen || clientDoor != 42 || hostPickup != 123 || !frags)
+            errors++;
+    }
+
     // --- 21. reactor self-destruct countdown: T-n, voices, mine explosion ---
     // runtime3 destroyed its reactor earlier and ticked ~4 s since
     int secondsAtStart = runtime3.CountdownSecondsLeft;

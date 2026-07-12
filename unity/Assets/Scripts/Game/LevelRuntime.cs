@@ -61,6 +61,8 @@ namespace D1U.Game
 
         public PlayerState Player { get; } = new PlayerState();
         public bool ReactorDestroyed { get; private set; }
+        /// <summary>Anarchy: exit triggers do nothing.</summary>
+        public bool DisableExit;
 
         // self-destruct countdown (cntrlcen.c do_controlcen_dead_frame)
         static readonly int[] ReactorTimes = { 50, 45, 40, 35, 30 }; // Alan_pavlish_reactor_times
@@ -330,10 +332,15 @@ namespace D1U.Game
                 Player.Energy = Math.Max(0f, Player.Energy - trigger.Value);
             if ((flags & TrigExit) != 0)
             {
-                Player.ExitReached = true;
-                Message?.Invoke("Level complete!");
+                if (DisableExit)
+                    Message?.Invoke("No exit in an anarchy game!");
+                else
+                {
+                    Player.ExitReached = true;
+                    Message?.Invoke("Level complete!");
+                }
             }
-            if ((flags & TrigSecretExit) != 0)
+            if ((flags & TrigSecretExit) != 0 && !DisableExit)
             {
                 Player.SecretExitReached = true;
                 Player.ExitReached = true; // the viewer routes to the secret level via SecretExitReached

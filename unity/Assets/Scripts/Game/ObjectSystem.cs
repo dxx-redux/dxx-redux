@@ -108,6 +108,8 @@ namespace D1U.Game
         public LevelRuntime Runtime;
         /// <summary>Player loadout, for the drop replacement rules (fireball.c:778).</summary>
         public PlayerWeapons Loadout;
+        /// <summary>Anarchy game: reactor is indestructible, drops stay local.</summary>
+        public bool Multiplayer;
 
         // player mirror (set by the controller every frame)
         public Vector3 PlayerPos;
@@ -525,10 +527,30 @@ namespace D1U.Game
             return (push, damage);
         }
 
+        /// <summary>Remove by id (remote pickup replication — no drop/score side effects).</summary>
+        public void RemoveRemote(int id)
+        {
+            if (id >= 0 && id < Objects.Count)
+                Remove(Objects[id]);
+        }
+
+        /// <summary>Anarchy setup: no robots, no hostages, no matcens.</summary>
+        public void StripForAnarchy()
+        {
+            Multiplayer = true;
+            foreach (var obj in Objects)
+                if (!obj.Dead && (obj.Type == 2 || obj.Type == 3))
+                    Remove(obj);
+            RobotsAlive = 0;
+            matcens.Clear();
+        }
+
         public void Damage(GameObj obj, float damage, Vector3 hitPos)
         {
             if (obj.Dead)
                 return;
+            if (Multiplayer && obj.Type == 9)
+                return; // the reactor sits out anarchy games
             obj.Shields -= damage;
             if (obj.Type == 2)
             {
