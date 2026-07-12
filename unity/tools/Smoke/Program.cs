@@ -823,6 +823,21 @@ try
         objsB.RobotsAlive != objs.RobotsAlive || objsB.Score != objs.Score ||
         aliveBotB.Pos != aliveBotA.Pos || aliveBotB.Aware != aliveBotA.Aware)
         errors++;
+
+    // --- 20. player death spills the loadout (drop_player_eggs) ---
+    var richLoadout = new D1U.Game.PlayerWeapons
+    {
+        LaserLevel = 3, Quad = true, HasVulcan = true, VulcanAmmo = 392,
+        Concussions = 7, Homings = 2, Smarts = 1,
+    };
+    int powerupsBeforeDeath = objsB.Objects.Count(o => o.Type == 7 && !o.Dead);
+    objsB.DropPlayerEggs(objsB.Objects[aliveBotA.Id].Pos, default, objsB.Objects[aliveBotA.Id].Segnum,
+        richLoadout, runtimeB.Player);
+    int spilled = objsB.Objects.Count(o => o.Type == 7 && !o.Dead) - powerupsBeforeDeath;
+    // 3 laser + quad + vulcan gun + 2 ammo boxes + 1x conc-4 + 3x conc-1 + 2 homing + 1 smart + shield + energy = 16
+    Console.WriteLine($"  death drops: {spilled} powerups spilled (expected 16)");
+    if (spilled != 16)
+        errors++;
 }
 catch (Exception e)
 {

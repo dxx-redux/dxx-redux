@@ -697,6 +697,42 @@ namespace D1U.Game
             }
         }
 
+        /// <summary>drop_player_eggs (collide.c:1178): the dying ship spills its loadout.</summary>
+        public void DropPlayerEggs(Vector3 pos, Vector3 vel, int segnum, PlayerWeapons w, PlayerState player)
+        {
+            if (w == null || segnum < 0)
+                return;
+            if (w.Quad)
+                DropEgg(7, 12, 1, pos, vel, segnum);
+            if (w.LaserLevel > 0)
+                DropEgg(7, 3, w.LaserLevel, pos, vel, segnum); // laser_level of POW_LASER
+            if (player != null && player.CloakTime > 0f)
+                DropEgg(7, 23, 1, pos, vel, segnum);
+            if (w.HasVulcan)
+            {
+                DropEgg(7, 13, 1, pos, vel, segnum);
+                int extraBoxes = Math.Max(0,
+                    (w.VulcanAmmo - PlayerWeapons.VulcanWeaponAmmo) / PlayerWeapons.VulcanAmmoPickup);
+                if (extraBoxes > 0)
+                    DropEgg(7, 22, extraBoxes, pos, vel, segnum);
+            }
+            if (w.HasSpread)
+                DropEgg(7, 14, 1, pos, vel, segnum);
+            if (w.HasPlasma)
+                DropEgg(7, 15, 1, pos, vel, segnum);
+            if (w.HasFusion)
+                DropEgg(7, 16, 1, pos, vel, segnum);
+            DropEgg(7, 11, w.Concussions / 4, pos, vel, segnum); // 4-packs then singles
+            DropEgg(7, 10, w.Concussions % 4, pos, vel, segnum);
+            DropEgg(7, 19, w.Homings / 4, pos, vel, segnum);
+            DropEgg(7, 18, w.Homings % 4, pos, vel, segnum);
+            DropEgg(7, 17, w.Proxies / 4, pos, vel, segnum);
+            DropEgg(7, 20, w.Smarts, pos, vel, segnum);
+            DropEgg(7, 21, w.Megas, pos, vel, segnum);
+            DropEgg(7, 2, 1, pos, vel, segnum); // a shield and an energy boost (collide.c:1281)
+            DropEgg(7, 1, 1, pos, vel, segnum);
+        }
+
         /// <summary>Dropped powerups fly, bounce off walls (PF_BOUNCE), drag to rest, and expire.</summary>
         public void MovePowerups(float dt)
         {

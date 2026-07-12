@@ -55,7 +55,11 @@ namespace D1U.Presentation
             {
                 deathTimer = 2.5f;
                 if (Objects != null)
+                {
                     Objects.PlayerAlive = false;
+                    // the dying ship spills its loadout into the mine (drop_player_eggs)
+                    Objects.DropPlayerEggs(state.Pos, state.Vel, state.Segnum, Weapons, Runtime.Player);
+                }
             }
         }
 
@@ -194,7 +198,10 @@ namespace D1U.Presentation
             {
                 Runtime.Player.Shields = 100f;
                 Runtime.Player.Energy = 100f;
+                Runtime.Player.CloakTime = 0f;
+                Runtime.Player.InvulnTime = 0f;
             }
+            Weapons.ResetForRespawn(); // fresh ship — go re-collect your gear
             if (Objects != null)
                 Objects.PlayerAlive = true;
             SyncTransform();

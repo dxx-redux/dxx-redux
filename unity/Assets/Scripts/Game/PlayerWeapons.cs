@@ -75,6 +75,20 @@ namespace D1U.Game
             nextFireSecondary = Math.Max(0f, nextFireSecondary - dt);
         }
 
+        /// <summary>Death: back to the bare ship (init_player_stats_new_ship).</summary>
+        public void ResetForRespawn()
+        {
+            SelectedPrimary = 0;
+            SelectedSecondary = 0;
+            LaserLevel = 0;
+            Quad = false;
+            HasVulcan = HasSpread = HasPlasma = HasFusion = false;
+            VulcanAmmo = 0;
+            FusionCharge = 0f;
+            Concussions = 3;
+            Homings = Proxies = Smarts = Megas = 0;
+        }
+
         public void Save(BinaryWriter bw)
         {
             bw.Write(SelectedPrimary);

@@ -1194,6 +1194,13 @@ namespace D1U.Presentation
                     : Runtime.Player.SecretExitReached && levelNumber <= missionLevelCount ? "SECRET EXIT!"
                     : "LEVEL COMPLETE";
                 GUI.Label(new Rect(0, Screen.height / 2 - 40, Screen.width, 80), banner, style);
+                if (objectSystem != null)
+                {
+                    var tally = new GUIStyle(GUI.skin.label) { fontSize = 20, alignment = TextAnchor.MiddleCenter };
+                    GUI.Label(new Rect(0, Screen.height / 2 + 24, Screen.width, 40),
+                        $"Score {objectSystem.Score + player.Score}   ·   Hostages {objectSystem.HostagesRescued}",
+                        tally);
+                }
             }
             else if (shipController != null && shipController.IsDead)
             {
