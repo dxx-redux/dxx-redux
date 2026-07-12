@@ -550,6 +550,7 @@ namespace D1U.Presentation
                     CircleDistance = DiffArray(r.CircleDistance),
                     RapidfireCount = (sbyte[])r.RapidfireCount.Clone(),
                     AttackType = (int)r.AttackType != 0,
+                    IsBoss = (int)r.BossFlag != 0,
                     SeeSound = r.SeeSound,
                     AttackSound = r.AttackSound,
                     ClawSound = r.ClawSound,
@@ -782,10 +783,11 @@ namespace D1U.Presentation
                        $"{(w.SelectedPrimary == 4 && w.FusionCharge > 0f ? $" charge {w.FusionCharge:F1}" : "")}]" +
                        $"   Missiles {w.Concussions}   Homing {w.Homings}";
             }
-            GUI.Label(new Rect(12, 8, 800, 24),
+            string robots = objectSystem != null ? $"   Robots {objectSystem.RobotsAlive}" : "";
+            GUI.Label(new Rect(12, 8, 900, 24),
                 $"Shields {player.Shields:F0}   Energy {player.Energy:F0}   Keys:" +
                 $"{((player.Keys & 2) != 0 ? " BLUE" : "")}{((player.Keys & 4) != 0 ? " RED" : "")}{((player.Keys & 8) != 0 ? " YELLOW" : "")}" +
-                ammo);
+                ammo + robots);
 
             // reticle
             if (shipController != null && !shipController.IsDead && !player.ExitReached)

@@ -525,6 +525,7 @@ try
             CircleDistance = DiffArray(r.CircleDistance),
             RapidfireCount = (sbyte[])r.RapidfireCount.Clone(),
             AttackType = (int)r.AttackType != 0,
+            IsBoss = (int)r.BossFlag != 0,
             SeeSound = r.SeeSound,
             AttackSound = r.AttackSound,
             ClawSound = r.ClawSound,

@@ -22,6 +22,7 @@ namespace D1U.Game
         public float[] CircleDistance;       // [5]
         public sbyte[] RapidfireCount;       // [5]
         public bool AttackType;              // claw robots
+        public bool IsBoss;
         public int SeeSound, AttackSound, ClawSound;
     }
 
@@ -129,6 +130,8 @@ namespace D1U.Game
         }
 
         readonly List<MatcenState> matcens = new List<MatcenState>();
+        readonly Dictionary<int, float> bossTeleportTimer = new Dictionary<int, float>();
+        readonly Dictionary<int, List<int>> bossTeleportSegs = new Dictionary<int, List<int>>();
 
         public ObjectSystem(SegmentWorld world,
                             Func<ObjectRecord, (int model, int vclip)> visualResolver,
@@ -472,6 +475,11 @@ namespace D1U.Game
                 Exploded?.Invoke(obj, obj.Pos);
                 DropContains(obj);
                 Remove(obj);
+                if (obj.SubId < robotStats.Length && robotStats[obj.SubId].IsBoss)
+                {
+                    Message?.Invoke("The boss is destroyed!");
+                    Runtime?.DestroyReactor(); // boss levels self-destruct on boss death
+                }
             }
             else if (obj.Type == 9)
             {
@@ -584,6 +592,19 @@ namespace D1U.Game
                 {
                     FireRobotWeapon(robot, stats, dist);
                 }
+
+                // boss teleport cycle (Boss_teleport_interval F1_0*8, ai.c:1875)
+                if (stats.IsBoss)
+                {
+                    float timer = bossTeleportTimer.TryGetValue(robot.Id, out var t) ? t : 8f;
+                    timer -= dt;
+                    if (timer <= 0f)
+                    {
+                        timer = 8f;
+                        BossTeleport(robot);
+                    }
+                    bossTeleportTimer[robot.Id] = timer;
+                }
             }
         }
 
@@ -628,6 +649,40 @@ namespace D1U.Game
             Sound?.Invoke(weapon.FiringSound, muzzle);
             if (stats.AttackSound > 0 && (DRand() & 3) == 0)
                 Sound?.Invoke(stats.AttackSound, robot.Pos);
+        }
+
+        void BossTeleport(GameObj boss)
+        {
+            if (!bossTeleportSegs.TryGetValue(boss.Id, out var segs))
+            {
+                // init_boss_segments: BFS around the boss's start (depth-limited)
+                segs = new List<int>();
+                var visited = new HashSet<int> { boss.Segnum };
+                var queue = new Queue<(int seg, int depth)>();
+                queue.Enqueue((boss.Segnum, 0));
+                while (queue.Count > 0)
+                {
+                    var (seg, depth) = queue.Dequeue();
+                    segs.Add(seg);
+                    if (depth >= 8)
+                        continue;
+                    for (int side = 0; side < 6; side++)
+                    {
+                        int child = world.Sides[seg][side].Child;
+                        if (child >= 0 && visited.Add(child))
+                            queue.Enqueue((child, depth + 1));
+                    }
+                }
+                bossTeleportSegs[boss.Id] = segs;
+            }
+            if (segs.Count == 0)
+                return;
+            int target = segs[DRand() % segs.Count];
+            boss.Pos = world.SegmentCenter(target);
+            Relink(boss, target);
+            boss.Vel = Vector3.Zero;
+            if (Objects[boss.Id].ExplSound > 0)
+                Sound?.Invoke(Objects[boss.Id].ExplSound, boss.Pos); // teleport whoosh stand-in
         }
 
         void MoveRobot(GameObj robot, float dt)
