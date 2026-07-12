@@ -47,6 +47,7 @@ namespace D1U.Presentation
         ModelFactory modelFactory;
         Shader levelShader;
         SoundFactory sounds;
+        MusicPlayer music;
         D1U.Game.ObjectSystem objectSystem;
         ShipController shipController;
         int missionLevelCount;
@@ -662,6 +663,10 @@ namespace D1U.Presentation
             }
             Log($"ship spawned at segment {start.Segnum} (mass={shipParams.Mass:F2} drag={shipParams.Drag:F4} " +
                 $"maxThrust={shipParams.MaxThrust:F2} size={shipParams.Size:F2})");
+
+            if (music == null)
+                music = new MusicPlayer(gameObject);
+            music.PlayLevelSong(dir, baseDxuData, levelNumber);
         }
 
         void PlaceCameraAtPlayerStart(BakedLevel level)
@@ -785,6 +790,7 @@ namespace D1U.Presentation
             objectsParent = null;
             shipController = null;
             exitTimer = 0f;
+            music?.Stop();
             Runtime = null;
             modelFactory?.Dispose();
             modelFactory = null;
