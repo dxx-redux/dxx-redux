@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -39,8 +40,11 @@ namespace D1U.Presentation
 
         public GraphicsConfig()
         {
+            // no sub-720-class modes: the UI stays usable and a misclick can't
+            // shrink the window into an unusable state. A stale saved tiny
+            // resolution self-heals too — IndexOf misses and maps to largest.
             foreach (var r in Screen.resolutions)
-                if (!resolutions.Contains((r.width, r.height)))
+                if (r.width >= 1024 && r.height >= 600 && !resolutions.Contains((r.width, r.height)))
                     resolutions.Add((r.width, r.height));
             var native = (w: Display.main.systemWidth, h: Display.main.systemHeight);
             if (native.w > 0 && !resolutions.Contains(native))
@@ -95,11 +99,21 @@ namespace D1U.Presentation
         }
 
         /// <summary>Window mode + size. No-op in the editor and until the
-        /// user has picked a display setting at least once.</summary>
+        /// user has picked a display setting at least once. Explicit
+        /// -screen-* command-line geometry always wins over saved prefs
+        /// (verification drives, troubleshooting a bad remembered mode).</summary>
         public void ApplyDisplay(bool force = false)
         {
             if (Application.isEditor || (!displayTouched && !force))
                 return;
+            if (!force)
+            {
+                var args = Environment.GetCommandLineArgs();
+                if (Array.IndexOf(args, "-screen-width") >= 0 ||
+                    Array.IndexOf(args, "-screen-height") >= 0 ||
+                    Array.IndexOf(args, "-screen-fullscreen") >= 0)
+                    return;
+            }
             displayTouched = true;
             var (w, h) = CurrentResolution();
             Screen.SetResolution(w, h, Modes[ModeIndex].mode);

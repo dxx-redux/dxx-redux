@@ -83,6 +83,7 @@ namespace D1U.Presentation
         int carryLaserLevel;
         bool carryQuad;
         bool menuMode;
+        bool pauseMode;               // in-level Esc menu: resume/save/load/settings/quit
         List<MissionInfo> menuMissions;
         int menuMissionIndex;
         int menuLevel = 1;
@@ -279,6 +280,84 @@ namespace D1U.Presentation
             }
         }
 
+        /// <summary>In-level Esc menu: resume / save / load / settings / quit.
+        /// Single-player pauses the sim; a netgame keeps running behind it.</summary>
+        void DrawPauseMenu(float vw, float vh)
+        {
+            GUI.color = new UnityEngine.Color(0f, 0f, 0f, 0.78f);
+            GUI.DrawTexture(new Rect(-4, -4, vw + 8, vh + 8), Texture2D.whiteTexture);
+            GUI.color = UnityEngine.Color.white;
+
+            float w = 460f;
+            float x = vw / 2f - w / 2f;
+            float y = vh * 0.2f;
+
+            var title = new GUIStyle(GUI.skin.label) { fontSize = 30, alignment = TextAnchor.MiddleCenter };
+            GUI.Label(new Rect(0, y - 70, vw, 50), "PAUSED", title);
+
+            if (menuPage == 1)
+            {
+                DrawControlsMenu(x, y, w);
+                return;
+            }
+            if (menuPage == 2)
+            {
+                DrawVideoMenu(x, y, w);
+                return;
+            }
+
+            bool canSave = netSession == null && shipController != null && Runtime != null &&
+                           objectSystem != null && !shipController.IsDead && !shipController.GameOver &&
+                           !Runtime.Player.ExitReached;
+            bool canLoad = netSession == null && File.Exists(SavePath);
+
+            if (GUI.Button(new Rect(x, y, w, 34), "RESUME"))
+            {
+                ClosePause();
+                return;
+            }
+            GUI.enabled = canSave;
+            if (GUI.Button(new Rect(x, y + 44, w, 34),
+                    canSave ? "SAVE GAME  (F5)" : "SAVE GAME  —  unavailable") && canSave)
+            {
+                GUI.enabled = true;
+                SaveGame();
+                ClosePause();
+                return;
+            }
+            GUI.enabled = canLoad;
+            if (GUI.Button(new Rect(x, y + 88, w, 34),
+                    canLoad ? "LOAD GAME  (F9)" : "LOAD GAME  —  no saved game") && canLoad)
+            {
+                GUI.enabled = true;
+                pauseMode = false;
+                LoadGame();
+                return;
+            }
+            GUI.enabled = true;
+            if (GUI.Button(new Rect(x, y + 144, w, 34), "SETTINGS ▸ CONTROLS"))
+            {
+                menuPage = 1;
+                rebinding = null;
+                return;
+            }
+            if (GUI.Button(new Rect(x, y + 188, w, 34), "SETTINGS ▸ VIDEO"))
+            {
+                menuPage = 2;
+                return;
+            }
+            if (GUI.Button(new Rect(x, y + 248, w, 34), "QUIT TO MAIN MENU"))
+            {
+                carryLaserLevel = 0;
+                carryQuad = false;
+                OpenMenu();
+                return;
+            }
+            GUI.Label(new Rect(0, y + 300, vw, 24),
+                netSession != null ? "netgame keeps running while this menu is open" : "game paused",
+                new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter });
+        }
+
         // net egg replication (shared ids across peers) + per-material texture state
         int bakedObjectCount;
         int nextEggNetId = 1;
@@ -320,6 +399,12 @@ namespace D1U.Presentation
         bool TryAutoStart()
         {
             var args = Environment.GetCommandLineArgs();
+            int ms = Array.IndexOf(args, "-d1u-menu-shots");
+            if (ms >= 0 && ms + 1 < args.Length)
+            {
+                StartCoroutine(MenuShots(args[ms + 1]));
+                return true;
+            }
             int at = Array.IndexOf(args, "-d1u-auto");
             if (at < 0 || at + 2 >= args.Length)
                 return false;
@@ -370,6 +455,29 @@ namespace D1U.Presentation
             Application.Quit();
         }
 
+        /// <summary>`-d1u-menu-shots <dir>`: screenshot every menu page (main,
+        /// controls, video, pause layout) and quit — layout self-verification.</summary>
+        System.Collections.IEnumerator MenuShots(string dir)
+        {
+            Directory.CreateDirectory(dir);
+            OpenMenu();
+            yield return new WaitForSeconds(1f);
+            for (int page = 0; page <= 2; page++)
+            {
+                menuPage = page;
+                yield return new WaitForEndOfFrame();
+                ScreenCapture.CaptureScreenshot(Path.Combine(dir, $"menu_p{page}.png"));
+                yield return new WaitForSeconds(0.4f);
+            }
+            menuMode = false;
+            pauseMode = true; // no level behind it: a layout-only look at the pause column
+            menuPage = 0;
+            yield return new WaitForEndOfFrame();
+            ScreenCapture.CaptureScreenshot(Path.Combine(dir, "menu_pause.png"));
+            yield return new WaitForSeconds(1f);
+            Application.Quit();
+        }
+
         void OnDestroy()
         {
             CloseNet();
@@ -382,7 +490,7 @@ namespace D1U.Presentation
         {
             if (!Application.isPlaying || !shipMode)
                 return;
-            bool wantLock = !menuMode;
+            bool wantLock = !menuMode && !pauseMode;
             Cursor.lockState = wantLock ? CursorLockMode.Locked : CursorLockMode.None;
             Cursor.visible = !wantLock;
         }
@@ -393,12 +501,33 @@ namespace D1U.Presentation
                 UpdateCursor(); // Windows drops the lock on Alt-Tab — re-acquire
         }
 
+        void OpenPause()
+        {
+            pauseMode = true;
+            menuPage = 0;
+            rebinding = null;
+            if (shipController != null)
+                shipController.Paused = netSession == null; // netgames never pause
+        }
+
+        void ClosePause()
+        {
+            pauseMode = false;
+            menuPage = 0;
+            rebinding = null;
+            if (shipController != null && !automapOpen)
+                shipController.Paused = false;
+            PlayerPrefs.Save();
+        }
+
         void OpenMenu()
         {
             if (automapOpen)
                 CloseAutomap(); // restore the camera before the level tears down
             CloseNet(); // leaving a netgame disconnects
             Clear();
+            pauseMode = false;
+            menuPage = 0;
             menuMode = true;
             var dir = string.IsNullOrEmpty(hogsDir) ? DefaultHogsDir() : hogsDir;
             try
@@ -648,14 +777,19 @@ namespace D1U.Presentation
             return sum / 4f;
         }
 
-        void DrawMenu()
+        void DrawMenu(float vw, float vh)
         {
+            // opaque backdrop: the menu never mixes with leftover world pixels
+            GUI.color = new UnityEngine.Color(0.04f, 0.04f, 0.08f, 0.97f);
+            GUI.DrawTexture(new Rect(-4, -4, vw + 8, vh + 8), Texture2D.whiteTexture);
+            GUI.color = UnityEngine.Color.white;
+
             float w = 460f;
-            float x = Screen.width / 2f - w / 2f;
-            float y = Screen.height * 0.2f;
+            float x = vw / 2f - w / 2f;
+            float y = vh * 0.2f;
 
             var title = new GUIStyle(GUI.skin.label) { fontSize = 30, alignment = TextAnchor.MiddleCenter };
-            GUI.Label(new Rect(0, y - 70, Screen.width, 50), "D1X-UNITY", title);
+            GUI.Label(new Rect(0, y - 70, vw, 50), "D1X-UNITY", title);
 
             if (menuPage == 1)
             {
@@ -727,13 +861,18 @@ namespace D1U.Presentation
                 return;
             }
             float helpY = rowY + 124;
-            if (netSession == null && File.Exists(SavePath))
+            if (netSession == null)
             {
-                if (GUI.Button(new Rect(x, helpY, w, 32), "LOAD GAME  (F9 in game)"))
+                bool haveSave = File.Exists(SavePath);
+                GUI.enabled = haveSave;
+                if (GUI.Button(new Rect(x, helpY, w, 32),
+                        haveSave ? "LOAD GAME" : "LOAD GAME  —  no saved game yet") && haveSave)
                 {
+                    GUI.enabled = true;
                     LoadGame();
                     return;
                 }
+                GUI.enabled = true;
                 helpY += 42;
             }
 
@@ -949,9 +1088,16 @@ namespace D1U.Presentation
                     CloseAutomap(); // original: Esc leaves the map, not the game
                     return;
                 }
-                carryLaserLevel = 0;
-                carryQuad = false;
-                OpenMenu();
+                if (pauseMode)
+                {
+                    // settings pages pop back to the pause root via their own
+                    // OnGUI Esc handling; Esc at the root resumes
+                    if (menuPage == 0)
+                        ClosePause();
+                    return;
+                }
+                if (shipController != null && (Runtime == null || !Runtime.Player.ExitReached))
+                    OpenPause();
                 return;
             }
 
@@ -1053,7 +1199,7 @@ namespace D1U.Presentation
                     return;
                 }
 
-                if (controls.Pressed(GameAction.Automap) && Runtime != null &&
+                if (controls.Pressed(GameAction.Automap) && Runtime != null && !pauseMode &&
                     !Runtime.Player.ExitReached && !shipController.IsDead)
                     ToggleAutomap();
                 if (automapOpen && automapView != null && Camera.main != null)
@@ -1504,6 +1650,7 @@ namespace D1U.Presentation
                 lastTotalScore = scoreCarried;
                 pendingLoad = br;       // consumed at the end of SpawnShip
                 menuMode = false;
+                pauseMode = false;
                 endingShown = false;
                 Build();
             }
@@ -1927,15 +2074,27 @@ namespace D1U.Presentation
 
         void OnGUI()
         {
+            // resolution-independent UI: lay out in a virtual 720p-height space
+            // and scale to the window. IMGUI hit-testing follows GUI.matrix, so
+            // menus stay identical (and usable) from small windows up to 4K.
+            float uiScale = Mathf.Max(0.25f, Screen.height / 720f);
+            GUI.matrix = Matrix4x4.Scale(new Vector3(uiScale, uiScale, 1f));
+            float vw = Screen.width / uiScale, vh = Screen.height / uiScale;
+
             if (buildQueued && Application.isPlaying)
             {
-                GUI.Label(new Rect(Screen.width / 2f - 170, Screen.height / 2f - 12, 340, 26),
+                GUI.Label(new Rect(vw / 2f - 170, vh / 2f - 12, 340, 26),
                     "PREPARING MISSION — a rebuild can take a minute...");
                 return;
             }
             if (menuMode && Application.isPlaying)
             {
-                DrawMenu();
+                DrawMenu(vw, vh);
+                return;
+            }
+            if (pauseMode && Application.isPlaying)
+            {
+                DrawPauseMenu(vw, vh);
                 return;
             }
             if (briefingMode)
@@ -1982,13 +2141,13 @@ namespace D1U.Presentation
                     alignment = TextAnchor.MiddleCenter,
                     normal = { textColor = new UnityEngine.Color(1f, 0.3f, 0.2f) },
                 };
-                GUI.Label(new Rect(0, Screen.height * 0.13f, Screen.width, 40),
+                GUI.Label(new Rect(0, vh * 0.13f, vw, 40),
                     $"T-{Mathf.Max(0, Runtime.CountdownSecondsLeft)} s", tstyle);
                 float flash = Runtime.MineFlash;
                 if (flash > 0f)
                 {
                     GUI.color = new UnityEngine.Color(1f, 1f, 1f, flash);
-                    GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture);
+                    GUI.DrawTexture(new Rect(-4, -4, vw + 8, vh + 8), Texture2D.whiteTexture);
                     GUI.color = UnityEngine.Color.white;
                 }
             }
@@ -1996,15 +2155,15 @@ namespace D1U.Presentation
             if (automapOpen)
             {
                 var amStyle = new GUIStyle(GUI.skin.label) { fontSize = 22, alignment = TextAnchor.MiddleCenter };
-                GUI.Label(new Rect(0, 34, Screen.width, 30), "— AUTOMAP —", amStyle);
-                GUI.Label(new Rect(12, Screen.height - 30, 600, 24),
+                GUI.Label(new Rect(0, 34, vw, 30), "— AUTOMAP —", amStyle);
+                GUI.Label(new Rect(12, vh - 30, 600, 24),
                     "Tab close · mouse orbit · wheel zoom");
             }
 
             // reticle
             if (!automapOpen && shipController != null && !shipController.IsDead && !player.ExitReached)
             {
-                float cx = Screen.width / 2f, cy = Screen.height / 2f;
+                float cx = vw / 2f, cy = vh / 2f;
                 GUI.color = new UnityEngine.Color(0.4f, 1f, 0.4f, 0.8f);
                 GUI.DrawTexture(new Rect(cx - 6, cy - 1, 4, 2), Texture2D.whiteTexture);
                 GUI.DrawTexture(new Rect(cx + 2, cy - 1, 4, 2), Texture2D.whiteTexture);
@@ -2028,11 +2187,11 @@ namespace D1U.Presentation
                 string banner = levelNumber == missionLevelCount ? "MISSION COMPLETE"
                     : Runtime.Player.SecretExitReached && levelNumber <= missionLevelCount ? "SECRET EXIT!"
                     : "LEVEL COMPLETE";
-                GUI.Label(new Rect(0, Screen.height / 2 - 40, Screen.width, 80), banner, style);
+                GUI.Label(new Rect(0, vh / 2 - 40, vw, 80), banner, style);
                 if (objectSystem != null)
                 {
                     var tally = new GUIStyle(GUI.skin.label) { fontSize = 20, alignment = TextAnchor.MiddleCenter };
-                    GUI.Label(new Rect(0, Screen.height / 2 + 24, Screen.width, 40),
+                    GUI.Label(new Rect(0, vh / 2 + 24, vw, 40),
                         $"Score {objectSystem.Score + player.Score}   ·   Hostages {objectSystem.HostagesRescued}",
                         tally);
                 }
@@ -2045,12 +2204,12 @@ namespace D1U.Presentation
                     alignment = TextAnchor.MiddleCenter,
                     normal = { textColor = new UnityEngine.Color(1f, 0.3f, 0.2f) },
                 };
-                GUI.Label(new Rect(0, Screen.height / 2 - 40, Screen.width, 80),
+                GUI.Label(new Rect(0, vh / 2 - 40, vw, 80),
                     shipController.GameOver ? "GAME OVER" : "SHIP DESTROYED", style);
                 if (shipController.GameOver)
                 {
                     var sub = new GUIStyle(GUI.skin.label) { fontSize = 20, alignment = TextAnchor.MiddleCenter };
-                    GUI.Label(new Rect(0, Screen.height / 2 + 24, Screen.width, 40),
+                    GUI.Label(new Rect(0, vh / 2 + 24, vw, 40),
                         $"Final score {scoreCarried + (objectSystem?.Score ?? 0) + player.Score}", sub);
                 }
             }
