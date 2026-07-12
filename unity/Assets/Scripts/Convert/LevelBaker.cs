@@ -97,6 +97,12 @@ namespace D1U.Convert
         public List<MatcenRecord> Matcens = new List<MatcenRecord>();
         public List<ObjectRecord> Objects = new List<ObjectRecord>();
 
+        /// <summary>
+        /// Diagnostic only (not serialized): how many render triangles had
+        /// their winding swapped by Bake to match the physics side normals.
+        /// </summary>
+        public int FlippedTriangles;
+
         public int StaticTriangleCount
         {
             get
@@ -111,6 +117,14 @@ namespace D1U.Convert
 
     public static class LevelBaker
     {
+        /// <summary>
+        /// Test hook (Smoke): called for every emitted render triangle with
+        /// (segment, side, face, a, b, c) in final winding order — face is 0
+        /// for the first triangle of the side, 1 for the second, matching
+        /// SegmentWorld.SideData.Normals indices. Null in normal operation.
+        /// </summary>
+        public static Action<int, int, int, Vector3, Vector3, Vector3> TriangleAudit;
+
         public static BakedLevel Bake(D1Level level, Descent1PIGFile pig)
         {
             var baked = new BakedLevel { Name = level.LevelName ?? "" };
@@ -296,24 +310,57 @@ namespace D1U.Convert
                 }
             }
 
+            // Reference normals built exactly the way the collision layer does
+            // (SegmentWorld.BuildSide: same SideToVerts corner order, same
+            // split). Every emitted triangle's winding is enforced against its
+            // face's physics normal, so with Cull Back the render is visible
+            // from precisely the half-space physics calls "inside".
+            Vector3 refN0, refN1;
             if (split == SideSplit.Tri13)
             {
-                EmitTriangle(target, side, positions, 0, 1, 3);
-                EmitTriangle(target, side, positions, 1, 2, 3);
+                refN0 = FaceNormal(positions[3], positions[0], positions[1]);
+                refN1 = FaceNormal(positions[1], positions[2], positions[3]);
+            }
+            else if (split == SideSplit.Tri02)
+            {
+                refN0 = FaceNormal(positions[0], positions[1], positions[2]);
+                refN1 = FaceNormal(positions[2], positions[3], positions[0]);
+            }
+            else // Quad: physics uses the 0-1-2 plane for both faces
+            {
+                refN0 = refN1 = FaceNormal(positions[0], positions[1], positions[2]);
+            }
+
+            if (split == SideSplit.Tri13)
+            {
+                EmitTriangle(baked, target, side, positions, 0, 1, 3, refN0, segIdx, sideNum, 0);
+                EmitTriangle(baked, target, side, positions, 1, 2, 3, refN1, segIdx, sideNum, 1);
             }
             else // Quad and Tri02 share the 0-2 diagonal
             {
-                EmitTriangle(target, side, positions, 0, 1, 2);
-                EmitTriangle(target, side, positions, 0, 2, 3);
+                EmitTriangle(baked, target, side, positions, 0, 1, 2, refN0, segIdx, sideNum, 0);
+                EmitTriangle(baked, target, side, positions, 0, 2, 3, refN1, segIdx, sideNum, 1);
             }
         }
 
-        static void EmitTriangle(RenderChunk chunk, Side side, Vector3[] positions, int a, int b, int c)
+        static void EmitTriangle(BakedLevel baked, RenderChunk chunk, Side side, Vector3[] positions,
+                                 int a, int b, int c, Vector3 refNormal, int segIdx, int sideNum, int face)
         {
+            var winding = Vector3.Cross(positions[b] - positions[a], positions[c] - positions[a]);
+            if (Vector3.Dot(winding, refNormal) < 0f)
+            {
+                (b, c) = (c, b); // flip winding; UVs/light follow their vertices
+                baked.FlippedTriangles++;
+            }
             EmitVertex(chunk, side, positions, a);
             EmitVertex(chunk, side, positions, b);
             EmitVertex(chunk, side, positions, c);
+            TriangleAudit?.Invoke(segIdx, sideNum, face, positions[a], positions[b], positions[c]);
         }
+
+        /// <summary>Same math as SegmentWorld.FaceNormal (direction is all that matters here).</summary>
+        static Vector3 FaceNormal(Vector3 a, Vector3 b, Vector3 c)
+            => Vector3.Cross(b - a, c - a);
 
         static void EmitVertex(RenderChunk chunk, Side side, Vector3[] positions, int i)
         {

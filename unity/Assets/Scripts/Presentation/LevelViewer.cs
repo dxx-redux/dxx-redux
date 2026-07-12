@@ -191,10 +191,70 @@ namespace D1U.Presentation
                 D1U.Game.ObjectSystem.Difficulty =
                     Mathf.Clamp(PlayerPrefs.GetInt("d1u_difficulty", 2), 0, 4);
             }
+            if (Application.isPlaying && shipMode && TryAutoStart())
+                return; // headless verification drive (-d1u-auto)
             if (Application.isPlaying && shipMode)
                 OpenMenu(); // pick mission/level first; Esc returns here
             else
                 Build();
+        }
+
+        /// <summary>
+        /// Self-verification drive: `-d1u-auto <missionKey> <level> -d1u-shots <dir>`
+        /// starts the mission directly, screenshots the interior from several
+        /// segments/angles, then quits. Lets the build be eyeballed headlessly.
+        /// </summary>
+        bool TryAutoStart()
+        {
+            var args = Environment.GetCommandLineArgs();
+            int at = Array.IndexOf(args, "-d1u-auto");
+            if (at < 0 || at + 2 >= args.Length)
+                return false;
+            string shotsDir = null;
+            int sd = Array.IndexOf(args, "-d1u-shots");
+            if (sd >= 0 && sd + 1 < args.Length)
+                shotsDir = args[sd + 1];
+
+            missionKey = args[at + 1];
+            int.TryParse(args[at + 2], out int level);
+            lives = 3;
+            menuMode = false;
+            StartLevel(Mathf.Max(1, level), briefing: false);
+            if (!string.IsNullOrEmpty(shotsDir))
+                StartCoroutine(AutoShots(shotsDir));
+            return true;
+        }
+
+        System.Collections.IEnumerator AutoShots(string dir)
+        {
+            Directory.CreateDirectory(dir);
+            while (shipController == null || shipWorld == null)
+                yield return null;
+            yield return new WaitForSeconds(1.5f); // let views/eclips settle
+
+            var cam = Camera.main;
+            if (cam == null)
+                yield break;
+            cam.transform.SetParent(null, true);
+            shipController.Paused = true; // hold the sim still for stable shots
+
+            int n = shipWorld.SegmentCount;
+            int[] segs = { playerStartSeg, n / 5, 2 * n / 5, 3 * n / 5, 4 * n / 5 };
+            int shot = 0;
+            foreach (var seg in segs)
+            {
+                int s = Mathf.Clamp(seg, 0, n - 1);
+                cam.transform.position = ToUnity(shipWorld.SegmentCenter(s));
+                for (int k = 0; k < 4; k++)
+                {
+                    cam.transform.rotation = Quaternion.Euler(k == 3 ? 55f : 0f, k * 90f, 0f);
+                    yield return new WaitForEndOfFrame();
+                    ScreenCapture.CaptureScreenshot(Path.Combine(dir, $"shot_{shot++:D2}.png"));
+                    yield return new WaitForSeconds(0.3f);
+                }
+            }
+            yield return new WaitForSeconds(1f);
+            Application.Quit();
         }
 
         void OnDestroy()

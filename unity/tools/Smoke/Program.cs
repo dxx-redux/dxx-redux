@@ -286,10 +286,12 @@ Console.WriteLine("\nlevel baking:");
 var missionList = MissionScanner.Scan(hogsDir);
 int levelBakeFailures = 0, levelsBaked = 0;
 int censusBadFacing = 0, censusSameFacing = 0, censusOpposite = 0;
+long censusTris = 0, censusWindingBad = 0, censusFlipped = 0, censusAudited = 0;
 foreach (var mission in missionList)
 {
     var missionHog = new HOGFile(mission.HogPath);
     long tris = 0, chunks = 0, wallPieces = 0, objects = 0;
+    long missionFlipped = 0, missionTris = 0, missionWindingBad = 0;
     foreach (var levelName in mission.LevelNames)
     {
         try
@@ -297,7 +299,23 @@ foreach (var mission in missionList)
             var lump = missionHog.Lumps.First(
                 l => string.Equals(l.Name, levelName, StringComparison.OrdinalIgnoreCase));
             using var ms = new MemoryStream(missionHog.GetLumpData(lump));
-            var bakedLevel = LevelBaker.Bake(D1Level.CreateFromStream(ms), pig);
+
+            // capture every emitted render triangle (statics + wall pieces)
+            // with its (segment, side, face) so it can be checked against the
+            // physics normal SegmentWorld builds for that face
+            var audit = new List<(int Seg, int Side, int Face,
+                                  System.Numerics.Vector3 A, System.Numerics.Vector3 B,
+                                  System.Numerics.Vector3 C)>();
+            BakedLevel bakedLevel;
+            LevelBaker.TriangleAudit = (seg, side, face, a, b, c) => audit.Add((seg, side, face, a, b, c));
+            try
+            {
+                bakedLevel = LevelBaker.Bake(D1Level.CreateFromStream(ms), pig);
+            }
+            finally
+            {
+                LevelBaker.TriangleAudit = null;
+            }
             tris += bakedLevel.StaticTriangleCount;
             chunks += bakedLevel.StaticChunks.Count;
             wallPieces += bakedLevel.DoorPieces.Count;
@@ -307,6 +325,31 @@ foreach (var mission in missionList)
             censusBadFacing += cBad;
             censusSameFacing += cSame;
             censusOpposite += cOpp;
+
+            // winding census: every emitted triangle must wind WITH the
+            // physics normal of its face — Cull Back then shows it exactly
+            // from the half-space collision calls "inside". The audit must
+            // also cover every triangle the bake produced.
+            long emittedTris = bakedLevel.StaticTriangleCount;
+            foreach (var door in bakedLevel.DoorPieces)
+                emittedTris += door.Geometry.TriangleCount;
+            if (audit.Count != emittedTris)
+            {
+                Console.Error.WriteLine($"  {mission.CacheKey}/{levelName} audit covered {audit.Count} of {emittedTris} triangles");
+                levelBakeFailures++;
+            }
+            var world = new D1U.Game.SegmentWorld(bakedLevel);
+            foreach (var t in audit)
+            {
+                var n = System.Numerics.Vector3.Cross(t.B - t.A, t.C - t.A);
+                if (n.LengthSquared() < 1e-10f)
+                    continue; // degenerate sliver, invisible either way
+                if (System.Numerics.Vector3.Dot(n, world.Sides[t.Seg][t.Side].Normals[t.Face]) < 0f)
+                    missionWindingBad++;
+            }
+            missionTris += emittedTris;
+            missionFlipped += bakedLevel.FlippedTriangles;
+            censusAudited += audit.Count;
         }
         catch (Exception e)
         {
@@ -314,14 +357,20 @@ foreach (var mission in missionList)
             Console.Error.WriteLine($"  {mission.CacheKey}/{levelName} FAIL: {e.GetType().Name}: {e.Message}");
         }
     }
+    censusTris += missionTris;
+    censusWindingBad += missionWindingBad;
+    censusFlipped += missionFlipped;
     Console.WriteLine($"  {mission.CacheKey,-12} levels={mission.LevelNames.Count,2} tris={tris,6} " +
-                      $"chunks={chunks,4} wallPieces={wallPieces,4} objects={objects,5}");
+                      $"chunks={chunks,4} wallPieces={wallPieces,4} objects={objects,5} " +
+                      $"flipped={missionFlipped} of {missionTris}, winding-bad={missionWindingBad}");
 }
 Console.WriteLine($"  baked {levelsBaked} levels, {levelBakeFailures} failure(s)");
 Console.WriteLine($"  face census: wrong-facing={censusBadFacing}, coincident same-facing pairs={censusSameFacing}, " +
                   $"opposite-facing pairs={censusOpposite} (separated by Cull Back)");
+Console.WriteLine($"  winding census: {censusWindingBad} of {censusTris} triangles wound against their physics normal " +
+                  $"({censusAudited} audited, {censusFlipped} flipped by the baker)");
 errors += levelBakeFailures;
-if (censusBadFacing > 0 || censusSameFacing > 0)
+if (censusBadFacing > 0 || censusSameFacing > 0 || censusWindingBad > 0)
     errors++;
 
 // --- 8. mission DXU build + cache hit + reload (M2) ---

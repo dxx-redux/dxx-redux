@@ -12,7 +12,7 @@ namespace D1U.Convert
     public static class DxuCache
     {
         /// <summary>Bump when converter output changes to invalidate caches.</summary>
-        public const uint ConverterVersion = 7; // v7: per-side tmaps (volatile-wall damage)
+        public const uint ConverterVersion = 8; // v8: enforced face winding (render == physics normals)
 
         public static string DefaultCacheDir =>
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
