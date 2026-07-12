@@ -829,6 +829,7 @@ void change_res();
 void graphics_config();
 void do_misc_menu();
 void do_obs_menu();
+void minimap_config();
 
 int options_menuset(newmenu *menu, d_event *event, void *userdata)
 {
@@ -848,6 +849,7 @@ int options_menuset(newmenu *menu, d_event *event, void *userdata)
 				case  8: ReorderSecondary();		break;
 				case  9: do_misc_menu();		break;
 				case 10: do_obs_menu();         break;
+				case 11: minimap_config();		break;
 			}
 			return 1;	// stay in menu until escape
 			break;
@@ -1411,6 +1413,64 @@ void graphics_config()
 	gr_set_attributes();
 	gr_set_mode(Game_screen_mode);
 #endif
+}
+
+void minimap_config()
+{
+	newmenu_item m[20];
+	int opt_mm_enable, opt_mm_pos, opt_mm_size, opt_mm_range, opt_mm_rotate, opt_mm_opacity;
+	int nitems = 0;
+	int i;
+
+	opt_mm_enable = nitems;
+	m[nitems].type = NM_TYPE_CHECK; m[nitems].text = "Show Minimap"; m[nitems].value = PlayerCfg.MinimapMode; nitems++;
+	m[nitems].type = NM_TYPE_TEXT; m[nitems].text = "Position:"; nitems++;
+	opt_mm_pos = nitems;
+	m[nitems].type = NM_TYPE_RADIO; m[nitems].text = "Top Left"; m[nitems].value = (PlayerCfg.MinimapPos == 0); m[nitems].group = 1; nitems++;
+	m[nitems].type = NM_TYPE_RADIO; m[nitems].text = "Top Right"; m[nitems].value = (PlayerCfg.MinimapPos == 1); m[nitems].group = 1; nitems++;
+	m[nitems].type = NM_TYPE_RADIO; m[nitems].text = "Bottom Left"; m[nitems].value = (PlayerCfg.MinimapPos == 2); m[nitems].group = 1; nitems++;
+	m[nitems].type = NM_TYPE_RADIO; m[nitems].text = "Bottom Right"; m[nitems].value = (PlayerCfg.MinimapPos == 3); m[nitems].group = 1; nitems++;
+	m[nitems].type = NM_TYPE_RADIO; m[nitems].text = "Center"; m[nitems].value = (PlayerCfg.MinimapPos == 4); m[nitems].group = 1; nitems++;
+	m[nitems].type = NM_TYPE_TEXT; m[nitems].text = "Size:"; nitems++;
+	opt_mm_size = nitems;
+	m[nitems].type = NM_TYPE_RADIO; m[nitems].text = "Small"; m[nitems].value = (PlayerCfg.MinimapSize == 0); m[nitems].group = 2; nitems++;
+	m[nitems].type = NM_TYPE_RADIO; m[nitems].text = "Medium"; m[nitems].value = (PlayerCfg.MinimapSize == 1); m[nitems].group = 2; nitems++;
+	m[nitems].type = NM_TYPE_RADIO; m[nitems].text = "Large"; m[nitems].value = (PlayerCfg.MinimapSize == 2); m[nitems].group = 2; nitems++;
+	m[nitems].type = NM_TYPE_TEXT; m[nitems].text = "Range:"; nitems++;
+	opt_mm_range = nitems;
+	m[nitems].type = NM_TYPE_RADIO; m[nitems].text = "Near"; m[nitems].value = (PlayerCfg.MinimapRange == 0); m[nitems].group = 3; nitems++;
+	m[nitems].type = NM_TYPE_RADIO; m[nitems].text = "Medium"; m[nitems].value = (PlayerCfg.MinimapRange == 1); m[nitems].group = 3; nitems++;
+	m[nitems].type = NM_TYPE_RADIO; m[nitems].text = "Far"; m[nitems].value = (PlayerCfg.MinimapRange == 2); m[nitems].group = 3; nitems++;
+	m[nitems].type = NM_TYPE_TEXT; m[nitems].text = "Rotation:"; nitems++;
+	opt_mm_rotate = nitems;
+	m[nitems].type = NM_TYPE_RADIO; m[nitems].text = "Heading Up"; m[nitems].value = (PlayerCfg.MinimapRotate == 0); m[nitems].group = 4; nitems++;
+	m[nitems].type = NM_TYPE_RADIO; m[nitems].text = "North Up"; m[nitems].value = (PlayerCfg.MinimapRotate == 1); m[nitems].group = 4; nitems++;
+	opt_mm_opacity = nitems;
+	m[nitems].type = NM_TYPE_SLIDER; m[nitems].text = "Opacity"; m[nitems].value = PlayerCfg.MinimapOpacity; m[nitems].min_value = 1; m[nitems].max_value = 10; nitems++;
+
+	newmenu_do1( NULL, "Minimap Options", nitems, m, NULL, NULL, 0 );
+
+	{
+		int old_mode = PlayerCfg.MinimapMode;
+
+		PlayerCfg.MinimapMode = m[opt_mm_enable].value;
+		for (i = 0; i < 5; i++)
+			if (m[opt_mm_pos + i].value)
+				PlayerCfg.MinimapPos = i;
+		for (i = 0; i < 3; i++)
+			if (m[opt_mm_size + i].value)
+				PlayerCfg.MinimapSize = i;
+		for (i = 0; i < 3; i++)
+			if (m[opt_mm_range + i].value)
+				PlayerCfg.MinimapRange = i;
+		for (i = 0; i < 2; i++)
+			if (m[opt_mm_rotate + i].value)
+				PlayerCfg.MinimapRotate = i;
+		PlayerCfg.MinimapOpacity = m[opt_mm_opacity].value;
+
+		if (PlayerCfg.MinimapMode && !old_mode)
+			Minimap_visible = 1;	//always start visible on enable
+	}
 }
 
 #if PHYSFS_VER_MAJOR >= 2
@@ -2544,7 +2604,7 @@ void do_options_menu()
 {
 	newmenu_item *m;
 
-	MALLOC(m, newmenu_item, 11);
+	MALLOC(m, newmenu_item, 12);
 	if (!m)
 		return;
 
@@ -2559,10 +2619,11 @@ void do_options_menu()
 	m[ 8].type = NM_TYPE_MENU;   m[ 8].text="Secondary autoselect ordering...";
 	m[ 9].type = NM_TYPE_MENU;   m[ 9].text="Misc Options...";
 	m[10].type = NM_TYPE_MENU;   m[10].text="Observer Options...";
+	m[11].type = NM_TYPE_MENU;   m[11].text="Minimap Options...";
 
 	// Fall back to main event loop
 	// Allows clean closing and re-opening when resolution changes
-	newmenu_do3( NULL, TXT_OPTIONS, 11, m, options_menuset, NULL, 0, NULL );
+	newmenu_do3( NULL, TXT_OPTIONS, 12, m, options_menuset, NULL, 0, NULL );
 }
 
 #ifndef RELEASE
