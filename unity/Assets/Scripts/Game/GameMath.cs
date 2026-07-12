@@ -22,7 +22,11 @@ namespace D1U.Game
         /// <summary>Row-vector transform: v * M.</summary>
         public Vector3 TransformRow(Vector3 v) => v.X * Right + v.Y * Up + v.Z * Forward;
 
-        /// <summary>vm_matrix_x_matrix: dest.row_i = src1.row_i * src2.</summary>
+        /// <summary>
+        /// Standard product a x b: row_i = a.row_i * b. Careful:
+        /// vm_matrix_x_matrix(dest,src0,src1) (vecmat.c:731-748) is src1 x src0,
+        /// i.e. Mul(src1, src0) — a body-frame delta multiplies from the LEFT.
+        /// </summary>
         public static Mat3 Mul(Mat3 a, Mat3 b) => new Mat3
         {
             Right = b.TransformRow(a.Right),

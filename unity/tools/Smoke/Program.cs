@@ -228,9 +228,64 @@ catch (Exception e)
 }
 
 // --- 7. bake every level to meshes (M2) ---
+// face census over everything EmitSide emits (statics + wall pieces): every
+// face must front its own segment's interior (the level materials cull Back,
+// LevelViewer.BuildChunk), and coincident faces of different segments must
+// front opposite ways — a same-facing pair z-fights under any culling.
+(int badFacing, int sameFacing, int opposite) FaceCensus(BakedLevel lvl)
+{
+    var wallAt = new Dictionary<(int seg, int side), WallRecord>();
+    foreach (var w in lvl.Walls)
+        wallAt[(w.SegmentIndex, w.SideIndex)] = w;
+    int bad = 0, same = 0, opp = 0;
+    var byCenter = new Dictionary<(long, long, long), List<System.Numerics.Vector3>>();
+    for (int s = 0; s < lvl.Segments.Length; s++)
+    {
+        var seg = lvl.Segments[s];
+        var segCenter = System.Numerics.Vector3.Zero;
+        for (int v = 0; v < 8; v++)
+            segCenter += lvl.Vertices[seg.Verts[v]];
+        segCenter /= 8f;
+        for (int sideNum = 0; sideNum < 6; sideNum++)
+        {
+            // mirror EmitSide: walls render unless WALL_OPEN; plain sides only when solid
+            bool emitted = wallAt.TryGetValue((s, sideNum), out var wall)
+                ? wall.Type != 4
+                : seg.Children[sideNum] == -1;
+            if (!emitted)
+                continue;
+            var sv = D1U.Game.SegmentWorld.SideToVerts[sideNum];
+            var c0 = lvl.Vertices[seg.Verts[sv[0]]];
+            var c1 = lvl.Vertices[seg.Verts[sv[1]]];
+            var c2 = lvl.Vertices[seg.Verts[sv[2]]];
+            var c3 = lvl.Vertices[seg.Verts[sv[3]]];
+            var n = System.Numerics.Vector3.Cross(c2 - c0, c3 - c1); // covers both diagonals
+            if (n.LengthSquared() < 1e-8f)
+                continue; // degenerate sliver
+            var faceCenter = (c0 + c1 + c2 + c3) / 4f;
+            if (System.Numerics.Vector3.Dot(n, segCenter - faceCenter) < 0f)
+                bad++;
+            var q = faceCenter * 64f;
+            var key = ((long)MathF.Round(q.X), (long)MathF.Round(q.Y), (long)MathF.Round(q.Z));
+            if (!byCenter.TryGetValue(key, out var list))
+                byCenter[key] = list = new List<System.Numerics.Vector3>();
+            foreach (var other in list)
+            {
+                if (System.Numerics.Vector3.Cross(n, other).LengthSquared() >
+                    1e-6f * n.LengthSquared() * other.LengthSquared())
+                    continue; // shares a center but not a plane
+                if (System.Numerics.Vector3.Dot(n, other) > 0f) same++; else opp++;
+            }
+            list.Add(n);
+        }
+    }
+    return (bad, same, opp);
+}
+
 Console.WriteLine("\nlevel baking:");
 var missionList = MissionScanner.Scan(hogsDir);
 int levelBakeFailures = 0, levelsBaked = 0;
+int censusBadFacing = 0, censusSameFacing = 0, censusOpposite = 0;
 foreach (var mission in missionList)
 {
     var missionHog = new HOGFile(mission.HogPath);
@@ -248,6 +303,10 @@ foreach (var mission in missionList)
             wallPieces += bakedLevel.DoorPieces.Count;
             objects += bakedLevel.Objects.Count;
             levelsBaked++;
+            var (cBad, cSame, cOpp) = FaceCensus(bakedLevel);
+            censusBadFacing += cBad;
+            censusSameFacing += cSame;
+            censusOpposite += cOpp;
         }
         catch (Exception e)
         {
@@ -259,7 +318,11 @@ foreach (var mission in missionList)
                       $"chunks={chunks,4} wallPieces={wallPieces,4} objects={objects,5}");
 }
 Console.WriteLine($"  baked {levelsBaked} levels, {levelBakeFailures} failure(s)");
+Console.WriteLine($"  face census: wrong-facing={censusBadFacing}, coincident same-facing pairs={censusSameFacing}, " +
+                  $"opposite-facing pairs={censusOpposite} (separated by Cull Back)");
 errors += levelBakeFailures;
+if (censusBadFacing > 0 || censusSameFacing > 0)
+    errors++;
 
 // --- 8. mission DXU build + cache hit + reload (M2) ---
 Console.WriteLine("\nmission DXU:");
@@ -363,6 +426,118 @@ try
     Console.WriteLine($"  10s full thrust: traveled {traveled:F1} units, max speed {maxSpeed:F1} " +
                       $"(analytic top {expectedTopSpeed:F1}), final segment {state.Segnum}, in-mine={inMine}");
     if (traveled < 20f || !inMine || maxSpeed < expectedTopSpeed * 0.5f || maxSpeed > expectedTopSpeed * 1.5f)
+        errors++;
+
+    // --- 9b. rotation composition vs do_physics_sim_rot (physics.c:349-385) ---
+    // vm_matrix_x_matrix (vecmat.c:731-748) transcribed literally: dest = src1 x
+    // src0, so the delta matrix (src1) applies in src0's own row basis.
+    static float Dot3(float x, float y, float z, System.Numerics.Vector3 v)
+        => x * v.X + y * v.Y + z * v.Z;
+    static D1U.Game.Mat3 CMatXMat(D1U.Game.Mat3 s0, D1U.Game.Mat3 s1) => new D1U.Game.Mat3
+    {
+        Right = new System.Numerics.Vector3(
+            Dot3(s0.Right.X, s0.Up.X, s0.Forward.X, s1.Right),
+            Dot3(s0.Right.Y, s0.Up.Y, s0.Forward.Y, s1.Right),
+            Dot3(s0.Right.Z, s0.Up.Z, s0.Forward.Z, s1.Right)),
+        Up = new System.Numerics.Vector3(
+            Dot3(s0.Right.X, s0.Up.X, s0.Forward.X, s1.Up),
+            Dot3(s0.Right.Y, s0.Up.Y, s0.Forward.Y, s1.Up),
+            Dot3(s0.Right.Z, s0.Up.Z, s0.Forward.Z, s1.Up)),
+        Forward = new System.Numerics.Vector3(
+            Dot3(s0.Right.X, s0.Up.X, s0.Forward.X, s1.Forward),
+            Dot3(s0.Right.Y, s0.Up.Y, s0.Forward.Y, s1.Forward),
+            Dot3(s0.Right.Z, s0.Up.Z, s0.Forward.Z, s1.Forward)),
+    };
+    // hand copy of physics.c:195-385 (ORIGINAL drag strategy, PF_TURNROLL)
+    static void RefSimRot(ref D1U.Game.Mat3 orient, ref System.Numerics.Vector3 rotVel,
+                          ref float turnRoll, System.Numerics.Vector3 rotThrust,
+                          float mass, float drag, float ft)
+    {
+        const float FT = 1f / 64f;                       // physics.c:191
+        int count = (int)(ft / FT);
+        float k = (ft - count * FT) / FT;
+        float rotDrag = drag * 5f / 2f;                  // physics.c:218
+        var accel = rotThrust * (1f / mass);
+        while (count-- > 0) { rotVel += accel; rotVel *= 1f - rotDrag; } // physics.c:231-237
+        rotVel += accel * k;                             // physics.c:240-243
+        rotVel *= 1f - k * rotDrag;
+
+        if (turnRoll != 0f)                              // physics.c:352-360
+            orient = CMatXMat(orient, D1U.Game.Mat3.FromAngles(0f, -turnRoll, 0f));
+        orient = CMatXMat(orient, D1U.Game.Mat3.FromAngles( // physics.c:362-368
+            rotVel.X * ft, rotVel.Z * ft, rotVel.Y * ft));
+        float desired = -rotVel.Y * ((0x4ec4 / 2) / 65536f); // set_object_turnroll
+        if (turnRoll != desired)
+        {
+            float maxRoll = 0x2000 / 65536f * ft;        // ROLL_RATE
+            float delta = desired - turnRoll;
+            if (Math.Abs(delta) < maxRoll) maxRoll = delta;
+            else if (delta < 0f) maxRoll = -maxRoll;
+            turnRoll += maxRoll;
+        }
+        if (turnRoll != 0f)                              // physics.c:374-382
+            orient = CMatXMat(orient, D1U.Game.Mat3.FromAngles(0f, turnRoll, 0f));
+        orient.Orthonormalize();                         // check_and_fix_matrix
+    }
+    static float MatDiff(D1U.Game.Mat3 a, D1U.Game.Mat3 b)
+    {
+        var dr = a.Right - b.Right;
+        var du = a.Up - b.Up;
+        var df = a.Forward - b.Forward;
+        return MathF.Max(MathF.Max(dr.Length(), du.Length()), df.Length());
+    }
+
+    var rotParams = shipParams;
+    rotParams.Wiggle = 0f; // wiggle would add Vel and pull fvi into a pure-rotation test
+    (D1U.Game.Mat3 orient, float turnRoll) RunRot(D1U.Game.Mat3 o0, float pitch, float heading, int steps)
+    {
+        var rotSim = new D1U.Game.ShipSim(world);
+        var rs = new D1U.Game.ShipState { Pos = start.Position, Orient = o0, Segnum = start.Segnum };
+        for (int i = 0; i < steps; i++)
+            rotSim.Step(rs, rotParams,
+                new D1U.Game.ShipControls { PitchTime = pitch * step, HeadingTime = heading * step },
+                step, i * step);
+        return (rs.Orient, rs.TurnRoll);
+    }
+    (D1U.Game.Mat3 orient, float turnRoll) RunRotRef(D1U.Game.Mat3 o0, float pitch, float heading, int steps)
+    {
+        var o = o0;
+        var rv = System.Numerics.Vector3.Zero;
+        float tr = 0f;
+        for (int i = 0; i < steps; i++)
+        {
+            // read_flying_controls: rotthrust = time * max_rotthrust / frametime
+            var rt = new System.Numerics.Vector3(pitch * step, heading * step, 0f)
+                     * (rotParams.MaxRotThrust / step);
+            RefSimRot(ref o, ref rv, ref tr, rt, rotParams.Mass, rotParams.Drag, step);
+        }
+        return (o, tr);
+    }
+
+    // full pitch at heading 90: must rotate about the ship's OWN right vector
+    var h90 = D1U.Game.Mat3.FromAngles(0f, 0f, 0.25f);
+    var (pitched, _) = RunRot(h90, 1f, 0f, 12);
+    var (pitchedRef, _) = RunRotRef(h90, 1f, 0f, 12);
+    float pitchRefDiff = MatDiff(pitched, pitchedRef);
+    float rightLock = System.Numerics.Vector3.Dot(pitched.Right, h90.Right);
+    float noseDip = System.Numerics.Vector3.Dot(pitched.Forward, h90.Up); // +pitch = nose to -up
+
+    // full yaw at pitch 90 (nose straight down): must swing toward body right
+    var p90 = D1U.Game.Mat3.FromAngles(0.25f, 0f, 0f);
+    var (yawed, yawRoll) = RunRot(p90, 0f, 1f, 12);
+    var (yawedRef, yawRollRef) = RunRotRef(p90, 0f, 1f, 12);
+    float yawRefDiff = MatDiff(yawed, yawedRef);
+    float yawSwing = System.Numerics.Vector3.Dot(yawed.Forward, p90.Right);
+
+    // steady level yaw banks INTO the turn (negative turnroll for +heading)
+    var (_, bankRoll) = RunRot(D1U.Game.Mat3.Identity, 0f, 1f, 12);
+
+    Console.WriteLine($"  rotation vs physics.c: pitch@h90 |dRef|={pitchRefDiff:E1} rightLock={rightLock:F4} " +
+                      $"noseDip={noseDip:F3}; yaw@p90 |dRef|={yawRefDiff:E1} swing={yawSwing:F3} " +
+                      $"turnroll={yawRoll:F4} (ref {yawRollRef:F4}); level-turn bank={bankRoll:F4}");
+    if (pitchRefDiff > 1e-4f || rightLock < 0.999f || noseDip > -0.05f ||
+        yawRefDiff > 1e-4f || yawSwing < 0.02f ||
+        Math.Abs(yawRoll - yawRollRef) > 1e-4f || bankRoll >= 0f)
         errors++;
 }
 catch (Exception e)
@@ -903,6 +1078,9 @@ try
     // --- 23. review fixes: winding, 2x grab reach, egg size, reactor fire, net eggs ---
     // (a) every door face must front toward its own segment's interior (Cull Back)
     int badWinding = 0;
+    var doorTris = new List<(System.Numerics.Vector3 A, System.Numerics.Vector3 B,
+                             System.Numerics.Vector3 C, System.Numerics.Vector3 N,
+                             System.Numerics.Vector3 Cen)>();
     foreach (var doorPiece in lvl3.DoorPieces)
     {
         var wseg = lvl3.Segments[doorPiece.SegmentIndex];
@@ -913,11 +1091,46 @@ try
         for (int t = 0; t + 2 < geom.Positions.Count; t += 3)
         {
             var wa = geom.Positions[t];
-            var wn = System.Numerics.Vector3.Cross(geom.Positions[t + 1] - wa, geom.Positions[t + 2] - wa);
+            var wb = geom.Positions[t + 1];
+            var wc = geom.Positions[t + 2];
+            var wn = System.Numerics.Vector3.Cross(wb - wa, wc - wa);
             if (System.Numerics.Vector3.Dot(wn, segCenter - wa) < 0f)
                 badWinding++;
+            if (wn.LengthSquared() > 1e-10f)
+                doorTris.Add((wa, wb, wc, wn, (wa + wb + wc) / 3f));
         }
     }
+
+    // (a2) no two door triangles may be coplanar, same-facing AND overlapping —
+    // such a pair z-fights even with Cull Back (a portal's front+back walls
+    // must front opposite ways, one into each segment)
+    static bool InsideTri(System.Numerics.Vector3 p, System.Numerics.Vector3 a,
+                          System.Numerics.Vector3 b, System.Numerics.Vector3 c,
+                          System.Numerics.Vector3 n)
+    {
+        float eps = 1e-4f * n.LengthSquared(); // strictly inside, scale-relative
+        return System.Numerics.Vector3.Dot(System.Numerics.Vector3.Cross(b - a, p - a), n) > eps &&
+               System.Numerics.Vector3.Dot(System.Numerics.Vector3.Cross(c - b, p - b), n) > eps &&
+               System.Numerics.Vector3.Dot(System.Numerics.Vector3.Cross(a - c, p - c), n) > eps;
+    }
+    int zfightPairs = 0;
+    for (int i = 0; i < doorTris.Count; i++)
+        for (int j = i + 1; j < doorTris.Count; j++)
+        {
+            var ti = doorTris[i];
+            var tj = doorTris[j];
+            if (System.Numerics.Vector3.Dot(ti.N, tj.N) <= 0f)
+                continue; // opposite-facing: Cull Back separates them
+            if (System.Numerics.Vector3.Cross(ti.N, tj.N).LengthSquared() >
+                1e-6f * ti.N.LengthSquared() * tj.N.LengthSquared())
+                continue; // not parallel
+            if (Math.Abs(System.Numerics.Vector3.Dot(
+                    System.Numerics.Vector3.Normalize(ti.N), tj.Cen - ti.A)) > 1e-2f)
+                continue; // parallel but on different planes
+            if (InsideTri(tj.Cen, ti.A, ti.B, ti.C, ti.N) ||
+                InsideTri(ti.Cen, tj.A, tj.B, tj.C, tj.N))
+                zfightPairs++;
+        }
 
     // (b) powerup_grab_cheat_all: a dropped egg at 1.9x combined radii is grabbed
     var grabEgg = objsB.Objects.Last(o => o.Type == 7 && !o.Dead);
@@ -979,9 +1192,11 @@ try
                  gotEggs[0].netId == 200001 && gotEggs[1].subId == 2;
     }
 
-    Console.WriteLine($"  review fixes: bad winding={badWinding}, grab@1.9x={grabAfter < grabBefore}, " +
-                      $"egg size={grabEggSize:F1}, reactor shots in 5s={reactorShots}, net eggs ok={eggsOk}");
-    if (badWinding > 0 || grabAfter >= grabBefore || grabEggSize < 2.5f || reactorShots < 4 || !eggsOk)
+    Console.WriteLine($"  review fixes: bad winding={badWinding}, coplanar zfight pairs={zfightPairs}, " +
+                      $"grab@1.9x={grabAfter < grabBefore}, egg size={grabEggSize:F1}, " +
+                      $"reactor shots in 5s={reactorShots}, net eggs ok={eggsOk}");
+    if (badWinding > 0 || zfightPairs > 0 || grabAfter >= grabBefore || grabEggSize < 2.5f ||
+        reactorShots < 4 || !eggsOk)
         errors++;
 }
 catch (Exception e)

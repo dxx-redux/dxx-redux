@@ -335,11 +335,13 @@ namespace D1U.Presentation
             if (material.HasProperty("_BaseMap")) material.SetTexture("_BaseMap", texture);
             else material.mainTexture = texture;
             if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", UnityEngine.Color.white);
-            // door/grate pieces: back-face culled — each of the two coplanar
-            // doorway faces is visible only from inside its own segment
-            // (render.c:412-415); drawing both double-sided made them z-fight.
-            // Solid static walls have no coplanar twin and stay double-sided.
-            if (material.HasProperty("_Cull")) material.SetInt("_Cull", door != null ? 2 : 0);
+            // every level face is wound to front INTO its own segment and the
+            // original renderer only ever drew it from there (render.c:412-415),
+            // so everything culls Back. That keeps the two coplanar faces of a
+            // doorway one-per-side, and stops coincident solid sides of
+            // UNCONNECTED neighbouring segments (common in retail levels) from
+            // z-fighting the way double-sided statics did.
+            if (material.HasProperty("_Cull")) material.SetInt("_Cull", 2);
             if (material.HasProperty("_AlphaClip")) { material.SetFloat("_AlphaClip", 1f); material.EnableKeyword("_ALPHATEST_ON"); }
             if (material.HasProperty("_Cutoff")) material.SetFloat("_Cutoff", 0.5f);
             materials.Add(material);
@@ -626,6 +628,10 @@ namespace D1U.Presentation
                 return;
             view.transform.SetParent(objectsParent, false);
             view.transform.position = ToUnity(obj.Pos);
+            // weapon models fly nose-first from the muzzle (missiles spawn side-on
+            // otherwise); Update only re-aims them while Vel stays meaningful
+            if (obj.Type == 5 && obj.ModelNum >= 0 && obj.Vel.LengthSquared() > 1e-4f)
+                view.transform.rotation = Quaternion.LookRotation(ToUnity(obj.Vel));
             objectViews[obj.Id] = view;
 
             if (obj.Type == 2 && obj.SubId < archives.Pig.numRobots)
@@ -877,8 +883,15 @@ namespace D1U.Presentation
                 if (!objectViews.TryGetValue(obj.Id, out var view) || view == null)
                     continue;
                 view.transform.position = ToUnity(obj.Pos);
-                if (obj.Type == 5 && obj.Vel != System.Numerics.Vector3.Zero)
-                    view.transform.rotation = Quaternion.LookRotation(ToUnity(obj.Vel));
+                if (obj.Type == 5)
+                {
+                    // only weapon MODELS point along flight — billboards face the
+                    // camera in BillboardSprite.LateUpdate. Near-zero Vel (stuck
+                    // flares, settling prox bombs) holds the last pose:
+                    // LookRotation(~zero) logs errors and snaps to identity.
+                    if (obj.ModelNum >= 0 && obj.Vel.LengthSquared() > 1e-4f)
+                        view.transform.rotation = Quaternion.LookRotation(ToUnity(obj.Vel));
+                }
                 else if (obj.Type == 2)
                 {
                     view.transform.rotation = Quaternion.LookRotation(

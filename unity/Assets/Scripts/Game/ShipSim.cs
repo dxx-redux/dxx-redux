@@ -343,13 +343,15 @@ namespace D1U.Game
                 s.RotVel *= 1f - k * rotDrag;
             }
 
-            // unrotate for old turnroll bank (physics.c:352-360)
+            // unrotate for old turnroll bank (physics.c:352-360); note
+            // vm_matrix_x_matrix(dest, orient, rotmat) = rotmat x orient — the
+            // delta goes FIRST so it applies in the ship's own frame
             if (s.TurnRoll != 0f)
-                s.Orient = Mat3.Mul(s.Orient, Mat3.FromAngles(0f, -s.TurnRoll, 0f));
+                s.Orient = Mat3.Mul(Mat3.FromAngles(0f, -s.TurnRoll, 0f), s.Orient);
 
             // integrate rotation (physics.c:362-368); p=x, h=y, b=z
-            s.Orient = Mat3.Mul(s.Orient, Mat3.FromAngles(
-                s.RotVel.X * frameTime, s.RotVel.Z * frameTime, s.RotVel.Y * frameTime));
+            s.Orient = Mat3.Mul(Mat3.FromAngles(
+                s.RotVel.X * frameTime, s.RotVel.Z * frameTime, s.RotVel.Y * frameTime), s.Orient);
 
             // set_object_turnroll (physics.c:148-168)
             float desiredBank = -s.RotVel.Y * TurnRollScale;
@@ -366,7 +368,7 @@ namespace D1U.Game
 
             // re-rotate for new turnroll bank (physics.c:374-382)
             if (s.TurnRoll != 0f)
-                s.Orient = Mat3.Mul(s.Orient, Mat3.FromAngles(0f, s.TurnRoll, 0f));
+                s.Orient = Mat3.Mul(Mat3.FromAngles(0f, s.TurnRoll, 0f), s.Orient);
 
             s.Orient.Orthonormalize(); // check_and_fix_matrix
         }
