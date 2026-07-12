@@ -24,15 +24,19 @@ Status: v1 + progress log (2026-07-12) · branch `unity`
   weapon carry-over, secret-level routing (Secret_level_table, builtin
   10/21/24 + .msn num_secrets; return to table[n]+1), Tab automap
   (mapedges.c port: visited wireframe, wall/door/key colors, frontier
-  hiding, orbit camera), music through MeltySynth + user-supplied .sf2.
-- **Headless verification**: `unity/tools/Smoke` (17 sections, SMOKE OK)
-  covers parsing→physics→combat→drops→pathfinding;
+  hiding, orbit camera), briefings (titles.c port: TXB text, the
+  retail screen table, PCX backgrounds, font3-1 typewriter at
+  20 ms/char, $-commands incl. the spinning robot window; before every
+  level and the endreg.txb ending after the last), music through
+  MeltySynth + user-supplied .sf2.
+- **Headless verification**: `unity/tools/Smoke` (18 sections, SMOKE OK)
+  covers parsing→physics→combat→drops→pathfinding→briefing text;
   `unity/tools/PresentationCheck` compiles the Unity-side Presentation
   assembly against the engine module DLLs, so all code is
   compile-verified even while the editor holds the project lock.
-- Remaining backlog: briefings (TXB), savegames, endgame/score screens,
-  vulcan ammo spew on death, homing retrack cadence details, difficulty
-  menu (Difficulty is const Hotshot), D2 support.
+- Remaining backlog: savegames, endgame score tally, vulcan ammo spew
+  on death, homing retrack cadence details, difficulty menu
+  (Difficulty is const Hotshot), D2 support.
 Scope: single-player Descent 1 in Unity, fan build (non-commercial, user-supplied game data — same posture as dxx-redux).
 
 ## 1. Goals and ground rules
