@@ -16,9 +16,53 @@ namespace D1U.EditorTools
     /// </summary>
     public static class BuildScript
     {
+        /// <summary>
+        /// The game creates all its materials at runtime via Shader.Find, so no
+        /// build asset references the shaders and Unity strips them from player
+        /// builds (editor Play mode works, built player silently falls back to
+        /// Sprites/Default — no depth write, walls overdraw each other). Pin
+        /// them in GraphicsSettings' Always Included Shaders before building.
+        /// </summary>
+        static void EnsureAlwaysIncludedShaders()
+        {
+            var wanted = new[]
+            {
+                "Universal Render Pipeline/Particles/Unlit",
+                "Sprites/Default",
+            };
+            var settings = AssetDatabase.LoadAssetAtPath<Object>("ProjectSettings/GraphicsSettings.asset");
+            var so = new SerializedObject(settings);
+            var list = so.FindProperty("m_AlwaysIncludedShaders");
+            foreach (var name in wanted)
+            {
+                var shader = Shader.Find(name);
+                if (shader == null)
+                {
+                    Debug.LogWarning($"D1U build: shader '{name}' not found in project");
+                    continue;
+                }
+                bool present = false;
+                for (int i = 0; i < list.arraySize; i++)
+                    if (list.GetArrayElementAtIndex(i).objectReferenceValue == shader)
+                    {
+                        present = true;
+                        break;
+                    }
+                if (!present)
+                {
+                    list.InsertArrayElementAtIndex(list.arraySize);
+                    list.GetArrayElementAtIndex(list.arraySize - 1).objectReferenceValue = shader;
+                    Debug.Log($"D1U build: pinned always-included shader '{name}'");
+                }
+            }
+            so.ApplyModifiedPropertiesWithoutUndo();
+            AssetDatabase.SaveAssets();
+        }
+
         [MenuItem("D1U/Build Windows Player")]
         public static void BuildWindows()
         {
+            EnsureAlwaysIncludedShaders();
             PlayerSettings.companyName = "dxx-redux";
             PlayerSettings.productName = "D1X-Unity";
             PlayerSettings.runInBackground = true;

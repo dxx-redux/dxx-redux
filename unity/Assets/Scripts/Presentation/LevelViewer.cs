@@ -336,6 +336,9 @@ namespace D1U.Presentation
             var shader = Shader.Find("Universal Render Pipeline/Particles/Unlit")
                          ?? Shader.Find("Sprites/Default");
             levelShader = shader;
+            // Sprites/Default = ZWrite Off = walls overdraw each other. If this
+            // ever logs the fallback in a player, the build stripped the shader.
+            Debug.Log($"D1U: level shader = {(shader != null ? shader.name : "<none>")}");
             modelFactory = new ModelFactory(baseDxuData, textureFactory, shader);
             sounds = new SoundFactory(baseDxuData, archives.Pig.SoundIDs);
 
