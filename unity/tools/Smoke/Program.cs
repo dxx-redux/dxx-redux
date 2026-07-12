@@ -711,8 +711,10 @@ try
     carrier.ContainsCount = 3;
     int powerupsBefore = objs.Objects.Count(o => o.Type == 7 && !o.Dead);
     int scoreBefore = objs.Score;
+    int firstNewId = objs.Objects.Count; // only THIS kill's eggs, not earlier fights' leftovers
     objs.Damage(carrier, 10000f, carrier.Pos);
-    var drops = objs.Objects.Where(o => o.Type == 7 && !o.Dead && o.SubId == 1 && o.Vel != default).ToList();
+    var drops = objs.Objects.Skip(firstNewId)
+        .Where(o => o.Type == 7 && !o.Dead && o.SubId == 1).ToList();
     float speed0 = drops.Count > 0 ? drops[0].Vel.Length() : 0f;
     for (int step = 0; step < 300; step++)
         objs.MovePowerups(1f / 60f);
@@ -896,6 +898,90 @@ try
     if (!runtime3.CountdownActive || runtime3.TotalCountdown != 40 ||
         secondsAtStart <= 0 || secondsAtStart >= 40 ||
         !exploded || !voiceIds.Contains(114) || !voiceIds.Contains(100) || !voiceIds.Contains(33))
+        errors++;
+
+    // --- 23. review fixes: winding, 2x grab reach, egg size, reactor fire, net eggs ---
+    // (a) every door face must front toward its own segment's interior (Cull Back)
+    int badWinding = 0;
+    foreach (var doorPiece in lvl3.DoorPieces)
+    {
+        var wseg = lvl3.Segments[doorPiece.SegmentIndex];
+        var segCenter = System.Numerics.Vector3.Zero;
+        for (int v = 0; v < 8; v++) segCenter += lvl3.Vertices[wseg.Verts[v]];
+        segCenter /= 8f;
+        var geom = doorPiece.Geometry;
+        for (int t = 0; t + 2 < geom.Positions.Count; t += 3)
+        {
+            var wa = geom.Positions[t];
+            var wn = System.Numerics.Vector3.Cross(geom.Positions[t + 1] - wa, geom.Positions[t + 2] - wa);
+            if (System.Numerics.Vector3.Dot(wn, segCenter - wa) < 0f)
+                badWinding++;
+        }
+    }
+
+    // (b) powerup_grab_cheat_all: a dropped egg at 1.9x combined radii is grabbed
+    var grabEgg = objsB.Objects.Last(o => o.Type == 7 && !o.Dead);
+    float grabEggSize = grabEgg.Size; // DropEgg must use Powerup_info size (3.0 default)
+    var grabState = new D1U.Game.PlayerState();
+    var grabWeapons = new D1U.Game.PlayerWeapons();
+    var grabShipPos = grabEgg.Pos + new System.Numerics.Vector3(1.9f * (grabEgg.Size + 4.66f), 0f, 0f);
+    int grabBefore = objsB.Objects.Count(o => o.Type == 7 && !o.Dead);
+    objsB.PickupScan(grabShipPos, 4.66f, grabEgg.Segnum, grabState, grabWeapons);
+    int grabAfter = objsB.Objects.Count(o => o.Type == 7 && !o.Dead);
+
+    // (c) the reactor returns fire once hit (do_controlcen_frame)
+    var worldC = new D1U.Game.SegmentWorld(lvl3);
+    var runtimeC = new D1U.Game.LevelRuntime(worldC, clips3);
+    var objsC = new D1U.Game.ObjectSystem(worldC,
+        record => { var v = D1U.Convert.ObjectVisuals.Resolve(pig, record); return (v.ModelNum, v.VClipNum); },
+        robotStats, 200f) { Runtime = runtimeC };
+    objsC.SetWeaponTable(allWeaponStats);
+    int reactorShots = 0;
+    var reactorC = objsC.Objects.FirstOrDefault(o => o.Type == 9 && !o.Dead);
+    if (reactorC != null)
+    {
+        objsC.PlayerAlive = true;
+        objsC.PlayerPos = reactorC.Pos + new System.Numerics.Vector3(20f, 0f, 0f);
+        objsC.PlayerSeg = reactorC.Segnum;
+        objsC.Damage(reactorC, 1f, reactorC.Pos); // wakes the defense guns
+        for (int i = 0; i < 300; i++)
+            objsC.TickReactor(1f / 60f);
+        reactorShots = objsC.Objects.Count(o => o.Type == 5 && o.ParentId == reactorC.Id);
+    }
+
+    // (d) MsgEggs roundtrip + a malformed datagram must not wedge the pump
+    bool eggsOk;
+    using (var host2 = D1U.Game.NetSession.Host("firststrike", 1, "H", 28652))
+    using (var client2 = D1U.Game.NetSession.Join("127.0.0.1", "C", 28652))
+    {
+        (int netId, byte subId, System.Numerics.Vector3 pos, System.Numerics.Vector3 vel)[] gotEggs = null;
+        host2.RemoteEggs += (slot, eggList) => gotEggs = eggList;
+        double now2 = 0;
+        void Pump2(double seconds)
+        {
+            for (double t = 0; t < seconds; t += 0.02)
+            {
+                now2 += 0.02;
+                host2.Update(now2);
+                client2.Update(now2);
+            }
+        }
+        Pump2(1.5);
+        using (var rogue = new System.Net.Sockets.UdpClient())
+            rogue.Send(new byte[] { 0xD1, 3 }, 2, "127.0.0.1", 28652); // truncated poison
+        client2.SendEggs(new[]
+        {
+            (200001, (byte)13, new System.Numerics.Vector3(1, 2, 3), System.Numerics.Vector3.Zero),
+            (200002, (byte)2, new System.Numerics.Vector3(4, 5, 6), System.Numerics.Vector3.Zero),
+        });
+        Pump2(0.5);
+        eggsOk = gotEggs != null && gotEggs.Length == 2 &&
+                 gotEggs[0].netId == 200001 && gotEggs[1].subId == 2;
+    }
+
+    Console.WriteLine($"  review fixes: bad winding={badWinding}, grab@1.9x={grabAfter < grabBefore}, " +
+                      $"egg size={grabEggSize:F1}, reactor shots in 5s={reactorShots}, net eggs ok={eggsOk}");
+    if (badWinding > 0 || grabAfter >= grabBefore || grabEggSize < 2.5f || reactorShots < 4 || !eggsOk)
         errors++;
 }
 catch (Exception e)

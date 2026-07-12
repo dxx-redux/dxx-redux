@@ -40,6 +40,14 @@ namespace D1U.Game
     /// (controls.c:40) and do_physics_sim / do_physics_sim_rot (physics.c),
     /// walls-only for M3.
     /// </summary>
+    /// <summary>One wall contact this step: where, and how hard (collide.c hooks).</summary>
+    public struct WallHitEvent
+    {
+        public int Seg, Side;
+        public float HitSpeed;   // physics.c:752-758 — 0 for a pure scrape
+        public Vector3 Point;
+    }
+
     public sealed class ShipSim
     {
         const float FT = 1f / 64f;                          // physics.c:191
@@ -51,8 +59,21 @@ namespace D1U.Game
         readonly FviInfo hitInfo = new FviInfo();
 
         public readonly List<int> PhysSegList = new List<int>(); // phys_seglist for triggers
-        public readonly List<(int Seg, int Side)> WallHits = new List<(int, int)>(); // per-step bump list
+        public readonly List<WallHitEvent> WallHits = new List<WallHitEvent>(); // per-step bump list
         public FviHit LastFate { get; private set; }
+
+        /// <summary>FQ_CHECK_OBJS: sweep object spheres during the move (physics.c:618).</summary>
+        public ObjectSystem Objects;
+        public Func<GameObj, bool> ObjectFilter;
+        /// <summary>
+        /// Collision response for an object hit mid-move. Return true to fly on
+        /// through (pickup/no-op response — velocity unchanged): the object joins
+        /// the frame's ignore list and the motion continues (physics.c:834-844).
+        /// Return false when the response changed velocities (bump) — motion ends.
+        /// </summary>
+        public Func<int, Vector3, bool> ObjectHit;
+
+        readonly List<int> ignoreObjs = new List<int>(8);
 
         public ShipSim(SegmentWorld world)
         {
@@ -68,6 +89,7 @@ namespace D1U.Game
             s.LastPos = s.Pos;
             PhysSegList.Clear();
             WallHits.Clear();
+            ignoreObjs.Clear();
 
             // ---- read_flying_controls (controls.c:40-110) ----
             var rotThrust = new Vector3(c.PitchTime, c.HeadingTime, c.BankTime);
@@ -131,8 +153,17 @@ namespace D1U.Game
 
                 var newPos = s.Pos + frameVec;
 
-                var query = new FviQuery { P0 = s.Pos, P1 = newPos, StartSeg = s.Segnum, Rad = p.Size };
+                var query = new FviQuery
+                {
+                    P0 = s.Pos, P1 = newPos, StartSeg = s.Segnum, Rad = p.Size,
+                    Objects = Objects, ObjectFilter = ObjectFilter, Ignore = ignoreObjs, ThisObj = -1,
+                };
                 fate = fvi.FindVectorIntersection(query, hitInfo);
+
+                // powerup hits don't consume slide retries (physics.c:640-641)
+                if (fate == FviHit.Object && hitInfo.HitObject >= 0 && Objects != null &&
+                    Objects.Objects[hitInfo.HitObject].Type == 7)
+                    count2--;
 
                 // accumulate traversed segments (physics.c:650-658)
                 if (PhysSegList.Count > 0 && hitInfo.NSegs > 0 &&
@@ -154,7 +185,8 @@ namespace D1U.Game
 
                 if (world.GetSegMasks(s.Pos, s.Segnum, 0f).CenterMask != 0)
                 {
-                    // start point no longer in segment (physics.c:683-701)
+                    // hit point outside the reported segment: the C aborts the
+                    // whole physics frame here, success or not (physics.c:683-701)
                     int n = world.FindPointSeg(s.Pos, s.Segnum);
                     if (n == -1)
                     {
@@ -168,9 +200,8 @@ namespace D1U.Game
                         {
                             s.Pos = world.SegmentCenter(s.Segnum);
                         }
-                        return;
                     }
-                    s.Segnum = n;
+                    return;
                 }
 
                 // recalculate remaining sim time (physics.c:703-741)
@@ -202,7 +233,19 @@ namespace D1U.Game
                 if (fate == FviHit.Wall)
                 {
                     if (hitInfo.HitSideSeg >= 0 && hitInfo.HitSide >= 0)
-                        WallHits.Add((hitInfo.HitSideSeg, hitInfo.HitSide)); // collide_player_and_wall hook
+                    {
+                        // impact speed for collide_object_with_wall (physics.c:748-758)
+                        float hitSpeed = 0f;
+                        var impactVec = s.Pos - savePos;
+                        float impactPart = Vector3.Dot(impactVec, hitInfo.WallNorm);
+                        if (impactPart != 0f && movedTime > 0f)
+                            hitSpeed = Math.Max(0f, -impactPart / movedTime);
+                        WallHits.Add(new WallHitEvent
+                        {
+                            Seg = hitInfo.HitSideSeg, Side = hitInfo.HitSide,
+                            HitSpeed = hitSpeed, Point = hitInfo.HitPoint,
+                        });
+                    }
 
                     // slide along wall (physics.c:785-803)
                     float wallPart = Vector3.Dot(hitInfo.WallNorm, s.Vel);
@@ -214,13 +257,22 @@ namespace D1U.Game
                     s.Vel += hitInfo.WallNorm * (-wallPart);
                     tryAgain = true;
                 }
-                _ = movedTime; // damage hooks (collide.c) arrive with M4/M5
+                else if (fate == FviHit.Object && hitInfo.HitObject >= 0)
+                {
+                    // collide_two_objects response (physics.c:809-847)
+                    bool through = ObjectHit != null && ObjectHit(hitInfo.HitObject, hitInfo.HitPoint);
+                    if (through)
+                    {
+                        ignoreObjs.Add(hitInfo.HitObject);
+                        tryAgain = true;
+                    }
+                }
             } while (tryAgain);
 
             LastFate = fate;
 
             // set velocity from actual movement (physics.c:895-904)
-            if (fate == FviHit.Wall || fate == FviHit.BadP0)
+            if (fate == FviHit.Wall || fate == FviHit.Object || fate == FviHit.BadP0)
                 s.Vel = (s.Pos - startPos) / frameTime;
 
             FixIllegalWallIntersection(s, p, frameTime);
@@ -232,10 +284,11 @@ namespace D1U.Game
                 if (sidenum != -1 && !world.IsPassable(world.Sides[origSegnum][sidenum]))
                 {
                     var side = world.Sides[origSegnum][sidenum];
+                    // min over vertex_list[0..3]: for a 2-face side [3] duplicates a
+                    // face-0 vert, so the 4th corner is excluded (physics.c:932-938)
                     int vertnum = side.NumFaces == 1
                         ? side.AnchorVert
-                        : Math.Min(Math.Min(side.FaceVerts[0], side.FaceVerts[1]),
-                                   Math.Min(side.FaceVerts[2], side.NumFaces == 2 ? side.FaceVerts[4] : side.FaceVerts[3]));
+                        : Math.Min(side.FaceVerts[0], Math.Min(side.FaceVerts[1], side.FaceVerts[2]));
                     float dist = SegmentWorld.DistToPlane(startPos, side.Normals[0], world.Verts[vertnum]);
                     s.Pos = startPos + side.Normals[0] * (p.Size - dist);
                     int n = world.FindPointSeg(s.Pos, origSegnum);
@@ -318,24 +371,19 @@ namespace D1U.Game
             s.Orient.Orthonormalize(); // check_and_fix_matrix
         }
 
-        /// <summary>fix_illegal_wall_intersection (physics.c:388-400), via face masks.</summary>
+        /// <summary>
+        /// fix_illegal_wall_intersection (physics.c:388-400): real sphere-vs-face
+        /// overlap via sphere_intersects_wall — recurses into neighbour segments
+        /// and never pushes off doorway (child) sides.
+        /// </summary>
         void FixIllegalWallIntersection(ShipState s, in ShipParams p, float frameTime)
         {
-            var masks = world.GetSegMasks(s.Pos, s.Segnum, p.Size);
-            if (masks.FaceMask == 0)
+            if (!fvi.SphereIntersectsWall(s.Pos, s.Segnum, p.Size, out int hseg, out int hside))
                 return;
-
-            var sides = world.Sides[s.Segnum];
-            for (int side = 0; side < 6; side++)
-            {
-                if ((masks.SideMask & (1 << side)) == 0 || world.IsPassable(sides[side]))
-                    continue;
-                s.Pos += sides[side].Normals[0] * (frameTime * 10f);
-                int n = world.FindPointSeg(s.Pos, s.Segnum);
-                if (n != -1)
-                    s.Segnum = n;
-                return;
-            }
+            s.Pos += world.Sides[hseg][hside].Normals[0] * (frameTime * 10f); // physics.c:397
+            int n = world.FindPointSeg(s.Pos, s.Segnum);                      // update_object_seg
+            if (n != -1)
+                s.Segnum = n;
         }
     }
 }

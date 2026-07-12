@@ -31,14 +31,15 @@ namespace D1U.Game
     public sealed class NetSession : IDisposable
     {
         public const int DefaultPort = 28342;
-        public const byte ProtocolVersion = 1;
+        public const byte ProtocolVersion = 2;
         public const int MaxPlayers = 8;
 
         const byte MsgJoin = 1, MsgWelcome = 2, MsgJoined = 3, MsgLeft = 4,
                    MsgState = 5, MsgFire = 6, MsgDied = 7, MsgDoor = 8,
-                   MsgPickup = 9, MsgPing = 10, MsgReject = 11;
+                   MsgPickup = 9, MsgPing = 10, MsgReject = 11, MsgEggs = 12;
         const double StateInterval = 1.0 / 15;
         const double TimeoutSeconds = 8.0;
+        const int MaxEggsPerPacket = 32;
 
         readonly UdpClient udp;
         readonly IPEndPoint hostEndPoint; // client side
@@ -64,7 +65,13 @@ namespace D1U.Game
         /// <summary>(victimSlot, killerSlot) — scoreboard already updated.</summary>
         public event Action<int, int> RemoteDied;
         public event Action<int> RemoteDoor;
+        /// <summary>(netObjectId) — a NET object id: a level-baked object index,
+        /// or an egg netId from RemoteEggs; mapping it to a local object is the
+        /// caller's job.</summary>
         public event Action<int> RemotePickup;
+        /// <summary>(senderSlot, eggs) — spawn the sender's death drops locally
+        /// under the shared (netId, subId) ids so pickups resolve everywhere.</summary>
+        public event Action<int, (int netId, byte subId, Vector3 pos, Vector3 vel)[]> RemoteEggs;
 
         double lastStateSend, lastJoinSend, lastPingSend, joinStarted, hostLastHeard;
         Vector3 pendingPos, pendingVel;
@@ -242,6 +249,8 @@ namespace D1U.Game
             Broadcast(p);
         }
 
+        /// <summary>The id is a NET object id — a level-baked object index, or
+        /// an egg netId announced via SendEggs; mapping is the caller's job.</summary>
         public void SendPickup(int objectId)
         {
             if (!Connected)
@@ -250,6 +259,30 @@ namespace D1U.Game
             p.bw.Write((byte)LocalSlot);
             p.bw.Write(objectId);
             Broadcast(p);
+        }
+
+        /// <summary>Announce death drops so they exist on every peer under the
+        /// shared (netId, subId) ids; split into packets of 32 entries.</summary>
+        public void SendEggs((int netId, byte subId, Vector3 pos, Vector3 vel)[] eggs)
+        {
+            if (!Connected || eggs == null || eggs.Length == 0)
+                return;
+            for (int start = 0; start < eggs.Length; start += MaxEggsPerPacket)
+            {
+                int count = Math.Min(MaxEggsPerPacket, eggs.Length - start);
+                var p = NewPacket(MsgEggs);
+                p.bw.Write((byte)LocalSlot);
+                p.bw.Write((byte)count);
+                for (int i = 0; i < count; i++)
+                {
+                    var egg = eggs[start + i];
+                    p.bw.Write(egg.netId);
+                    p.bw.Write(egg.subId);
+                    SaveIo.Write(p.bw, egg.pos);
+                    SaveIo.Write(p.bw, egg.vel);
+                }
+                Broadcast(p);
+            }
         }
 
         // ------------------------------------------------------------------
@@ -277,13 +310,23 @@ namespace D1U.Game
                 }
                 if (data.Length < 2 || data[0] != 0xD1)
                     continue;
-                var br = new BinaryReader(new MemoryStream(data));
-                br.ReadByte();
-                byte type = br.ReadByte();
-                if (IsHost)
-                    HandleAsHost(type, br, data, from, now);
-                else
-                    HandleAsClient(type, br, now);
+                try
+                {
+                    var br = new BinaryReader(new MemoryStream(data));
+                    br.ReadByte();
+                    byte type = br.ReadByte();
+                    if (IsHost)
+                        HandleAsHost(type, br, data, from, now);
+                    else
+                        HandleAsClient(type, br, now);
+                }
+                catch (Exception e) when (e is EndOfStreamException || e is IOException
+                                          || e is FormatException || e is ArgumentException)
+                {
+                    // truncated/garbage datagram: drop just this packet
+                    // (FormatException = BinaryReader.ReadString on a bad
+                    // 7-bit length) and keep pumping the rest of the queue
+                }
             }
         }
 
@@ -328,8 +371,24 @@ namespace D1U.Game
             if (sender == null)
                 return;
             sender.LastHeard = now;
-            RelayRaw(raw, from);
-            ProcessCommon(type, br, now);
+
+            if (type == MsgLeft)
+            {
+                // payload parsed (validated) before the relay goes out; the
+                // host drops the leaver itself instead of waiting for the
+                // 8s timeout to notice
+                int slot = br.ReadByte();
+                RelayRaw(raw, from);
+                if (players.Remove(slot))
+                    PlayerLeft?.Invoke(slot);
+                return;
+            }
+
+            // parse before relaying: a truncated payload throws out of
+            // ProcessCommon and dies here instead of poisoning every client,
+            // and unknown message types are ignored, never forwarded
+            if (ProcessCommon(type, br, now))
+                RelayRaw(raw, from);
         }
 
         void HandleAsClient(byte type, BinaryReader br, double now)
@@ -389,21 +448,29 @@ namespace D1U.Game
             }
         }
 
-        void ProcessCommon(byte type, BinaryReader br, double now)
+        /// <summary>Gameplay messages common to host and clients. Each case reads
+        /// its whole payload before acting, so a malformed packet throws before it
+        /// has side effects — and before the host relays it. Returns false for
+        /// unknown types so the host never forwards what it cannot parse.</summary>
+        bool ProcessCommon(byte type, BinaryReader br, double now)
         {
             switch (type)
             {
                 case MsgState:
                 {
                     int slot = br.ReadByte();
-                    if (slot == LocalSlot)
-                        return;
-                    var player = GetOrTrack(slot, now);
-                    player.Pos = SaveIo.ReadVec(br);
-                    player.Orient = SaveIo.ReadMat(br);
-                    player.Vel = SaveIo.ReadVec(br);
-                    player.LastHeard = now;
-                    return;
+                    var pos = SaveIo.ReadVec(br);
+                    var orient = SaveIo.ReadMat(br);
+                    var vel = SaveIo.ReadVec(br);
+                    if (slot != LocalSlot)
+                    {
+                        var player = GetOrTrack(slot, now);
+                        player.Pos = pos;
+                        player.Orient = orient;
+                        player.Vel = vel;
+                        player.LastHeard = now;
+                    }
+                    return true;
                 }
                 case MsgFire:
                 {
@@ -413,37 +480,59 @@ namespace D1U.Game
                     var dir = SaveIo.ReadVec(br);
                     if (slot != LocalSlot)
                         RemoteFire?.Invoke(slot, weapon, pos, dir);
-                    return;
+                    return true;
                 }
                 case MsgDied:
                 {
                     int victim = br.ReadByte();
                     int killer = br.ReadSByte();
-                    if (victim == LocalSlot)
-                        return;
-                    ApplyDeathToScore(victim, killer);
-                    RemoteDied?.Invoke(victim, killer);
-                    return;
+                    if (victim != LocalSlot)
+                    {
+                        ApplyDeathToScore(victim, killer);
+                        RemoteDied?.Invoke(victim, killer);
+                    }
+                    return true;
                 }
                 case MsgDoor:
                 {
                     br.ReadByte(); // sender slot
-                    RemoteDoor?.Invoke(br.ReadInt32());
-                    return;
+                    int wallIndex = br.ReadInt32();
+                    RemoteDoor?.Invoke(wallIndex);
+                    return true;
                 }
                 case MsgPickup:
                 {
                     br.ReadByte();
-                    RemotePickup?.Invoke(br.ReadInt32());
-                    return;
+                    int netObjectId = br.ReadInt32();
+                    RemotePickup?.Invoke(netObjectId);
+                    return true;
+                }
+                case MsgEggs:
+                {
+                    int slot = br.ReadByte();
+                    int count = br.ReadByte();
+                    var eggs = new (int netId, byte subId, Vector3 pos, Vector3 vel)[count];
+                    for (int i = 0; i < count; i++)
+                    {
+                        int netId = br.ReadInt32();
+                        byte subId = br.ReadByte();
+                        var pos = SaveIo.ReadVec(br);
+                        var vel = SaveIo.ReadVec(br);
+                        eggs[i] = (netId, subId, pos, vel);
+                    }
+                    if (slot != LocalSlot)
+                        RemoteEggs?.Invoke(slot, eggs);
+                    return true;
                 }
                 case MsgPing:
                 {
                     int slot = br.ReadByte();
                     if (slot != LocalSlot)
                         GetOrTrack(slot, now).LastHeard = now;
-                    return;
+                    return true;
                 }
+                default:
+                    return false;
             }
         }
 

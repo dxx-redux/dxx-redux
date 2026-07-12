@@ -93,6 +93,14 @@ namespace D1U.Presentation
         readonly List<(Material material, RenderChunk chunk)> allSurfaces
             = new List<(Material, RenderChunk)>();
 
+        // net egg replication (shared ids across peers) + per-material texture state
+        int bakedObjectCount;
+        int nextEggNetId = 1;
+        readonly Dictionary<int, int> netEggLocal = new Dictionary<int, int>(); // netId -> local id
+        readonly Dictionary<int, int> netEggIds = new Dictionary<int, int>();   // local id -> netId
+        readonly Dictionary<Material, EclipAnimator.SurfaceTexState> surfaceStates =
+            new Dictionary<Material, EclipAnimator.SurfaceTexState>();
+
         static readonly string[] DifficultyNames = { "TRAINEE", "ROOKIE", "HOTSHOT", "ACE", "INSANE" };
 
         void Start()
@@ -115,8 +123,27 @@ namespace D1U.Presentation
             Clear();
         }
 
+        /// <summary>Locked+hidden during play, free over the IMGUI menu. Applied
+        /// every frame (idempotent) so no state transition can leak the cursor.</summary>
+        void UpdateCursor()
+        {
+            if (!Application.isPlaying || !shipMode)
+                return;
+            bool wantLock = !menuMode;
+            Cursor.lockState = wantLock ? CursorLockMode.Locked : CursorLockMode.None;
+            Cursor.visible = !wantLock;
+        }
+
+        void OnApplicationFocus(bool focused)
+        {
+            if (focused)
+                UpdateCursor(); // Windows drops the lock on Alt-Tab — re-acquire
+        }
+
         void OpenMenu()
         {
+            if (automapOpen)
+                CloseAutomap(); // restore the camera before the level tears down
             CloseNet(); // leaving a netgame disconnects
             Clear();
             menuMode = true;
@@ -229,10 +256,17 @@ namespace D1U.Presentation
             if (material.HasProperty("_BaseMap")) material.SetTexture("_BaseMap", texture);
             else material.mainTexture = texture;
             if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", UnityEngine.Color.white);
-            if (material.HasProperty("_Cull")) material.SetInt("_Cull", 0); // double-sided until winding is locked in
+            // back-face culled: each of the two coplanar doorway faces is visible
+            // only from inside its own segment (render.c:412-415); double-sided
+            // rendering made them z-fight
+            if (material.HasProperty("_Cull")) material.SetInt("_Cull", 2);
             if (material.HasProperty("_AlphaClip")) { material.SetFloat("_AlphaClip", 1f); material.EnableKeyword("_ALPHATEST_ON"); }
             if (material.HasProperty("_Cutoff")) material.SetFloat("_Cutoff", 0.5f);
             materials.Add(material);
+            surfaceStates[material] = new EclipAnimator.SurfaceTexState
+            {
+                Base = chunk.BaseBitmap, Overlay = chunk.OverlayBitmap, Rotation = chunk.Rotation,
+            };
 
             go.AddComponent<MeshFilter>().sharedMesh = mesh;
             go.AddComponent<MeshRenderer>().sharedMaterial = material;
@@ -322,17 +356,19 @@ namespace D1U.Presentation
 
                 foreach (var (material, chunk) in allSurfaces)
                 {
+                    if (!surfaceStates.TryGetValue(material, out var state))
+                        continue;
                     if (frameSet.Contains(chunk.BaseBitmap))
                         animator.Entries.Add(new EclipAnimator.Entry
                         {
-                            Material = material, AnimatesBase = true, FrameBitmaps = frames,
-                            OtherBitmap = chunk.OverlayBitmap, Rotation = chunk.Rotation, FrameTime = frameTime,
+                            Material = material, State = state, AnimatesBase = true,
+                            FrameBitmaps = frames, FrameTime = frameTime,
                         });
                     else if (chunk.OverlayBitmap > 0 && frameSet.Contains(chunk.OverlayBitmap))
                         animator.Entries.Add(new EclipAnimator.Entry
                         {
-                            Material = material, AnimatesBase = false, FrameBitmaps = frames,
-                            OtherBitmap = chunk.BaseBitmap, Rotation = chunk.Rotation, FrameTime = frameTime,
+                            Material = material, State = state, AnimatesBase = false,
+                            FrameBitmaps = frames, FrameTime = frameTime,
                         });
                 }
             }
@@ -392,7 +428,18 @@ namespace D1U.Presentation
                 PlayerPrefs.SetInt("d1u_difficulty", D1U.Game.ObjectSystem.Difficulty);
             }
 
-            if (GUI.Button(new Rect(x, rowY + 40, w, 40), "START") ||
+            float sens = PlayerPrefs.GetFloat("d1u_mouse_sens", 1f);
+            GUI.Label(new Rect(x, rowY + 38, 190, 24), $"Mouse speed: {sens:F2}x");
+            float newSens = GUI.HorizontalSlider(new Rect(x + 190, rowY + 44, 170, 20), sens, 0.25f, 4f);
+            if (!Mathf.Approximately(newSens, sens))
+                PlayerPrefs.SetFloat("d1u_mouse_sens", newSens);
+            bool invertY = PlayerPrefs.GetInt("d1u_invert_y", 0) != 0;
+            bool newInvertY = GUI.Toggle(new Rect(x + 380, rowY + 38, 280, 26), invertY,
+                " Invert mouse Y (push = nose up)");
+            if (newInvertY != invertY)
+                PlayerPrefs.SetInt("d1u_invert_y", newInvertY ? 1 : 0);
+
+            if (GUI.Button(new Rect(x, rowY + 74, w, 40), "START") ||
                 Input.GetKeyDown(KeyCode.Return))
             {
                 missionKey = selected.CacheKey;
@@ -400,12 +447,14 @@ namespace D1U.Presentation
                 lives = 3;
                 scoreCarried = 0;
                 lastTotalScore = 0;
+                carryLaserLevel = 0;
+                carryQuad = false;
                 menuMode = false;
                 StartLevel(menuLevel);
                 return;
             }
-            float helpY = rowY + 90;
-            if (File.Exists(SavePath))
+            float helpY = rowY + 124;
+            if (netSession == null && File.Exists(SavePath))
             {
                 if (GUI.Button(new Rect(x, helpY, w, 32), "LOAD GAME  (F9 in game)"))
                 {
@@ -429,6 +478,8 @@ namespace D1U.Presentation
                 joinIp = GUI.TextField(new Rect(x + 80, helpY, 170, 28), joinIp, 45);
                 if (GUI.Button(new Rect(x + 258, helpY, 90, 28), "HOST"))
                 {
+                    carryLaserLevel = 0;
+                    carryQuad = false;
                     StartHost(selected);
                     return;
                 }
@@ -574,9 +625,12 @@ namespace D1U.Presentation
 
         void Update()
         {
+            UpdateCursor();
             if (netSession != null)
             {
                 netSession.Update(Time.timeAsDouble);
+                if (netSession == null)
+                    return; // a JoinFailed handler tore the session down mid-pump
                 if (netSession.Connected && !menuMode && !briefingMode && shipController != null)
                 {
                     var s = shipController.State;
@@ -588,13 +642,29 @@ namespace D1U.Presentation
                 return;
             if (mineExplodedPending)
             {
-                // caught by the self-destruct: the level restarts (cntrlcen.c -> DoPlayerDead)
+                // caught by the self-destruct: the ship is lost with the mine
+                // (cntrlcen.c:198 DoPlayerDead; gameseq.c:1054-1060 lives--/game over)
                 mineExplodedPending = false;
+                lives--;
+                carryLaserLevel = 0;
+                carryQuad = false;
+                if (lives <= 0)
+                {
+                    messages.Add((Time.time, "GAME OVER"));
+                    OpenMenu();
+                    return;
+                }
+                messages.Add((Time.time, $"Ship lost in the blast — {lives} remaining"));
                 StartLevel(levelNumber, briefing: false);
                 return;
             }
             if (Application.isPlaying && shipMode && Input.GetKeyDown(KeyCode.Escape))
             {
+                if (automapOpen)
+                {
+                    CloseAutomap(); // original: Esc leaves the map, not the game
+                    return;
+                }
                 carryLaserLevel = 0;
                 carryQuad = false;
                 OpenMenu();
@@ -613,7 +683,15 @@ namespace D1U.Presentation
                     if (!exitCarryDone)
                     {
                         exitCarryDone = true;
-                        scoreCarried += (objectSystem?.Score ?? 0) + Runtime.Player.Score;
+                        // hostages score at the exit, scaled by difficulty (gameseq.c:758-770)
+                        int diff = D1U.Game.ObjectSystem.Difficulty;
+                        int onBoard = Runtime.Player.HostagesOnBoard;
+                        int hostagePoints = onBoard * 500 * (diff + 1);
+                        if (onBoard > 0 && objectSystem != null && onBoard == objectSystem.HostagesTotal)
+                            hostagePoints += onBoard * 1000 * (diff + 1); // full-rescue bonus
+                        if (hostagePoints > 0)
+                            messages.Add((Time.time, $"{onBoard} hostage(s) delivered: +{hostagePoints}"));
+                        scoreCarried += hostagePoints + (objectSystem?.Score ?? 0) + Runtime.Player.Score;
                     }
                     if (levelNumber > missionLevelCount)
                     {
@@ -740,6 +818,7 @@ namespace D1U.Presentation
                 stats[i] = new D1U.Game.RobotStats
                 {
                     Strength = (float)(double)r.Strength,
+                    Mass = (float)(double)r.Mass,
                     ModelNum = r.ModelNum,
                     DeathVClip = r.DeathVClipNum,
                     DeathSound = r.DeathSoundNum,
@@ -823,6 +902,7 @@ namespace D1U.Presentation
             Runtime.WallFrameChanged += OnWallFrameChanged;
             Runtime.WallHiddenChanged += OnWallHiddenChanged;
             Runtime.Message += text => messages.Add((Time.time, text));
+            Runtime.EmitVisualSync(); // authored wall state: blasted/opened/illusion-off
 
             var orient = new D1U.Game.Mat3
             {
@@ -842,6 +922,10 @@ namespace D1U.Presentation
                     break;
                 }
 
+            var powerupSizes = new float[pig.numPowerups];
+            for (int i = 0; i < pig.numPowerups; i++)
+                powerupSizes[i] = pig.Powerups[i] != null ? (float)(double)pig.Powerups[i].Size : 3f;
+
             objectsParent = new GameObject("Objects").transform;
             objectsParent.SetParent(transform, false);
             objectSystem = new D1U.Game.ObjectSystem(world,
@@ -850,8 +934,14 @@ namespace D1U.Presentation
                     var visual = ObjectVisuals.Resolve(pig, record);
                     return (visual.ModelNum, visual.VClipNum);
                 },
-                robotStats, reactorShields)
+                robotStats, reactorShields, powerupSizes)
             { Runtime = Runtime };
+            bakedObjectCount = objectSystem.Objects.Count; // ids below this are shared net-wide
+            netEggLocal.Clear();
+            netEggIds.Clear();
+            nextEggNetId = 1;
+            objectSystem.ExtraLife += () => lives++;
+            Runtime.SideBlocked = objectSystem.AnyObjectPokesSide; // doors won't scissor objects
             objectSystem.Message += text => messages.Add((Time.time, text));
             objectSystem.Sound += (soundId, pos) => sounds?.PlayAt(soundId, ToUnity(pos), 0.7f);
             Runtime.MatcenTriggered += objectSystem.TriggerMatcen;
@@ -875,12 +965,21 @@ namespace D1U.Presentation
             };
             objectSystem.Removed += obj =>
             {
-                if (netSession != null && !applyingRemote && (obj.Type == 7 || obj.Type == 3))
-                    netSession.SendPickup(obj.Id); // picked up here: gone for everyone
                 if (objectViews.TryGetValue(obj.Id, out var view) && view != null)
                     Destroy(view);
                 objectViews.Remove(obj.Id);
                 objectAnimators.Remove(obj.Id);
+            };
+            objectSystem.PickedUp += obj =>
+            {
+                // CONSUMED here: gone for everyone (mere expiry is never broadcast)
+                if (netSession == null || applyingRemote)
+                    return;
+                int netId = obj.Id < bakedObjectCount
+                    ? obj.Id
+                    : netEggIds.TryGetValue(obj.Id, out var mapped) ? mapped : -1;
+                if (netId >= 0)
+                    netSession.SendPickup(netId);
             };
             objectSystem.Exploded += OnExplosion;
             objectSystem.Spawned += CreateObjectView;
@@ -912,6 +1011,27 @@ namespace D1U.Presentation
             controller.Runtime = Runtime;
             controller.Objects = objectSystem;
             controller.Sounds = sounds;
+            controller.WallBonkSound = 70;  // SOUND_PLAYER_HIT_WALL (sounds.h:204)
+            controller.ScrapeSound = 151;   // SOUND_VOLATILE_WALL_HISS (sounds.h:218)
+            controller.mouseSensMultiplier = PlayerPrefs.GetFloat("d1u_mouse_sens", 1f);
+            controller.invertMouseY = PlayerPrefs.GetInt("d1u_invert_y", 0) != 0;
+            controller.Weapons.MultiplayerScale = netSession != null;
+            controller.Weapons.Message += text => messages.Add((Time.time, text));
+            controller.EggsSpilled += eggs =>
+            {
+                if (netSession == null || eggs.Count == 0)
+                    return;
+                var packet = new (int netId, byte subId, System.Numerics.Vector3 pos,
+                                  System.Numerics.Vector3 vel)[eggs.Count];
+                for (int i = 0; i < eggs.Count; i++)
+                {
+                    int netId = (netSession.LocalSlot + 1) * 100000 + nextEggNetId++;
+                    netEggIds[eggs[i].Id] = netId;
+                    netEggLocal[netId] = eggs[i].Id;
+                    packet[i] = (netId, eggs[i].SubId, eggs[i].Pos, eggs[i].Vel);
+                }
+                netSession.SendEggs(packet);
+            };
             if (netSession == null)
             {
                 controller.TryConsumeLife = () => --lives > 0;
@@ -960,6 +1080,23 @@ namespace D1U.Presentation
             controller.WeaponStats = weaponStats;
             objectSystem.SetWeaponTable(weaponStats);
             objectSystem.Loadout = controller.Weapons;
+
+            // volatile (lava) side damage: per-side tmap -> TmapInfo.damage
+            var tmapInfos = pig.TMapInfo;
+            var tmapDamage = new float[tmapInfos != null ? tmapInfos.Length : 0];
+            for (int i = 0; i < tmapDamage.Length; i++)
+                tmapDamage[i] = tmapInfos[i] != null ? (float)(double)tmapInfos[i].Damage : 0f;
+            var bakedSegs = LoadedLevel.Segments;
+            controller.SideDamage = (seg, side) =>
+            {
+                if (tmapDamage.Length == 0 || seg < 0 || seg >= bakedSegs.Length)
+                    return 0f;
+                var tmaps = bakedSegs[seg].SideTmaps;
+                if (tmaps == null)
+                    return 0f;
+                int tmap = tmaps[side];
+                return tmap >= 0 && tmap < tmapDamage.Length ? tmapDamage[tmap] : 0f;
+            };
             objectSystem.PlayerHit += (damage, source) =>
             {
                 bool wasDead = controller.IsDead;
@@ -1024,7 +1161,7 @@ namespace D1U.Presentation
                 using (var bw = new System.IO.BinaryWriter(File.Create(SavePath)))
                 {
                     bw.Write(0x56533144); // "D1SV"
-                    bw.Write(3);          // save format version
+                    bw.Write(4);          // save format version (v4: linked doors, hostages)
                     bw.Write(missionKey ?? "");
                     bw.Write(levelNumber);
                     bw.Write(returnAfterSecret);
@@ -1064,7 +1201,7 @@ namespace D1U.Presentation
             try
             {
                 var br = new System.IO.BinaryReader(new MemoryStream(File.ReadAllBytes(SavePath)));
-                if (br.ReadInt32() != 0x56533144 || br.ReadInt32() != 3)
+                if (br.ReadInt32() != 0x56533144 || br.ReadInt32() != 4)
                     throw new InvalidDataException("not a D1X-Unity savegame (or an older format)");
                 missionKey = br.ReadString();
                 levelNumber = br.ReadInt32();
@@ -1109,6 +1246,8 @@ namespace D1U.Presentation
                 shipController.RestoreFromLoad();
                 Runtime.EmitVisualSync();
                 RebuildObjectViews();
+                // don't re-earn extra lives for score the save already banked
+                lastTotalScore = scoreCarried + objectSystem.Score + Runtime.Player.Score;
                 messages.Add((Time.time, "Game restored"));
             }
             catch (Exception e)
@@ -1252,6 +1391,8 @@ namespace D1U.Presentation
             {
                 missionKey = netSession.MissionKey;
                 returnAfterSecret = 0;
+                carryLaserLevel = 0;
+                carryQuad = false;
                 menuNetStatus = "";
                 menuMode = false;
                 StartLevel(netSession.LevelNumber, briefing: false);
@@ -1291,8 +1432,28 @@ namespace D1U.Presentation
             {
                 if (objectSystem == null)
                     return;
+                int localId = id < bakedObjectCount
+                    ? id
+                    : netEggLocal.TryGetValue(id, out var mapped) ? mapped : -1;
+                if (localId < 0)
+                    return;
                 applyingRemote = true;
-                objectSystem.RemoveRemote(id);
+                objectSystem.RemoveRemote(localId);
+                applyingRemote = false;
+            };
+            netSession.RemoteEggs += (slot, eggs) =>
+            {
+                if (objectSystem == null)
+                    return;
+                applyingRemote = true;
+                foreach (var (netId, subId, pos, vel) in eggs)
+                {
+                    if (netEggLocal.ContainsKey(netId))
+                        continue; // relay duplicates
+                    var drop = objectSystem.AddNetEgg(subId, pos, vel);
+                    netEggLocal[netId] = drop.Id;
+                    netEggIds[drop.Id] = netId;
+                }
                 applyingRemote = false;
             };
         }
@@ -1386,7 +1547,9 @@ namespace D1U.Presentation
                 camAutomapParent = cam.transform.parent;
                 cam.transform.SetParent(null, true);
             }
-            shipController.Paused = true;
+            // single-player automap pauses time (original); a netgame never pauses,
+            // or incoming fire would freeze mid-air and the player would be immune
+            shipController.Paused = netSession == null;
             automapOpen = true;
         }
 
@@ -1436,9 +1599,23 @@ namespace D1U.Presentation
             int frameBitmap = textureTable[clip.Frames[frame]];
             foreach (var (material, chunk, _) in pieces)
             {
-                var texture = tmap1
-                    ? textureFactory.Get(frameBitmap, chunk.OverlayBitmap, chunk.Rotation)
-                    : textureFactory.Get(chunk.BaseBitmap, frameBitmap, chunk.Rotation);
+                if (!surfaceStates.TryGetValue(material, out var state))
+                    surfaceStates[material] = state = new EclipAnimator.SurfaceTexState
+                    {
+                        Base = chunk.BaseBitmap, Overlay = chunk.OverlayBitmap, Rotation = chunk.Rotation,
+                    };
+                if (tmap1)
+                {
+                    state.Base = frameBitmap;
+                }
+                else
+                {
+                    // wall_set_tmap_num overwrites the rotation bits — animation
+                    // frames render unrotated (wall.c:239)
+                    state.Overlay = frameBitmap;
+                    state.Rotation = 0;
+                }
+                var texture = textureFactory.Get(state.Base, state.Overlay, state.Rotation);
                 if (material.HasProperty("_BaseMap")) material.SetTexture("_BaseMap", texture);
                 else material.mainTexture = texture;
             }

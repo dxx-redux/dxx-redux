@@ -33,9 +33,27 @@ namespace D1U.Game
 
         float nextFire;
         float nextFireSecondary;
+        float nextFlare;         // Next_flare_fire_time (game.c:644-655)
+        float fusionSoundTimer;  // Fusion_next_sound_time (game.c:1285-1305)
         int missileGun;      // Missile_gun toggle: alternate gun points 4/5
         bool spreadAxis;     // spreadfire alternates horizontal/vertical
         uint randSeed = 0x5115;
+
+        /// <summary>Weapon id of the last successful shot, for firing sounds.</summary>
+        public int LastFiredId { get; private set; }
+
+        /// <summary>Use the multiplayer fusion scale/halving (laser.c:249-263).</summary>
+        public bool MultiplayerScale;
+
+        /// <summary>HUD text from auto-select ("&lt;name&gt; selected!", weapon.c:319).</summary>
+        public event Action<string> Message;
+
+        const float RearmTime = 1f; // REARM_TIME (weapon.h:74)
+
+        // DefaultPrimaryOrder/DefaultSecondaryOrder up to the 255 cutpoint
+        // (weapon.c:48-49); prox sits past the cutpoint, never auto-selected.
+        static readonly int[] PrimaryPriority = { 4, 3, 2, 1, 0 };
+        static readonly int[] SecondaryPriority = { 4, 3, 1, 0 };
 
         public bool OwnsPrimary(int index) => index switch
         {
@@ -73,6 +91,7 @@ namespace D1U.Game
         {
             nextFire = Math.Max(0f, nextFire - dt);
             nextFireSecondary = Math.Max(0f, nextFireSecondary - dt);
+            nextFlare = Math.Max(0f, nextFlare - dt);
         }
 
         /// <summary>Death: back to the bare ship (init_player_stats_new_ship).</summary>
@@ -133,24 +152,28 @@ namespace D1U.Game
             if (nextFire > 0f)
                 return false;
 
+            bool fired = false;
             switch (SelectedPrimary)
             {
                 case 0: // lasers: both barrels (quad = 4)
                 {
                     var stats = weapons[LaserLevel];
-                    if (player.Energy < stats.EnergyUsage)
-                        return false;
-                    player.Energy -= stats.EnergyUsage;
+                    float cost = ScaleEnergy(stats.EnergyUsage);
+                    if (player.Energy < cost)
+                        break;
+                    player.Energy -= cost;
                     nextFire += Math.Max(0.05f, stats.FireWait);
                     int gunCount = Quad ? 4 : 2;
                     for (int gun = 0; gun < gunCount; gun++)
                         Spawn(objects, stats, (byte)LaserLevel, ship, gunPoints[gun], ship.Orient.Forward);
-                    return true;
+                    LastFiredId = LaserLevel;
+                    fired = true;
+                    break;
                 }
                 case 1: // vulcan: gun 6, ammo, angular jitter (laser.c:1289)
                 {
                     if (!HasVulcan || VulcanAmmo <= 0)
-                        return false;
+                        break;
                     var stats = weapons[11];
                     VulcanAmmo--;
                     nextFire += Math.Max(0.03f, stats.FireWait);
@@ -158,14 +181,17 @@ namespace D1U.Game
                     float jitterH = (Rand() / 8 - 2048) / 65536f;
                     var dir = ship.Orient.TransformRow(Mat3.FromAngles(jitterP, 0f, jitterH).Forward);
                     Spawn(objects, stats, 11, ship, gunPoints[6], dir);
-                    return true;
+                    LastFiredId = 11;
+                    fired = true;
+                    break;
                 }
                 case 2: // spreadfire: 3 bolts, alternating spread axis (laser.c:1298-1307)
                 {
                     var stats = weapons[12];
-                    if (!HasSpread || player.Energy < stats.EnergyUsage)
-                        return false;
-                    player.Energy -= stats.EnergyUsage;
+                    float cost = ScaleEnergy(stats.EnergyUsage);
+                    if (!HasSpread || player.Energy < cost)
+                        break;
+                    player.Energy -= cost;
                     nextFire += Math.Max(0.05f, stats.FireWait);
                     var axis = spreadAxis ? ship.Orient.Up : ship.Orient.Right;
                     spreadAxis = !spreadAxis;
@@ -173,32 +199,90 @@ namespace D1U.Game
                     Spawn(objects, stats, 12, ship, gunPoints[6], fwd);
                     Spawn(objects, stats, 12, ship, gunPoints[6], Vector3.Normalize(fwd + axis * (1f / 16f)));
                     Spawn(objects, stats, 12, ship, gunPoints[6], Vector3.Normalize(fwd - axis * (1f / 16f)));
-                    return true;
+                    LastFiredId = 12;
+                    fired = true;
+                    break;
                 }
                 case 3: // plasma: both barrels
                 {
                     var stats = weapons[13];
-                    if (!HasPlasma || player.Energy < stats.EnergyUsage)
-                        return false;
-                    player.Energy -= stats.EnergyUsage;
+                    float cost = ScaleEnergy(stats.EnergyUsage);
+                    if (!HasPlasma || player.Energy < cost)
+                        break;
+                    player.Energy -= cost;
                     nextFire += Math.Max(0.05f, stats.FireWait);
                     Spawn(objects, stats, 13, ship, gunPoints[0], ship.Orient.Forward);
                     Spawn(objects, stats, 13, ship, gunPoints[1], ship.Orient.Forward);
-                    return true;
+                    LastFiredId = 13;
+                    fired = true;
+                    break;
                 }
                 default:
-                    return false;
+                    return false; // fusion (4) never fires here; no dry auto-select (game.c:1259)
             }
+
+            // auto_select_weapon(0) after each shot (laser.c:1248); also on a dry
+            // trigger (quietly), so an empty weapon switches away.
+            MaybeAutoSelectPrimary(player, weapons, !fired);
+            return fired;
         }
 
-        /// <summary>Fusion charges while the trigger is held (game.c:1253-1317, simplified).</summary>
-        public void FusionHold(PlayerState player, float dt)
+        /// <summary>
+        /// Flare (laser.c:875-905 Flare_create): gun 6, along ship forward; fires
+        /// while any energy remains and charges the difficulty-scaled flare cost,
+        /// clamped at 0. Flat 0.25s refire gate (game.c:644-655), not FireWait.
+        /// </summary>
+        public bool FireFlare(ObjectSystem objects, PlayerState player, WeaponStats[] weapons,
+                              ShipState ship, Vector3[] gunPoints)
         {
+            if (nextFlare > 0f)
+                return false;
             if (player.Energy <= 0f)
-                return;
-            float drain = Math.Min(player.Energy, 2f * dt);
-            player.Energy -= drain;
-            FusionCharge = Math.Min(4f, FusionCharge + dt);
+                return false;
+            nextFlare = 0.25f; // Next_flare_fire_time = GameTime64 + F1_0/4 (game.c:653)
+            player.Energy -= ScaleEnergy(weapons[9].EnergyUsage);
+            if (player.Energy <= 0f)
+            {
+                player.Energy = 0f;
+                MaybeAutoSelectPrimary(player, weapons, false); // laser.c:887-889
+            }
+            Spawn(objects, weapons[9], 9, ship, gunPoints[6], ship.Orient.Forward);
+            LastFiredId = 9;
+            return true;
+        }
+
+        /// <summary>
+        /// Fusion charges while the trigger is held (game.c:1253-1320): 2 energy
+        /// up front, then 1 energy/sec; the charge itself is uncapped. Returns
+        /// the overcharge self-damage for this frame (game.c:1285-1301): on each
+        /// warmup-sound tick (every 0.125..0.25s) with charge above 2.0 the player
+        /// takes d_rand()*4 (0..2) damage; the caller applies it. Returns 0 when
+        /// none. Charging cannot start below 2 energy (game.c:1259); when energy
+        /// hits 0 the C fires immediately (game.c:1271-1273), so the caller should
+        /// release when Energy reaches 0.
+        /// </summary>
+        public float FusionHold(PlayerState player, float dt)
+        {
+            if (FusionCharge <= 0f)
+            {
+                if (player.Energy < 2f)
+                    return 0f;      // need 2 energy to start charging (game.c:1259)
+                player.Energy -= 2f; // up-front cost when the charge starts (game.c:1265-1266)
+            }
+            else if (player.Energy <= 0f)
+                return 0f;          // drained dry: C auto-fires here, we just stop charging
+
+            FusionCharge += dt;     // uncapped (game.c:1268)
+            player.Energy -= dt;    // 1 energy/sec while held (game.c:1269)
+            if (player.Energy < 0f)
+                player.Energy = 0f;
+
+            fusionSoundTimer -= dt;
+            if (fusionSoundTimer > 0f)
+                return 0f;
+            float damage = FusionCharge > 2f ? Rand() * 4f / 65536f : 0f; // game.c:1288-1291
+            fusionSoundTimer = 0.125f + (Rand() / 4) / 65536f; // F1_0/8 + d_rand()/4 (game.c:1307)
+            return damage;
         }
 
         /// <summary>Release the fusion trigger: fire both bolts with the charge multiplier.</summary>
@@ -211,14 +295,23 @@ namespace D1U.Game
                 return false;
             }
             var stats = weapons[14];
-            // damage multiplier 1 + charge/2, single-player cap 4x (laser.c:246-263)
-            float multiplier = Math.Min(4f, 1f + FusionCharge / 2f);
+            // multiplier (laser.c:246-263): scale 4 single player, 2 in multi;
+            // 1 + charge/2 up to the scale, then jumps to the scale; multiplayer
+            // results are halved again.
+            float scale = MultiplayerScale ? 2f : 4f;
+            float multiplier = FusionCharge <= 0f ? 1f
+                : FusionCharge <= scale ? 1f + FusionCharge / 2f : scale;
+            if (MultiplayerScale)
+                multiplier /= 2f;
             FusionCharge = 0f;
             var boosted = stats;
             boosted.Strength *= multiplier;
             nextFire += Math.Max(0.25f, stats.FireWait);
             Spawn(objects, boosted, 14, ship, gunPoints[0], ship.Orient.Forward);
             Spawn(objects, boosted, 14, ship, gunPoints[1], ship.Orient.Forward);
+            LastFiredId = 14;
+            // fusion uses 0 energy on release, so switch away if under 2 (laser.c:1248)
+            MaybeAutoSelectPrimary(player, weapons, false);
             return true;
         }
 
@@ -244,7 +337,11 @@ namespace D1U.Game
             if (preferHoming && Homings > 0)
                 slot = 1;
             if (SecondaryCount(slot) <= 0)
+            {
+                // dry attempt: pick the next missile type per the C order
+                MaybeAutoSelectSecondary(true);
                 return -1;
+            }
 
             switch (slot)
             {
@@ -266,6 +363,8 @@ namespace D1U.Game
                 var bomb = objects.FireWeapon(stats, (byte)weaponId, pos, -ship.Orient.Forward, ship.Segnum);
                 bomb.Vel = ship.Vel * 0.5f - ship.Orient.Forward * 4f;
                 bomb.LifeLeft = Math.Max(bomb.LifeLeft, 120f);
+                LastFiredId = weaponId;
+                MaybeAutoSelectSecondary(false); // laser.c:1585-1587
                 return weaponId;
             }
 
@@ -274,7 +373,98 @@ namespace D1U.Game
                 missileGun++;
             var muzzle = ship.Pos + ship.Orient.TransformRow(gunPoints[gun]);
             objects.FireWeapon(stats, (byte)weaponId, muzzle, ship.Orient.Forward, ship.Segnum);
+            LastFiredId = weaponId;
+            // select the next missile once this one runs out (laser.c:1585-1587);
+            // skipped when the shot was redirected off the selected slot.
+            if (slot == SelectedSecondary)
+                MaybeAutoSelectSecondary(false);
             return weaponId;
+        }
+
+        // low-difficulty energy discount (laser.c:1129-1131, 881-882):
+        // x(Difficulty+2)/4 below Hotshot -> x0.5 Trainee, x0.75 Rookie
+        static float ScaleEnergy(float usage)
+            => ObjectSystem.Difficulty < 2 ? usage * (ObjectSystem.Difficulty + 2) * 0.25f : usage;
+
+        // player_has_weapon HAS_ALL (weapon.c:75-152): owned + ammo + energy.
+        // Energy is checked against the UNSCALED usage; fusion needs 2 energy
+        // despite a 0 usage (weapon.c:127-135).
+        bool PrimaryHasAll(PlayerState player, WeaponStats[] weapons, int index)
+        {
+            if (!OwnsPrimary(index))
+                return false;
+            if (index == 1 && VulcanAmmo <= 0)
+                return false;
+            if (index == 4)
+                return player.Energy >= 2f;
+            int wid = index switch { 1 => 11, 2 => 12, 3 => 13, _ => 0 };
+            return player.Energy >= weapons[wid].EnergyUsage;
+        }
+
+        /// <summary>
+        /// classic_auto_select_weapon(0) (weapon.c:371-433): if the selected
+        /// primary can't fire, walk the priority order fusion, plasma, spread,
+        /// vulcan, laser from the current one, wrapping; fall back to lasers.
+        /// quietIfUnchanged suppresses the no-weapons message on dry retriggers.
+        /// </summary>
+        void MaybeAutoSelectPrimary(PlayerState player, WeaponStats[] weapons, bool quietIfUnchanged)
+        {
+            if (PrimaryHasAll(player, weapons, SelectedPrimary))
+                return;
+            int start = Array.IndexOf(PrimaryPriority, SelectedPrimary);
+            for (int i = 1; i <= PrimaryPriority.Length; i++)
+            {
+                int candidate = PrimaryPriority[(start + i) % PrimaryPriority.Length];
+                if (candidate == SelectedPrimary)
+                    break; // tried all -> fall back to lasers (TXT_NO_PRIMARY)
+                if (candidate == 0 && Quad)
+                    continue; // quad owners have no plain-laser slot (weapon.c:52-68)
+                if (!PrimaryHasAll(player, weapons, candidate))
+                    continue;
+                SelectedPrimary = candidate;
+                FusionCharge = 0f;    // select_weapon drops the charge (weapon.c:264)
+                nextFire = RearmTime; // rearm on switch (weapon.c:284)
+                Message?.Invoke($"{PrimaryName} selected!"); // TXT_SELECTED (weapon.c:319)
+                return;
+            }
+            bool changed = SelectedPrimary != 0;
+            if (changed)
+            {
+                SelectedPrimary = 0;
+                FusionCharge = 0f;
+                nextFire = RearmTime;
+            }
+            if (changed || !quietIfUnchanged)
+                Message?.Invoke("No primary weapons available"); // TXT_NO_PRIMARY (weapon.c:426)
+        }
+
+        /// <summary>
+        /// classic_auto_select_weapon(1) (weapon.c:436-462): mega, smart, homing,
+        /// concussion from the current one, wrapping; prox is never a candidate.
+        /// </summary>
+        void MaybeAutoSelectSecondary(bool quietIfUnchanged)
+        {
+            if (SecondaryCount(SelectedSecondary) > 0)
+                return;
+            int start = Array.IndexOf(SecondaryPriority, SelectedSecondary); // -1 when prox
+            for (int i = 1; i <= SecondaryPriority.Length; i++)
+            {
+                int candidate = SecondaryPriority[(start + i) % SecondaryPriority.Length];
+                if (candidate == SelectedSecondary)
+                {
+                    if (!quietIfUnchanged)
+                        Message?.Invoke("No secondary weapons available!"); // weapon.c:456
+                    return;
+                }
+                if (SecondaryCount(candidate) <= 0)
+                    continue;
+                SelectedSecondary = candidate;
+                nextFireSecondary = RearmTime; // rearm on switch (weapon.c:303)
+                Message?.Invoke($"{SecondaryName} selected!"); // TXT_SELECTED (weapon.c:319)
+                return;
+            }
+            if (!quietIfUnchanged) // prox selected, nothing in the order left
+                Message?.Invoke("No secondary weapons selected!"); // weapon.c:447
         }
     }
 }

@@ -6,17 +6,26 @@ namespace D1U.Presentation
     /// <summary>
     /// Animates wall surfaces whose base or overlay texture belongs to an
     /// eclip (effects.c: eclips rewrite Textures[] every frame_time). Each
-    /// entry swaps in the current frame's merged texture.
+    /// entry re-merges the surface's CURRENT layer pair, so door-frame
+    /// changes (which update the shared state) survive eclip ticks.
     /// </summary>
     public class EclipAnimator : MonoBehaviour
     {
+        /// <summary>Live (base, overlay, rotation) of one wall material — shared
+        /// between the eclip animator and the door-frame handler.</summary>
+        public sealed class SurfaceTexState
+        {
+            public int Base;
+            public int Overlay;
+            public int Rotation;
+        }
+
         public sealed class Entry
         {
             public Material Material;
+            public SurfaceTexState State;
             public bool AnimatesBase;   // else the overlay animates
             public int[] FrameBitmaps;
-            public int OtherBitmap;     // the non-animated layer
-            public int Rotation;
             public float FrameTime;
             public int LastFrame = -1;
         }
@@ -31,13 +40,14 @@ namespace D1U.Presentation
             foreach (var entry in Entries)
             {
                 int frame = (int)(Time.time / entry.FrameTime) % entry.FrameBitmaps.Length;
-                if (frame == entry.LastFrame || entry.Material == null)
+                if (frame == entry.LastFrame || entry.Material == null || entry.State == null)
                     continue;
                 entry.LastFrame = frame;
-                int frameBitmap = entry.FrameBitmaps[frame];
-                var texture = entry.AnimatesBase
-                    ? Textures.Get(frameBitmap, entry.OtherBitmap, entry.Rotation)
-                    : Textures.Get(entry.OtherBitmap, frameBitmap, entry.Rotation);
+                if (entry.AnimatesBase)
+                    entry.State.Base = entry.FrameBitmaps[frame];
+                else
+                    entry.State.Overlay = entry.FrameBitmaps[frame];
+                var texture = Textures.Get(entry.State.Base, entry.State.Overlay, entry.State.Rotation);
                 if (entry.Material.HasProperty("_BaseMap")) entry.Material.SetTexture("_BaseMap", texture);
                 else entry.Material.mainTexture = texture;
             }

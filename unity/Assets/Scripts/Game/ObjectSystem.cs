@@ -9,6 +9,7 @@ namespace D1U.Game
     public struct RobotStats
     {
         public float Strength;
+        public float Mass;                   // robot_info mass (bump_two_objects)
         public int ModelNum;
         public int DeathVClip;
         public int DeathSound;
@@ -116,9 +117,18 @@ namespace D1U.Game
         public Vector3 PlayerVel;
         public int PlayerSeg = -1;
         public float PlayerSize = 4.7f;
+        public float PlayerMass = 4f;        // player_ship.mass (bump_two_objects)
         public bool PlayerAlive = true;
         public bool PlayerCloaked;
+        /// <summary>Live player stats for pickups that happen inside the sim (moving powerups).</summary>
+        public PlayerState PlayerRef;
         public int Score { get; private set; }
+
+        /// <summary>Powerup_info[id].size (pig powerup table); pickup radii + sprites.</summary>
+        public float[] PowerupSizes;
+        float PowerupSize(int id, float fallback = 3f)
+            => PowerupSizes != null && id >= 0 && id < PowerupSizes.Length && PowerupSizes[id] > 0f
+                ? PowerupSizes[id] : fallback;
 
         public event Action<GameObj> Spawned;
         public event Action<GameObj> Removed;
@@ -128,9 +138,14 @@ namespace D1U.Game
         /// <summary>(damage, source) — a robot weapon or claw reached the player.</summary>
         public event Action<float, GameObj> PlayerHit;
         public event Action<string> Message;
+        /// <summary>The local player consumed a powerup (for net pickup replication).</summary>
+        public event Action<GameObj> PickedUp;
+        /// <summary>POW_EXTRA_LIFE collected.</summary>
+        public event Action ExtraLife;
 
         public int RobotsAlive { get; private set; }
         public int HostagesRescued { get; private set; }
+        public int HostagesTotal { get; private set; }
 
         // d_rand LCG (maths/rand.c)
         uint randSeed = 0x1234;
@@ -154,14 +169,34 @@ namespace D1U.Game
         readonly Dictionary<int, float> bossTeleportTimer = new Dictionary<int, float>();
         readonly Dictionary<int, List<int>> bossTeleportSegs = new Dictionary<int, List<int>>();
 
+        // weapon object-filter state (one cached delegate instead of a closure per shot)
+        int filterOwnerId;
+        readonly Func<GameObj, bool> weaponTargetFilter;
+
+        // eggs spilled by the current DropPlayerEggs call (net replication)
+        List<GameObj> eggCollector;
+
+        // reactor defense state (do_controlcen_frame, cntrlcen.c:233-355)
+        float reactorNextFire;
+        float reactorScanTimer;
+        float reactorSilence;
+        bool reactorBeenHit;
+        bool reactorSeen;
+
         public ObjectSystem(SegmentWorld world,
                             Func<ObjectRecord, (int model, int vclip)> visualResolver,
-                            RobotStats[] robots, float reactorShields)
+                            RobotStats[] robots, float reactorShields,
+                            float[] powerupSizes = null)
         {
             this.world = world;
             robotStats = robots;
             fvi = new Fvi(world);
             segObjects = new List<int>[world.SegmentCount];
+            PowerupSizes = powerupSizes;
+            weaponTargetFilter = target =>
+                target.Id != filterOwnerId &&
+                (filterOwnerId < 0 ? target.Type == 2 || target.Type == 9  // player shots
+                                   : target.Type == 2);                    // robot shots
 
             foreach (var record in world.Level.Objects)
             {
@@ -176,7 +211,9 @@ namespace D1U.Game
                     SubId = record.SubtypeId,
                     Pos = record.Position,
                     Segnum = record.Segnum,
-                    Size = record.Size,
+                    // placed powerups get the canonical Powerup_info size, not the
+                    // level-file value (gamesave.c:280)
+                    Size = type == 7 ? PowerupSize(record.SubtypeId, record.Size) : record.Size,
                     ModelNum = model,
                     VClipNum = vclip,
                     ContainsType = record.ContainsType,
@@ -193,6 +230,10 @@ namespace D1U.Game
                     obj.ExplVClip = stats.DeathVClip;
                     obj.ExplSound = stats.DeathSound;
                     RobotsAlive++;
+                }
+                else if (type == 3)
+                {
+                    HostagesTotal++;
                 }
                 else if (type == 9)
                 {
@@ -320,6 +361,7 @@ namespace D1U.Game
                 }
 
                 var end = weapon.Pos + weapon.Vel * dt;
+                filterOwnerId = weapon.ParentId;
                 int ownerId = weapon.ParentId;
                 var query = new FviQuery
                 {
@@ -329,10 +371,7 @@ namespace D1U.Game
                     Rad = weapon.Size,
                     Objects = this,
                     ThisObj = weapon.Id,
-                    ObjectFilter = target =>
-                        target.Id != ownerId &&
-                        (ownerId < 0 ? target.Type == 2 || target.Type == 9  // player shots
-                                     : target.Type == 2),                    // robot shots
+                    ObjectFilter = weaponTargetFilter, // cached — no per-weapon closure
                 };
                 var fate = fvi.FindVectorIntersection(query, hitInfo);
 
@@ -373,7 +412,8 @@ namespace D1U.Game
                                 Relink(weapon, hitInfo.HitSeg);
                             break;
                         }
-                        Runtime?.DamageWall(hitInfo.HitSideSeg, hitInfo.HitSide, weapon.Shields);
+                        Runtime?.WeaponHitWall(hitInfo.HitSideSeg, hitInfo.HitSide,
+                            weapon.Shields, weapon.ParentId < 0); // wall_hit_process
                         Exploded?.Invoke(weapon, hitInfo.HitPoint);
                         Remove(weapon);
                         BadassDamage(weapon, hitInfo.HitPoint);
@@ -408,12 +448,29 @@ namespace D1U.Game
                 weapon.HomerAccum -= homerTick;
                 var velDir = weapon.Vel / speed;
 
+                // drop a player target that died or cloaked (track_track_goal)
+                if (weapon.HomingTarget == -2 && (!PlayerAlive || PlayerCloaked))
+                    weapon.HomingTarget = -1;
+
                 // (re)acquire: nearest target within 250 units and 3/4 dot
-                if (weapon.HomingTarget < 0 || Objects[weapon.HomingTarget].Dead)
+                if (weapon.HomingTarget == -1 ||
+                    (weapon.HomingTarget >= 0 && Objects[weapon.HomingTarget].Dead))
                 {
                     weapon.HomingTarget = -1;
                     float best = 250f;
-                    if (weapon.ParentId < 0) // player missiles track robots
+                    if (weapon.ParentId >= 0)
+                    {
+                        // robot/reactor missiles track the player
+                        if (PlayerAlive && !PlayerCloaked)
+                        {
+                            var toPlayer = PlayerPos - weapon.Pos;
+                            float dPlayer = toPlayer.Length();
+                            if (dPlayer >= 1f && dPlayer < best &&
+                                Vector3.Dot(velDir, toPlayer / dPlayer) >= 0.75f)
+                                weapon.HomingTarget = -2; // the player (not a GameObj)
+                        }
+                    }
+                    else // player missiles track robots
                     {
                         foreach (var candidate in Objects)
                         {
@@ -430,12 +487,13 @@ namespace D1U.Game
                         }
                     }
                 }
-                if (weapon.HomingTarget < 0)
+                if (weapon.HomingTarget == -1)
                     continue;
 
                 // turn: vel = normalize(norm_vel + to_target) * speed (laser.c:1017-1023)
-                var target = Objects[weapon.HomingTarget];
-                var toTarget = Vector3.Normalize(target.Pos - weapon.Pos);
+                var targetPos = weapon.HomingTarget == -2
+                    ? PlayerPos : Objects[weapon.HomingTarget].Pos;
+                var toTarget = Vector3.Normalize(targetPos - weapon.Pos);
                 float dot = Vector3.Dot(velDir, toTarget);
                 weapon.Vel = Vector3.Normalize(velDir + toTarget) * speed;
                 weapon.LifeLeft -= Math.Abs(1f - dot) * 32f * homerTick; // turn life cost (laser.c:1027)
@@ -491,47 +549,99 @@ namespace D1U.Game
             }
         }
 
-        /// <summary>Ship-vs-robot/reactor overlap: separation push + ram damage.</summary>
-        public (Vector3 push, float damage) ShipCollide(Vector3 shipPos, float shipSize, int shipSeg, Vector3 shipVel)
+        /// <summary>Objects the player's swept move collides with (collide_init pairs).</summary>
+        public static readonly Func<GameObj, bool> PlayerMoveFilter =
+            t => t.Type == 2 || t.Type == 3 || t.Type == 7 || t.Type == 9;
+
+        /// <summary>
+        /// collide_two_objects dispatch for the player's swept move. Returns true
+        /// when the ship flies on through (powerup/hostage — velocity unchanged),
+        /// false when the response bumped velocities and motion ends this frame
+        /// (physics.c:834-846).
+        /// </summary>
+        public bool PlayerHitObject(int objId, Vector3 hitPos, ShipState ship,
+                                    PlayerState player, PlayerWeapons weapons)
         {
-            var push = Vector3.Zero;
-            float damage = 0f;
-            if (shipSeg < 0)
-                return (push, damage);
-
-            void Scan(int seg)
+            var obj = Objects[objId];
+            if (obj.Dead)
+                return true;
+            switch (obj.Type)
             {
-                foreach (int id in ObjectsInSeg(seg))
-                {
-                    var obj = Objects[id];
-                    if (obj.Dead || (obj.Type != 2 && obj.Type != 9))
-                        continue;
-                    var away = shipPos - obj.Pos;
-                    float dist = away.Length();
-                    float overlap = obj.Size + shipSize - dist;
-                    if (overlap <= 0f || dist < 1e-3f)
-                        continue;
-                    away /= dist;
-                    push += away * overlap;
-                    float closing = -Vector3.Dot(shipVel, away);
-                    if (closing > 20f) // ~wall damage threshold feel
-                        damage = Math.Max(damage, closing / 128f * 10f);
-                }
-            }
+                case 7: // collide_player_and_powerup (collide.c:1646)
+                case 3: // collide_player_and_hostage
+                    TryPickup(obj, player, weapons);
+                    return true;
 
-            Scan(shipSeg);
-            var sides = world.Sides[shipSeg];
-            for (int s = 0; s < 6; s++)
-                if (sides[s].Child >= 0)
-                    Scan(sides[s].Child);
-            return (push, damage);
+                case 2:
+                {
+                    // bump_two_objects(robot, player, 1) (collide.c:241-267, 687)
+                    float robotMass = obj.SubId < robotStats.Length && robotStats[obj.SubId].Mass > 0f
+                        ? robotStats[obj.SubId].Mass : 4f;
+                    float playerMass = PlayerMass > 0f ? PlayerMass : 4f;
+                    bool boss = obj.SubId < robotStats.Length && robotStats[obj.SubId].IsBoss;
+
+                    var force = (obj.Vel - ship.Vel) * (2f * robotMass * playerMass / (robotMass + playerMass));
+                    ship.Vel += force / playerMass;    // bump_this_object(player)
+                    if (!boss)
+                        obj.Vel -= force / robotMass;  // bosses don't budge (collide.c:220)
+                    obj.Aware = true;
+                    obj.Provoked = true;
+
+                    float forceMag = force.Length();   // apply_force_damage (collide.c:130-141)
+                    float playerDamage = forceMag / playerMass / 8f;
+                    if (playerDamage >= 1f / 3f)       // FORCE_DAMAGE_THRESHOLD
+                        PlayerHit?.Invoke(playerDamage, obj);
+                    float robotDamage = forceMag / robotMass / 8f;
+                    if (robotDamage >= 1f / 3f && !boss)
+                        Damage(obj, robotDamage, hitPos);
+                    return false;
+                }
+
+                case 9:
+                    // reactor is MT_NONE: bump_two_objects stops the mover dead
+                    // (collide.c:248-258) and wakes the defense guns
+                    ship.Vel = Vector3.Zero;
+                    reactorBeenHit = true;
+                    return false;
+
+                default:
+                    return true;
+            }
         }
 
-        /// <summary>Remove by id (remote pickup replication — no drop/score side effects).</summary>
+        /// <summary>Does any live object poke through this side? (door close check_poke)</summary>
+        public bool AnyObjectPokesSide(int seg, int side)
+        {
+            foreach (int id in ObjectsInSeg(seg))
+            {
+                var o = Objects[id];
+                if (!o.Dead && (world.GetSegMasks(o.Pos, seg, o.Size).SideMask & (1 << side)) != 0)
+                    return true;
+            }
+            int child = world.Sides[seg][side].Child;
+            if (child >= 0)
+            {
+                int cside = world.FindConnectSide(child, seg);
+                if (cside >= 0)
+                    foreach (int id in ObjectsInSeg(child))
+                    {
+                        var o = Objects[id];
+                        if (!o.Dead && (world.GetSegMasks(o.Pos, child, o.Size).SideMask & (1 << cside)) != 0)
+                            return true;
+                    }
+            }
+            return false;
+        }
+
+        /// <summary>Remove by id (remote pickup replication — no drop/score side effects).
+        /// Only powerups/hostages qualify; diverged ids can't nuke weapons/robots.</summary>
         public void RemoveRemote(int id)
         {
-            if (id >= 0 && id < Objects.Count)
-                Remove(Objects[id]);
+            if (id < 0 || id >= Objects.Count)
+                return;
+            var obj = Objects[id];
+            if (obj.Type == 7 || obj.Type == 3)
+                Remove(obj);
         }
 
         /// <summary>Anarchy setup: no robots, no hostages, no matcens.</summary>
@@ -549,8 +659,10 @@ namespace D1U.Game
         {
             if (obj.Dead)
                 return;
+            if (obj.Type == 9)
+                reactorBeenHit = true; // wakes the defense guns (Control_center_been_hit)
             if (Multiplayer && obj.Type == 9)
-                return; // the reactor sits out anarchy games
+                return; // the reactor can't be destroyed in anarchy games
             obj.Shields -= damage;
             if (obj.Type == 2)
             {
@@ -698,13 +810,14 @@ namespace D1U.Game
                         Pos = pos,
                         Vel = v,
                         Segnum = segnum,
-                        Size = 1.5f,
+                        Size = PowerupSize(id), // Powerup_info[id].size (fireball.c:886)
                         VClipNum = -2,  // view resolves powerup vclip by SubId
                         ExplVClip = 62, // VCLIP_POWERUP_DISAPPEARANCE
                     };
                     if (id == 1 || id == 2 || id == 10 || id == 11) // energy/shield/missiles expire
                         drop.LifeLeft = (DRand() / 65536f + 3f) * 64f; // 3..3.5 binary minutes
                     Add(drop);
+                    eggCollector?.Add(drop);
                 }
                 else if (type == 2 && id < robotStats.Length)
                 {
@@ -735,11 +848,14 @@ namespace D1U.Game
             }
         }
 
-        /// <summary>drop_player_eggs (collide.c:1178): the dying ship spills its loadout.</summary>
-        public void DropPlayerEggs(Vector3 pos, Vector3 vel, int segnum, PlayerWeapons w, PlayerState player)
+        /// <summary>drop_player_eggs (collide.c:1178): the dying ship spills its
+        /// loadout. Returns the spilled powerups (net replication).</summary>
+        public List<GameObj> DropPlayerEggs(Vector3 pos, Vector3 vel, int segnum, PlayerWeapons w, PlayerState player)
         {
+            var spilled = new List<GameObj>();
             if (w == null || segnum < 0)
-                return;
+                return spilled;
+            eggCollector = spilled;
             if (w.Quad)
                 DropEgg(7, 12, 1, pos, vel, segnum);
             if (w.LaserLevel > 0)
@@ -769,6 +885,29 @@ namespace D1U.Game
             DropEgg(7, 21, w.Megas, pos, vel, segnum);
             DropEgg(7, 2, 1, pos, vel, segnum); // a shield and an energy boost (collide.c:1281)
             DropEgg(7, 1, 1, pos, vel, segnum);
+            eggCollector = null;
+            return spilled;
+        }
+
+        /// <summary>Spawn a remote player's death drop (MsgEggs) locally.</summary>
+        public GameObj AddNetEgg(byte subId, Vector3 pos, Vector3 vel)
+        {
+            int seg = world.FindPointSeg(pos, 0);
+            var drop = new GameObj
+            {
+                Type = 7,
+                SubId = subId,
+                Pos = pos,
+                Vel = vel,
+                Segnum = seg >= 0 ? seg : 0,
+                Size = PowerupSize(subId),
+                VClipNum = -2,
+                ExplVClip = 62,
+            };
+            if (subId == 1 || subId == 2 || subId == 10 || subId == 11)
+                drop.LifeLeft = (DRand() / 65536f + 3f) * 64f;
+            Add(drop);
+            return drop;
         }
 
         /// <summary>Dropped powerups fly, bounce off walls (PF_BOUNCE), drag to rest, and expire.</summary>
@@ -797,21 +936,42 @@ namespace D1U.Game
                     obj.Vel = Vector3.Zero;
                     continue;
                 }
-                var query = new FviQuery
+                // mid-flight pickup: sweep the motion against the player sphere
+                // (FQ_CHECK_OBJS both ways — a drop can streak into a hovering ship)
+                if (PlayerAlive && PlayerRef != null &&
+                    Fvi.CheckVectorToSphere(out _, obj.Pos, obj.Pos + obj.Vel * dt,
+                                            PlayerPos, obj.Size + PlayerSize) > 0f)
                 {
-                    P0 = obj.Pos,
-                    P1 = obj.Pos + obj.Vel * dt,
-                    StartSeg = obj.Segnum,
-                    Rad = obj.Size,
-                };
-                var fate = fvi.FindVectorIntersection(query, hitInfo);
-                if (fate == FviHit.BadP0)
-                    continue;
-                obj.Pos = hitInfo.HitPoint;
-                if (hitInfo.HitSeg >= 0)
-                    Relink(obj, hitInfo.HitSeg);
-                if (fate == FviHit.Wall)
+                    TryPickup(obj, PlayerRef, Loadout);
+                    if (obj.Dead)
+                        continue;
+                }
+
+                // PF_BOUNCE with the remaining motion re-traced (physics.c retry loop)
+                float remaining = dt;
+                for (int bounce = 0; bounce < 3 && remaining > 1e-4f; bounce++)
+                {
+                    var query = new FviQuery
+                    {
+                        P0 = obj.Pos,
+                        P1 = obj.Pos + obj.Vel * remaining,
+                        StartSeg = obj.Segnum,
+                        Rad = obj.Size,
+                    };
+                    var fate = fvi.FindVectorIntersection(query, hitInfo);
+                    if (fate == FviHit.BadP0)
+                        break;
+                    float attempted = obj.Vel.Length() * remaining;
+                    float moved = Vector3.Distance(hitInfo.HitPoint, obj.Pos);
+                    obj.Pos = hitInfo.HitPoint;
+                    if (hitInfo.HitSeg >= 0)
+                        Relink(obj, hitInfo.HitSeg);
+                    if (fate != FviHit.Wall)
+                        break;
                     obj.Vel -= hitInfo.WallNorm * (2f * Vector3.Dot(hitInfo.WallNorm, obj.Vel));
+                    remaining = attempted > 1e-6f
+                        ? remaining * Math.Max(0f, 1f - moved / attempted) : 0f;
+                }
             }
         }
 
@@ -820,9 +980,8 @@ namespace D1U.Game
 
         public void UpdateAi(float dt)
         {
-            if (!PlayerAlive)
-                return;
-
+            // the original keeps ai_do_frame running through player death;
+            // PlayerHit is a no-op while the death sequence plays
             for (int i = 0; i < Objects.Count; i++)
             {
                 var robot = Objects[i];
@@ -999,29 +1158,140 @@ namespace D1U.Game
                 Sound?.Invoke(Objects[boss.Id].ExplSound, boss.Pos); // teleport whoosh stand-in
         }
 
+        static readonly Func<GameObj, bool> RobotMoveFilter =
+            t => t.Type == 2 || t.Type == 9; // robots block on each other + the reactor
+
         void MoveRobot(GameObj robot, float dt)
         {
             if (robot.Vel == Vector3.Zero)
                 return;
-            var query = new FviQuery
+            // reduced do_physics_sim: slide-retry loop (3 passes for non-players,
+            // physics.c:596 comment), object blocking, and stuck recovery
+            float remaining = dt;
+            for (int pass = 0; pass < 3 && remaining > 1e-4f && robot.Vel != Vector3.Zero; pass++)
             {
-                P0 = robot.Pos,
-                P1 = robot.Pos + robot.Vel * dt,
-                StartSeg = robot.Segnum,
-                Rad = robot.Size,
-            };
-            var fate = fvi.FindVectorIntersection(query, hitInfo);
-            if (fate == FviHit.BadP0)
-                return;
-            robot.Pos = hitInfo.HitPoint;
-            if (hitInfo.HitSeg >= 0)
-                Relink(robot, hitInfo.HitSeg);
-            if (fate == FviHit.Wall)
-            {
+                var query = new FviQuery
+                {
+                    P0 = robot.Pos,
+                    P1 = robot.Pos + robot.Vel * remaining,
+                    StartSeg = robot.Segnum,
+                    Rad = robot.Size,
+                    Objects = this,
+                    ThisObj = robot.Id,
+                    ObjectFilter = RobotMoveFilter,
+                };
+                var fate = fvi.FindVectorIntersection(query, hitInfo);
+                if (fate == FviHit.BadP0)
+                    return;
+                float attempted = robot.Vel.Length() * remaining;
+                float moved = Vector3.Distance(hitInfo.HitPoint, robot.Pos);
+                robot.Pos = hitInfo.HitPoint;
+                if (hitInfo.HitSeg >= 0)
+                    Relink(robot, hitInfo.HitSeg);
+                if (fate != FviHit.Wall)
+                    break; // done, or stopped at another object
                 float wallPart = Vector3.Dot(hitInfo.WallNorm, robot.Vel);
                 robot.Vel -= hitInfo.WallNorm * wallPart; // slide
                 RobotBumpDoor(hitInfo.HitSideSeg, hitInfo.HitSide);
+                remaining = attempted > 1e-6f
+                    ? remaining * Math.Max(0f, 1f - moved / attempted) : 0f;
             }
+
+            // don't stand inside the ship (collide_player_and_robot separation)
+            if (PlayerAlive)
+            {
+                var away = robot.Pos - PlayerPos;
+                float d = away.Length();
+                float overlap = robot.Size + PlayerSize - d;
+                if (overlap > 0f && d > 1e-3f)
+                    robot.Pos += away / d * overlap;
+            }
+
+            // fix_illegal_wall_intersection (physics.c:906)
+            if (fvi.SphereIntersectsWall(robot.Pos, robot.Segnum, robot.Size, out int hseg, out int hside))
+            {
+                robot.Pos += world.Sides[hseg][hside].Normals[0] * (dt * 10f);
+                int n = world.FindPointSeg(robot.Pos, robot.Segnum);
+                if (n != -1)
+                    Relink(robot, n);
+            }
+        }
+
+        /// <summary>do_controlcen_frame (cntrlcen.c:233-355): the reactor shoots back.</summary>
+        public void TickReactor(float dt)
+        {
+            if (Runtime != null && Runtime.ReactorDestroyed)
+                return;
+            GameObj reactor = null;
+            for (int i = 0; i < Objects.Count; i++)
+                if (!Objects[i].Dead && Objects[i].Type == 9)
+                {
+                    reactor = Objects[i];
+                    break;
+                }
+            if (reactor == null || weaponTable.Length <= 6)
+                return;
+
+            if (!reactorBeenHit && !reactorSeen)
+            {
+                reactorScanTimer -= dt;
+                if (reactorScanTimer > 0f)
+                    return;
+                reactorScanTimer = 0.125f; // "every so often" (d_tick_count % 8)
+                var toPlayer = PlayerPos - reactor.Pos;
+                float d = toPlayer.Length();
+                if (!PlayerAlive || d > 200f || d < 1e-3f)
+                    return;
+                var visQuery = new FviQuery
+                {
+                    P0 = reactor.Pos, P1 = PlayerPos,
+                    StartSeg = reactor.Segnum, Rad = 0.25f,
+                };
+                if (fvi.FindVectorIntersection(visQuery, hitInfo) == FviHit.None)
+                {
+                    reactorSeen = true;
+                    reactorNextFire = 0f;
+                }
+                return;
+            }
+
+            // hold fire a moment after killing the player (controlcen_death_silence)
+            if (!PlayerAlive)
+                reactorSilence += dt;
+            else
+                reactorSilence = 0f;
+            if (reactorSilence > 2f)
+                return;
+
+            reactorNextFire -= dt;
+            if (reactorNextFire >= 0f)
+                return;
+
+            var vec = PlayerPos - reactor.Pos;
+            float dist = vec.Length();
+            if (dist > 300f)
+            {
+                reactorBeenHit = false; // player got away (cntrlcen.c:317-322)
+                reactorSeen = false;
+                return;
+            }
+            if (dist < 1e-3f)
+                return;
+            vec /= dist;
+            var gun = reactor.Pos + vec * (reactor.Size * 0.75f); // gun_pos approximation
+            var stats = weaponTable[6]; // CONTROLCEN_WEAPON_NUM (cntrlcen.h:28)
+            FireWeapon(stats, 6, gun, vec, reactor.Segnum, reactor.Id);
+            Sound?.Invoke(stats.FiringSound, gun);
+            if (DRand() < 32767 / 4) // 1/4 of the time: a second, randomized bolt
+            {
+                var rand = new Vector3(DRand() - 16384, DRand() - 16384, DRand() - 16384);
+                if (rand != Vector3.Zero)
+                {
+                    var dir2 = Vector3.Normalize(vec + Vector3.Normalize(rand) * 0.25f);
+                    FireWeapon(stats, 6, gun, dir2, reactor.Segnum, reactor.Id);
+                }
+            }
+            reactorNextFire = (5 - Difficulty) * 0.25f * (Multiplayer ? 2f : 1f);
         }
 
         // ------------------------------------------------------------------
@@ -1329,40 +1599,46 @@ namespace D1U.Game
         // ------------------------------------------------------------------
         // pickups
 
+        /// <summary>
+        /// powerup_grab_cheat_all (game.c:1334-1356): unconditionally every frame,
+        /// grab any powerup in the player's own segment within DOUBLE the combined
+        /// radii. Hostages are rescued by contact only (the swept move).
+        /// </summary>
         public void PickupScan(Vector3 shipPos, float shipSize, int shipSeg,
                                PlayerState player, PlayerWeapons weapons)
         {
             if (shipSeg < 0)
                 return;
-            ScanSegForPickups(shipSeg, shipPos, shipSize, player, weapons);
-            var sides = world.Sides[shipSeg];
-            for (int s = 0; s < 6; s++)
-                if (sides[s].Child >= 0)
-                    ScanSegForPickups(sides[s].Child, shipPos, shipSize, player, weapons);
-        }
-
-        void ScanSegForPickups(int seg, Vector3 shipPos, float shipSize,
-                               PlayerState player, PlayerWeapons weapons)
-        {
-            var list = ObjectsInSeg(seg);
+            var list = ObjectsInSeg(shipSeg);
             for (int i = list.Count - 1; i >= 0; i--)
             {
                 var obj = Objects[list[i]];
-                if (obj.Dead || (obj.Type != 7 && obj.Type != 3))
+                if (obj.Dead || obj.Type != 7)
                     continue;
-                if (Vector3.Distance(obj.Pos, shipPos) > obj.Size + shipSize)
+                if (Vector3.Distance(obj.Pos, shipPos) >= 2f * (obj.Size + shipSize))
                     continue;
+                TryPickup(obj, player, weapons);
+            }
+        }
 
-                if (obj.Type == 3)
-                {
-                    HostagesRescued++;
-                    Score += 1000; // HOSTAGE_SCORE (scores.h:85)
-                    Message?.Invoke("Hostage rescued!");
-                    Remove(obj);
-                    continue;
-                }
-                if (ApplyPowerup(obj.SubId, player, weapons))
-                    Remove(obj);
+        /// <summary>collide_player_and_powerup / _hostage: apply, and consume on use.</summary>
+        public void TryPickup(GameObj obj, PlayerState player, PlayerWeapons weapons)
+        {
+            if (obj.Dead)
+                return;
+            if (obj.Type == 3)
+            {
+                HostagesRescued++;
+                if (player != null)
+                    player.HostagesOnBoard++; // scored at the exit, lost on death (gameseq.c:758)
+                Message?.Invoke("Hostage rescued!");
+                Remove(obj);
+                return;
+            }
+            if (obj.Type == 7 && ApplyPowerup(obj.SubId, player, weapons))
+            {
+                PickedUp?.Invoke(obj); // net: announce the consumption
+                Remove(obj);
             }
         }
 
@@ -1386,6 +1662,7 @@ namespace D1U.Game
             switch (id)
             {
                 case 0:
+                    ExtraLife?.Invoke();
                     Message?.Invoke("Extra life!");
                     return true;
                 case 1:
@@ -1408,9 +1685,17 @@ namespace D1U.Game
                     }
                     Message?.Invoke("Your laser is maxed out!");
                     return PickUpEnergy(player); // maxed weapon pickups become energy (do_powerup)
-                case 4: player.Keys |= 2; Message?.Invoke("Blue key!"); return true;
-                case 5: player.Keys |= 4; Message?.Invoke("Red key!"); return true;
-                case 6: player.Keys |= 8; Message?.Invoke("Yellow key!"); return true;
+                // keys are never consumed in multiplayer — every player can take
+                // them (do_powerup, powerup.c:309-312)
+                case 4:
+                    if ((player.Keys & 2) == 0) { player.Keys |= 2; Message?.Invoke("Blue key!"); }
+                    return !Multiplayer;
+                case 5:
+                    if ((player.Keys & 4) == 0) { player.Keys |= 4; Message?.Invoke("Red key!"); }
+                    return !Multiplayer;
+                case 6:
+                    if ((player.Keys & 8) == 0) { player.Keys |= 8; Message?.Invoke("Yellow key!"); }
+                    return !Multiplayer;
                 case 10: // 1 concussion
                     if (weapons == null || weapons.Concussions >= 20) return false;
                     weapons.Concussions = Math.Min(20, weapons.Concussions + 1);
@@ -1510,16 +1795,25 @@ namespace D1U.Game
                     Message?.Invoke("Mega missile!");
                     return true;
                 case 23:
+                    if (player.CloakTime > 0f)
+                    {
+                        Message?.Invoke("You are already cloaked!"); // powerup.c:463
+                        return false;
+                    }
                     player.CloakTime = 30f;
                     Message?.Invoke("Cloaking device!");
                     return true;
                 case 25:
+                    if (player.InvulnTime > 0f)
+                    {
+                        Message?.Invoke("You already are invulnerable!"); // powerup.c:483
+                        return false;
+                    }
                     player.InvulnTime = 30f;
                     Message?.Invoke("Invulnerability!");
                     return true;
                 default:
-                    Message?.Invoke("Picked up a powerup (effect coming soon)");
-                    return true;
+                    return false; // unhandled ids stay in the world (powerup.c:508)
             }
         }
     }

@@ -54,9 +54,12 @@ namespace D1U.Presentation
                     if (overlay != null)
                     {
                         byte over = overlay.Indexed[OverlayIndex(x, y, overlay.Width, overlay.Height, rotation)];
-                        if (over == 254)
+                        if (over == 254 && overlay.SuperTransparent)
                         {
-                            transparent = true;      // super-transparent: hole through both
+                            // hole through both layers — ONLY for BM_FLAG_SUPER_TRANSPARENT
+                            // bitmaps (texmerge.c:164, ogl.c:1318); everywhere else 254
+                            // is an ordinary palette colour
+                            transparent = true;
                         }
                         else if (over != 255)        // 255 shows the base texel
                         {

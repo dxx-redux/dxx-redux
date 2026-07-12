@@ -12,7 +12,7 @@ namespace D1U.Convert
     public static class DxuCache
     {
         /// <summary>Bump when converter output changes to invalidate caches.</summary>
-        public const uint ConverterVersion = 6; // v6: secret levels baked into mission DXUs
+        public const uint ConverterVersion = 7; // v7: per-side tmaps (volatile-wall damage)
 
         public static string DefaultCacheDir =>
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),

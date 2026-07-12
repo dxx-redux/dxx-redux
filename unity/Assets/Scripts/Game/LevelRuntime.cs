@@ -23,6 +23,8 @@ namespace D1U.Game
         public int Score;
         public bool ExitReached;
         public bool SecretExitReached;
+        /// <summary>Rescued hostages ride along; scored at the exit, lost on death.</summary>
+        public int HostagesOnBoard;
     }
 
     /// <summary>
@@ -46,6 +48,7 @@ namespace D1U.Game
         sealed class ActiveDoor
         {
             public int FrontWall;
+            public int LinkedWall = -1; // second half of a double door (wall.c:426-449)
             public float Time;
         }
 
@@ -63,6 +66,8 @@ namespace D1U.Game
         public bool ReactorDestroyed { get; private set; }
         /// <summary>Anarchy: exit triggers do nothing.</summary>
         public bool DisableExit;
+        /// <summary>Any object (not just the player) poking through a side blocks door close.</summary>
+        public Func<int, int, bool> SideBlocked;
 
         // self-destruct countdown (cntrlcen.c do_controlcen_dead_frame)
         static readonly int[] ReactorTimes = { 50, 45, 40, 35, 30 }; // Alan_pavlish_reactor_times
@@ -205,17 +210,17 @@ namespace D1U.Game
             int frame = oneFrame > 0f ? (int)(door.Time / oneFrame) : n;
 
             if (frame < n)
-                SetFrameBothSides(wall, record.ClipNum, frame);
+                ForParts(door, w => SetFrameBothSides(w, level.Walls[w].ClipNum, frame));
 
             if (frame > n / 2)
-                SetPassableBothSides(wall, true, FlagDoorOpened);
+                ForParts(door, w => SetPassableBothSides(w, true, FlagDoorOpened));
 
             if (frame >= n - 1)
             {
-                SetFrameBothSides(wall, record.ClipNum, n - 1);
+                ForParts(door, w => SetFrameBothSides(w, level.Walls[w].ClipNum, n - 1));
                 if ((wallFlags[wall] & FlagDoorAuto) == 0)
                     return true; // non-auto doors stay open
-                SetStateBothSides(wall, StateWaiting);
+                ForParts(door, w => SetStateBothSides(w, StateWaiting));
                 door.Time = 0f;
             }
             return false;
@@ -228,8 +233,8 @@ namespace D1U.Game
             var record = level.Walls[wall];
             var clip = clips[record.ClipNum];
 
-            // abort while the player pokes into the doorway (check_poke; the
-            // full object list arrives with the object system)
+            // abort while the player or any object pokes into the doorway
+            // (check_poke over both segments' objects, wall.c:656-679)
             if ((wallFlags[wall] & FlagDoorAuto) != 0)
             {
                 int child = world.Sides[record.SegmentIndex][record.SideIndex].Child;
@@ -243,6 +248,8 @@ namespace D1U.Game
                         (world.GetSegMasks(playerPos, playerSeg, playerSize).SideMask & (1 << cside)) != 0)
                         return false;
                 }
+                if (SideBlocked != null && SideBlocked(record.SegmentIndex, record.SideIndex))
+                    return false;
             }
 
             door.Time += dt;
@@ -251,17 +258,20 @@ namespace D1U.Game
             int frame = n - 1 - (oneFrame > 0f ? (int)(door.Time / oneFrame) : n);
 
             if (frame < n / 2)
-                SetPassableBothSides(wall, false, 0, clearFlags: FlagDoorOpened);
+                ForParts(door, w => SetPassableBothSides(w, false, 0, clearFlags: FlagDoorOpened));
 
             if (frame > 0)
             {
-                SetFrameBothSides(wall, record.ClipNum, frame);
+                ForParts(door, w => SetFrameBothSides(w, level.Walls[w].ClipNum, frame));
                 return false;
             }
 
             // fully closed (wall_close_door_num)
-            SetStateBothSides(wall, StateClosed);
-            SetFrameBothSides(wall, record.ClipNum, 0);
+            ForParts(door, w =>
+            {
+                SetStateBothSides(w, StateClosed);
+                SetFrameBothSides(w, level.Walls[w].ClipNum, 0);
+            });
             return true;
         }
 
@@ -284,7 +294,30 @@ namespace D1U.Game
             if (record.Keys == 4 && (Player.Keys & 4) == 0) { Message?.Invoke("Red key required"); return; }
             if (record.Keys == 8 && (Player.Keys & 8) == 0) { Message?.Invoke("Yellow key required"); return; }
 
-            if (wallState[wall] == StateClosed)
+            // any state but already-opening: also pushes a closing door back open
+            // (wall_hit_process, wall.c:867-870)
+            if (wallState[wall] != StateOpening)
+                OpenDoor(wall);
+        }
+
+        /// <summary>wall_hit_process for weapon impacts (wall.c:802-881): blastables
+        /// take damage; unlocked doors the shooter has keys for swing open.</summary>
+        public void WeaponHitWall(int seg, int side, float damage, bool playerShot)
+        {
+            int wall = WallAt(seg, side);
+            if (wall < 0)
+                return;
+            var record = level.Walls[wall];
+            if (record.Type == TypeBlastable)
+            {
+                DamageWall(seg, side, damage);
+                return;
+            }
+            if (record.Type != TypeDoor || (wallFlags[wall] & FlagDoorLocked) != 0)
+                return;
+            if (record.Keys > 1 && (!playerShot || (Player.Keys & record.Keys) == 0))
+                return; // silent for weapons (original messages only for the player object)
+            if (wallState[wall] != StateOpening)
                 OpenDoor(wall);
         }
 
@@ -309,8 +342,21 @@ namespace D1U.Game
             }
 
             SetStateBothSides(wall, StateOpening);
-            activeDoors.Add(new ActiveDoor { FrontWall = wall });
+            int linked = level.Walls[wall].LinkedWall;
+            if (linked >= 0 && linked < level.Walls.Count && linked != wall)
+                SetStateBothSides(linked, StateOpening);
+            else
+                linked = -1;
+            activeDoors.Add(new ActiveDoor { FrontWall = wall, LinkedWall = linked });
             DoorMoved?.Invoke(wall, true);
+        }
+
+        /// <summary>Run an action for each wall of a double door (active_door parts).</summary>
+        void ForParts(ActiveDoor door, Action<int> action)
+        {
+            action(door.FrontWall);
+            if (door.LinkedWall >= 0)
+                action(door.LinkedWall);
         }
 
         /// <summary>Player crossed from a segment through a side (check_trigger).</summary>
@@ -479,6 +525,7 @@ namespace D1U.Game
             foreach (var door in activeDoors)
             {
                 bw.Write(door.FrontWall);
+                bw.Write(door.LinkedWall);
                 bw.Write(door.Time);
             }
             bw.Write(ReactorDestroyed);
@@ -494,6 +541,7 @@ namespace D1U.Game
             bw.Write(Player.Score);
             bw.Write(Player.ExitReached);
             bw.Write(Player.SecretExitReached);
+            bw.Write(Player.HostagesOnBoard);
         }
 
         public void Load(BinaryReader br)
@@ -518,7 +566,12 @@ namespace D1U.Game
             activeDoors.Clear();
             int doorCount = br.ReadInt32();
             for (int i = 0; i < doorCount; i++)
-                activeDoors.Add(new ActiveDoor { FrontWall = br.ReadInt32(), Time = br.ReadSingle() });
+                activeDoors.Add(new ActiveDoor
+                {
+                    FrontWall = br.ReadInt32(),
+                    LinkedWall = br.ReadInt32(),
+                    Time = br.ReadSingle(),
+                });
             ReactorDestroyed = br.ReadBoolean();
             CountdownActive = br.ReadBoolean();
             countdownTimer = br.ReadSingle();
@@ -533,6 +586,7 @@ namespace D1U.Game
             Player.Score = br.ReadInt32();
             Player.ExitReached = br.ReadBoolean();
             Player.SecretExitReached = br.ReadBoolean();
+            Player.HostagesOnBoard = br.ReadInt32();
         }
 
         /// <summary>Re-emit wall visual state (door frames, hidden illusions) after a load.</summary>

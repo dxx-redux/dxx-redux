@@ -13,6 +13,7 @@ namespace D1U.Game
         public ObjectSystem Objects;        // null = walls only
         public int ThisObj;                 // skip self
         public Func<GameObj, bool> ObjectFilter;
+        public System.Collections.Generic.List<int> Ignore; // fq.ignore_obj_list
     }
 
     public sealed class FviInfo
@@ -52,6 +53,11 @@ namespace D1U.Game
         ObjectSystem queryObjects;
         int queryThisObj;
         Func<GameObj, bool> queryFilter;
+        System.Collections.Generic.List<int> queryIgnore;
+
+        // recursion scratch buffers, one pair per nest level (no per-call allocs)
+        readonly int[][] tempSeglistPool = new int[MaxSegsVisited][];
+        readonly int[][] hitNonePool = new int[MaxSegsVisited][];
 
         public Fvi(SegmentWorld world) => this.world = world;
 
@@ -65,6 +71,7 @@ namespace D1U.Game
             queryObjects = q.Objects;
             queryThisObj = q.ThisObj;
             queryFilter = q.ObjectFilter;
+            queryIgnore = q.Ignore;
 
             if (q.StartSeg < 0 || q.StartSeg >= world.SegmentCount ||
                 world.GetSegMasks(q.P0, q.StartSeg, 0f).CenterMask != 0)
@@ -99,9 +106,8 @@ namespace D1U.Game
 
             if (hitSeg == -1)
             {
-                // zero-radius retry (fvi.c:702-717)
-                segsVisited[0] = q.StartSeg;
-                nSegsVisited = 1;
+                // zero-radius retry (fvi.c:702-717) — the C reuses the already-
+                // exhausted visited list, so the retry can't re-enter pass-1 segs
                 int retrySegs = 0;
                 FviSub(out var newHitPoint, out int newHitSeg2, q.P0, q.StartSeg, q.P1,
                        0f, info.SegList, ref retrySegs, -2, 0);
@@ -145,7 +151,8 @@ namespace D1U.Game
             var closestHitPoint = Vector3.Zero;
             int hitSeg = -1;
             int hitNoneSeg = -1;
-            var hitNoneSeglist = new int[MaxFviSegs];
+            int poolLevel = Math.Min(nestLevel, MaxSegsVisited - 1);
+            var hitNoneSeglist = hitNonePool[poolLevel] ??= new int[MaxFviSegs];
             int hitNoneNSegs = 0;
 
             seglist[0] = startseg;
@@ -158,6 +165,8 @@ namespace D1U.Game
                 {
                     var obj = queryObjects.Objects[objId];
                     if (obj.Dead || objId == queryThisObj)
+                        continue;
+                    if (queryIgnore != null && queryIgnore.Contains(objId))
                         continue;
                     if (queryFilter != null && !queryFilter(obj))
                         continue;
@@ -216,7 +225,7 @@ namespace D1U.Game
                                 goto quitLooking;
 
                             var saveWallNorm = wallNorm;
-                            var tempSeglist = new int[MaxFviSegs];
+                            var tempSeglist = tempSeglistPool[poolLevel] ??= new int[MaxFviSegs];
                             int tempNSegs = 0;
 
                             var subHitType = FviSub(out var subHitPoint, out int subHitSeg, p0, newSegnum,
@@ -297,6 +306,59 @@ namespace D1U.Game
         }
 
         // ---- geometric primitives (fvi.c ports) --------------------------
+
+        /// <summary>
+        /// sphere_intersects_wall via object_intersects_wall_d (fvi.c:1218-1294):
+        /// true polygon-overlap test that recurses through child sides into
+        /// neighbour segments; solid (childless) faces only register as hits.
+        /// </summary>
+        public bool SphereIntersectsWall(Vector3 pnt, int segnum, float rad, out int hitSeg, out int hitSide)
+        {
+            nSegsVisited = 0;
+            return SphereIntersectsWallSub(pnt, segnum, rad, out hitSeg, out hitSide);
+        }
+
+        bool SphereIntersectsWallSub(Vector3 pnt, int segnum, float rad, out int hitSeg, out int hitSide)
+        {
+            hitSeg = -1;
+            hitSide = -1;
+            if (nSegsVisited < MaxSegsVisited)
+                segsVisited[nSegsVisited++] = segnum;
+
+            int facemask = world.GetSegMasks(pnt, segnum, rad).FaceMask;
+            if (facemask == 0)
+                return false;
+
+            var sides = world.Sides[segnum];
+            int bit = 1;
+            for (int side = 0; side < 6 && facemask >= bit; side++)
+            {
+                var sideData = sides[side];
+                int nv = sideData.NumFaces == 1 ? 4 : 3;
+                for (int face = 0; face < 2; face++, bit <<= 1)
+                {
+                    if ((facemask & bit) == 0)
+                        continue;
+                    if (CheckSphereToFace(pnt, sideData, face, nv, rad) == ItNone)
+                        continue;
+
+                    int child = sideData.Child;
+                    if (child < 0) // !IS_CHILD — a real wall face (fvi.c:1261)
+                    {
+                        hitSeg = segnum;
+                        hitSide = side;
+                        return true;
+                    }
+                    // hit a doorway/child side: check the adjoining segment (fvi.c:1253)
+                    bool seen = false;
+                    for (int i = 0; i < nSegsVisited; i++)
+                        if (segsVisited[i] == child) { seen = true; break; }
+                    if (!seen && SphereIntersectsWallSub(pnt, child, rad, out hitSeg, out hitSide))
+                        return true;
+                }
+            }
+            return false;
+        }
 
         /// <summary>check_vector_to_sphere_1 (fvi.c:420-484). Returns hit distance, 0 = miss.</summary>
         public static float CheckVectorToSphere(out Vector3 intp, Vector3 p0, Vector3 p1, Vector3 spherePos, float sphereRad)

@@ -55,10 +55,11 @@ namespace D1U.Convert
 
     public struct SegmentRecord
     {
-        public int[] Verts;    // 8 indices into BakedLevel.Vertices
-        public int[] Children; // per side: segment index, -1 none, -2 exit
-        public byte Function;  // SegFunction (fuelcen/matcen/reactor...)
-        public float Light;    // segment static light (for objects)
+        public int[] Verts;      // 8 indices into BakedLevel.Vertices
+        public int[] Children;   // per side: segment index, -1 none, -2 exit
+        public byte Function;    // SegFunction (fuelcen/matcen/reactor...)
+        public float Light;      // segment static light (for objects)
+        public short[] SideTmaps; // per side: tmap_num (TmapInfo damage lookup)
     }
 
     public sealed class ObjectRecord
@@ -140,6 +141,7 @@ namespace D1U.Convert
                     Children = new int[6],
                     Function = (byte)seg.Function,
                     Light = (float)seg.Light,
+                    SideTmaps = new short[6],
                 };
                 for (int v = 0; v < 8 && v < seg.Vertices.Length; v++)
                     record.Verts[v] = vertexIndex[seg.Vertices[v]];
@@ -150,6 +152,7 @@ namespace D1U.Convert
                     record.Children[sideNum] =
                         side.Exit ? -2 :
                         side.ConnectedSegment != null ? segmentIndex[side.ConnectedSegment] : -1;
+                    record.SideTmaps[sideNum] = (short)side.BaseTextureIndex;
                     EmitSide(baked, chunkMap, level, pig, vertexIndex, s, sideNum, side);
                 }
                 baked.Segments[s] = record;
@@ -335,6 +338,7 @@ namespace D1U.Convert
                 for (int i = 0; i < 6; i++) bw.Write(seg.Children[i]);
                 bw.Write(seg.Function);
                 bw.Write(seg.Light);
+                for (int i = 0; i < 6; i++) bw.Write(seg.SideTmaps != null ? seg.SideTmaps[i] : (short)0);
             }
 
             bw.Write(level.StaticChunks.Count);
@@ -427,11 +431,12 @@ namespace D1U.Convert
             var segments = new SegmentRecord[br.ReadInt32()];
             for (int s = 0; s < segments.Length; s++)
             {
-                var seg = new SegmentRecord { Verts = new int[8], Children = new int[6] };
+                var seg = new SegmentRecord { Verts = new int[8], Children = new int[6], SideTmaps = new short[6] };
                 for (int i = 0; i < 8; i++) seg.Verts[i] = br.ReadInt32();
                 for (int i = 0; i < 6; i++) seg.Children[i] = br.ReadInt32();
                 seg.Function = br.ReadByte();
                 seg.Light = br.ReadSingle();
+                for (int i = 0; i < 6; i++) seg.SideTmaps[i] = br.ReadInt16();
                 segments[s] = seg;
             }
             level.Segments = segments;
