@@ -101,7 +101,9 @@ namespace D1U.Presentation
         // from a MonoBehaviour field initializer.
         ControlsConfig controlsCfg;
         ControlsConfig controls => controlsCfg ??= new ControlsConfig();
-        int menuPage;                 // 0 = main menu, 1 = controls
+        GraphicsConfig gfxCfg;
+        GraphicsConfig gfx => gfxCfg ??= new GraphicsConfig();
+        int menuPage;                 // 0 = main menu, 1 = controls, 2 = video
         GameAction? rebinding;        // waiting for a key press for this action
 
         /// <summary>Settings → Controls: rebind keys, tune mouse direction/speed.</summary>
@@ -172,6 +174,111 @@ namespace D1U.Presentation
             }
         }
 
+        /// <summary>Settings → Video: display mode/resolution, vsync, fps cap,
+        /// MSAA, texture filtering, FOV. Everything applies immediately.</summary>
+        void DrawVideoMenu(float x, float y, float w)
+        {
+            GUI.Label(new Rect(x, y, w, 26), "VIDEO  —  changes apply immediately");
+            var g = gfx;
+            float rowH = 34f;
+            int row = 0;
+            var mid = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter };
+
+            int CycleRow(string label, string value)
+            {
+                float ry = y + 34 + row++ * rowH;
+                GUI.Label(new Rect(x, ry, 170, 26), label);
+                int dir = 0;
+                if (GUI.Button(new Rect(x + 175, ry, 30, 26), "<")) dir = -1;
+                GUI.Label(new Rect(x + 210, ry, w - 245, 26), value, mid);
+                if (GUI.Button(new Rect(x + w - 30, ry, 30, 26), ">")) dir = 1;
+                return dir;
+            }
+
+            int d = CycleRow("Display", GraphicsConfig.Modes[g.ModeIndex].label);
+            if (d != 0)
+            {
+                g.ModeIndex = (g.ModeIndex + d + GraphicsConfig.Modes.Length) % GraphicsConfig.Modes.Length;
+                g.Save();
+                g.ApplyDisplay(force: true);
+            }
+
+            d = CycleRow("Resolution", g.ResolutionLabel());
+            if (d != 0)
+            {
+                g.ResIndex = Mathf.Clamp(g.ResIndex + d, 0, g.Resolutions.Count - 1);
+                g.Save();
+                g.ApplyDisplay(force: true);
+            }
+
+            d = CycleRow("VSync", g.VSync ? "ON" : "OFF");
+            if (d != 0)
+            {
+                g.VSync = !g.VSync;
+                g.Save();
+                g.ApplyQuality();
+            }
+
+            int cap = GraphicsConfig.FpsCaps[g.FpsIndex];
+            d = CycleRow("FPS limit", cap == 0 ? "OFF" : g.VSync ? $"{cap}  (vsync wins)" : cap.ToString());
+            if (d != 0)
+            {
+                g.FpsIndex = (g.FpsIndex + d + GraphicsConfig.FpsCaps.Length) % GraphicsConfig.FpsCaps.Length;
+                g.Save();
+                g.ApplyQuality();
+            }
+
+            int msaa = GraphicsConfig.MsaaLevels[g.MsaaIndex];
+            d = CycleRow("Anti-aliasing", msaa == 1 ? "OFF" : $"MSAA {msaa}x");
+            if (d != 0)
+            {
+                g.MsaaIndex = (g.MsaaIndex + d + GraphicsConfig.MsaaLevels.Length) % GraphicsConfig.MsaaLevels.Length;
+                g.Save();
+                g.ApplyQuality();
+            }
+
+            d = CycleRow("Texture filter", g.SmoothFilter ? "SMOOTH" : "CRISP  (original)");
+            if (d != 0)
+            {
+                g.SmoothFilter = !g.SmoothFilter;
+                g.Save();
+                LevelTextureFactory.DefaultFilter = g.Filter;
+                textureFactory?.ApplyFilter(g.Filter);
+            }
+
+            float fy = y + 34 + row++ * rowH;
+            GUI.Label(new Rect(x, fy, 170, 26), $"Field of view: {g.Fov:F0}°");
+            float newFov = GUI.HorizontalSlider(new Rect(x + 175, fy + 8, w - 175, 20),
+                g.Fov, GraphicsConfig.MinFov, GraphicsConfig.MaxFov);
+            if (!Mathf.Approximately(newFov, g.Fov))
+            {
+                g.Fov = newFov;
+                g.Save();
+                var cam = Camera.main;
+                if (cam != null)
+                    cam.fieldOfView = g.Fov;
+            }
+
+            float by = y + 34 + row * rowH + 14;
+            if (GUI.Button(new Rect(x, by, 220, 30), "RESET TO DEFAULTS"))
+            {
+                g.ResetDefaults();
+                g.ApplyQuality();
+                g.ApplyDisplay(force: true);
+                LevelTextureFactory.DefaultFilter = g.Filter;
+                textureFactory?.ApplyFilter(g.Filter);
+                var cam = Camera.main;
+                if (cam != null)
+                    cam.fieldOfView = g.Fov;
+            }
+            if (GUI.Button(new Rect(x + 240, by, 220, 30), "BACK") ||
+                (Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Escape))
+            {
+                menuPage = 0;
+                PlayerPrefs.Save();
+            }
+        }
+
         // net egg replication (shared ids across peers) + per-material texture state
         int bakedObjectCount;
         int nextEggNetId = 1;
@@ -190,6 +297,12 @@ namespace D1U.Presentation
                 Application.runInBackground = true; // a backgrounded netgame host must keep pumping
                 D1U.Game.ObjectSystem.Difficulty =
                     Mathf.Clamp(PlayerPrefs.GetInt("d1u_difficulty", 2), 0, 4);
+                gfx.ApplyQuality();
+                gfx.ApplyDisplay();
+                LevelTextureFactory.DefaultFilter = gfx.Filter;
+                var cam0 = Camera.main;
+                if (cam0 != null)
+                    cam0.fieldOfView = gfx.Fov;
             }
             if (Application.isPlaying && shipMode && TryAutoStart())
                 return; // headless verification drive (-d1u-auto)
@@ -549,6 +662,11 @@ namespace D1U.Presentation
                 DrawControlsMenu(x, y, w);
                 return;
             }
+            if (menuPage == 2)
+            {
+                DrawVideoMenu(x, y, w);
+                return;
+            }
 
             if (menuMissions == null || menuMissions.Count == 0)
             {
@@ -582,10 +700,15 @@ namespace D1U.Presentation
                 PlayerPrefs.SetInt("d1u_difficulty", D1U.Game.ObjectSystem.Difficulty);
             }
 
-            if (GUI.Button(new Rect(x, rowY + 38, w, 30), "SETTINGS  ▸  CONTROLS"))
+            if (GUI.Button(new Rect(x, rowY + 38, w / 2 - 5, 30), "SETTINGS ▸ CONTROLS"))
             {
                 menuPage = 1;
                 rebinding = null;
+                return;
+            }
+            if (GUI.Button(new Rect(x + w / 2 + 5, rowY + 38, w / 2 - 5, 30), "SETTINGS ▸ VIDEO"))
+            {
+                menuPage = 2;
                 return;
             }
 

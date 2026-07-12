@@ -14,6 +14,9 @@ namespace D1U.Presentation
     /// </summary>
     public sealed class LevelTextureFactory : IDisposable
     {
+        /// <summary>Point (authentic) vs bilinear — Settings > Video.</summary>
+        public static FilterMode DefaultFilter = FilterMode.Point;
+
         readonly BaseDxu baseDxu;
         readonly Color32[] palette = new Color32[256];
         readonly Dictionary<(int, int, int), Texture2D> cache
@@ -78,7 +81,7 @@ namespace D1U.Presentation
             var texture = new Texture2D(w, h, TextureFormat.RGBA32, false)
             {
                 name = overlay != null ? $"{baseBmp.Name}+{overlay.Name}r{rotation}" : baseBmp.Name,
-                filterMode = FilterMode.Point,
+                filterMode = DefaultFilter,
                 wrapMode = TextureWrapMode.Repeat,
                 hideFlags = HideFlags.HideAndDontSave,
             };
@@ -86,6 +89,14 @@ namespace D1U.Presentation
             texture.Apply(false, false);
             cache[key] = texture;
             return texture;
+        }
+
+        /// <summary>Re-filter every texture built so far (Settings > Video toggle).</summary>
+        public void ApplyFilter(FilterMode mode)
+        {
+            foreach (var texture in cache.Values)
+                if (texture != null)
+                    texture.filterMode = mode;
         }
 
         // texmerge.c rotation mapping: source texel of the overlay for dest (x, y)
