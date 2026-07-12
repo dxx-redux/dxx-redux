@@ -33,6 +33,7 @@ namespace D1U.Presentation
         public int MsaaIndex;
         public bool SmoothFilter;              // false = point sampling (authentic)
         public float Fov = DefaultFov;
+        public float Brightness = 1f;          // light multiplier, 0.5..1.5
 
         readonly List<(int w, int h)> resolutions = new List<(int, int)>();
         public IReadOnlyList<(int w, int h)> Resolutions => resolutions;
@@ -63,6 +64,7 @@ namespace D1U.Presentation
             MsaaIndex = Mathf.Clamp(PlayerPrefs.GetInt("d1u_gfx_msaa", 0), 0, MsaaLevels.Length - 1);
             SmoothFilter = PlayerPrefs.GetInt("d1u_gfx_filter", 0) != 0;
             Fov = Mathf.Clamp(PlayerPrefs.GetFloat("d1u_gfx_fov", DefaultFov), MinFov, MaxFov);
+            Brightness = Mathf.Clamp(PlayerPrefs.GetFloat("d1u_gfx_bright", 1f), 0.5f, 1.5f);
         }
 
         int IndexOf(int w, int h)
@@ -96,6 +98,7 @@ namespace D1U.Presentation
             PlayerPrefs.SetInt("d1u_gfx_msaa", MsaaIndex);
             PlayerPrefs.SetInt("d1u_gfx_filter", SmoothFilter ? 1 : 0);
             PlayerPrefs.SetFloat("d1u_gfx_fov", Fov);
+            PlayerPrefs.SetFloat("d1u_gfx_bright", Brightness);
         }
 
         /// <summary>Window mode + size. No-op in the editor and until the
@@ -140,6 +143,7 @@ namespace D1U.Presentation
             MsaaIndex = 0;
             SmoothFilter = false;
             Fov = DefaultFov;
+            Brightness = 1f;
             Save();
         }
     }

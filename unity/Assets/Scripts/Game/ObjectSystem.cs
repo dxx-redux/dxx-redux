@@ -660,7 +660,11 @@ namespace D1U.Game
             if (obj.Dead)
                 return;
             if (obj.Type == 9)
+            {
+                if (obj.Shields < 0f)
+                    return; // already a corpse — stays solid, takes no more hits
                 reactorBeenHit = true; // wakes the defense guns (Control_center_been_hit)
+            }
             if (Multiplayer && obj.Type == 9)
                 return; // the reactor can't be destroyed in anarchy games
             obj.Shields -= damage;
@@ -690,7 +694,9 @@ namespace D1U.Game
             {
                 Score += 5000; // CONTROL_CEN_SCORE (scores.h:86)
                 Exploded?.Invoke(obj, obj.Pos);
-                Remove(obj);
+                // the dead reactor stays as a solid corpse spewing fireballs
+                // during the countdown (cntrlcen.c:117-124 Dead_controlcen_object_num)
+                obj.Shields = -1f;
                 Runtime?.DestroyReactor();
             }
         }

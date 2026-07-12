@@ -93,6 +93,10 @@ namespace D1U.Presentation
         /// <summary>Death drops, for net replication (list may be empty).</summary>
         public event Action<System.Collections.Generic.List<GameObj>> EggsSpilled;
 
+        /// <summary>Player fired a weapon — the viewer adds a muzzle-flash
+        /// light (lighting.c cast_muzzle_flash_light).</summary>
+        public event Action<UnityEngine.Vector3> Fired;
+
         void Update()
         {
             if (sim == null || Paused)
@@ -170,6 +174,18 @@ namespace D1U.Presentation
             Objects.TickMatcens(ft);
             Objects.TickReactor(ft);
 
+            // reactor destroyed: rock the ship (cntrlcen.c do_countdown_frame,
+            // d_rand-16384 = ±0.25 fix; halved here for 64 Hz vs ~32 Hz d_tick)
+            if (alive && Runtime.CountdownActive)
+            {
+                int fc = Mathf.Clamp(Runtime.CountdownSecondsLeft, 0, 16);
+                float mag = 3f / 16f + (16 - fc) / 32f;
+                float div = D1U.Game.ObjectSystem.Difficulty == 0 ? 4f : 1f;
+                state.RotVel += new System.Numerics.Vector3(
+                    (UnityEngine.Random.value - 0.5f) * 0.25f * mag / div, 0f,
+                    (UnityEngine.Random.value - 0.5f) * 0.25f * mag / div);
+            }
+
             if (alive)
             {
                 Weapons.Tick(ft);
@@ -198,19 +214,26 @@ namespace D1U.Presentation
                     }
                     else if (Weapons.FusionCharge > 0f &&
                              Weapons.FusionRelease(Objects, Runtime.Player, WeaponStats, state, GunPoints))
+                    {
                         Sounds?.PlayAt(WeaponStats[Weapons.LastFiredId].FiringSound, shipPos, 0.8f);
+                        Fired?.Invoke(shipPos);
+                    }
                 }
                 else if (trigger &&
                          Weapons.TryFirePrimary(Objects, Runtime.Player, WeaponStats, state, GunPoints))
                 {
                     Sounds?.PlayAt(WeaponStats[Weapons.LastFiredId].FiringSound, shipPos, 0.6f);
+                    Fired?.Invoke(shipPos);
                 }
                 if (Controls.Held(GameAction.FireSecondary))
                 {
                     int fired = Weapons.TryFireSecondary(Objects, WeaponStats, state, GunPoints,
                         preferHoming: Controls.Held(GameAction.PreferHoming));
                     if (fired >= 0)
+                    {
                         Sounds?.PlayAt(WeaponStats[fired].FiringSound, shipPos, 0.8f);
+                        Fired?.Invoke(shipPos);
+                    }
                 }
                 if (Controls.Pressed(GameAction.Flare) && WeaponStats.Length > 9 &&
                     Weapons.FireFlare(Objects, Runtime.Player, WeaponStats, state, GunPoints))

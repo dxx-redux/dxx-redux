@@ -260,6 +260,16 @@ namespace D1U.Presentation
                     cam.fieldOfView = g.Fov;
             }
 
+            float bry = y + 34 + row++ * rowH;
+            GUI.Label(new Rect(x, bry, 170, 26), $"Brightness: {g.Brightness:F2}x");
+            float newBright = GUI.HorizontalSlider(new Rect(x + 175, bry + 8, w - 175, 20),
+                g.Brightness, 0.5f, 1.5f);
+            if (!Mathf.Approximately(newBright, g.Brightness))
+            {
+                g.Brightness = newBright;
+                g.Save(); // the viewer pushes _D1UBrightness every frame in-game
+            }
+
             float by = y + 34 + row * rowH + 14;
             if (GUI.Button(new Rect(x, by, 220, 30), "RESET TO DEFAULTS"))
             {
@@ -366,6 +376,31 @@ namespace D1U.Presentation
         readonly Dictionary<Material, EclipAnimator.SurfaceTexState> surfaceStates =
             new Dictionary<Material, EclipAnimator.SurfaceTexState>();
 
+        // dynamic lighting (lighting.c set_dynamic_light port): light sources are
+        // gathered per frame, the strongest 48 go to the D1U/Level shader, and
+        // object tints get the same sum CPU-side. Muzzle flashes and explosion
+        // fireballs live in flashLights with a linear fade.
+        static readonly int LightsProp = Shader.PropertyToID("_D1ULights");
+        static readonly int LightCountProp = Shader.PropertyToID("_D1ULightCount");
+        static readonly int FlashProp = Shader.PropertyToID("_D1UFlash");
+        static readonly int BrightnessProp = Shader.PropertyToID("_D1UBrightness");
+        static readonly int BaseColorProp = Shader.PropertyToID("_BaseColor");
+        // Obj_light_xlate (lighting.c:196-199) — flare flicker rates
+        static readonly int[] FlareXlate = { 0x1234, 0x3321, 0x2468, 0x1735,
+                                             0x0123, 0x19af, 0x3f03, 0x232a,
+                                             0x2123, 0x39af, 0x0f03, 0x132a,
+                                             0x3123, 0x29af, 0x1f03, 0x032a };
+        readonly List<Vector4> lightCandidates = new List<Vector4>(96);
+        static readonly Vector4[] lightBuf = new Vector4[48];
+        readonly List<(Vector3 pos, float i0, float start, float dur)> flashLights =
+            new List<(Vector3, float, float, float)>();
+        readonly Dictionary<int, Renderer[]> objectRenderers = new Dictionary<int, Renderer[]>();
+        readonly Dictionary<int, float> objectLastTint = new Dictionary<int, float>();
+        MaterialPropertyBlock tintBlock;
+        int lastLightCount;
+        float mineStrobeAng;
+        float currentFlashScale = 1f;
+
         static readonly string[] DifficultyNames = { "TRAINEE", "ROOKIE", "HOTSHOT", "ACE", "INSANE" };
 
         void Start()
@@ -434,10 +469,27 @@ namespace D1U.Presentation
             if (cam == null)
                 yield break;
             cam.transform.SetParent(null, true);
+
+            // -d1u-boom: kill the reactor first and shoot its room mid-countdown
+            // (strobe + fireball stream) — verifies the post-reactor lighting
+            int reactorSeg = -1;
+            if (Array.IndexOf(Environment.GetCommandLineArgs(), "-d1u-boom") >= 0 && objectSystem != null)
+            {
+                foreach (var o in objectSystem.Objects)
+                    if (!o.Dead && o.Type == 9)
+                    {
+                        objectSystem.Damage(o, 100000f, o.Pos);
+                        reactorSeg = o.Segnum;
+                        break;
+                    }
+                yield return new WaitForSeconds(2.5f); // let fireballs/strobe run
+            }
             shipController.Paused = true; // hold the sim still for stable shots
 
             int n = shipWorld.SegmentCount;
-            int[] segs = { playerStartSeg, n / 5, 2 * n / 5, 3 * n / 5, 4 * n / 5 };
+            int[] segs = reactorSeg >= 0
+                ? new[] { reactorSeg, reactorSeg, playerStartSeg, n / 5, 3 * n / 5 }
+                : new[] { playerStartSeg, n / 5, 2 * n / 5, 3 * n / 5, 4 * n / 5 };
             int shot = 0;
             foreach (var seg in segs)
             {
@@ -584,6 +636,20 @@ namespace D1U.Presentation
             modelFactory = new ModelFactory(baseDxuData, textureFactory, shader);
             sounds = new SoundFactory(baseDxuData, archives.Pig.SoundIDs);
 
+            // lighting state fresh per level; globals must exist before the
+            // first D1U/Level draw or everything renders unlit-dark
+            flashLights.Clear();
+            objectRenderers.Clear();
+            objectLastTint.Clear();
+            lastLightCount = 0;
+            mineStrobeAng = 0f;
+            currentFlashScale = 1f;
+            System.Array.Clear(lightBuf, 0, lightBuf.Length);
+            Shader.SetGlobalVectorArray(LightsProp, lightBuf);
+            Shader.SetGlobalInt(LightCountProp, 0);
+            Shader.SetGlobalFloat(FlashProp, 1f);
+            Shader.SetGlobalFloat(BrightnessProp, Application.isPlaying ? gfx.Brightness : 1f);
+
             int staticVerts = 0;
             foreach (var chunk in level.StaticChunks)
                 staticVerts += BuildChunk(chunk, $"static_{chunk.BaseBitmap}_{chunk.OverlayBitmap}_{chunk.Rotation}", shader, null);
@@ -636,13 +702,18 @@ namespace D1U.Presentation
             mesh.triangles = Enumerable.Range(0, chunk.Positions.Count).ToArray();
             mesh.RecalculateBounds();
 
-            var material = RuntimeMaterials.Cutout(shader);
+            var material = RuntimeMaterials.Level(shader);
             material.name = name;
             material.hideFlags = HideFlags.HideAndDontSave;
             var texture = textureFactory.Get(chunk.BaseBitmap, chunk.OverlayBitmap, chunk.Rotation);
             if (material.HasProperty("_BaseMap")) material.SetTexture("_BaseMap", texture);
             else material.mainTexture = texture;
             if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", UnityEngine.Color.white);
+            // BM_FLAG_NO_LIGHTING bitmaps (lava) render fullbright (ogl.c:800)
+            bool fullbright = chunk.BaseBitmap > 0 && archives?.Pig != null &&
+                              chunk.BaseBitmap < archives.Pig.Bitmaps.Count &&
+                              archives.Pig.Bitmaps[chunk.BaseBitmap].NoLighting;
+            if (material.HasProperty("_Fullbright")) material.SetFloat("_Fullbright", fullbright ? 1f : 0f);
             // every level face is wound to front INTO its own segment and the
             // original renderer only ever drew it from there (render.c:412-415),
             // so everything culls Back. That keeps the two coplanar faces of a
@@ -1038,6 +1109,177 @@ namespace D1U.Presentation
                 radius, levelShader, 1f, loop: false);
             sprite.transform.SetParent(objectsParent, false);
             sprite.transform.position = ToUnity(position);
+            RegisterFireballLight(ToUnity(position), vclip);
+        }
+
+        /// <summary>Fireballs light the room: vclip light_value fading over the
+        /// clip's play time (lighting.c compute_light_emission OBJ_FIREBALL).</summary>
+        void RegisterFireballLight(Vector3 pos, LibDescent.Data.VClip vclip)
+        {
+            float light = (float)(double)vclip.LightValue;
+            if (light > 0.02f)
+                flashLights.Add((pos, Mathf.Min(light, 4f), Time.time,
+                    Mathf.Max(0.1f, (float)(double)vclip.PlayTime)));
+        }
+
+        /// <summary>Small stand-alone fireball (dead-reactor stream).</summary>
+        void SpawnFireball(Vector3 pos, int vclipNum, float radius, float volume)
+        {
+            if (archives == null || vclipNum < 0 || vclipNum >= archives.Pig.VClips.Length)
+                return;
+            var vclip = archives.Pig.VClips[vclipNum];
+            if (vclip == null || vclip.NumFrames <= 0)
+                return;
+            if (vclip.SoundNum >= 0)
+                sounds?.PlayAt(vclip.SoundNum, pos, volume);
+            float frameTime = (float)(double)vclip.PlayTime / Mathf.Max(1, vclip.NumFrames);
+            var sprite = BillboardSprite.Create("explosion", VClipFrames(vclip), frameTime,
+                radius, levelShader, 1f, loop: false);
+            if (objectsParent != null)
+                sprite.transform.SetParent(objectsParent, false);
+            sprite.transform.position = pos;
+            RegisterFireballLight(pos, vclip);
+        }
+
+        /// <summary>Per-frame dynamic light pass (lighting.c set_dynamic_light):
+        /// gather emitters, keep the strongest 48 for the level shader, drive
+        /// the mine-destroyed strobe and the dead-reactor fireball stream.</summary>
+        void UpdateDynamicLights()
+        {
+            lightCandidates.Clear();
+            var pig = archives?.Pig;
+            D1U.Game.GameObj deadReactor = null;
+
+            if (shipController != null && !shipController.IsDead)
+            {
+                // OBJ_PLAYER: max(|smoothed thrust|/4, 2)+0.5 (lighting.c:217-224)
+                // — with D1 ship constants the thrust arm never wins, so ~2.5
+                var p = shipController.State.Pos;
+                lightCandidates.Add(new Vector4(p.X, p.Y, p.Z, 2.5f));
+            }
+
+            if (objectSystem != null && pig != null)
+            {
+                foreach (var obj in objectSystem.Objects)
+                {
+                    if (obj.Dead)
+                        continue;
+                    float intensity = 0f;
+                    switch (obj.Type)
+                    {
+                        case 2:
+                            intensity = 0.5f; // robots (lighting.c:238)
+                            break;
+                        case 5:
+                            if (obj.SubId == 9 && obj.SubId < pig.Weapons.Length)
+                            {
+                                // flare flicker (lighting.c:244-245)
+                                float baseLight = (float)(double)pig.Weapons[obj.SubId].Light;
+                                int fixTime = (int)(Time.time * 65536.0);
+                                float flicker = ((fixTime ^ FlareXlate[obj.Id & 15]) & 0x3fff) / 65536f;
+                                intensity = 2f * (Mathf.Min(baseLight, obj.LifeLeft) + flicker);
+                            }
+                            else if (obj.SubId < pig.Weapons.Length)
+                                intensity = (float)(double)pig.Weapons[obj.SubId].Light;
+                            break;
+                        case 7:
+                            if (obj.SubId < pig.Powerups.Length)
+                                intensity = (float)(double)pig.Powerups[obj.SubId].Light;
+                            break;
+                        case 9:
+                            if (obj.Shields < 0f)
+                                deadReactor = obj;
+                            break;
+                    }
+                    if (intensity > 0.02f)
+                        lightCandidates.Add(new Vector4(obj.Pos.X, obj.Pos.Y, obj.Pos.Z,
+                            Mathf.Min(intensity, 4f)));
+                }
+            }
+
+            // muzzle flashes + fireballs: linear fade (lighting.c:168-192/229-230)
+            for (int i = flashLights.Count - 1; i >= 0; i--)
+            {
+                var f = flashLights[i];
+                float t = Time.time - f.start;
+                if (t >= f.dur)
+                {
+                    flashLights.RemoveAt(i);
+                    continue;
+                }
+                float intensity = f.i0 * (1f - t / f.dur);
+                if (intensity > 0.02f)
+                    lightCandidates.Add(new Vector4(f.pos.x, f.pos.y, f.pos.z, intensity));
+            }
+
+            // dead reactor spews fireballs through the countdown (cntrlcen.c:122-124,
+            // d_rand < FrameTime*4 ≈ 8 per second, size 3, VCLIP_SMALL_EXPLOSION)
+            if (deadReactor != null && Runtime != null && Runtime.CountdownActive &&
+                UnityEngine.Random.value < 8f * Time.deltaTime)
+            {
+                var at = ToUnity(deadReactor.Pos) +
+                         UnityEngine.Random.insideUnitSphere * deadReactor.Size * 0.75f;
+                SpawnFireball(at, 2, 3f, 0.7f);
+            }
+
+            // mine-destroyed light strobe (render.c flash_frame: 1 Hz sine on the
+            // static light, halted while the T-0 whiteout runs)
+            if (Runtime != null && Runtime.CountdownActive && Runtime.MineFlash < 0.05f)
+            {
+                mineStrobeAng += Time.deltaTime;
+                currentFlashScale = (Mathf.Sin(mineStrobeAng * 2f * Mathf.PI) + 1f) / 2f;
+            }
+            else
+                currentFlashScale = 1f;
+
+            // keep the strongest 48 as seen from the camera
+            var cam = Camera.main;
+            var camPos = cam != null ? cam.transform.position : Vector3.zero;
+            if (lightCandidates.Count > lightBuf.Length)
+                lightCandidates.Sort((a, b) =>
+                    (b.w / Mathf.Max(Vector3.Distance(camPos, b), 4f)).CompareTo(
+                     a.w / Mathf.Max(Vector3.Distance(camPos, a), 4f)));
+            lastLightCount = Mathf.Min(lightCandidates.Count, lightBuf.Length);
+            for (int i = 0; i < lastLightCount; i++)
+                lightBuf[i] = lightCandidates[i];
+            for (int i = lastLightCount; i < lightBuf.Length; i++)
+                lightBuf[i] = Vector4.zero;
+
+            Shader.SetGlobalVectorArray(LightsProp, lightBuf);
+            Shader.SetGlobalInt(LightCountProp, lastLightCount);
+            Shader.SetGlobalFloat(FlashProp, currentFlashScale);
+            Shader.SetGlobalFloat(BrightnessProp, gfx.Brightness);
+        }
+
+        /// <summary>Object tint = segment static light (strobed) + dynamic sum,
+        /// the same math the level shader runs per vertex.</summary>
+        void ApplyObjectLight(D1U.Game.GameObj obj, GameObject view)
+        {
+            float baseLight = obj.Segnum >= 0 && LoadedLevel != null &&
+                              obj.Segnum < LoadedLevel.Segments.Length
+                ? LoadedLevel.Segments[obj.Segnum].Light
+                : 1f;
+            float dyn = 0f;
+            var pos = view.transform.position;
+            for (int i = 0; i < lastLightCount; i++)
+            {
+                var L = lightBuf[i];
+                float d = Vector3.Distance(pos, L);
+                if (d < L.w * 64f)
+                    dyn += L.w / Mathf.Max(d, 4f);
+            }
+            float lit = Mathf.Clamp01(Mathf.Clamp(baseLight * currentFlashScale + dyn, 0.25f, 1f)
+                                      * gfx.Brightness);
+            if (objectLastTint.TryGetValue(obj.Id, out float last) && Mathf.Abs(last - lit) < 0.02f)
+                return;
+            objectLastTint[obj.Id] = lit;
+            if (!objectRenderers.TryGetValue(obj.Id, out var rends) || rends == null)
+                objectRenderers[obj.Id] = rends = view.GetComponentsInChildren<Renderer>(true);
+            tintBlock ??= new MaterialPropertyBlock();
+            tintBlock.SetColor(BaseColorProp, new UnityEngine.Color(lit, lit, lit, 1f));
+            foreach (var r in rends)
+                if (r != null)
+                    r.SetPropertyBlock(tintBlock);
         }
 
         void Update()
@@ -1210,14 +1452,19 @@ namespace D1U.Presentation
 
             if (objectSystem == null)
                 return;
+            UpdateDynamicLights();
             foreach (var obj in objectSystem.Objects)
             {
-                if (obj.Dead || (obj.Type != 5 && obj.Type != 2 && obj.Type != 7))
+                if (obj.Dead || (obj.Type != 5 && obj.Type != 2 && obj.Type != 7 && obj.Type != 9))
                     continue;
+                if (!objectViews.TryGetValue(obj.Id, out var lightView) || lightView == null)
+                    continue;
+                ApplyObjectLight(obj, lightView);
+                if (obj.Type == 9)
+                    continue; // reactor never moves — relight only
                 if (obj.Type == 7 && obj.Vel == System.Numerics.Vector3.Zero)
                     continue; // placed powerups never move; dropped ones bounce to rest
-                if (!objectViews.TryGetValue(obj.Id, out var view) || view == null)
-                    continue;
+                var view = lightView;
                 view.transform.position = ToUnity(obj.Pos);
                 if (obj.Type == 5)
                 {
@@ -1455,6 +1702,9 @@ namespace D1U.Presentation
             controller.Controls = controls; // shared: menu tweaks apply live
             controller.Weapons.MultiplayerScale = netSession != null;
             controller.Weapons.Message += text => messages.Add((Time.time, text));
+            // muzzle flash: 3.0 light fading over 1/3 s at the firing position
+            // (lighting.c cast_muzzle_flash_light, FLASH_LEN F1_0/3, scale 3)
+            controller.Fired += p => flashLights.Add((p, 3f, Time.time, 1f / 3f));
             controller.EggsSpilled += eggs =>
             {
                 if (netSession == null || eggs.Count == 0)

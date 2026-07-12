@@ -29,6 +29,7 @@ namespace D1U.EditorTools
             {
                 "Universal Render Pipeline/Particles/Unlit",
                 "Sprites/Default",
+                "D1U/Level",
             };
             var settings = AssetDatabase.LoadAssetAtPath<Object>("ProjectSettings/GraphicsSettings.asset");
             var so = new SerializedObject(settings);
@@ -87,11 +88,33 @@ namespace D1U.EditorTools
             Debug.Log($"D1U build: created runtime material template {path}");
         }
 
+        /// <summary>Template for the dynamic-lit level shader (D1U/Level).
+        /// The material reference also guarantees the shader ships.</summary>
+        static void EnsureLevelLitTemplate()
+        {
+            const string path = "Assets/Resources/D1U/LevelLit.mat";
+            if (AssetDatabase.LoadAssetAtPath<Material>(path) != null)
+                return;
+            var shader = Shader.Find("D1U/Level");
+            if (shader == null)
+            {
+                Debug.LogWarning("D1U build: D1U/Level shader not found — dynamic lighting template skipped");
+                return;
+            }
+            var mat = new Material(shader) { name = "LevelLit" };
+            mat.SetFloat("_Cutoff", 0.5f);
+            mat.SetFloat("_Cull", 2f);
+            AssetDatabase.CreateAsset(mat, path);
+            AssetDatabase.SaveAssets();
+            Debug.Log($"D1U build: created runtime material template {path}");
+        }
+
         [MenuItem("D1U/Build Windows Player")]
         public static void BuildWindows()
         {
             EnsureAlwaysIncludedShaders();
             EnsureRuntimeMaterialTemplates();
+            EnsureLevelLitTemplate();
             PlayerSettings.companyName = "dxx-redux";
             PlayerSettings.productName = "D1X-Unity";
             PlayerSettings.runInBackground = true;
