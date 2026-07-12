@@ -394,7 +394,9 @@ namespace D1U.Presentation
             mesh.triangles = Enumerable.Range(0, chunk.Positions.Count).ToArray();
             mesh.RecalculateBounds();
 
-            var material = new Material(shader) { name = name, hideFlags = HideFlags.HideAndDontSave };
+            var material = RuntimeMaterials.Cutout(shader);
+            material.name = name;
+            material.hideFlags = HideFlags.HideAndDontSave;
             var texture = textureFactory.Get(chunk.BaseBitmap, chunk.OverlayBitmap, chunk.Rotation);
             if (material.HasProperty("_BaseMap")) material.SetTexture("_BaseMap", texture);
             else material.mainTexture = texture;

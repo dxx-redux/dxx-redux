@@ -155,7 +155,9 @@ namespace D1U.Presentation
 
         Material NewMaterial(string name)
         {
-            var material = new Material(shader) { name = name, hideFlags = HideFlags.HideAndDontSave };
+            var material = RuntimeMaterials.Cutout(shader);
+            material.name = name;
+            material.hideFlags = HideFlags.HideAndDontSave;
             if (material.HasProperty("_Cull")) material.SetInt("_Cull", 0);
             if (material.HasProperty("_AlphaClip")) { material.SetFloat("_AlphaClip", 1f); material.EnableKeyword("_ALPHATEST_ON"); }
             if (material.HasProperty("_Cutoff")) material.SetFloat("_Cutoff", 0.5f);

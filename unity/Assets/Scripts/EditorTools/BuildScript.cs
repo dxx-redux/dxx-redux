@@ -59,10 +59,39 @@ namespace D1U.EditorTools
             AssetDatabase.SaveAssets();
         }
 
+        /// <summary>
+        /// Generates the runtime material template (Resources/D1U/LevelCutout)
+        /// with the alpha-test keyword baked in, so URP's variant stripper
+        /// keeps that variant in player builds (see RuntimeMaterials).
+        /// </summary>
+        static void EnsureRuntimeMaterialTemplates()
+        {
+            const string dir = "Assets/Resources/D1U";
+            const string path = dir + "/LevelCutout.mat";
+            if (AssetDatabase.LoadAssetAtPath<Material>(path) != null)
+                return;
+            if (!AssetDatabase.IsValidFolder("Assets/Resources"))
+                AssetDatabase.CreateFolder("Assets", "Resources");
+            if (!AssetDatabase.IsValidFolder(dir))
+                AssetDatabase.CreateFolder("Assets/Resources", "D1U");
+
+            var shader = Shader.Find("Universal Render Pipeline/Particles/Unlit")
+                         ?? Shader.Find("Sprites/Default");
+            var mat = new Material(shader) { name = "LevelCutout" };
+            if (mat.HasProperty("_AlphaClip")) mat.SetFloat("_AlphaClip", 1f);
+            mat.EnableKeyword("_ALPHATEST_ON");
+            if (mat.HasProperty("_Cutoff")) mat.SetFloat("_Cutoff", 0.5f);
+            if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", Color.white);
+            AssetDatabase.CreateAsset(mat, path);
+            AssetDatabase.SaveAssets();
+            Debug.Log($"D1U build: created runtime material template {path}");
+        }
+
         [MenuItem("D1U/Build Windows Player")]
         public static void BuildWindows()
         {
             EnsureAlwaysIncludedShaders();
+            EnsureRuntimeMaterialTemplates();
             PlayerSettings.companyName = "dxx-redux";
             PlayerSettings.productName = "D1X-Unity";
             PlayerSettings.runInBackground = true;

@@ -69,7 +69,9 @@ namespace D1U.Presentation
             view.wclips = wclips;
             view.shader = shader;
 
-            view.material = new Material(shader) { name = "automap", hideFlags = HideFlags.HideAndDontSave };
+            view.material = RuntimeMaterials.Cutout(shader);
+            view.material.name = "automap";
+            view.material.hideFlags = HideFlags.HideAndDontSave;
             if (view.material.HasProperty("_BaseColor"))
                 view.material.SetColor("_BaseColor", Color.white);
             if (view.material.HasProperty("_Cull"))

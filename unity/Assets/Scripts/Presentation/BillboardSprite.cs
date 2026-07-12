@@ -27,7 +27,9 @@ namespace D1U.Presentation
             sprite.loop = loop;
             sprite.spawnTime = Time.time;
 
-            sprite.material = new Material(shader) { name = name, hideFlags = HideFlags.HideAndDontSave };
+            sprite.material = RuntimeMaterials.Cutout(shader);
+            sprite.material.name = name;
+            sprite.material.hideFlags = HideFlags.HideAndDontSave;
             if (sprite.material.HasProperty("_Cull")) sprite.material.SetInt("_Cull", 0);
             if (sprite.material.HasProperty("_AlphaClip")) { sprite.material.SetFloat("_AlphaClip", 1f); sprite.material.EnableKeyword("_ALPHATEST_ON"); }
             if (sprite.material.HasProperty("_Cutoff")) sprite.material.SetFloat("_Cutoff", 0.5f);
