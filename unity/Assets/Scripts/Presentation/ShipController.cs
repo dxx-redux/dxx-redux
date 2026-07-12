@@ -18,10 +18,8 @@ namespace D1U.Presentation
         // Unity's axis is counts * 0.1 (InputManager sensitivity), so base 1/24.
         const float MouseScale = 1f / 24f;
 
-        /// <summary>1 = original default feel; user-adjustable in the menu.</summary>
-        public float mouseSensMultiplier = 1f;
-        /// <summary>false = original default (mouse forward pitches the nose down).</summary>
-        public bool invertMouseY;
+        /// <summary>Bindings + mouse tuning (Settings → Controls); shared with the menu.</summary>
+        public ControlsConfig Controls { get; set; }
 
         ShipSim sim;
         ShipState state;
@@ -116,22 +114,23 @@ namespace D1U.Presentation
 
             if (alive)
             {
+                var cfg = Controls ??= new ControlsConfig();
                 var c = new ShipControls();
-                if (Input.GetKey(KeyCode.W)) c.ForwardTime += ft;
-                if (Input.GetKey(KeyCode.S)) c.ForwardTime -= ft;
-                if (Input.GetKey(KeyCode.D)) c.SidewaysTime += ft;
-                if (Input.GetKey(KeyCode.A)) c.SidewaysTime -= ft;
-                if (Input.GetKey(KeyCode.Space)) c.VerticalTime += ft;
-                if (Input.GetKey(KeyCode.LeftControl)) c.VerticalTime -= ft;
-                if (Input.GetKey(KeyCode.Q)) c.BankTime += ft;
-                if (Input.GetKey(KeyCode.E)) c.BankTime -= ft;
+                if (cfg.Held(GameAction.Forward)) c.ForwardTime += ft;
+                if (cfg.Held(GameAction.Reverse)) c.ForwardTime -= ft;
+                if (cfg.Held(GameAction.SlideRight)) c.SidewaysTime += ft;
+                if (cfg.Held(GameAction.SlideLeft)) c.SidewaysTime -= ft;
+                if (cfg.Held(GameAction.SlideUp)) c.VerticalTime += ft;
+                if (cfg.Held(GameAction.SlideDown)) c.VerticalTime -= ft;
+                if (cfg.Held(GameAction.BankLeft)) c.BankTime += ft;
+                if (cfg.Held(GameAction.BankRight)) c.BankTime -= ft;
 
                 // count-based mouse: same swipe = same turn at any frame rate
-                float mx = Input.GetAxisRaw("Mouse X") * MouseScale * mouseSensMultiplier;
-                float my = Input.GetAxisRaw("Mouse Y") * MouseScale * mouseSensMultiplier;
-                c.HeadingTime += mx;
+                float mx = Input.GetAxisRaw("Mouse X") * MouseScale * cfg.MouseSens;
+                float my = Input.GetAxisRaw("Mouse Y") * MouseScale * cfg.MouseSens;
+                c.HeadingTime += cfg.InvertX ? -mx : mx;
                 // original default: mouse forward = nose down (kconfig.c:1440)
-                c.PitchTime += invertMouseY ? -my : my;
+                c.PitchTime += cfg.InvertY ? -my : my;
 
                 c.PitchTime = Mathf.Clamp(c.PitchTime, -ft / 2f, ft / 2f); // kconfig.c:1731-1756
                 c.HeadingTime = Mathf.Clamp(c.HeadingTime, -ft, ft);
@@ -187,7 +186,7 @@ namespace D1U.Presentation
                 }
 
                 var shipPos = new Vector3(state.Pos.X, state.Pos.Y, state.Pos.Z);
-                bool trigger = Input.GetMouseButton(0);
+                bool trigger = Controls.Held(GameAction.FirePrimary);
                 if (Weapons.SelectedPrimary == 4)
                 {
                     // fusion: charge while held, fire on release; overcharge burns
@@ -206,14 +205,14 @@ namespace D1U.Presentation
                 {
                     Sounds?.PlayAt(WeaponStats[Weapons.LastFiredId].FiringSound, shipPos, 0.6f);
                 }
-                if (Input.GetMouseButton(1))
+                if (Controls.Held(GameAction.FireSecondary))
                 {
                     int fired = Weapons.TryFireSecondary(Objects, WeaponStats, state, GunPoints,
-                        preferHoming: Input.GetKey(KeyCode.H));
+                        preferHoming: Controls.Held(GameAction.PreferHoming));
                     if (fired >= 0)
                         Sounds?.PlayAt(WeaponStats[fired].FiringSound, shipPos, 0.8f);
                 }
-                if (Input.GetKeyDown(KeyCode.F) && WeaponStats.Length > 9 &&
+                if (Controls.Pressed(GameAction.Flare) && WeaponStats.Length > 9 &&
                     Weapons.FireFlare(Objects, Runtime.Player, WeaponStats, state, GunPoints))
                 {
                     Sounds?.PlayAt(WeaponStats[9].FiringSound, shipPos, 0.5f);

@@ -97,6 +97,79 @@ namespace D1U.Presentation
         // can take ~a minute on a version bump, and Build blocks the main thread)
         bool buildQueued;
 
+        // Settings -> Controls page state
+        readonly ControlsConfig controls = new ControlsConfig();
+        int menuPage;                 // 0 = main menu, 1 = controls
+        GameAction? rebinding;        // waiting for a key press for this action
+
+        /// <summary>Settings → Controls: rebind keys, tune mouse direction/speed.</summary>
+        void DrawControlsMenu(float x, float y, float w)
+        {
+            GUI.Label(new Rect(x, y, w, 26), "CONTROLS  —  click a binding, then press the new key");
+
+            var e = Event.current;
+            if (rebinding != null)
+            {
+                if (e.type == EventType.KeyDown && e.keyCode != KeyCode.None)
+                {
+                    if (e.keyCode != KeyCode.Escape) // Esc cancels, never binds
+                        controls.Set(rebinding.Value, e.keyCode);
+                    rebinding = null;
+                    e.Use();
+                }
+                else if (e.type == EventType.MouseDown)
+                {
+                    controls.Set(rebinding.Value, KeyCode.Mouse0 + e.button);
+                    rebinding = null;
+                    e.Use();
+                }
+            }
+
+            float rowH = 30f;
+            for (int i = 0; i < ControlsConfig.Bindables.Length; i++)
+            {
+                var (action, label, _) = ControlsConfig.Bindables[i];
+                float ry = y + 32 + i * rowH;
+                GUI.Label(new Rect(x, ry, 240, 26), label);
+                string keyText = rebinding == action
+                    ? "PRESS A KEY..."
+                    : ControlsConfig.KeyName(controls.Get(action));
+                if (GUI.Button(new Rect(x + 250, ry, 210, 26), keyText) && rebinding == null)
+                    rebinding = action;
+            }
+
+            float my = y + 32 + ControlsConfig.Bindables.Length * rowH + 10;
+            GUI.Label(new Rect(x, my, 200, 24), $"Mouse speed: {controls.MouseSens:F2}x");
+            float newSens = GUI.HorizontalSlider(new Rect(x + 200, my + 6, 260, 20), controls.MouseSens, 0.25f, 4f);
+            if (!Mathf.Approximately(newSens, controls.MouseSens))
+            {
+                controls.MouseSens = newSens;
+                controls.SaveMouse();
+            }
+            bool newInvY = GUI.Toggle(new Rect(x, my + 30, 300, 24), controls.InvertY,
+                " Invert mouse Y (push = nose up)");
+            bool newInvX = GUI.Toggle(new Rect(x, my + 56, 300, 24), controls.InvertX,
+                " Invert mouse X");
+            if (newInvY != controls.InvertY || newInvX != controls.InvertX)
+            {
+                controls.InvertY = newInvY;
+                controls.InvertX = newInvX;
+                controls.SaveMouse();
+            }
+
+            if (GUI.Button(new Rect(x, my + 90, 220, 30), "RESET TO DEFAULTS"))
+            {
+                controls.ResetDefaults();
+                rebinding = null;
+            }
+            if (GUI.Button(new Rect(x + 240, my + 90, 220, 30), "BACK") ||
+                (rebinding == null && e.type == EventType.KeyDown && e.keyCode == KeyCode.Escape))
+            {
+                menuPage = 0;
+                rebinding = null;
+            }
+        }
+
         // net egg replication (shared ids across peers) + per-material texture state
         int bakedObjectCount;
         int nextEggNetId = 1;
@@ -401,6 +474,12 @@ namespace D1U.Presentation
             var title = new GUIStyle(GUI.skin.label) { fontSize = 30, alignment = TextAnchor.MiddleCenter };
             GUI.Label(new Rect(0, y - 70, Screen.width, 50), "D1X-UNITY", title);
 
+            if (menuPage == 1)
+            {
+                DrawControlsMenu(x, y, w);
+                return;
+            }
+
             if (menuMissions == null || menuMissions.Count == 0)
             {
                 GUI.Label(new Rect(x, y, w, 60),
@@ -433,16 +512,12 @@ namespace D1U.Presentation
                 PlayerPrefs.SetInt("d1u_difficulty", D1U.Game.ObjectSystem.Difficulty);
             }
 
-            float sens = PlayerPrefs.GetFloat("d1u_mouse_sens", 1f);
-            GUI.Label(new Rect(x, rowY + 38, 190, 24), $"Mouse speed: {sens:F2}x");
-            float newSens = GUI.HorizontalSlider(new Rect(x + 190, rowY + 44, 170, 20), sens, 0.25f, 4f);
-            if (!Mathf.Approximately(newSens, sens))
-                PlayerPrefs.SetFloat("d1u_mouse_sens", newSens);
-            bool invertY = PlayerPrefs.GetInt("d1u_invert_y", 0) != 0;
-            bool newInvertY = GUI.Toggle(new Rect(x + 380, rowY + 38, 280, 26), invertY,
-                " Invert mouse Y (push = nose up)");
-            if (newInvertY != invertY)
-                PlayerPrefs.SetInt("d1u_invert_y", newInvertY ? 1 : 0);
+            if (GUI.Button(new Rect(x, rowY + 38, w, 30), "SETTINGS  ▸  CONTROLS"))
+            {
+                menuPage = 1;
+                rebinding = null;
+                return;
+            }
 
             if (GUI.Button(new Rect(x, rowY + 74, w, 40), "START") ||
                 Input.GetKeyDown(KeyCode.Return))
@@ -780,7 +855,7 @@ namespace D1U.Presentation
                     return;
                 }
 
-                if (Input.GetKeyDown(KeyCode.Tab) && Runtime != null &&
+                if (controls.Pressed(GameAction.Automap) && Runtime != null &&
                     !Runtime.Player.ExitReached && !shipController.IsDead)
                     ToggleAutomap();
                 if (automapOpen && automapView != null && Camera.main != null)
@@ -1026,8 +1101,7 @@ namespace D1U.Presentation
             controller.Sounds = sounds;
             controller.WallBonkSound = 70;  // SOUND_PLAYER_HIT_WALL (sounds.h:204)
             controller.ScrapeSound = 151;   // SOUND_VOLATILE_WALL_HISS (sounds.h:218)
-            controller.mouseSensMultiplier = PlayerPrefs.GetFloat("d1u_mouse_sens", 1f);
-            controller.invertMouseY = PlayerPrefs.GetInt("d1u_invert_y", 0) != 0;
+            controller.Controls = controls; // shared: menu tweaks apply live
             controller.Weapons.MultiplayerScale = netSession != null;
             controller.Weapons.Message += text => messages.Add((Time.time, text));
             controller.EggsSpilled += eggs =>
