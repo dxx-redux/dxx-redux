@@ -23,6 +23,7 @@ namespace D1U.Game
         public sbyte[] RapidfireCount;       // [5]
         public bool AttackType;              // claw robots
         public bool IsBoss;
+        public int Score;
         public int SeeSound, AttackSound, ClawSound;
     }
 
@@ -98,6 +99,8 @@ namespace D1U.Game
         public int PlayerSeg = -1;
         public float PlayerSize = 4.7f;
         public bool PlayerAlive = true;
+        public bool PlayerCloaked;
+        public int Score { get; private set; }
 
         public event Action<GameObj> Spawned;
         public event Action<GameObj> Removed;
@@ -508,6 +511,8 @@ namespace D1U.Game
             if (obj.Type == 2)
             {
                 RobotsAlive--;
+                if (obj.SubId < robotStats.Length)
+                    Score += robotStats[obj.SubId].Score;
                 Exploded?.Invoke(obj, obj.Pos);
                 DropContains(obj);
                 Remove(obj);
@@ -577,6 +582,8 @@ namespace D1U.Game
                     Rad = 0.25f,
                 };
                 bool visible = fvi.FindVectorIntersection(visQuery, hitInfo) == FviHit.None;
+                if (PlayerCloaked && dist > 20f)
+                    visible = false; // cloaked players are only noticed up close
                 float dot = Vector3.Dot(robot.Orient.Forward, dir);
                 bool visibleAndInFov = visible &&
                     dot >= (stats.FieldOfView != null ? stats.FieldOfView[Difficulty] : 0.5f);
@@ -934,6 +941,14 @@ namespace D1U.Game
                     if (weapons == null || weapons.Megas >= 5) return false;
                     weapons.Megas++;
                     Message?.Invoke("Mega missile!");
+                    return true;
+                case 23:
+                    player.CloakTime = 30f;
+                    Message?.Invoke("Cloaking device!");
+                    return true;
+                case 25:
+                    player.InvulnTime = 30f;
+                    Message?.Invoke("Invulnerability!");
                     return true;
                 default:
                     Message?.Invoke("Picked up a powerup (effect coming soon)");

@@ -46,7 +46,7 @@ namespace D1U.Presentation
         /// <summary>Robot weapons/claws reached the player (apply_damage_to_player).</summary>
         public void ApplyPlayerDamage(float damage)
         {
-            if (Runtime == null || deathTimer > 0f)
+            if (Runtime == null || deathTimer > 0f || Runtime.Player.InvulnTime > 0f)
                 return;
             Runtime.Player.Shields -= damage;
             if (Runtime.Player.Shields <= 0f)
@@ -105,6 +105,7 @@ namespace D1U.Presentation
                 Objects.PlayerVel = state.Vel;
                 Objects.PlayerSeg = state.Segnum;
                 Objects.PlayerSize = shipParams.Size;
+                Objects.PlayerCloaked = Runtime.Player.CloakTime > 0f;
                 Objects.UpdateAi(ft);
                 Objects.TickMatcens(ft);
 

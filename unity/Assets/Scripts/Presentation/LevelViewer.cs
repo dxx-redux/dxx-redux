@@ -551,6 +551,7 @@ namespace D1U.Presentation
                     RapidfireCount = (sbyte[])r.RapidfireCount.Clone(),
                     AttackType = (int)r.AttackType != 0,
                     IsBoss = (int)r.BossFlag != 0,
+                    Score = r.ScoreValue,
                     SeeSound = r.SeeSound,
                     AttackSound = r.AttackSound,
                     ClawSound = r.ClawSound,
@@ -783,7 +784,12 @@ namespace D1U.Presentation
                        $"{(w.SelectedPrimary == 4 && w.FusionCharge > 0f ? $" charge {w.FusionCharge:F1}" : "")}]" +
                        $"   [{w.SecondaryName} {w.SecondaryCount(w.SelectedSecondary)}]";
             }
-            string robots = objectSystem != null ? $"   Robots {objectSystem.RobotsAlive}" : "";
+            string robots = objectSystem != null
+                ? $"   Robots {objectSystem.RobotsAlive}   Score {objectSystem.Score + player.Score}"
+                : "";
+            string timers = (player.CloakTime > 0f ? $"   CLOAK {player.CloakTime:F0}" : "") +
+                            (player.InvulnTime > 0f ? $"   INVULN {player.InvulnTime:F0}" : "");
+            robots += timers;
             GUI.Label(new Rect(12, 8, 900, 24),
                 $"Shields {player.Shields:F0}   Energy {player.Energy:F0}   Keys:" +
                 $"{((player.Keys & 2) != 0 ? " BLUE" : "")}{((player.Keys & 4) != 0 ? " RED" : "")}{((player.Keys & 8) != 0 ? " YELLOW" : "")}" +

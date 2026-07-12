@@ -17,6 +17,9 @@ namespace D1U.Game
         public float Shields = 100f;
         public float Energy = 100f;
         public int Keys;            // wall key bits: 2 blue, 4 red, 8 gold
+        public float CloakTime;     // seconds remaining
+        public float InvulnTime;
+        public int Score;
         public bool ExitReached;
         public bool SecretExitReached;
     }
@@ -143,6 +146,9 @@ namespace D1U.Game
             {
                 Player.Energy = Math.Min(100f, Player.Energy + 25f * dt);
             }
+
+            Player.CloakTime = Math.Max(0f, Player.CloakTime - dt);
+            Player.InvulnTime = Math.Max(0f, Player.InvulnTime - dt);
         }
 
         bool DoDoorOpen(ActiveDoor door, float dt)
