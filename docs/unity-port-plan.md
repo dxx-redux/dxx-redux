@@ -40,14 +40,27 @@ Status: v1 + progress log (2026-07-12) · branch `unity`
   reactor starts the real self-destruct countdown (50..30 s by
   difficulty, voice callouts, siren, T-n readout, whiteout) — escape or
   the mine blows and the level restarts.
-- **Headless verification**: `unity/tools/Smoke` (21 sections, SMOKE OK)
+- **D1 completion set**: flares (F, stick to walls), blob/vclip weapon
+  bolt rendering, lives (3 ships, +1 per 50k, score banks across
+  levels) with GAME OVER, savegame v3.
+- **Multiplayer (anarchy)**: NetSession (single-threaded UDP 28342,
+  host-relay star, mid-game join via WELCOME with mission/level/
+  difficulty/roster, 15 Hz states, fire/door/pickup replication,
+  victim-authoritative damage, frag scoreboard, timeouts). Menu
+  HOST/JOIN by IP; remote ships rendered as interpolated player-ship
+  models; robots/exits stripped per anarchy rules; infinite ships with
+  random-start respawns. Verified with a real loopback game in Smoke.
+- **Build**: D1U/Build Windows Player (also batchmode) →
+  `unity/Builds/D1X-Unity/d1x-unity.exe`; HOGs are found next to the
+  exe, in an adjacent `hogs/`, or in the repo's `d1/hogs`.
+- **Headless verification**: `unity/tools/Smoke` (22 sections, SMOKE OK)
   covers parsing→physics→combat→drops→pathfinding→briefing text→
-  savegame roundtrip→death drops→countdown; `unity/tools/
-  PresentationCheck` compiles the Unity-side Presentation assembly
-  against the engine module DLLs, so all code is compile-verified even
-  while the editor holds the lock.
-- Remaining backlog: extra lives at score thresholds, homing retrack
-  cadence details, D2 support (next big milestone).
+  savegame roundtrip→death drops→countdown→netgame loopback;
+  `unity/tools/PresentationCheck` compiles the Unity-side Presentation
+  assembly against the engine module DLLs.
+- Scope note: D2 support is explicitly out of scope (user decision,
+  2026-07-12). Remaining polish: homing retrack cadence details,
+  powerup respawn option for long anarchy games, net egg drops.
 Scope: single-player Descent 1 in Unity, fan build (non-commercial, user-supplied game data — same posture as dxx-redux).
 
 ## 1. Goals and ground rules
