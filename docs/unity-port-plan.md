@@ -2,24 +2,37 @@
 
 Status: v1 + progress log (2026-07-12) · branch `unity`
 
-## Progress (updated 2026-07-12)
+## Progress (updated 2026-07-12, evening)
 
 - **M0–M4 complete**: project scaffold, base/mission DXU rebuild caches with
   auto-invalidation, level rendering with merged overlays + animated
   textures, faithful flight physics/FVI, doors/keys/triggers/matcens/
-  fuel-centers, level objects rendered.
+  fuel-centers, level objects rendered. First in-editor play session
+  confirmed by the user: "looks very like original".
 - **M5 complete in essentials**: all five primaries (lasers/vulcan/
   spreadfire/plasma/fusion) and five secondaries (concussion/homing/prox/
   smart/mega) with selection keys, robot AI (sight, chase, per-difficulty
-  firing with jitter and bursts, claw contact), player death/respawn,
-  matcen spawning, boss teleport + self-destruct-on-death, cloak/invuln,
-  scoring, sounds (weapons, doors, robots), explosions, robot pose
-  animation on true submodel hierarchies.
+  firing with jitter and bursts, claw contact, out-of-sight BFS
+  pathfinding through openable doors, still robots chase once shot),
+  player death/respawn, matcen spawning, boss teleport +
+  self-destruct-on-death, cloak/invuln, scoring (robots/reactor 5000/
+  hostage 1000), sounds, explosions, robot pose animation on true
+  submodel hierarchies, exact powerup amounts (3+3*(NDL-diff), maxed
+  pickups fall back to energy), faithful death drops (robot_info rolls,
+  replace-with-energy, bounce physics, timed despawn).
 - **M6 partially**: mission-select menu (Esc), level progression with
-  weapon carry-over, music through MeltySynth + any user-supplied .sf2.
-- Known simplifications are marked TODO in code: exact powerup amounts,
-  drop probability rolls, secret-level routing, AI pathfinding when out
-  of sight, homing retrack cadence details, briefings/automap/savegames.
+  weapon carry-over, secret-level routing (Secret_level_table, builtin
+  10/21/24 + .msn num_secrets; return to table[n]+1), Tab automap
+  (mapedges.c port: visited wireframe, wall/door/key colors, frontier
+  hiding, orbit camera), music through MeltySynth + user-supplied .sf2.
+- **Headless verification**: `unity/tools/Smoke` (17 sections, SMOKE OK)
+  covers parsing→physics→combat→drops→pathfinding;
+  `unity/tools/PresentationCheck` compiles the Unity-side Presentation
+  assembly against the engine module DLLs, so all code is
+  compile-verified even while the editor holds the project lock.
+- Remaining backlog: briefings (TXB), savegames, endgame/score screens,
+  vulcan ammo spew on death, homing retrack cadence details, difficulty
+  menu (Difficulty is const Hotshot), D2 support.
 Scope: single-player Descent 1 in Unity, fan build (non-commercial, user-supplied game data — same posture as dxx-redux).
 
 ## 1. Goals and ground rules
