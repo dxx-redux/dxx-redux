@@ -622,10 +622,15 @@ namespace D1U.Presentation
             if (Runtime == null || !Application.isPlaying)
                 return;
             var player = Runtime.Player;
-            string ammo = shipController != null
-                ? $"   Lasers L{shipController.Weapons.LaserLevel + 1}{(shipController.Weapons.Quad ? " QUAD" : "")}" +
-                  $"   Missiles {shipController.Weapons.Concussions}   Homing {shipController.Weapons.Homings}"
-                : "";
+            string ammo = "";
+            if (shipController != null)
+            {
+                var w = shipController.Weapons;
+                ammo = $"   [{w.PrimaryName}{(w.Quad && w.SelectedPrimary == 0 ? " QUAD" : "")}" +
+                       $"{(w.SelectedPrimary == 1 ? $" {w.VulcanAmmo}" : "")}" +
+                       $"{(w.SelectedPrimary == 4 && w.FusionCharge > 0f ? $" charge {w.FusionCharge:F1}" : "")}]" +
+                       $"   Missiles {w.Concussions}   Homing {w.Homings}";
+            }
             GUI.Label(new Rect(12, 8, 800, 24),
                 $"Shields {player.Shields:F0}   Energy {player.Energy:F0}   Keys:" +
                 $"{((player.Keys & 2) != 0 ? " BLUE" : "")}{((player.Keys & 4) != 0 ? " RED" : "")}{((player.Keys & 8) != 0 ? " YELLOW" : "")}" +

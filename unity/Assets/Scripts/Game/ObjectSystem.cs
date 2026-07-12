@@ -801,6 +801,34 @@ namespace D1U.Game
                     if (weapons != null) weapons.Quad = true;
                     Message?.Invoke("Quad lasers!");
                     return true;
+                case 13:
+                    if (weapons == null) return false;
+                    if (!weapons.HasVulcan) { weapons.HasVulcan = true; Message?.Invoke("Vulcan cannon!"); }
+                    else Message?.Invoke("Vulcan ammo!");
+                    weapons.VulcanAmmo = Math.Min(PlayerWeapons.VulcanAmmoMax,
+                        weapons.VulcanAmmo + PlayerWeapons.VulcanWeaponAmmo);
+                    return true;
+                case 14:
+                    if (weapons == null || weapons.HasSpread) return false;
+                    weapons.HasSpread = true;
+                    Message?.Invoke("Spreadfire cannon!");
+                    return true;
+                case 15:
+                    if (weapons == null || weapons.HasPlasma) return false;
+                    weapons.HasPlasma = true;
+                    Message?.Invoke("Plasma cannon!");
+                    return true;
+                case 16:
+                    if (weapons == null || weapons.HasFusion) return false;
+                    weapons.HasFusion = true;
+                    Message?.Invoke("Fusion cannon!");
+                    return true;
+                case 22:
+                    if (weapons == null || weapons.VulcanAmmo >= PlayerWeapons.VulcanAmmoMax) return false;
+                    weapons.VulcanAmmo = Math.Min(PlayerWeapons.VulcanAmmoMax,
+                        weapons.VulcanAmmo + PlayerWeapons.VulcanAmmoPickup);
+                    Message?.Invoke("Vulcan ammo!");
+                    return true;
                 default:
                     Message?.Invoke("Picked up a powerup (effect coming soon)");
                     return true;

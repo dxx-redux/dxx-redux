@@ -4,20 +4,55 @@ using System.Numerics;
 namespace D1U.Game
 {
     /// <summary>
-    /// Player primary firing (laser.c do_laser_firing_player, simplified to
-    /// lasers for M5 phase 1): fire-wait pacing, energy cost, twin barrels
-    /// (gun points 0/1; 2/3 with quads).
+    /// Player weapons (laser.c do_laser_firing_player essentials): five
+    /// primaries with their firing patterns, missiles with homing preference.
     /// </summary>
     public sealed class PlayerWeapons
     {
+        // primary indices 0..4 -> laser/vulcan/spreadfire/plasma/fusion
+        public const int VulcanAmmoMax = 392 * 2;        // powerup.h:63
+        public const int VulcanWeaponAmmo = 196;
+        public const int VulcanAmmoPickup = 49 * 2;
+
+        public int SelectedPrimary;
         public int LaserLevel;   // 0..3 -> weapon ids 0..3
         public bool Quad;
+        public bool HasVulcan, HasSpread, HasPlasma, HasFusion;
+        public int VulcanAmmo;
+        public float FusionCharge;
         public int Concussions = 3; // players start with 3 (gameseq init)
         public int Homings;
 
         float nextFire;
         float nextFireSecondary;
-        int missileGun; // Missile_gun toggle: alternate gun points 4/5
+        int missileGun;      // Missile_gun toggle: alternate gun points 4/5
+        bool spreadAxis;     // spreadfire alternates horizontal/vertical
+        uint randSeed = 0x5115;
+
+        public bool OwnsPrimary(int index) => index switch
+        {
+            0 => true,
+            1 => HasVulcan,
+            2 => HasSpread,
+            3 => HasPlasma,
+            4 => HasFusion,
+            _ => false,
+        };
+
+        public string PrimaryName => SelectedPrimary switch
+        {
+            1 => "VULCAN",
+            2 => "SPREADFIRE",
+            3 => "PLASMA",
+            4 => "FUSION",
+            _ => $"LASER L{LaserLevel + 1}",
+        };
+
+        int Rand()
+        {
+            randSeed = randSeed * 0x41c64e6d + 0x3039;
+            return (int)((randSeed >> 16) & 0x7fff);
+        }
 
         public void Tick(float dt)
         {
@@ -25,26 +60,107 @@ namespace D1U.Game
             nextFireSecondary = Math.Max(0f, nextFireSecondary - dt);
         }
 
+        /// <summary>Non-fusion primaries; fusion goes through FusionHold/FusionRelease.</summary>
         public bool TryFirePrimary(ObjectSystem objects, PlayerState player, WeaponStats[] weapons,
                                    ShipState ship, Vector3[] gunPoints)
         {
             if (nextFire > 0f)
                 return false;
 
-            var stats = weapons[LaserLevel];
-            if (player.Energy < stats.EnergyUsage)
-                return false;
-
-            player.Energy -= stats.EnergyUsage;
-            nextFire += Math.Max(0.05f, stats.FireWait);
-
-            int gunCount = Quad ? 4 : 2;
-            for (int gun = 0; gun < gunCount; gun++)
+            switch (SelectedPrimary)
             {
-                var muzzle = ship.Pos + ship.Orient.TransformRow(gunPoints[gun]);
-                objects.FireWeapon(stats, (byte)LaserLevel, muzzle, ship.Orient.Forward, ship.Segnum);
+                case 0: // lasers: both barrels (quad = 4)
+                {
+                    var stats = weapons[LaserLevel];
+                    if (player.Energy < stats.EnergyUsage)
+                        return false;
+                    player.Energy -= stats.EnergyUsage;
+                    nextFire += Math.Max(0.05f, stats.FireWait);
+                    int gunCount = Quad ? 4 : 2;
+                    for (int gun = 0; gun < gunCount; gun++)
+                        Spawn(objects, stats, (byte)LaserLevel, ship, gunPoints[gun], ship.Orient.Forward);
+                    return true;
+                }
+                case 1: // vulcan: gun 6, ammo, angular jitter (laser.c:1289)
+                {
+                    if (!HasVulcan || VulcanAmmo <= 0)
+                        return false;
+                    var stats = weapons[11];
+                    VulcanAmmo--;
+                    nextFire += Math.Max(0.03f, stats.FireWait);
+                    float jitterP = (Rand() / 8 - 2048) / 65536f;
+                    float jitterH = (Rand() / 8 - 2048) / 65536f;
+                    var dir = ship.Orient.TransformRow(Mat3.FromAngles(jitterP, 0f, jitterH).Forward);
+                    Spawn(objects, stats, 11, ship, gunPoints[6], dir);
+                    return true;
+                }
+                case 2: // spreadfire: 3 bolts, alternating spread axis (laser.c:1298-1307)
+                {
+                    var stats = weapons[12];
+                    if (!HasSpread || player.Energy < stats.EnergyUsage)
+                        return false;
+                    player.Energy -= stats.EnergyUsage;
+                    nextFire += Math.Max(0.05f, stats.FireWait);
+                    var axis = spreadAxis ? ship.Orient.Up : ship.Orient.Right;
+                    spreadAxis = !spreadAxis;
+                    var fwd = ship.Orient.Forward;
+                    Spawn(objects, stats, 12, ship, gunPoints[6], fwd);
+                    Spawn(objects, stats, 12, ship, gunPoints[6], Vector3.Normalize(fwd + axis * (1f / 16f)));
+                    Spawn(objects, stats, 12, ship, gunPoints[6], Vector3.Normalize(fwd - axis * (1f / 16f)));
+                    return true;
+                }
+                case 3: // plasma: both barrels
+                {
+                    var stats = weapons[13];
+                    if (!HasPlasma || player.Energy < stats.EnergyUsage)
+                        return false;
+                    player.Energy -= stats.EnergyUsage;
+                    nextFire += Math.Max(0.05f, stats.FireWait);
+                    Spawn(objects, stats, 13, ship, gunPoints[0], ship.Orient.Forward);
+                    Spawn(objects, stats, 13, ship, gunPoints[1], ship.Orient.Forward);
+                    return true;
+                }
+                default:
+                    return false;
             }
+        }
+
+        /// <summary>Fusion charges while the trigger is held (game.c:1253-1317, simplified).</summary>
+        public void FusionHold(PlayerState player, float dt)
+        {
+            if (player.Energy <= 0f)
+                return;
+            float drain = Math.Min(player.Energy, 2f * dt);
+            player.Energy -= drain;
+            FusionCharge = Math.Min(4f, FusionCharge + dt);
+        }
+
+        /// <summary>Release the fusion trigger: fire both bolts with the charge multiplier.</summary>
+        public bool FusionRelease(ObjectSystem objects, PlayerState player, WeaponStats[] weapons,
+                                  ShipState ship, Vector3[] gunPoints)
+        {
+            if (nextFire > 0f)
+            {
+                FusionCharge = 0f;
+                return false;
+            }
+            var stats = weapons[14];
+            // damage multiplier 1 + charge/2, single-player cap 4x (laser.c:246-263)
+            float multiplier = Math.Min(4f, 1f + FusionCharge / 2f);
+            FusionCharge = 0f;
+            var boosted = stats;
+            boosted.Strength *= multiplier;
+            nextFire += Math.Max(0.25f, stats.FireWait);
+            Spawn(objects, boosted, 14, ship, gunPoints[0], ship.Orient.Forward);
+            Spawn(objects, boosted, 14, ship, gunPoints[1], ship.Orient.Forward);
             return true;
+        }
+
+        void Spawn(ObjectSystem objects, in WeaponStats stats, byte weaponId,
+                   ShipState ship, Vector3 gunLocal, Vector3 dir)
+        {
+            var muzzle = ship.Pos + ship.Orient.TransformRow(gunLocal);
+            objects.FireWeapon(stats, weaponId, muzzle, dir, ship.Segnum);
         }
 
         /// <summary>

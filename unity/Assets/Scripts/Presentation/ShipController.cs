@@ -109,11 +109,31 @@ namespace D1U.Presentation
                 Objects.TickMatcens(ft);
 
                 Weapons.Tick(ft);
-                if (Input.GetMouseButton(0) &&
-                    Weapons.TryFirePrimary(Objects, Runtime.Player, WeaponStats, state, GunPoints))
+
+                // primary select 1..5
+                for (int key = 0; key < 5; key++)
+                    if (Input.GetKeyDown(KeyCode.Alpha1 + key) && Weapons.OwnsPrimary(key))
+                        Weapons.SelectedPrimary = key;
+
+                var shipPos = new Vector3(state.Pos.X, state.Pos.Y, state.Pos.Z);
+                bool trigger = Input.GetMouseButton(0);
+                if (Weapons.SelectedPrimary == 4)
                 {
-                    Sounds?.PlayAt(WeaponStats[Weapons.LaserLevel].FiringSound,
-                        new Vector3(state.Pos.X, state.Pos.Y, state.Pos.Z), 0.6f);
+                    // fusion: charge while held, fire on release
+                    if (trigger)
+                        Weapons.FusionHold(Runtime.Player, ft);
+                    else if (Weapons.FusionCharge > 0f &&
+                             Weapons.FusionRelease(Objects, Runtime.Player, WeaponStats, state, GunPoints))
+                        Sounds?.PlayAt(WeaponStats[14].FiringSound, shipPos, 0.8f);
+                }
+                else if (trigger &&
+                         Weapons.TryFirePrimary(Objects, Runtime.Player, WeaponStats, state, GunPoints))
+                {
+                    int weaponId = Weapons.SelectedPrimary switch
+                    {
+                        1 => 11, 2 => 12, 3 => 13, _ => Weapons.LaserLevel,
+                    };
+                    Sounds?.PlayAt(WeaponStats[weaponId].FiringSound, shipPos, 0.6f);
                 }
                 if (Input.GetMouseButton(1))
                 {
