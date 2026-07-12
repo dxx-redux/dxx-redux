@@ -50,6 +50,13 @@ namespace D1U.Presentation
         MusicPlayer music;
         D1U.Game.ObjectSystem objectSystem;
         ShipController shipController;
+        D1U.Game.SegmentWorld shipWorld;
+        AutomapView automapView;
+        bool automapOpen;
+        bool[] visitedSegs;
+        int playerStartSeg;
+        readonly List<GameObject> automapHidden = new List<GameObject>();
+        Transform camAutomapParent;
         int missionLevelCount;
         int[] secretFromLevel = Array.Empty<int>(); // per secret level: entered from this normal level
         int returnAfterSecret;                      // normal level to resume after a secret level
@@ -534,6 +541,22 @@ namespace D1U.Presentation
                 }
             }
 
+            // automap: track visited segments, Tab toggles the wireframe view
+            if (Application.isPlaying && shipMode && shipController != null && visitedSegs != null)
+            {
+                int shipSeg = shipController.State.Segnum;
+                if (shipSeg >= 0 && shipSeg < visitedSegs.Length)
+                    visitedSegs[shipSeg] = true;
+
+                if (Input.GetKeyDown(KeyCode.Tab) && Runtime != null &&
+                    !Runtime.Player.ExitReached && !shipController.IsDead)
+                    ToggleAutomap();
+                if (automapOpen && automapView != null && Camera.main != null)
+                    automapView.UpdateView(Camera.main,
+                        new Vector3(shipController.State.Pos.X, shipController.State.Pos.Y, shipController.State.Pos.Z),
+                        shipController.State.Orient);
+            }
+
             if (objectSystem == null)
                 return;
             foreach (var obj in objectSystem.Objects)
@@ -632,6 +655,11 @@ namespace D1U.Presentation
             };
 
             var world = new D1U.Game.SegmentWorld(level);
+            shipWorld = world;
+            playerStartSeg = start.Segnum;
+            visitedSegs = new bool[level.Segments.Length];
+            if (start.Segnum >= 0 && start.Segnum < visitedSegs.Length)
+                visitedSegs[start.Segnum] = true;
 
             // level runtime: doors/triggers/fuelcens, clips from the pig
             wclips = archives.Pig.WClips;
@@ -765,6 +793,61 @@ namespace D1U.Presentation
             music.PlayLevelSong(dir, baseDxuData, levelNumber);
         }
 
+        void ToggleAutomap()
+        {
+            if (automapOpen)
+            {
+                CloseAutomap();
+                return;
+            }
+            if (automapView == null)
+                automapView = AutomapView.Create(transform, LoadedLevel, shipWorld, wclips, levelShader);
+            bool reactorAlive = objectSystem != null &&
+                objectSystem.Objects.Any(o => o.Type == 9 && !o.Dead);
+            automapView.Rebuild(visitedSegs, objectSystem, playerStartSeg, reactorAlive);
+
+            automapHidden.Clear();
+            for (int i = 0; i < transform.childCount; i++)
+            {
+                var child = transform.GetChild(i).gameObject;
+                if (child.name == "Ship" || child.name == "Automap" || !child.activeSelf)
+                    continue;
+                child.SetActive(false);
+                automapHidden.Add(child);
+            }
+            automapView.gameObject.SetActive(true);
+
+            var cam = Camera.main;
+            if (cam != null)
+            {
+                camAutomapParent = cam.transform.parent;
+                cam.transform.SetParent(null, true);
+            }
+            shipController.Paused = true;
+            automapOpen = true;
+        }
+
+        void CloseAutomap()
+        {
+            foreach (var go in automapHidden)
+                if (go != null)
+                    go.SetActive(true);
+            automapHidden.Clear();
+            if (automapView != null)
+                automapView.gameObject.SetActive(false);
+
+            var cam = Camera.main;
+            if (cam != null && camAutomapParent != null)
+            {
+                cam.transform.SetParent(camAutomapParent, false);
+                cam.transform.localPosition = Vector3.zero;
+                cam.transform.localRotation = Quaternion.identity;
+            }
+            if (shipController != null)
+                shipController.Paused = false;
+            automapOpen = false;
+        }
+
         void PlaceCameraAtPlayerStart(BakedLevel level)
         {
             var start = level.Objects.FirstOrDefault(o => o.Type == (byte)ObjectType.Player);
@@ -837,8 +920,16 @@ namespace D1U.Presentation
                 $"{((player.Keys & 2) != 0 ? " BLUE" : "")}{((player.Keys & 4) != 0 ? " RED" : "")}{((player.Keys & 8) != 0 ? " YELLOW" : "")}" +
                 ammo + robots);
 
+            if (automapOpen)
+            {
+                var amStyle = new GUIStyle(GUI.skin.label) { fontSize = 22, alignment = TextAnchor.MiddleCenter };
+                GUI.Label(new Rect(0, 34, Screen.width, 30), "— AUTOMAP —", amStyle);
+                GUI.Label(new Rect(12, Screen.height - 30, 600, 24),
+                    "Tab close · mouse orbit · wheel zoom");
+            }
+
             // reticle
-            if (shipController != null && !shipController.IsDead && !player.ExitReached)
+            if (!automapOpen && shipController != null && !shipController.IsDead && !player.ExitReached)
             {
                 float cx = Screen.width / 2f, cy = Screen.height / 2f;
                 GUI.color = new UnityEngine.Color(0.4f, 1f, 0.4f, 0.8f);
@@ -894,6 +985,12 @@ namespace D1U.Presentation
             objectSystem = null;
             objectsParent = null;
             shipController = null;
+            shipWorld = null;
+            automapView = null;   // destroyed with the children above
+            automapOpen = false;
+            automapHidden.Clear();
+            camAutomapParent = null;
+            visitedSegs = null;
             exitTimer = 0f;
             music?.Stop();
             Runtime = null;

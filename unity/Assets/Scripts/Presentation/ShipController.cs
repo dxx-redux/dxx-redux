@@ -24,6 +24,8 @@ namespace D1U.Presentation
         float deathTimer;
 
         public ShipState State => state;
+        /// <summary>Freeze the sim (automap open) — original automap pauses single-player time.</summary>
+        public bool Paused { get; set; }
         public LevelRuntime Runtime { get; set; }
         public ObjectSystem Objects { get; set; }
         public SoundFactory Sounds { get; set; }
@@ -59,7 +61,7 @@ namespace D1U.Presentation
 
         void Update()
         {
-            if (sim == null)
+            if (sim == null || Paused)
                 return;
 
             float ft = Mathf.Min(Time.deltaTime, 0.25f);
