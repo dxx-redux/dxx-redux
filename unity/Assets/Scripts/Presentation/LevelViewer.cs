@@ -97,8 +97,10 @@ namespace D1U.Presentation
         // can take ~a minute on a version bump, and Build blocks the main thread)
         bool buildQueued;
 
-        // Settings -> Controls page state
-        readonly ControlsConfig controls = new ControlsConfig();
+        // Settings -> Controls page state. Lazy: PlayerPrefs may not be touched
+        // from a MonoBehaviour field initializer.
+        ControlsConfig controlsCfg;
+        ControlsConfig controls => controlsCfg ??= new ControlsConfig();
         int menuPage;                 // 0 = main menu, 1 = controls
         GameAction? rebinding;        // waiting for a key press for this action
 
