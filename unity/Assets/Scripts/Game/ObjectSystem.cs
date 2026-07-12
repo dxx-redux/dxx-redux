@@ -87,7 +87,8 @@ namespace D1U.Game
     /// </summary>
     public sealed class ObjectSystem
     {
-        public const int Difficulty = 2; // Hotshot until the difficulty menu exists
+        /// <summary>0 Trainee .. 4 Insane; set from the menu (Hotshot default).</summary>
+        public static int Difficulty = 2;
 
         readonly SegmentWorld world;
         readonly Fvi fvi;
@@ -1288,7 +1289,7 @@ namespace D1U.Game
         }
 
         // pick_up_energy (powerup.c:175): 3 + 3*(NDL - difficulty)
-        const float PickupBoost = 3f + 3f * (5 - Difficulty);
+        static float PickupBoost => 3f + 3f * (5 - Difficulty);
 
         bool PickUpEnergy(PlayerState player)
         {

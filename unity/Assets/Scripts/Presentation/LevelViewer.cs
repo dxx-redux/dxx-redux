@@ -78,8 +78,13 @@ namespace D1U.Presentation
         readonly List<(Material material, RenderChunk chunk)> allSurfaces
             = new List<(Material, RenderChunk)>();
 
+        static readonly string[] DifficultyNames = { "TRAINEE", "ROOKIE", "HOTSHOT", "ACE", "INSANE" };
+
         void Start()
         {
+            if (Application.isPlaying)
+                D1U.Game.ObjectSystem.Difficulty =
+                    Mathf.Clamp(PlayerPrefs.GetInt("d1u_difficulty", 2), 0, 4);
             if (Application.isPlaying && shipMode)
                 OpenMenu(); // pick mission/level first; Esc returns here
             else
@@ -357,7 +362,12 @@ namespace D1U.Presentation
                 menuLevel = Mathf.Max(1, menuLevel - 1);
             if (GUI.Button(new Rect(x + 170, rowY, 34, 28), "+"))
                 menuLevel = Mathf.Min(selected.NormalLevelCount, menuLevel + 1);
-            GUI.Label(new Rect(x + 220, rowY, 240, 28), "Difficulty: Hotshot");
+            if (GUI.Button(new Rect(x + 220, rowY, 240, 28),
+                    $"Difficulty: {DifficultyNames[D1U.Game.ObjectSystem.Difficulty]}"))
+            {
+                D1U.Game.ObjectSystem.Difficulty = (D1U.Game.ObjectSystem.Difficulty + 1) % 5;
+                PlayerPrefs.SetInt("d1u_difficulty", D1U.Game.ObjectSystem.Difficulty);
+            }
 
             if (GUI.Button(new Rect(x, rowY + 40, w, 40), "START") ||
                 Input.GetKeyDown(KeyCode.Return))
@@ -845,6 +855,7 @@ namespace D1U.Presentation
                     bw.Write(missionKey ?? "");
                     bw.Write(levelNumber);
                     bw.Write(returnAfterSecret);
+                    bw.Write(D1U.Game.ObjectSystem.Difficulty);
                     var s = shipController.State;
                     D1U.Game.SaveIo.Write(bw, s.Pos);
                     D1U.Game.SaveIo.Write(bw, s.Vel);
@@ -883,6 +894,7 @@ namespace D1U.Presentation
                 missionKey = br.ReadString();
                 levelNumber = br.ReadInt32();
                 returnAfterSecret = br.ReadInt32();
+                D1U.Game.ObjectSystem.Difficulty = Mathf.Clamp(br.ReadInt32(), 0, 4);
                 pendingLoad = br;       // consumed at the end of SpawnShip
                 menuMode = false;
                 endingShown = false;
