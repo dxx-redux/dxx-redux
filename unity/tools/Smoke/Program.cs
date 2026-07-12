@@ -763,6 +763,26 @@ try
                       $"(robot id {hunter.SubId}, behavior 0x{hunter.Behavior:X2})");
     if (depthOf[farSeg] < 3 || distAfter > distBefore * 0.6f)
         errors++;
+
+    // --- 18. briefings: TXB decodes and every level + the ending have messages ---
+    var briefText = D1U.Convert.BriefingScript.LoadText(hog, "briefing.tex", "briefing.txb");
+    int levelsWithBriefing = 0;
+    for (int lv = 1; lv <= 27; lv++)
+        if (briefText != null && D1U.Convert.BriefingScript.ScreensForLevel(lv)
+                .Any(s => D1U.Convert.BriefingScript.GetMessage(briefText, s.MessageNum) != null))
+            levelsWithBriefing++;
+    var endText = D1U.Convert.BriefingScript.LoadText(hog, "endreg.tex", "endreg.txb", "ending.tex", "ending.txb");
+    int endScreens = endText == null ? 0
+        : D1U.Convert.BriefingScript.ScreensForLevel(D1U.Convert.BriefingScript.EndingLevelNum)
+            .Count(s => D1U.Convert.BriefingScript.GetMessage(endText, s.MessageNum) != null);
+    var introScreens = briefText == null ? 0
+        : D1U.Convert.BriefingScript.ScreensForLevel(1)
+            .Count(s => D1U.Convert.BriefingScript.GetMessage(briefText, s.MessageNum) != null);
+    Console.WriteLine($"  briefings: text {briefText?.Length ?? 0} chars, " +
+                      $"levels with briefing {levelsWithBriefing}/27, " +
+                      $"level-1 screens (intro+moon) {introScreens}, ending screens {endScreens}");
+    if (briefText == null || briefText.Length < 5000 || levelsWithBriefing < 27 || endScreens == 0)
+        errors++;
 }
 catch (Exception e)
 {

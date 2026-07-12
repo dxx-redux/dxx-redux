@@ -51,6 +51,9 @@ namespace D1U.Presentation
         D1U.Game.ObjectSystem objectSystem;
         ShipController shipController;
         D1U.Game.SegmentWorld shipWorld;
+        BriefingView briefingView;
+        bool briefingMode;
+        bool endingShown;
         AutomapView automapView;
         bool automapOpen;
         bool[] visitedSegs;
@@ -359,10 +362,9 @@ namespace D1U.Presentation
                 Input.GetKeyDown(KeyCode.Return))
             {
                 missionKey = selected.CacheKey;
-                levelNumber = menuLevel;
                 returnAfterSecret = 0;
                 menuMode = false;
-                Build();
+                StartLevel(menuLevel);
             }
             GUI.Label(new Rect(x, rowY + 90, w, 60),
                 "WASD move · Space/Ctrl vertical · Q/E bank · mouse aim\n" +
@@ -488,7 +490,7 @@ namespace D1U.Presentation
 
         void Update()
         {
-            if (menuMode)
+            if (menuMode || briefingMode)
                 return;
             if (Application.isPlaying && shipMode && Input.GetKeyDown(KeyCode.Escape))
             {
@@ -510,14 +512,14 @@ namespace D1U.Presentation
                     if (levelNumber > missionLevelCount)
                     {
                         // leaving a secret level: resume after the level it was entered from
-                        levelNumber = returnAfterSecret;
+                        int resume = returnAfterSecret;
                         returnAfterSecret = 0;
-                        if (levelNumber < 1 || levelNumber > missionLevelCount)
+                        if (resume < 1 || resume > missionLevelCount)
                         {
                             OpenMenu();
                             return;
                         }
-                        Build();
+                        StartLevel(resume);
                         return;
                     }
                     if (Runtime.Player.SecretExitReached)
@@ -527,15 +529,19 @@ namespace D1U.Presentation
                         if (idx >= 0)
                         {
                             returnAfterSecret = levelNumber + 1; // gameseq.c: table[n]+1 on return
-                            levelNumber = missionLevelCount + idx + 1;
-                            Build();
+                            StartLevel(missionLevelCount + idx + 1);
                             return;
                         }
                     }
                     if (levelNumber < missionLevelCount)
                     {
-                        levelNumber++;
-                        Build();
+                        StartLevel(levelNumber + 1);
+                        return;
+                    }
+                    if (!endingShown)
+                    {
+                        endingShown = true;
+                        ShowEnding();
                         return;
                     }
                 }
@@ -793,6 +799,79 @@ namespace D1U.Presentation
             music.PlayLevelSong(dir, baseDxuData, levelNumber);
         }
 
+        MissionInfo ResolveMission(string dir)
+        {
+            var wantedKey = string.IsNullOrEmpty(missionKey) ? "firststrike" : missionKey.ToLowerInvariant();
+            return MissionScanner.Scan(dir).FirstOrDefault(m => m.CacheKey == wantedKey);
+        }
+
+        /// <summary>Enter a level: briefing first when one exists, then Build.</summary>
+        void StartLevel(int target)
+        {
+            levelNumber = target;
+            endingShown = false;
+            if (Application.isPlaying && shipMode && TryShowBriefing(target))
+                return; // Build() runs when the briefing closes
+            Build();
+        }
+
+        bool TryShowBriefing(int target)
+        {
+            try
+            {
+                var dir = string.IsNullOrEmpty(hogsDir) ? DefaultHogsDir() : hogsDir;
+                var mission = ResolveMission(dir);
+                if (mission == null)
+                    return false;
+                // secret levels use negative table entries (aster01 screens)
+                int briefLevel = target > mission.NormalLevelCount
+                    ? -(target - mission.NormalLevelCount)
+                    : target;
+                string[] names = mission.BuiltIn
+                    ? new[] { "briefing.tex", "briefing.txb" }
+                    : new[] { mission.CacheKey + ".tex", mission.CacheKey + ".txb" };
+                briefingView = BriefingView.Create(transform, dir,
+                    mission.BuiltIn ? null : mission.HogPath, names, briefLevel,
+                    () => { briefingMode = false; briefingView = null; Build(); });
+                if (briefingView == null)
+                    return false;
+                briefingMode = true;
+                return true;
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("D1U: briefing skipped: " + e.Message);
+                return false;
+            }
+        }
+
+        void ShowEnding()
+        {
+            try
+            {
+                var dir = string.IsNullOrEmpty(hogsDir) ? DefaultHogsDir() : hogsDir;
+                var mission = ResolveMission(dir);
+                string[] names = mission != null && !mission.BuiltIn
+                    ? new[] { mission.CacheKey + ".tex", mission.CacheKey + ".txb" }
+                    : new[] { "endreg.tex", "endreg.txb", "ending.tex", "ending.txb" };
+                briefingView = BriefingView.Create(transform, dir,
+                    mission != null && !mission.BuiltIn ? mission.HogPath : null, names,
+                    BriefingScript.EndingLevelNum,
+                    () => { briefingMode = false; briefingView = null; OpenMenu(); });
+                if (briefingView == null)
+                {
+                    OpenMenu();
+                    return;
+                }
+                briefingMode = true;
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("D1U: ending briefing skipped: " + e.Message);
+                OpenMenu();
+            }
+        }
+
         void ToggleAutomap()
         {
             if (automapOpen)
@@ -897,6 +976,8 @@ namespace D1U.Presentation
                 DrawMenu();
                 return;
             }
+            if (briefingMode)
+                return; // BriefingView draws itself
             if (Runtime == null || !Application.isPlaying)
                 return;
             var player = Runtime.Player;
@@ -986,7 +1067,9 @@ namespace D1U.Presentation
             objectsParent = null;
             shipController = null;
             shipWorld = null;
-            automapView = null;   // destroyed with the children above
+            briefingView = null;  // destroyed with the children above
+            briefingMode = false;
+            automapView = null;
             automapOpen = false;
             automapHidden.Clear();
             camAutomapParent = null;
