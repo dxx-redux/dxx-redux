@@ -35,13 +35,19 @@ Status: v1 + progress log (2026-07-12) · branch `unity`
   and the RNG seed; restores across missions and levels. The menu
   cycles Trainee..Insane (persisted, recorded in saves); all
   per-difficulty tables read through it.
-- **Headless verification**: `unity/tools/Smoke` (19 sections, SMOKE OK)
+- **Death and escape**: dying spills the whole loadout as re-collectable
+  powerups (drop_player_eggs) and respawns a bare ship; destroying the
+  reactor starts the real self-destruct countdown (50..30 s by
+  difficulty, voice callouts, siren, T-n readout, whiteout) — escape or
+  the mine blows and the level restarts.
+- **Headless verification**: `unity/tools/Smoke` (21 sections, SMOKE OK)
   covers parsing→physics→combat→drops→pathfinding→briefing text→
-  savegame roundtrip; `unity/tools/PresentationCheck` compiles the
-  Unity-side Presentation assembly against the engine module DLLs, so
-  all code is compile-verified even while the editor holds the lock.
-- Remaining backlog: endgame score tally, vulcan ammo spew on death,
-  homing retrack cadence details, D2 support.
+  savegame roundtrip→death drops→countdown; `unity/tools/
+  PresentationCheck` compiles the Unity-side Presentation assembly
+  against the engine module DLLs, so all code is compile-verified even
+  while the editor holds the lock.
+- Remaining backlog: extra lives at score thresholds, homing retrack
+  cadence details, D2 support (next big milestone).
 Scope: single-player Descent 1 in Unity, fan build (non-commercial, user-supplied game data — same posture as dxx-redux).
 
 ## 1. Goals and ground rules
