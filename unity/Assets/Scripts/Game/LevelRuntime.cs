@@ -589,8 +589,10 @@ namespace D1U.Game
             Player.HostagesOnBoard = br.ReadInt32();
         }
 
-        /// <summary>Re-emit wall visual state (door frames, hidden illusions) after a load.</summary>
-        public void EmitVisualSync()
+        /// <summary>Re-emit wall visual state (door frames, hidden illusions) after a
+        /// load, or on a fresh build (then closed doors keep their authored — possibly
+        /// rotated — texture, so pass includeClosedDoors: false).</summary>
+        public void EmitVisualSync(bool includeClosedDoors = true)
         {
             for (int w = 0; w < level.Walls.Count; w++)
             {
@@ -610,7 +612,8 @@ namespace D1U.Game
                     int n = Math.Max(1, clips[record.ClipNum].NumFrames);
                     bool open = world.WallPassable[w] || wallState[w] == StateWaiting ||
                                 (wallFlags[w] & FlagDoorOpened) != 0;
-                    WallFrameChanged?.Invoke(w, open ? n - 1 : 0, clips[record.ClipNum].Tmap1);
+                    if (open || includeClosedDoors)
+                        WallFrameChanged?.Invoke(w, open ? n - 1 : 0, clips[record.ClipNum].Tmap1);
                 }
             }
         }

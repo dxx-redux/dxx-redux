@@ -93,6 +93,10 @@ namespace D1U.Presentation
         readonly List<(Material material, RenderChunk chunk)> allSurfaces
             = new List<(Material, RenderChunk)>();
 
+        // deferred level build: draw one LOADING frame first (mission DXU rebakes
+        // can take ~a minute on a version bump, and Build blocks the main thread)
+        bool buildQueued;
+
         // net egg replication (shared ids across peers) + per-material texture state
         int bakedObjectCount;
         int nextEggNetId = 1;
@@ -256,10 +260,11 @@ namespace D1U.Presentation
             if (material.HasProperty("_BaseMap")) material.SetTexture("_BaseMap", texture);
             else material.mainTexture = texture;
             if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", UnityEngine.Color.white);
-            // back-face culled: each of the two coplanar doorway faces is visible
-            // only from inside its own segment (render.c:412-415); double-sided
-            // rendering made them z-fight
-            if (material.HasProperty("_Cull")) material.SetInt("_Cull", 2);
+            // door/grate pieces: back-face culled — each of the two coplanar
+            // doorway faces is visible only from inside its own segment
+            // (render.c:412-415); drawing both double-sided made them z-fight.
+            // Solid static walls have no coplanar twin and stay double-sided.
+            if (material.HasProperty("_Cull")) material.SetInt("_Cull", door != null ? 2 : 0);
             if (material.HasProperty("_AlphaClip")) { material.SetFloat("_AlphaClip", 1f); material.EnableKeyword("_ALPHATEST_ON"); }
             if (material.HasProperty("_Cutoff")) material.SetFloat("_Cutoff", 0.5f);
             materials.Add(material);
@@ -640,6 +645,12 @@ namespace D1U.Presentation
             }
             if (menuMode || briefingMode)
                 return;
+            if (buildQueued)
+            {
+                buildQueued = false;
+                Build(); // the LOADING frame was drawn by OnGUI last frame
+                return;
+            }
             if (mineExplodedPending)
             {
                 // caught by the self-destruct: the ship is lost with the mine
@@ -902,7 +913,9 @@ namespace D1U.Presentation
             Runtime.WallFrameChanged += OnWallFrameChanged;
             Runtime.WallHiddenChanged += OnWallHiddenChanged;
             Runtime.Message += text => messages.Add((Time.time, text));
-            Runtime.EmitVisualSync(); // authored wall state: blasted/opened/illusion-off
+            // authored wall state (blasted/opened/illusion-off); closed doors keep
+            // their baked, correctly-rotated texture
+            Runtime.EmitVisualSync(includeClosedDoors: false);
 
             var orient = new D1U.Game.Mat3
             {
@@ -1286,7 +1299,10 @@ namespace D1U.Presentation
             endingShown = false;
             if (briefing && Application.isPlaying && shipMode && TryShowBriefing(target))
                 return; // Build() runs when the briefing closes
-            Build();
+            if (Application.isPlaying && shipMode)
+                buildQueued = true; // one LOADING frame before the synchronous build
+            else
+                Build();
         }
 
         bool TryShowBriefing(int target)
@@ -1306,7 +1322,7 @@ namespace D1U.Presentation
                     : new[] { mission.CacheKey + ".tex", mission.CacheKey + ".txb" };
                 briefingView = BriefingView.Create(transform, dir,
                     mission.BuiltIn ? null : mission.HogPath, names, briefLevel,
-                    () => { briefingMode = false; briefingView = null; Build(); });
+                    () => { briefingMode = false; briefingView = null; buildQueued = true; });
                 if (briefingView == null)
                     return false;
                 briefingMode = true;
@@ -1632,6 +1648,12 @@ namespace D1U.Presentation
 
         void OnGUI()
         {
+            if (buildQueued && Application.isPlaying)
+            {
+                GUI.Label(new Rect(Screen.width / 2f - 170, Screen.height / 2f - 12, 340, 26),
+                    "PREPARING MISSION — a rebuild can take a minute...");
+                return;
+            }
             if (menuMode && Application.isPlaying)
             {
                 DrawMenu();
