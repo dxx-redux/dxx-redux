@@ -1,6 +1,25 @@
 # D1X-Unity — Descent 1 port to Unity: implementation plan
 
-Status: draft v1 (2026-07-11) · branch `unity`
+Status: v1 + progress log (2026-07-12) · branch `unity`
+
+## Progress (updated 2026-07-12)
+
+- **M0–M4 complete**: project scaffold, base/mission DXU rebuild caches with
+  auto-invalidation, level rendering with merged overlays + animated
+  textures, faithful flight physics/FVI, doors/keys/triggers/matcens/
+  fuel-centers, level objects rendered.
+- **M5 complete in essentials**: all five primaries (lasers/vulcan/
+  spreadfire/plasma/fusion) and five secondaries (concussion/homing/prox/
+  smart/mega) with selection keys, robot AI (sight, chase, per-difficulty
+  firing with jitter and bursts, claw contact), player death/respawn,
+  matcen spawning, boss teleport + self-destruct-on-death, cloak/invuln,
+  scoring, sounds (weapons, doors, robots), explosions, robot pose
+  animation on true submodel hierarchies.
+- **M6 partially**: mission-select menu (Esc), level progression with
+  weapon carry-over, music through MeltySynth + any user-supplied .sf2.
+- Known simplifications are marked TODO in code: exact powerup amounts,
+  drop probability rolls, secret-level routing, AI pathfinding when out
+  of sight, homing retrack cadence details, briefings/automap/savegames.
 Scope: single-player Descent 1 in Unity, fan build (non-commercial, user-supplied game data — same posture as dxx-redux).
 
 ## 1. Goals and ground rules
