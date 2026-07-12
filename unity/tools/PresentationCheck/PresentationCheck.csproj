@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Compile-only mirror of the D1U.Presentation Unity assembly so its code
+       can be syntax/type-checked headlessly (the editor holds the project
+       lock while open). References the engine module DLLs straight from the
+       Unity install; never run, never shipped. -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <LangVersion>9.0</LangVersion>
+    <NoWarn>CS0649;MSB3277</NoWarn>
+    <UnityManaged>C:\Program Files\Unity\Hub\Editor\6000.5.3f1\Editor\Data\Managed\UnityEngine</UnityManaged>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\..\Assets\Scripts\Presentation\**\*.cs" />
+    <Compile Include="..\..\Assets\Plugins\MeltySynth\**\*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LibDescent.Data\LibDescent.Data.csproj" />
+    <ProjectReference Include="..\D1U.Convert\D1U.Convert.csproj" />
+    <ProjectReference Include="..\D1U.Game\D1U.Game.csproj" />
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(UnityManaged)\UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.IMGUIModule">
+      <HintPath>$(UnityManaged)\UnityEngine.IMGUIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.InputLegacyModule">
+      <HintPath>$(UnityManaged)\UnityEngine.InputLegacyModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.AudioModule">
+      <HintPath>$(UnityManaged)\UnityEngine.AudioModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.TextRenderingModule">
+      <HintPath>$(UnityManaged)\UnityEngine.TextRenderingModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+</Project>
