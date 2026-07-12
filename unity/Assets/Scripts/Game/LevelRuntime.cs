@@ -290,6 +290,7 @@ namespace D1U.Game
             if ((flags & TrigSecretExit) != 0)
             {
                 Player.SecretExitReached = true;
+                Player.ExitReached = true; // TODO: route to the secret level instead of the next one
                 Message?.Invoke("Secret exit!");
             }
             if ((flags & TrigControlDoors) != 0)

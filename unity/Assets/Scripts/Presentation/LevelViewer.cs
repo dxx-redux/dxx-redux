@@ -49,6 +49,10 @@ namespace D1U.Presentation
         SoundFactory sounds;
         D1U.Game.ObjectSystem objectSystem;
         ShipController shipController;
+        int missionLevelCount;
+        float exitTimer;
+        int carryLaserLevel;
+        bool carryQuad;
         readonly Dictionary<int, GameObject> objectViews = new Dictionary<int, GameObject>();
         Transform objectsParent;
         readonly List<(Material material, RenderChunk chunk)> allSurfaces
@@ -82,6 +86,9 @@ namespace D1U.Presentation
             int index = Mathf.Clamp(levelNumber - 1, 0, levels.Count - 1);
             var level = levels[index];
             LoadedLevel = level;
+            // secret levels (levelSx) sit at the end of the built-in list and are
+            // only reachable via secret exits — normal progression skips them
+            missionLevelCount = levelNames.Count(n => !n.StartsWith("levels", StringComparison.OrdinalIgnoreCase));
 
             textureFactory = new LevelTextureFactory(baseDxu);
             var shader = Shader.Find("Universal Render Pipeline/Particles/Unlit")
@@ -343,6 +350,20 @@ namespace D1U.Presentation
 
         void Update()
         {
+            // level progression: pause on the LEVEL COMPLETE banner, then advance
+            if (Application.isPlaying && shipMode && Runtime != null && Runtime.Player.ExitReached)
+            {
+                exitTimer += Time.deltaTime;
+                if (exitTimer > 3f && levelNumber < missionLevelCount)
+                {
+                    carryLaserLevel = shipController != null ? shipController.Weapons.LaserLevel : carryLaserLevel;
+                    carryQuad = shipController != null ? shipController.Weapons.Quad : carryQuad;
+                    levelNumber++;
+                    Build();
+                    return;
+                }
+            }
+
             if (objectSystem == null)
                 return;
             foreach (var obj in objectSystem.Objects)
@@ -526,6 +547,8 @@ namespace D1U.Presentation
             controller.WeaponStats = weaponStats;
             objectSystem.SetWeaponTable(weaponStats);
             objectSystem.PlayerHit += (damage, source) => controller.ApplyPlayerDamage(damage);
+            controller.Weapons.LaserLevel = carryLaserLevel; // persists across levels
+            controller.Weapons.Quad = carryQuad;
             var gunPoints = new System.Numerics.Vector3[8];
             for (int i = 0; i < 8; i++)
             {
@@ -613,7 +636,8 @@ namespace D1U.Presentation
             if (player.ExitReached)
             {
                 var style = new GUIStyle(GUI.skin.label) { fontSize = 40, alignment = TextAnchor.MiddleCenter };
-                GUI.Label(new Rect(0, Screen.height / 2 - 40, Screen.width, 80), "LEVEL COMPLETE", style);
+                GUI.Label(new Rect(0, Screen.height / 2 - 40, Screen.width, 80),
+                    levelNumber >= missionLevelCount ? "MISSION COMPLETE" : "LEVEL COMPLETE", style);
             }
             else if (shipController != null && shipController.IsDead)
             {
@@ -642,6 +666,7 @@ namespace D1U.Presentation
             objectSystem = null;
             objectsParent = null;
             shipController = null;
+            exitTimer = 0f;
             Runtime = null;
             modelFactory?.Dispose();
             modelFactory = null;
