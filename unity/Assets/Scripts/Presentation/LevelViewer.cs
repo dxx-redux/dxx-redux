@@ -781,7 +781,7 @@ namespace D1U.Presentation
                 ammo = $"   [{w.PrimaryName}{(w.Quad && w.SelectedPrimary == 0 ? " QUAD" : "")}" +
                        $"{(w.SelectedPrimary == 1 ? $" {w.VulcanAmmo}" : "")}" +
                        $"{(w.SelectedPrimary == 4 && w.FusionCharge > 0f ? $" charge {w.FusionCharge:F1}" : "")}]" +
-                       $"   Missiles {w.Concussions}   Homing {w.Homings}";
+                       $"   [{w.SecondaryName} {w.SecondaryCount(w.SelectedSecondary)}]";
             }
             string robots = objectSystem != null ? $"   Robots {objectSystem.RobotsAlive}" : "";
             GUI.Label(new Rect(12, 8, 900, 24),

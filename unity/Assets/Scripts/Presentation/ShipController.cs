@@ -110,10 +110,16 @@ namespace D1U.Presentation
 
                 Weapons.Tick(ft);
 
-                // primary select 1..5
+                // primary select 1..5, secondary select 6..0
                 for (int key = 0; key < 5; key++)
                     if (Input.GetKeyDown(KeyCode.Alpha1 + key) && Weapons.OwnsPrimary(key))
                         Weapons.SelectedPrimary = key;
+                for (int key = 0; key < 5; key++)
+                {
+                    var code = key < 4 ? KeyCode.Alpha6 + key : KeyCode.Alpha0;
+                    if (Input.GetKeyDown(code) && Weapons.SecondaryCount(key) > 0)
+                        Weapons.SelectedSecondary = key;
+                }
 
                 var shipPos = new Vector3(state.Pos.X, state.Pos.Y, state.Pos.Z);
                 bool trigger = Input.GetMouseButton(0);

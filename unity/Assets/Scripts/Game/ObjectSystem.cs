@@ -282,6 +282,19 @@ namespace D1U.Game
                 if (weapon.Homing)
                     UpdateHoming(weapon, dt);
 
+                // proximity bombs: drift to rest, detonate on approach after arming
+                if (weapon.SubId == 16)
+                {
+                    weapon.Vel *= Math.Max(0f, 1f - 3f * dt);
+                    if (weapon.Age > 1f && ProximityTripped(weapon))
+                    {
+                        Exploded?.Invoke(weapon, weapon.Pos);
+                        Remove(weapon);
+                        BadassDamage(weapon, weapon.Pos);
+                        continue;
+                    }
+                }
+
                 var end = weapon.Pos + weapon.Vel * dt;
                 int ownerId = weapon.ParentId;
                 var query = new FviQuery
@@ -397,9 +410,32 @@ namespace D1U.Game
             }
         }
 
+        bool ProximityTripped(GameObj bomb)
+        {
+            foreach (int id in ObjectsInSeg(bomb.Segnum))
+            {
+                var obj = Objects[id];
+                if (!obj.Dead && obj.Type == 2 &&
+                    Vector3.Distance(obj.Pos, bomb.Pos) < obj.Size + 5f)
+                    return true;
+            }
+            return PlayerAlive && Vector3.Distance(PlayerPos, bomb.Pos) < PlayerSize + 5f && bomb.Age > 3f;
+        }
+
         /// <summary>Badass radius damage with linear falloff (fireball.c:104-130).</summary>
         void BadassDamage(GameObj weapon, Vector3 center)
         {
+            // smart missiles burst into homing blobs (NUM_SMART_CHILDREN, fireball.c:246)
+            if (weapon.SubId == 17 && weapon.ParentId < 0 && weaponTable.Length > 19)
+            {
+                for (int i = 0; i < 6; i++)
+                {
+                    var dir = Vector3.Normalize(new Vector3(
+                        DRand() - 16384, DRand() - 16384, DRand() - 16384));
+                    FireWeapon(weaponTable[19], 19, center + dir * 1.5f, dir, weapon.Segnum);
+                }
+            }
+
             float radius = weapon.BadassRadius;
             if (radius <= 0f)
                 return;
@@ -883,6 +919,21 @@ namespace D1U.Game
                     weapons.VulcanAmmo = Math.Min(PlayerWeapons.VulcanAmmoMax,
                         weapons.VulcanAmmo + PlayerWeapons.VulcanAmmoPickup);
                     Message?.Invoke("Vulcan ammo!");
+                    return true;
+                case 17:
+                    if (weapons == null || weapons.Proxies >= 10) return false;
+                    weapons.Proxies = Math.Min(10, weapons.Proxies + 4);
+                    Message?.Invoke("Proximity bombs!");
+                    return true;
+                case 20:
+                    if (weapons == null || weapons.Smarts >= 5) return false;
+                    weapons.Smarts++;
+                    Message?.Invoke("Smart missile!");
+                    return true;
+                case 21:
+                    if (weapons == null || weapons.Megas >= 5) return false;
+                    weapons.Megas++;
+                    Message?.Invoke("Mega missile!");
                     return true;
                 default:
                     Message?.Invoke("Picked up a powerup (effect coming soon)");

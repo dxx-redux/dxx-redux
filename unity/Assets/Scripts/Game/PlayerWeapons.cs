@@ -22,6 +22,13 @@ namespace D1U.Game
         public float FusionCharge;
         public int Concussions = 3; // players start with 3 (gameseq init)
         public int Homings;
+        public int Proxies;
+        public int Smarts;
+        public int Megas;
+        public int SelectedSecondary; // 0 concussion, 1 homing, 2 prox, 3 smart, 4 mega
+
+        static readonly int[] SecondaryWeaponIds = { 8, 15, 16, 17, 18 };
+        static readonly string[] SecondaryNames = { "CONCUSSION", "HOMING", "PROX BOMB", "SMART", "MEGA" };
 
         float nextFire;
         float nextFireSecondary;
@@ -47,6 +54,13 @@ namespace D1U.Game
             4 => "FUSION",
             _ => $"LASER L{LaserLevel + 1}",
         };
+
+        public int SecondaryCount(int slot) => slot switch
+        {
+            0 => Concussions, 1 => Homings, 2 => Proxies, 3 => Smarts, 4 => Megas, _ => 0,
+        };
+
+        public string SecondaryName => SecondaryNames[SelectedSecondary];
 
         int Rand()
         {
@@ -164,8 +178,9 @@ namespace D1U.Game
         }
 
         /// <summary>
-        /// Fire a missile: homing when available (and preferHoming), else
-        /// concussion. Guns 4/5 alternate (Missile_gun, laser.c:1477-1483).
+        /// Fire the selected secondary. Missiles use guns 4/5 alternating
+        /// (Missile_gun, laser.c:1477-1483); prox bombs drop behind; smart/
+        /// mega use gun 7 (center).
         /// </summary>
         public int TryFireSecondary(ObjectSystem objects, WeaponStats[] weapons,
                                     ShipState ship, Vector3[] gunPoints, bool preferHoming)
@@ -173,17 +188,39 @@ namespace D1U.Game
             if (nextFireSecondary > 0f)
                 return -1;
 
-            int weaponId;
-            if (preferHoming && Homings > 0) { weaponId = 15; Homings--; }
-            else if (Concussions > 0) { weaponId = 8; Concussions--; }
-            else if (Homings > 0) { weaponId = 15; Homings--; }
-            else return -1;
+            int slot = SelectedSecondary;
+            if (preferHoming && Homings > 0)
+                slot = 1;
+            if (SecondaryCount(slot) <= 0)
+                return -1;
 
+            switch (slot)
+            {
+                case 0: Concussions--; break;
+                case 1: Homings--; break;
+                case 2: Proxies--; break;
+                case 3: Smarts--; break;
+                default: Megas--; break;
+            }
+
+            int weaponId = SecondaryWeaponIds[slot];
             var stats = weapons[weaponId];
             nextFireSecondary += Math.Max(0.25f, stats.FireWait);
 
-            var muzzle = ship.Pos + ship.Orient.TransformRow(gunPoints[4 + (missileGun & 1)]);
-            missileGun++;
+            if (slot == 2)
+            {
+                // prox bomb: drop behind the ship, slow drift
+                var pos = ship.Pos - ship.Orient.Forward * 3f;
+                var bomb = objects.FireWeapon(stats, (byte)weaponId, pos, -ship.Orient.Forward, ship.Segnum);
+                bomb.Vel = ship.Vel * 0.5f - ship.Orient.Forward * 4f;
+                bomb.LifeLeft = Math.Max(bomb.LifeLeft, 120f);
+                return weaponId;
+            }
+
+            int gun = slot >= 3 ? 7 : 4 + (missileGun & 1);
+            if (slot < 3)
+                missileGun++;
+            var muzzle = ship.Pos + ship.Orient.TransformRow(gunPoints[gun]);
             objects.FireWeapon(stats, (byte)weaponId, muzzle, ship.Orient.Forward, ship.Segnum);
             return weaponId;
         }
