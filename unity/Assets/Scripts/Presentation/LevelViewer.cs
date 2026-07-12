@@ -51,6 +51,8 @@ namespace D1U.Presentation
         D1U.Game.ObjectSystem objectSystem;
         ShipController shipController;
         int missionLevelCount;
+        int[] secretFromLevel = Array.Empty<int>(); // per secret level: entered from this normal level
+        int returnAfterSecret;                      // normal level to resume after a secret level
         float exitTimer;
         int carryLaserLevel;
         bool carryQuad;
@@ -119,9 +121,10 @@ namespace D1U.Presentation
             int index = Mathf.Clamp(levelNumber - 1, 0, levels.Count - 1);
             var level = levels[index];
             LoadedLevel = level;
-            // secret levels (levelSx) sit at the end of the built-in list and are
-            // only reachable via secret exits — normal progression skips them
-            missionLevelCount = levelNames.Count(n => !n.StartsWith("levels", StringComparison.OrdinalIgnoreCase));
+            // secret levels sit at the end of the level list and are only
+            // reachable via secret exits — normal progression skips them
+            missionLevelCount = mission.NormalLevelCount > 0 ? mission.NormalLevelCount : levelNames.Count;
+            secretFromLevel = mission.SecretFromLevel.ToArray();
 
             textureFactory = new LevelTextureFactory(baseDxu);
             var shader = Shader.Find("Universal Render Pipeline/Particles/Unlit")
@@ -328,7 +331,7 @@ namespace D1U.Presentation
             for (int i = 0; i < menuMissions.Count; i++)
             {
                 var mission = menuMissions[i];
-                string label = $"{(i == menuMissionIndex ? "> " : "   ")}{mission.Name}  ({mission.LevelNames.Count} levels)";
+                string label = $"{(i == menuMissionIndex ? "> " : "   ")}{mission.Name}  ({mission.NormalLevelCount} levels)";
                 if (GUI.Button(new Rect(x, y + i * 34, w, 30), label))
                 {
                     menuMissionIndex = i;
@@ -342,7 +345,7 @@ namespace D1U.Presentation
             if (GUI.Button(new Rect(x + 130, rowY, 34, 28), "-"))
                 menuLevel = Mathf.Max(1, menuLevel - 1);
             if (GUI.Button(new Rect(x + 170, rowY, 34, 28), "+"))
-                menuLevel = Mathf.Min(selected.LevelNames.Count, menuLevel + 1);
+                menuLevel = Mathf.Min(selected.NormalLevelCount, menuLevel + 1);
             GUI.Label(new Rect(x + 220, rowY, 240, 28), "Difficulty: Hotshot");
 
             if (GUI.Button(new Rect(x, rowY + 40, w, 40), "START") ||
@@ -350,6 +353,7 @@ namespace D1U.Presentation
             {
                 missionKey = selected.CacheKey;
                 levelNumber = menuLevel;
+                returnAfterSecret = 0;
                 menuMode = false;
                 Build();
             }
@@ -465,6 +469,8 @@ namespace D1U.Presentation
             var vclip = archives.Pig.VClips[vclipNum];
             if (vclip == null || vclip.NumFrames <= 0)
                 return;
+            if (obj.ExplSound < 0 && vclip.SoundNum >= 0)
+                sounds?.PlayAt(vclip.SoundNum, ToUnity(position), 0.6f); // e.g. powerup despawn
             float radius = obj.Type == 5 ? 1.6f : Mathf.Max(2f, obj.Size * 1.2f);
             float frameTime = (float)(double)vclip.PlayTime / Mathf.Max(1, vclip.NumFrames);
             var sprite = BillboardSprite.Create("explosion", VClipFrames(vclip), frameTime,
@@ -489,13 +495,42 @@ namespace D1U.Presentation
             if (Application.isPlaying && shipMode && Runtime != null && Runtime.Player.ExitReached)
             {
                 exitTimer += Time.deltaTime;
-                if (exitTimer > 3f && levelNumber < missionLevelCount)
+                if (exitTimer > 3f)
                 {
                     carryLaserLevel = shipController != null ? shipController.Weapons.LaserLevel : carryLaserLevel;
                     carryQuad = shipController != null ? shipController.Weapons.Quad : carryQuad;
-                    levelNumber++;
-                    Build();
-                    return;
+
+                    if (levelNumber > missionLevelCount)
+                    {
+                        // leaving a secret level: resume after the level it was entered from
+                        levelNumber = returnAfterSecret;
+                        returnAfterSecret = 0;
+                        if (levelNumber < 1 || levelNumber > missionLevelCount)
+                        {
+                            OpenMenu();
+                            return;
+                        }
+                        Build();
+                        return;
+                    }
+                    if (Runtime.Player.SecretExitReached)
+                    {
+                        // secret exit: jump to the secret level registered for this level
+                        int idx = Array.IndexOf(secretFromLevel, levelNumber);
+                        if (idx >= 0)
+                        {
+                            returnAfterSecret = levelNumber + 1; // gameseq.c: table[n]+1 on return
+                            levelNumber = missionLevelCount + idx + 1;
+                            Build();
+                            return;
+                        }
+                    }
+                    if (levelNumber < missionLevelCount)
+                    {
+                        levelNumber++;
+                        Build();
+                        return;
+                    }
                 }
             }
 
@@ -503,8 +538,10 @@ namespace D1U.Presentation
                 return;
             foreach (var obj in objectSystem.Objects)
             {
-                if (obj.Dead || (obj.Type != 5 && obj.Type != 2))
+                if (obj.Dead || (obj.Type != 5 && obj.Type != 2 && obj.Type != 7))
                     continue;
+                if (obj.Type == 7 && obj.Vel == System.Numerics.Vector3.Zero)
+                    continue; // placed powerups never move; dropped ones bounce to rest
                 if (!objectViews.TryGetValue(obj.Id, out var view) || view == null)
                     continue;
                 view.transform.position = ToUnity(obj.Pos);
@@ -555,6 +592,10 @@ namespace D1U.Presentation
                     SeeSound = r.SeeSound,
                     AttackSound = r.AttackSound,
                     ClawSound = r.ClawSound,
+                    ContainsType = r.ContainsType,
+                    ContainsId = r.ContainsID,
+                    ContainsCount = r.ContainsCount,
+                    ContainsProb = r.ContainsProbability,
                 };
             }
             return stats;
@@ -692,6 +733,7 @@ namespace D1U.Presentation
             }
             controller.WeaponStats = weaponStats;
             objectSystem.SetWeaponTable(weaponStats);
+            objectSystem.Loadout = controller.Weapons;
             objectSystem.PlayerHit += (damage, source) => controller.ApplyPlayerDamage(damage);
             controller.Weapons.LaserLevel = carryLaserLevel; // persists across levels
             controller.Weapons.Quad = carryQuad;
@@ -780,7 +822,7 @@ namespace D1U.Presentation
             {
                 var w = shipController.Weapons;
                 ammo = $"   [{w.PrimaryName}{(w.Quad && w.SelectedPrimary == 0 ? " QUAD" : "")}" +
-                       $"{(w.SelectedPrimary == 1 ? $" {w.VulcanAmmo}" : "")}" +
+                       $"{(w.SelectedPrimary == 1 ? $" {(w.VulcanAmmo * 835968L) >> 16}" : "")}" + // VULCAN_AMMO_SCALE
                        $"{(w.SelectedPrimary == 4 && w.FusionCharge > 0f ? $" charge {w.FusionCharge:F1}" : "")}]" +
                        $"   [{w.SecondaryName} {w.SecondaryCount(w.SelectedSecondary)}]";
             }
@@ -819,8 +861,10 @@ namespace D1U.Presentation
             if (player.ExitReached)
             {
                 var style = new GUIStyle(GUI.skin.label) { fontSize = 40, alignment = TextAnchor.MiddleCenter };
-                GUI.Label(new Rect(0, Screen.height / 2 - 40, Screen.width, 80),
-                    levelNumber >= missionLevelCount ? "MISSION COMPLETE" : "LEVEL COMPLETE", style);
+                string banner = levelNumber == missionLevelCount ? "MISSION COMPLETE"
+                    : Runtime.Player.SecretExitReached && levelNumber <= missionLevelCount ? "SECRET EXIT!"
+                    : "LEVEL COMPLETE";
+                GUI.Label(new Rect(0, Screen.height / 2 - 40, Screen.width, 80), banner, style);
             }
             else if (shipController != null && shipController.IsDead)
             {

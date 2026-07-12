@@ -25,6 +25,8 @@ namespace D1U.Game
         public bool IsBoss;
         public int Score;
         public int SeeSound, AttackSound, ClawSound;
+        // death drop table (robot_info contains_*, rolled in fireball.c:1225)
+        public sbyte ContainsType, ContainsId, ContainsCount, ContainsProb;
     }
 
     public struct WeaponStats
@@ -92,6 +94,8 @@ namespace D1U.Game
 
         public readonly List<GameObj> Objects = new List<GameObj>();
         public LevelRuntime Runtime;
+        /// <summary>Player loadout, for the drop replacement rules (fireball.c:778).</summary>
+        public PlayerWeapons Loadout;
 
         // player mirror (set by the controller every frame)
         public Vector3 PlayerPos;
@@ -514,7 +518,7 @@ namespace D1U.Game
                 if (obj.SubId < robotStats.Length)
                     Score += robotStats[obj.SubId].Score;
                 Exploded?.Invoke(obj, obj.Pos);
-                DropContains(obj);
+                DropRobotContents(obj);
                 Remove(obj);
                 if (obj.SubId < robotStats.Length && robotStats[obj.SubId].IsBoss)
                 {
@@ -524,28 +528,206 @@ namespace D1U.Game
             }
             else if (obj.Type == 9)
             {
+                Score += 5000; // CONTROL_CEN_SCORE (scores.h:86)
                 Exploded?.Invoke(obj, obj.Pos);
                 Remove(obj);
                 Runtime?.DestroyReactor();
             }
         }
 
-        void DropContains(GameObj robot)
+        /// <summary>Death drops (explode_object secondary explosion, fireball.c:1218-1234).</summary>
+        void DropRobotContents(GameObj robot)
         {
-            if (robot.ContainsCount == 0 || robot.ContainsType != 7)
-                return;
-            for (int i = 0; i < robot.ContainsCount; i++)
+            byte type = robot.ContainsType;
+            byte id = robot.ContainsId;
+            int count = robot.ContainsCount;
+            if (count <= 0 && robot.SubId < robotStats.Length)
             {
-                var offset = new Vector3(0.6f * (i - (robot.ContainsCount - 1) * 0.5f), 0.3f * (i % 2), 0f);
-                Add(new GameObj
+                var stats = robotStats[robot.SubId];
+                if (stats.ContainsCount > 0 && ((DRand() * 16) >> 15) < stats.ContainsProb)
                 {
-                    Type = 7,
-                    SubId = robot.ContainsId,
-                    Pos = robot.Pos + offset,
-                    Segnum = robot.Segnum,
-                    Size = 1.5f,
-                    VClipNum = -2, // view resolves powerup vclip by SubId
-                });
+                    count = ((DRand() * stats.ContainsCount) >> 15) + 1;
+                    type = (byte)stats.ContainsType;
+                    id = (byte)stats.ContainsId;
+                }
+            }
+            if (count <= 0)
+                return;
+            if (type == 7)
+                MaybeReplaceWithEnergy(robot, ref id, ref count);
+            if (count > 0)
+                DropEgg(type, id, count, robot.Pos, robot.Vel, robot.Segnum);
+        }
+
+        /// <summary>
+        /// maybe_replace_powerup_with_energy (fireball.c:778): don't drop a weapon
+        /// the player already has (or that is lying nearby) — 50% chance it becomes
+        /// energy (vulcan: vulcan ammo), otherwise nothing.
+        /// </summary>
+        void MaybeReplaceWithEnergy(GameObj robot, ref byte id, ref int count)
+        {
+            if (id == 23) // cloak: never stack a second one nearby
+            {
+                if (WeaponNearby(robot.Segnum, 23, 3))
+                    count = 0;
+                return;
+            }
+
+            bool isWeapon = id >= 13 && id <= 16; // vulcan/spread/plasma/fusion
+            bool hasWeapon = Loadout != null && id switch
+            {
+                13 => Loadout.HasVulcan,
+                14 => Loadout.HasSpread,
+                15 => Loadout.HasPlasma,
+                16 => Loadout.HasFusion,
+                _ => false,
+            };
+
+            if ((id == 13 || id == 22) && Loadout != null &&
+                Loadout.VulcanAmmo >= PlayerWeapons.VulcanAmmoMax)
+            {
+                count = 0; // don't drop vulcan ammo when the player is maxed
+            }
+            else if (isWeapon)
+            {
+                if (hasWeapon || WeaponNearby(robot.Segnum, id, 3))
+                {
+                    if (DRand() > 16384)
+                    {
+                        count = 1;
+                        id = id == 13 ? (byte)22 : (byte)1; // vulcan -> ammo, rest -> energy
+                    }
+                    else
+                        count = 0;
+                }
+            }
+            else if (id == 12 && ((Loadout != null && Loadout.Quad) || WeaponNearby(robot.Segnum, 12, 3)))
+            {
+                if (DRand() > 16384)
+                {
+                    count = 1;
+                    id = 1;
+                }
+                else
+                    count = 0;
+            }
+        }
+
+        /// <summary>weapon_nearby / object_nearby_aux (fireball.c:748): same powerup within 3 segment hops.</summary>
+        bool WeaponNearby(int segnum, byte powerupId, int depth)
+        {
+            if (depth == 0 || segnum < 0)
+                return false;
+            foreach (int objId in ObjectsInSeg(segnum))
+            {
+                var obj = Objects[objId];
+                if (!obj.Dead && obj.Type == 7 && obj.SubId == powerupId)
+                    return true;
+            }
+            var sides = world.Sides[segnum];
+            for (int s = 0; s < 6; s++)
+                if (sides[s].Child >= 0 && WeaponNearby(sides[s].Child, powerupId, depth - 1))
+                    return true;
+            return false;
+        }
+
+        /// <summary>drop_powerup (fireball.c:839): spawn contents with random spread and bounce physics.</summary>
+        void DropEgg(byte type, byte id, int count, Vector3 pos, Vector3 vel, int segnum)
+        {
+            float mag = vel.Length();
+            for (int i = 0; i < count; i++)
+            {
+                if (type == 7)
+                {
+                    var v = vel;
+                    v.X += (mag + 32f) * (DRand() - 16384) * 2 / 65536f;
+                    v.Y += (mag + 32f) * (DRand() - 16384) * 2 / 65536f;
+                    v.Z += (mag + 32f) * (DRand() - 16384) * 2 / 65536f;
+                    var drop = new GameObj
+                    {
+                        Type = 7,
+                        SubId = id,
+                        Pos = pos,
+                        Vel = v,
+                        Segnum = segnum,
+                        Size = 1.5f,
+                        VClipNum = -2,  // view resolves powerup vclip by SubId
+                        ExplVClip = 62, // VCLIP_POWERUP_DISAPPEARANCE
+                    };
+                    if (id == 1 || id == 2 || id == 10 || id == 11) // energy/shield/missiles expire
+                        drop.LifeLeft = (DRand() / 65536f + 3f) * 64f; // 3..3.5 binary minutes
+                    Add(drop);
+                }
+                else if (type == 2 && id < robotStats.Length)
+                {
+                    var stats = robotStats[id];
+                    var dir = vel == Vector3.Zero ? new Vector3(0f, 0f, 1f) : Vector3.Normalize(vel);
+                    dir.X += (DRand() - 16384) * 2 / 65536f;
+                    dir.Y += (DRand() - 16384) * 2 / 65536f;
+                    dir.Z += (DRand() - 16384) * 2 / 65536f;
+                    dir = Vector3.Normalize(dir);
+                    var spawned = new GameObj
+                    {
+                        Type = 2,
+                        SubId = id,
+                        Pos = pos,
+                        Vel = dir * ((32f + mag) * 2f),
+                        Segnum = segnum,
+                        Size = 4f,
+                        Shields = stats.Strength,
+                        ModelNum = stats.ModelNum,
+                        ExplVClip = stats.DeathVClip,
+                        ExplSound = stats.DeathSound,
+                        Behavior = 0x81,
+                        Aware = true,
+                    };
+                    RobotsAlive++;
+                    Add(spawned);
+                }
+            }
+        }
+
+        /// <summary>Dropped powerups fly, bounce off walls (PF_BOUNCE), drag to rest, and expire.</summary>
+        public void MovePowerups(float dt)
+        {
+            for (int i = 0; i < Objects.Count; i++)
+            {
+                var obj = Objects[i];
+                if (obj.Dead || obj.Type != 7)
+                    continue;
+                if (obj.LifeLeft > 0f)
+                {
+                    obj.LifeLeft -= dt;
+                    if (obj.LifeLeft <= 0f)
+                    {
+                        Exploded?.Invoke(obj, obj.Pos);
+                        Remove(obj);
+                        continue;
+                    }
+                }
+                if (obj.Vel == Vector3.Zero)
+                    continue;
+                obj.Vel *= (float)Math.Pow(1.0 - 512.0 / 65536.0, dt * 64.0); // drag 512 per 64 Hz tick
+                if (obj.Vel.Length() < 0.05f)
+                {
+                    obj.Vel = Vector3.Zero;
+                    continue;
+                }
+                var query = new FviQuery
+                {
+                    P0 = obj.Pos,
+                    P1 = obj.Pos + obj.Vel * dt,
+                    StartSeg = obj.Segnum,
+                    Rad = obj.Size,
+                };
+                var fate = fvi.FindVectorIntersection(query, hitInfo);
+                if (fate == FviHit.BadP0)
+                    continue;
+                obj.Pos = hitInfo.HitPoint;
+                if (hitInfo.HitSeg >= 0)
+                    Relink(obj, hitInfo.HitSeg);
+                if (fate == FviHit.Wall)
+                    obj.Vel -= hitInfo.WallNorm * (2f * Vector3.Dot(hitInfo.WallNorm, obj.Vel));
             }
         }
 
@@ -840,6 +1022,7 @@ namespace D1U.Game
                 if (obj.Type == 3)
                 {
                     HostagesRescued++;
+                    Score += 1000; // HOSTAGE_SCORE (scores.h:85)
                     Message?.Invoke("Hostage rescued!");
                     Remove(obj);
                     continue;
@@ -849,19 +1032,38 @@ namespace D1U.Game
             }
         }
 
+        // pick_up_energy (powerup.c:175): 3 + 3*(NDL - difficulty)
+        const float PickupBoost = 3f + 3f * (5 - Difficulty);
+
+        bool PickUpEnergy(PlayerState player)
+        {
+            if (player.Energy >= 200f)
+            {
+                Message?.Invoke("Your energy is maxed out!");
+                return false;
+            }
+            player.Energy = Math.Min(200f, player.Energy + PickupBoost);
+            Message?.Invoke($"Energy boosted to {(int)player.Energy}");
+            return true;
+        }
+
         bool ApplyPowerup(byte id, PlayerState player, PlayerWeapons weapons)
         {
             switch (id)
             {
-                case 1:
-                    if (player.Energy >= 200f) return false;
-                    player.Energy = Math.Min(200f, player.Energy + 15f); // TODO exact powerup.c amount
-                    Message?.Invoke("Energy boost!");
+                case 0:
+                    Message?.Invoke("Extra life!");
                     return true;
+                case 1:
+                    return PickUpEnergy(player);
                 case 2:
-                    if (player.Shields >= 200f) return false;
-                    player.Shields = Math.Min(200f, player.Shields + 15f); // TODO exact powerup.c amount
-                    Message?.Invoke("Shield boost!");
+                    if (player.Shields >= 200f)
+                    {
+                        Message?.Invoke("Your shield is maxed out!");
+                        return false;
+                    }
+                    player.Shields = Math.Min(200f, player.Shields + PickupBoost);
+                    Message?.Invoke($"Shield boosted to {(int)player.Shields}");
                     return true;
                 case 3:
                     if (weapons != null && weapons.LaserLevel < 3)
@@ -870,8 +1072,8 @@ namespace D1U.Game
                         Message?.Invoke($"Laser boosted to {weapons.LaserLevel + 1}!");
                         return true;
                     }
-                    Message?.Invoke("Laser already at maximum");
-                    return false;
+                    Message?.Invoke("Your laser is maxed out!");
+                    return PickUpEnergy(player); // maxed weapon pickups become energy (do_powerup)
                 case 4: player.Keys |= 2; Message?.Invoke("Blue key!"); return true;
                 case 5: player.Keys |= 4; Message?.Invoke("Red key!"); return true;
                 case 6: player.Keys |= 8; Message?.Invoke("Yellow key!"); return true;
@@ -896,31 +1098,62 @@ namespace D1U.Game
                     Message?.Invoke("4 homing missiles!");
                     return true;
                 case 12:
-                    if (weapons != null) weapons.Quad = true;
-                    Message?.Invoke("Quad lasers!");
-                    return true;
+                    if (weapons == null) return false;
+                    if (!weapons.Quad)
+                    {
+                        weapons.Quad = true;
+                        Message?.Invoke("Quad lasers!");
+                        return true;
+                    }
+                    Message?.Invoke("You already have quad lasers!");
+                    return PickUpEnergy(player);
                 case 13:
                     if (weapons == null) return false;
-                    if (!weapons.HasVulcan) { weapons.HasVulcan = true; Message?.Invoke("Vulcan cannon!"); }
-                    else Message?.Invoke("Vulcan ammo!");
+                    if (!weapons.HasVulcan)
+                    {
+                        weapons.HasVulcan = true;
+                        weapons.VulcanAmmo = Math.Min(PlayerWeapons.VulcanAmmoMax,
+                            weapons.VulcanAmmo + PlayerWeapons.VulcanWeaponAmmo);
+                        Message?.Invoke("Vulcan cannon!");
+                        return true;
+                    }
+                    // already owned: grab the powerup's ammo instead (do_powerup:369-423)
+                    if (weapons.VulcanAmmo >= PlayerWeapons.VulcanAmmoMax)
+                    {
+                        Message?.Invoke("Your ammo is maxed out!");
+                        return false;
+                    }
                     weapons.VulcanAmmo = Math.Min(PlayerWeapons.VulcanAmmoMax,
                         weapons.VulcanAmmo + PlayerWeapons.VulcanWeaponAmmo);
+                    Message?.Invoke("Vulcan ammo!");
                     return true;
                 case 14:
-                    if (weapons == null || weapons.HasSpread) return false;
-                    weapons.HasSpread = true;
-                    Message?.Invoke("Spreadfire cannon!");
-                    return true;
+                    if (weapons == null) return false;
+                    if (!weapons.HasSpread)
+                    {
+                        weapons.HasSpread = true;
+                        Message?.Invoke("Spreadfire cannon!");
+                        return true;
+                    }
+                    return PickUpEnergy(player);
                 case 15:
-                    if (weapons == null || weapons.HasPlasma) return false;
-                    weapons.HasPlasma = true;
-                    Message?.Invoke("Plasma cannon!");
-                    return true;
+                    if (weapons == null) return false;
+                    if (!weapons.HasPlasma)
+                    {
+                        weapons.HasPlasma = true;
+                        Message?.Invoke("Plasma cannon!");
+                        return true;
+                    }
+                    return PickUpEnergy(player);
                 case 16:
-                    if (weapons == null || weapons.HasFusion) return false;
-                    weapons.HasFusion = true;
-                    Message?.Invoke("Fusion cannon!");
-                    return true;
+                    if (weapons == null) return false;
+                    if (!weapons.HasFusion)
+                    {
+                        weapons.HasFusion = true;
+                        Message?.Invoke("Fusion cannon!");
+                        return true;
+                    }
+                    return PickUpEnergy(player);
                 case 22:
                     if (weapons == null || weapons.VulcanAmmo >= PlayerWeapons.VulcanAmmoMax) return false;
                     weapons.VulcanAmmo = Math.Min(PlayerWeapons.VulcanAmmoMax,

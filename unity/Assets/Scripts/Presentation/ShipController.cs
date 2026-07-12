@@ -151,6 +151,7 @@ namespace D1U.Presentation
                             new Vector3(state.Pos.X, state.Pos.Y, state.Pos.Z), 0.8f);
                 }
                 Objects.MoveWeapons(ft);
+                Objects.MovePowerups(ft);
                 Objects.PickupScan(state.Pos, shipParams.Size, state.Segnum, Runtime.Player, Weapons);
 
                 // ship-vs-robot separation + ram damage

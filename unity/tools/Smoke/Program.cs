@@ -526,9 +526,14 @@ try
             RapidfireCount = (sbyte[])r.RapidfireCount.Clone(),
             AttackType = (int)r.AttackType != 0,
             IsBoss = (int)r.BossFlag != 0,
+            Score = r.ScoreValue,
             SeeSound = r.SeeSound,
             AttackSound = r.AttackSound,
             ClawSound = r.ClawSound,
+            ContainsType = r.ContainsType,
+            ContainsId = r.ContainsID,
+            ContainsCount = r.ContainsCount,
+            ContainsProb = r.ContainsProbability,
         };
     }
 
@@ -691,6 +696,33 @@ try
     Console.WriteLine($"  homing: fired {System.Numerics.Vector3.Distance(homingFrom, calmBot.Pos):F0} units out, " +
                       $"acquired={acquired}, robot shields {botShieldsBefore:F1} -> {calmBot.Shields:F1}");
     if (!acquired)
+        errors++;
+
+    // --- 16. death drops: contained powerups spawn with velocity, bounce, and expire ---
+    int dropTables = Enumerable.Range(0, robotStats.Length)
+        .Count(k => robotStats[k].ContainsCount > 0 && robotStats[k].ContainsProb > 0);
+    Console.WriteLine($"  drop tables: {dropTables}/{robotStats.Length} robot types can drop contents");
+    if (dropTables == 0)
+        errors++;
+
+    var carrier = objs.Objects.First(o => o.Type == 2 && !o.Dead);
+    carrier.ContainsType = 7;
+    carrier.ContainsId = 1; // energy — never replaced by the energy rule
+    carrier.ContainsCount = 3;
+    int powerupsBefore = objs.Objects.Count(o => o.Type == 7 && !o.Dead);
+    int scoreBefore = objs.Score;
+    objs.Damage(carrier, 10000f, carrier.Pos);
+    var drops = objs.Objects.Where(o => o.Type == 7 && !o.Dead && o.SubId == 1 && o.Vel != default).ToList();
+    float speed0 = drops.Count > 0 ? drops[0].Vel.Length() : 0f;
+    for (int step = 0; step < 300; step++)
+        objs.MovePowerups(1f / 60f);
+    float speed1 = drops.Count > 0 ? drops[0].Vel.Length() : 0f;
+    int powerupsAfter = objs.Objects.Count(o => o.Type == 7 && !o.Dead);
+    Console.WriteLine($"  drops: powerups {powerupsBefore} -> {powerupsAfter} " +
+                      $"(3 energy dropped, all expiring), drop speed {speed0:F1} -> {speed1:F1}, " +
+                      $"score +{objs.Score - scoreBefore}");
+    if (drops.Count != 3 || drops.Any(d => d.LifeLeft <= 0f) || speed1 >= speed0 ||
+        drops.Any(d => d.Segnum < 0))
         errors++;
 }
 catch (Exception e)

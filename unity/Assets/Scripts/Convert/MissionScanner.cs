@@ -13,7 +13,12 @@ namespace D1U.Convert
         public string HogPath = "";
         public string MsnPath;      // null for the built-in mission
         public bool BuiltIn;
+        /// <summary>Normal levels first, then secret levels.</summary>
         public List<string> LevelNames = new List<string>();
+        /// <summary>Number of normal levels (the rest of LevelNames are secret levels).</summary>
+        public int NormalLevelCount;
+        /// <summary>Per secret level: the normal level whose secret exit leads to it (Secret_level_table).</summary>
+        public List<int> SecretFromLevel = new List<int>();
 
         /// <summary>Stable cache-file key (missions rebuild to {CacheKey}.dxu).</summary>
         public string CacheKey => BuiltIn
@@ -49,10 +54,16 @@ namespace D1U.Convert
                     .Where(l => BuiltinLevel.IsMatch(l.Name))
                     .OrderBy(l => int.Parse(BuiltinLevel.Match(l.Name).Groups[1].Value))
                     .Select(l => l.Name));
-                mission.LevelNames.AddRange(hog.Lumps
+                mission.NormalLevelCount = mission.LevelNames.Count;
+                var secretNames = hog.Lumps
                     .Where(l => BuiltinSecret.IsMatch(l.Name))
                     .OrderBy(l => int.Parse(BuiltinSecret.Match(l.Name).Groups[1].Value))
-                    .Select(l => l.Name));
+                    .Select(l => l.Name)
+                    .ToList();
+                mission.LevelNames.AddRange(secretNames);
+                int[] builtinSecretTable = { 10, 21, 24 }; // mission.c:183-185
+                for (int i = 0; i < secretNames.Count && i < builtinSecretTable.Length; i++)
+                    mission.SecretFromLevel.Add(builtinSecretTable[i]);
                 if (mission.LevelNames.Count > 0)
                     missions.Add(mission);
             }
@@ -67,13 +78,20 @@ namespace D1U.Convert
                     var msn = MissionFile.Load(msnPath);
                     if (msn.Levels.Count == 0)
                         continue;
-                    missions.Add(new MissionInfo
+                    var mission = new MissionInfo
                     {
                         Name = string.IsNullOrEmpty(msn.Name) ? Path.GetFileNameWithoutExtension(msnPath) : msn.Name,
                         HogPath = hogPath,
                         MsnPath = msnPath,
                         LevelNames = new List<string>(msn.Levels),
-                    });
+                        NormalLevelCount = msn.Levels.Count,
+                    };
+                    foreach (var secret in msn.SecretLevels)
+                    {
+                        mission.LevelNames.Add(secret.LevelName);
+                        mission.SecretFromLevel.Add(secret.StartingLevel);
+                    }
+                    missions.Add(mission);
                 }
                 catch (Exception)
                 {
