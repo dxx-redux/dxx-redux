@@ -53,13 +53,43 @@ namespace D1U.Presentation
         float exitTimer;
         int carryLaserLevel;
         bool carryQuad;
+        bool menuMode;
+        List<MissionInfo> menuMissions;
+        int menuMissionIndex;
+        int menuLevel = 1;
         readonly Dictionary<int, GameObject> objectViews = new Dictionary<int, GameObject>();
         Transform objectsParent;
         readonly List<(Material material, RenderChunk chunk)> allSurfaces
             = new List<(Material, RenderChunk)>();
 
-        void Start() => Build();
+        void Start()
+        {
+            if (Application.isPlaying && shipMode)
+                OpenMenu(); // pick mission/level first; Esc returns here
+            else
+                Build();
+        }
+
         void OnDestroy() => Clear();
+
+        void OpenMenu()
+        {
+            Clear();
+            menuMode = true;
+            var dir = string.IsNullOrEmpty(hogsDir) ? DefaultHogsDir() : hogsDir;
+            try
+            {
+                menuMissions = MissionScanner.Scan(dir);
+            }
+            catch (Exception e)
+            {
+                menuMissions = new List<MissionInfo>();
+                Debug.LogError("D1U: mission scan failed: " + e.Message);
+            }
+            menuMissionIndex = Mathf.Max(0, menuMissions.FindIndex(
+                m => m.CacheKey == (string.IsNullOrEmpty(missionKey) ? "firststrike" : missionKey.ToLowerInvariant())));
+            menuLevel = Mathf.Max(1, levelNumber);
+        }
 
         [ContextMenu("Build")]
         public void Build()
@@ -276,6 +306,55 @@ namespace D1U.Presentation
             return sum / 4f;
         }
 
+        void DrawMenu()
+        {
+            float w = 460f;
+            float x = Screen.width / 2f - w / 2f;
+            float y = Screen.height * 0.2f;
+
+            var title = new GUIStyle(GUI.skin.label) { fontSize = 30, alignment = TextAnchor.MiddleCenter };
+            GUI.Label(new Rect(0, y - 70, Screen.width, 50), "D1X-UNITY", title);
+
+            if (menuMissions == null || menuMissions.Count == 0)
+            {
+                GUI.Label(new Rect(x, y, w, 60),
+                    "No missions found. Set the hogs directory on the LevelViewer component.");
+                return;
+            }
+
+            for (int i = 0; i < menuMissions.Count; i++)
+            {
+                var mission = menuMissions[i];
+                string label = $"{(i == menuMissionIndex ? "> " : "   ")}{mission.Name}  ({mission.LevelNames.Count} levels)";
+                if (GUI.Button(new Rect(x, y + i * 34, w, 30), label))
+                {
+                    menuMissionIndex = i;
+                    menuLevel = 1;
+                }
+            }
+
+            float rowY = y + menuMissions.Count * 34 + 16;
+            var selected = menuMissions[menuMissionIndex];
+            GUI.Label(new Rect(x, rowY, 120, 28), $"Level {menuLevel}");
+            if (GUI.Button(new Rect(x + 130, rowY, 34, 28), "-"))
+                menuLevel = Mathf.Max(1, menuLevel - 1);
+            if (GUI.Button(new Rect(x + 170, rowY, 34, 28), "+"))
+                menuLevel = Mathf.Min(selected.LevelNames.Count, menuLevel + 1);
+            GUI.Label(new Rect(x + 220, rowY, 240, 28), "Difficulty: Hotshot");
+
+            if (GUI.Button(new Rect(x, rowY + 40, w, 40), "START") ||
+                Input.GetKeyDown(KeyCode.Return))
+            {
+                missionKey = selected.CacheKey;
+                levelNumber = menuLevel;
+                menuMode = false;
+                Build();
+            }
+            GUI.Label(new Rect(x, rowY + 90, w, 60),
+                "WASD move · Space/Ctrl vertical · Q/E bank · mouse aim\n" +
+                "LMB fire · RMB missile (hold H: homing) · 1-5 weapons · Esc menu");
+        }
+
         void CreateObjectView(D1U.Game.GameObj obj)
         {
             if (objectsParent == null || obj.Dead)
@@ -350,6 +429,16 @@ namespace D1U.Presentation
 
         void Update()
         {
+            if (menuMode)
+                return;
+            if (Application.isPlaying && shipMode && Input.GetKeyDown(KeyCode.Escape))
+            {
+                carryLaserLevel = 0;
+                carryQuad = false;
+                OpenMenu();
+                return;
+            }
+
             // level progression: pause on the LEVEL COMPLETE banner, then advance
             if (Application.isPlaying && shipMode && Runtime != null && Runtime.Player.ExitReached)
             {
@@ -619,6 +708,11 @@ namespace D1U.Presentation
 
         void OnGUI()
         {
+            if (menuMode && Application.isPlaying)
+            {
+                DrawMenu();
+                return;
+            }
             if (Runtime == null || !Application.isPlaying)
                 return;
             var player = Runtime.Player;
