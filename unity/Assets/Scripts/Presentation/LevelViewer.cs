@@ -98,8 +98,11 @@ namespace D1U.Presentation
         void Start()
         {
             if (Application.isPlaying)
+            {
+                Application.runInBackground = true; // a backgrounded netgame host must keep pumping
                 D1U.Game.ObjectSystem.Difficulty =
                     Mathf.Clamp(PlayerPrefs.GetInt("d1u_difficulty", 2), 0, 4);
+            }
             if (Application.isPlaying && shipMode)
                 OpenMenu(); // pick mission/level first; Esc returns here
             else
@@ -1620,7 +1623,15 @@ namespace D1U.Presentation
 
         public static string DefaultHogsDir()
         {
-            foreach (var rel in new[] { "../../d1/hogs", "../../../../../d1/hogs" })
+            foreach (var rel in new[]
+            {
+                "..",             // player build: HOG/PIG right next to the exe
+                "../hogs",        // player build: a hogs folder next to the exe
+                "../../d1/hogs",  // editor / repo layouts
+                "../../../d1/hogs",
+                "../../../../d1/hogs",
+                "../../../../../d1/hogs",
+            })
             {
                 var p = Path.GetFullPath(Path.Combine(Application.dataPath, rel));
                 if (File.Exists(Path.Combine(p, "DESCENT.HOG")))
