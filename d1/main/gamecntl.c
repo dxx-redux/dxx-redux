@@ -577,6 +577,15 @@ int HandleSystemKey(int key)
 			}
 			break;
 
+		KEY_MAC(case KEY_COMMAND+KEY_4:)
+		case KEY_F4:
+			if (PlayerCfg.MinimapMode)
+			{
+				Minimap_visible = !Minimap_visible;
+				HUD_init_message_literal(HM_DEFAULT, Minimap_visible ? "Minimap on" : "Minimap off");
+			}
+			break;
+
 		KEY_MAC(case KEY_COMMAND+KEY_5:)
 		case KEY_F5:
 			if ( Newdemo_state == ND_STATE_RECORDING )

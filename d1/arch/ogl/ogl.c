@@ -397,7 +397,7 @@ bool g3_draw_line(g3s_point *p0,g3s_point *p1)
 	color_array[0] = color_array[4] = color_r;
 	color_array[1] = color_array[5] = color_g;
 	color_array[2] = color_array[6] = color_b;
-	color_array[3] = color_array[7] = 1.0;
+	color_array[3] = color_array[7] = (grd_curcanv->cv_fade_level >= GR_FADE_OFF)?1.0:1.0 - (float)grd_curcanv->cv_fade_level / ((float)GR_FADE_LEVELS - 1.0);
 	glVertexPointer(3, GL_FLOAT, 0, vertex_array);
 	glColorPointer(4, GL_FLOAT, 0, color_array);
 	glDrawArrays(GL_LINES, 0, 2);

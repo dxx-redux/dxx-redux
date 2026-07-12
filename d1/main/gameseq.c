@@ -76,6 +76,7 @@ COPYRIGHT 1993-1998 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "config.h"
 #include "robot.h"
 #include "automap.h"
+#include "minimap.h"
 #include "cntrlcen.h"
 #include "powerup.h"
 #include "text.h"
@@ -1182,6 +1183,8 @@ void StartNewLevelSub(int level_num, int page_in_textures, int secret_flag)
 	HUD_clear_messages();
 
 	automap_clear_visited();
+
+	minimap_level_reset();
 
 	init_player_stats_level(secret_flag);
 

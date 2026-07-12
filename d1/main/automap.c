@@ -61,6 +61,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "powerup.h"
 #include "switch.h"
 #include "automap.h"
+#include "mapedges.h"
 #include "cntrlcen.h"
 #include "timer.h"
 #include "config.h"
@@ -75,23 +76,6 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 
 #define LEAVE_TIME 0x4000
 
-#define EF_USED     1   // This edge is used
-#define EF_DEFINING 2   // A structure defining edge that should always draw.
-#define EF_FRONTIER 4   // An edge between the known and the unknown.
-#define EF_SECRET   8   // An edge that is part of a secret wall.
-#define EF_GRATE    16  // A grate... draw it all the time.
-#define EF_NO_FADE  32  // An edge that doesn't fade with distance
-#define EF_TOO_FAR  64  // An edge that is too far away
-
-typedef struct Edge_info {
-	int   verts[2];     // 8  bytes
-	ubyte sides[4];     // 4  bytes
-	int   segnum[4];    // 16 bytes  // This might not need to be stored... If you can access the normals of a side.
-	ubyte flags;        // 1  bytes  // See the EF_??? defines above.
-	ubyte color;        // 1  bytes
-	ubyte num_faces;    // 1  bytes  // 31 bytes...
-} Edge_info;
-
 typedef struct automap
 {
 	fix64			entry_time;
@@ -103,11 +87,8 @@ typedef struct automap
 	int			max_segments_away;
 	int			segment_limit;
 	
-	// Edge list variables
-	int			num_edges;
-	int			max_edges; //set each frame
-	int			highest_edge_index;
-	Edge_info		*edges;
+	// Edge list (shared machinery with the HUD minimap)
+	map_edge_list		el;
 	int			*drawingListBright;
 	
 	// Screen canvas variables
@@ -123,11 +104,6 @@ typedef struct automap
 	vms_matrix		viewMatrix;
 	fix			viewDist;
 	
-	int			wall_normal_color;
-	int			wall_door_color;
-	int			wall_door_blue;
-	int			wall_door_gold;
-	int			wall_door_red;
 	int			wall_revealed_color;
 	int			hostage_color;
 	int			font_color_20;
@@ -141,11 +117,6 @@ typedef struct automap
 #define MAX_EDGES_FROM_VERTS(v)     ((v)*4)
 #define MAX_EDGES 6000  // Determined by loading all the levels by John & Mike, Feb 9, 1995
 
-#define K_WALL_NORMAL_COLOR     BM_XRGB(29, 29, 29 )
-#define K_WALL_DOOR_COLOR       BM_XRGB(5, 27, 5 )
-#define K_WALL_DOOR_BLUE        BM_XRGB(0, 0, 31)
-#define K_WALL_DOOR_GOLD        BM_XRGB(31, 31, 0)
-#define K_WALL_DOOR_RED         BM_XRGB(31, 0, 0)
 #define K_HOSTAGE_COLOR         BM_XRGB(0, 31, 0 )
 #define K_FONT_COLOR_20         BM_XRGB(20, 20, 20 )
 #define K_GREEN_31              BM_XRGB(0, 31, 0)
@@ -154,11 +125,6 @@ int Automap_active = 0;
 
 void init_automap_colors(automap *am)
 {
-	am->wall_normal_color = K_WALL_NORMAL_COLOR;
-	am->wall_door_color = K_WALL_DOOR_COLOR;
-	am->wall_door_blue = K_WALL_DOOR_BLUE;
-	am->wall_door_gold = K_WALL_DOOR_GOLD;
-	am->wall_door_red = K_WALL_DOOR_RED;
 	am->hostage_color = K_HOSTAGE_COLOR;
 	am->font_color_20 = K_FONT_COLOR_20;
 	am->green_31 = K_GREEN_31;
@@ -184,7 +150,6 @@ ubyte Automap_visited[MAX_SEGMENTS];
 // Function Prototypes
 void adjust_segment_limit(automap *am, int SegmentLimit);
 void draw_all_edges(automap *am);
-void automap_build_edge_list(automap *am);
 // extern
 void check_and_fix_matrix(vms_matrix *m);
 
@@ -493,7 +458,7 @@ int automap_key_command(window *wind, d_event *event, automap *am)
 			if (cheats.enabled) 	 
 			{
 				cheats.fullautomap = !cheats.fullautomap;
-				automap_build_edge_list(am);
+				map_edge_list_build(&am->el, MAP_EDGE_BUILD_AUTOMAP);
 			}
 			return 1;
 #ifndef NDEBUG
@@ -502,7 +467,7 @@ int automap_key_command(window *wind, d_event *event, automap *am)
 				
 				for (i=0; i<=Highest_segment_index; i++ )
 					Automap_visited[i] = 1;
-				automap_build_edge_list(am);
+				map_edge_list_build(&am->el, MAP_EDGE_BUILD_AUTOMAP);
 				am->max_segments_away = set_segment_depths(Objects[Players[Player_num].objnum].segnum, Automap_visited);
 				am->segment_limit = am->max_segments_away;
 				adjust_segment_limit(am, am->segment_limit);
@@ -601,7 +566,7 @@ int automap_handler(window *wind, d_event *event, automap *am)
 #ifdef OGL
 			gr_free_bitmap_data(&am->automap_background);
 #endif
-			d_free(am->edges);
+			d_free(am->el.edges);
 			d_free(am->drawingListBright);
 			d_free(am);
 			window_set_visible(Game_wind, 1);
@@ -642,15 +607,15 @@ void do_automap()
 	am->pause_game = 1; // Set to 1 if everything is paused during automap...No pause during net.
 	am->max_segments_away = 0;
 	am->segment_limit = 1;
-	am->num_edges = 0;
-	am->highest_edge_index = -1;
-	am->max_edges = Num_segments*12;
-	MALLOC(am->edges, Edge_info, am->max_edges);
-	MALLOC(am->drawingListBright, int, am->max_edges);
-	if (!am->edges || !am->drawingListBright)
+	am->el.num_edges = 0;
+	am->el.highest_edge_index = -1;
+	am->el.max_edges = Num_segments*12;
+	MALLOC(am->el.edges, Edge_info, am->el.max_edges);
+	MALLOC(am->drawingListBright, int, am->el.max_edges);
+	if (!am->el.edges || !am->drawingListBright)
 	{
-		if (am->edges)
-			d_free(am->edges);
+		if (am->el.edges)
+			d_free(am->el.edges);
 		if (am->drawingListBright)
 			d_free(am->drawingListBright);
 
@@ -679,7 +644,7 @@ void do_automap()
 
 	gr_set_current_canvas(NULL);
 
-	automap_build_edge_list(am);
+	map_edge_list_build(&am->el, MAP_EDGE_BUILD_AUTOMAP);
 
 	if ( am->viewDist==0 )
 		am->viewDist = ZOOM_DEFAULT;
@@ -728,8 +693,8 @@ void adjust_segment_limit(automap *am, int SegmentLimit)
 	int i,e1;
 	Edge_info * e;
 
-	for (i=0; i<=am->highest_edge_index; i++ )	{
-		e = &am->edges[i];
+	for (i=0; i<=am->el.highest_edge_index; i++ )	{
+		e = &am->el.edges[i];
 		e->flags |= EF_TOO_FAR;
 		for (e1=0; e1<e->num_faces; e1++ )	{
 			if ( Automap_visited[e->segnum[e1]] <= SegmentLimit )	{
@@ -754,15 +719,15 @@ void draw_all_edges(automap *am)
 	
 	nbright=0;
 
-	for (i=0; i<=am->highest_edge_index; i++ )	{
-		//e = &am->edges[Edge_used_list[i]];
-		e = &am->edges[i];
+	for (i=0; i<=am->el.highest_edge_index; i++ )	{
+		//e = &am->el.edges[Edge_used_list[i]];
+		e = &am->el.edges[i];
 		if (!(e->flags & EF_USED)) continue;
 
 		if ( e->flags & EF_TOO_FAR) continue;
 
 		if (e->flags&EF_FRONTIER) { 	// A line that is between what we have seen and what we haven't
-			if ( (!(e->flags&EF_SECRET))&&(e->color==am->wall_normal_color))
+			if ( (!(e->flags&EF_SECRET))&&(e->color==am->el.wall_normal_color))
 				continue; 	// If a line isn't secret and is normal color, then don't draw it
 		}
 
@@ -792,7 +757,7 @@ void draw_all_edges(automap *am)
 
 			if ( nfacing && nnfacing )	{
 				// a contour line
-				am->drawingListBright[nbright++] = e-am->edges;
+				am->drawingListBright[nbright++] = e-am->el.edges;
 			} else if ( e->flags&(EF_DEFINING|EF_GRATE) )	{
 				if ( nfacing == 0 )	{
 					if ( e->flags & EF_NO_FADE )
@@ -801,7 +766,7 @@ void draw_all_edges(automap *am)
 						gr_setcolor( gr_fade_table[e->color+256*8] );
 					g3_draw_line( &Segment_points[e->verts[0]], &Segment_points[e->verts[1]] );
 				} 	else {
-					am->drawingListBright[nbright++] = e-am->edges;
+					am->drawingListBright[nbright++] = e-am->el.edges;
 				}
 			}
 		}
@@ -820,8 +785,8 @@ void draw_all_edges(automap *am)
 				j = i - incr;
 				while (j>=0 )	{
 					// compare element j and j+incr
-					v1 = am->edges[am->drawingListBright[j]].verts[0];
-					v2 = am->edges[am->drawingListBright[j+incr]].verts[0];
+					v1 = am->el.edges[am->drawingListBright[j]].verts[0];
+					v2 = am->el.edges[am->drawingListBright[j+incr]].verts[0];
 
 					if (Segment_points[v1].p3_z < Segment_points[v2].p3_z) {
 						// If not in correct order, them swap 'em
@@ -842,7 +807,7 @@ void draw_all_edges(automap *am)
 	for (i=0; i<nbright; i++ )	{
 		int color;
 		fix dist;
-		e = &am->edges[am->drawingListBright[i]];
+		e = &am->el.edges[am->drawingListBright[i]];
 		p1 = &Segment_points[e->verts[0]];
 		p2 = &Segment_points[e->verts[1]];
 		dist = p1->p3_z - min_distance;
@@ -858,321 +823,5 @@ void draw_all_edges(automap *am)
 			gr_setcolor( gr_fade_table[e->color+color*256] );	
 		}
 		g3_draw_line( p1, p2 );
-	}
-}
-
-
-//==================================================================
-//
-// All routines below here are used to build the Edge list
-//
-//==================================================================
-
-
-//finds edge, filling in edge_ptr. if found old edge, returns index, else return -1
-static int automap_find_edge(automap *am, int v0,int v1,Edge_info **edge_ptr)
-{
-	long vv, evv;
-	int hash, oldhash;
-	int ret, ev0, ev1;
-
-	vv = (v1<<16) + v0;
-
-	oldhash = hash = ((v0*5+v1) % am->max_edges);
-
-	ret = -1;
-
-	while (ret==-1) {
-		ev0 = am->edges[hash].verts[0];
-		ev1 = am->edges[hash].verts[1];
-		evv = (ev1<<16)+ev0;
-		if (am->edges[hash].num_faces == 0 ) ret=0;
-		else if (evv == vv) ret=1;
-		else {
-			if (++hash==am->max_edges) hash=0;
-			if (hash==oldhash) Error("Edge list full!");
-		}
-	}
-
-	*edge_ptr = &am->edges[hash];
-
-	if (ret == 0)
-		return -1;
-	else
-		return hash;
-
-}
-
-
-void add_one_edge( automap *am, int va, int vb, ubyte color, ubyte side, int segnum, int hidden, int grate, int no_fade )	{
-	int found;
-	Edge_info *e;
-	int tmp;
-
-	if ( am->num_edges >= am->max_edges)	{
-		// GET JOHN! (And tell him that his
-		// MAX_EDGES_FROM_VERTS formula is hosed.)
-		// If he's not around, save the mine,
-		// and send him  mail so he can look
-		// at the mine later. Don't modify it.
-		// This is important if this happens.
-		Int3();		// LOOK ABOVE!!!!!!
-		return;
-	}
-
-	if ( va > vb )	{
-		tmp = va;
-		va = vb;
-		vb = tmp;
-	}
-
-	found = automap_find_edge(am,va,vb,&e);
-		
-	if (found == -1) {
-		e->verts[0] = va;
-		e->verts[1] = vb;
-		e->color = color;
-		e->num_faces = 1;
-		e->flags = EF_USED | EF_DEFINING;			// Assume a normal line
-		e->sides[0] = side;
-		e->segnum[0] = segnum;
-		//Edge_used_list[am->num_edges] = e-am->edges;
-		if ( (e-am->edges) > am->highest_edge_index )
-			am->highest_edge_index = e - am->edges;
-		am->num_edges++;
-	} else {
-		if ( color != am->wall_normal_color )
-			e->color = color;
-		if ( e->num_faces < 4 ) {
-			e->sides[e->num_faces] = side;
-			e->segnum[e->num_faces] = segnum;
-			e->num_faces++;
-		}
-	}
-
-	if ( grate )
-		e->flags |= EF_GRATE;
-
-	if ( hidden )
-		e->flags|=EF_SECRET;		// Mark this as a hidden edge
-	if ( no_fade )
-		e->flags |= EF_NO_FADE;
-}
-
-void add_one_unknown_edge( automap *am, int va, int vb )
-{
-	int found;
-	Edge_info *e;
-	int tmp;
-
-	if ( va > vb )	{
-		tmp = va;
-		va = vb;
-		vb = tmp;
-	}
-
-	found = automap_find_edge(am,va,vb,&e);
-	if (found != -1) 	
-		e->flags|=EF_FRONTIER;		// Mark as a border edge
-}
-
-#ifndef _GAMESEQ_H
-extern obj_position Player_init[];
-#endif
-
-void add_segment_edges(automap *am, segment *seg)
-{
-	int 	is_grate, no_fade;
-	ubyte	color;
-	int	sn;
-	int	segnum = seg-Segments;
-	int	hidden_flag;
-	
-	for (sn=0;sn<MAX_SIDES_PER_SEGMENT;sn++) {
-		int	vertex_list[4];
-
-		hidden_flag = 0;
-
-		is_grate = 0;
-		no_fade = 0;
-
-		color = 255;
-		if (seg->children[sn] == -1) {
-			color = am->wall_normal_color;
-		}
-
-		switch( seg->special )	{
-		case SEGMENT_IS_FUELCEN:
-			color = BM_XRGB( 29, 27, 13 );
-			break;
-		case SEGMENT_IS_CONTROLCEN:
-			if (Control_center_present)
-				color = BM_XRGB( 29, 0, 0 );
-			break;
-		case SEGMENT_IS_ROBOTMAKER:
-			color = BM_XRGB( 29, 0, 31 );
-			break;
-		}
-
-		if (seg->sides[sn].wall_num > -1)	{
-		
-			switch( Walls[seg->sides[sn].wall_num].type )	{
-			case WALL_DOOR:
-				if (Walls[seg->sides[sn].wall_num].keys == KEY_BLUE) {
-					no_fade = 1;
-					color = am->wall_door_blue;
-				} else if (Walls[seg->sides[sn].wall_num].keys == KEY_GOLD) {
-					no_fade = 1;
-					color = am->wall_door_gold;
-				} else if (Walls[seg->sides[sn].wall_num].keys == KEY_RED) {
-					no_fade = 1;
-					color = am->wall_door_red;
-				} else if (!(WallAnims[Walls[seg->sides[sn].wall_num].clip_num].flags & WCF_HIDDEN)) {
-					int	connected_seg = seg->children[sn];
-					if (connected_seg != -1) {
-						int connected_side = find_connect_side(seg, &Segments[connected_seg]);
-						int	keytype = Walls[Segments[connected_seg].sides[connected_side].wall_num].keys;
-						if ((keytype != KEY_BLUE) && (keytype != KEY_GOLD) && (keytype != KEY_RED))
-							color = am->wall_door_color;
-						else {
-							switch (Walls[Segments[connected_seg].sides[connected_side].wall_num].keys) {
-								case KEY_BLUE:	color = am->wall_door_blue;	no_fade = 1; break;
-								case KEY_GOLD:	color = am->wall_door_gold;	no_fade = 1; break;
-								case KEY_RED:	color = am->wall_door_red;	no_fade = 1; break;
-								default:	Error("Inconsistent data.  Supposed to be a colored wall, but not blue, gold or red.\n");
-							}
-						}
-
-					}
-				} else {
-					color = am->wall_normal_color;
-					hidden_flag = 1;
-				}
-				break;
-			case WALL_CLOSED:
-				// Make grates draw properly
-				if (WALL_IS_DOORWAY(seg,sn) & WID_RENDPAST_FLAG)
-					is_grate = 1;
-				else
-					hidden_flag = 1;
-				color = am->wall_normal_color;
-				break;
-			case WALL_BLASTABLE:
-				// Hostage doors
-				color = am->wall_door_color;	
-				break;
-			}
-		}
-	
-		if (segnum==Player_init[Player_num].segnum)
-			color = BM_XRGB(31,0,31);
-
-		if ( color != 255 )	{
-			// If they have a map powerup, draw unvisited areas in dark blue.
-			if (Players[Player_num].flags & PLAYER_FLAGS_MAP_ALL && (!Automap_visited[segnum]))	
-				color = BM_XRGB( 0, 0, 25 );
-
-			get_side_verts(vertex_list,segnum,sn);
-			add_one_edge( am, vertex_list[0], vertex_list[1], color, sn, segnum, hidden_flag, 0, no_fade );
-			add_one_edge( am, vertex_list[1], vertex_list[2], color, sn, segnum, hidden_flag, 0, no_fade );
-			add_one_edge( am, vertex_list[2], vertex_list[3], color, sn, segnum, hidden_flag, 0, no_fade );
-			add_one_edge( am, vertex_list[3], vertex_list[0], color, sn, segnum, hidden_flag, 0, no_fade );
-
-			if ( is_grate )	{
-				add_one_edge( am, vertex_list[0], vertex_list[2], color, sn, segnum, hidden_flag, 1, no_fade );
-				add_one_edge( am, vertex_list[1], vertex_list[3], color, sn, segnum, hidden_flag, 1, no_fade );
-			}
-		}
-	}
-}
-
-
-// Adds all the edges from a segment we haven't visited yet.
-
-void add_unknown_segment_edges(automap *am, segment *seg)
-{
-	int sn;
-	int segnum = seg-Segments;
-	
-	for (sn=0;sn<MAX_SIDES_PER_SEGMENT;sn++) {
-		int	vertex_list[4];
-
-		// Only add edges that have no children
-		if (seg->children[sn] == -1) {
-			get_side_verts(vertex_list,segnum,sn);
-	
-			add_one_unknown_edge( am, vertex_list[0], vertex_list[1] );
-			add_one_unknown_edge( am, vertex_list[1], vertex_list[2] );
-			add_one_unknown_edge( am, vertex_list[2], vertex_list[3] );
-			add_one_unknown_edge( am, vertex_list[3], vertex_list[0] );
-		}
-	}
-}
-
-void automap_build_edge_list(automap *am)
-{	
-	int	i,e1,e2,s;
-	Edge_info * e;
-
-	// clear edge list
-	for (i=0; i<am->max_edges; i++) {
-		am->edges[i].num_faces = 0;
-		am->edges[i].flags = 0;
-	}
-	am->num_edges = 0;
-	am->highest_edge_index = -1;
-
-	if (cheats.fullautomap || (Players[Player_num].flags & PLAYER_FLAGS_MAP_ALL) )	{
-		// Cheating, add all edges as visited
-		for (s=0; s<=Highest_segment_index; s++)
-#ifdef EDITOR
-			if (Segments[s].segnum != -1)
-#endif
-			{
-				add_segment_edges(am, &Segments[s]);
-			}
-	} else {
-		// Not cheating, add visited edges, and then unvisited edges
-		for (s=0; s<=Highest_segment_index; s++)
-#ifdef EDITOR
-			if (Segments[s].segnum != -1)
-#endif
-				if (Automap_visited[s]) {
-					add_segment_edges(am, &Segments[s]);
-				}
-	
-		for (s=0; s<=Highest_segment_index; s++)
-#ifdef EDITOR
-			if (Segments[s].segnum != -1)
-#endif
-				if (!Automap_visited[s]) {
-					add_unknown_segment_edges(am, &Segments[s]);
-				}
-	}
-
-	// Find unnecessary lines (These are lines that don't have to be drawn because they have small curvature)
-	for (i=0; i<=am->highest_edge_index; i++ )	{
-		e = &am->edges[i];
-		if (!(e->flags&EF_USED)) continue;
-
-		for (e1=0; e1<e->num_faces; e1++ )	{
-			for (e2=1; e2<e->num_faces; e2++ )	{
-				if ( (e1 != e2) && (e->segnum[e1] != e->segnum[e2]) )	{
-#ifdef COMPACT_SEGS
-					vms_vector v1, v2;
-					get_side_normal(&Segments[e->segnum[e1]], e->sides[e1], 0, &v1 );
-					get_side_normal(&Segments[e->segnum[e2]], e->sides[e2], 0, &v2 );
-					if ( vm_vec_dot(&v1,&v2) > (F1_0-(F1_0/10))  )	{
-#else
-					if ( vm_vec_dot( &Segments[e->segnum[e1]].sides[e->sides[e1]].normals[0], &Segments[e->segnum[e2]].sides[e->sides[e2]].normals[0] ) > (F1_0-(F1_0/10))  )	{
-#endif
-						e->flags &= (~EF_DEFINING);
-						break;
-					}
-				}
-			}
-			if (!(e->flags & EF_DEFINING))
-				break;
-		}
 	}
 }

@@ -49,6 +49,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "laser.h"
 #include "playsave.h"
 #include "automap.h"
+#include "minimap.h"
 #include "mission.h"
 #include "gameseq.h"
 #include "args.h"
@@ -534,6 +535,15 @@ void game_render_frame_mono(int flip)
 			gr_box(i, i, mw - 1 - i, mh - 1 - i);
 
 		gr_set_current_canvas(&Screen_3d_window);
+	}
+
+	if (PlayerCfg.MinimapMode && Minimap_visible
+		&& !Player_is_dead && !Endlevel_sequence
+		&& Viewer == ConsoleObject
+		&& Newdemo_state != ND_STATE_PLAYBACK
+		&& !is_observer())
+	{
+		draw_minimap();
 	}
 
 	update_cockpits();
