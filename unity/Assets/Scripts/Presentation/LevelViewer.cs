@@ -186,6 +186,7 @@ namespace D1U.Presentation
         {
             if (Application.isPlaying)
             {
+                Debug.Log($"D1U: build {Application.version}");
                 Application.runInBackground = true; // a backgrounded netgame host must keep pumping
                 D1U.Game.ObjectSystem.Difficulty =
                     Mathf.Clamp(PlayerPrefs.GetInt("d1u_difficulty", 2), 0, 4);
@@ -580,6 +581,7 @@ namespace D1U.Presentation
                 "WASD move · Space/Ctrl vertical · Q/E bank · mouse aim\n" +
                 "LMB fire · RMB missile (hold H: homing) · 1-5 weapons · F flare\n" +
                 "Tab automap · F5 save · F9 load · Esc menu");
+            GUI.Label(new Rect(x, helpY + 78, w, 20), $"build {Application.version}");
         }
 
         void CreateObjectView(D1U.Game.GameObj obj)

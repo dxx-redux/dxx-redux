@@ -22,6 +22,9 @@ namespace D1U.EditorTools
             PlayerSettings.companyName = "dxx-redux";
             PlayerSettings.productName = "D1X-Unity";
             PlayerSettings.runInBackground = true;
+            // visible build stamp (menu footer + Player.log) — ends "which build
+            // am I actually running?" confusion during test rounds
+            PlayerSettings.bundleVersion = System.DateTime.Now.ToString("yyyy-MM-dd HH:mm");
 
             string outDir = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "Builds", "D1X-Unity"));
             Directory.CreateDirectory(outDir);
