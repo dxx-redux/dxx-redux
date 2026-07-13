@@ -397,8 +397,8 @@ void state_object_rw_to_object(object_rw *obj_rw, object *obj)
 			int i = 0;
 			reactor *reactor = get_reactor_definition(obj->id);
 			if (obj->type == OBJ_CNTRLCEN) {
-			  for (i=0; i<reactor->n_guns; i++)
-				  calc_controlcen_gun_point(reactor, obj, i);
+				for (i=0; i<reactor->n_guns; i++)
+					calc_controlcen_gun_point(reactor, obj, i);
 			}
 			break;
 		}
