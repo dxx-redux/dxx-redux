@@ -22,6 +22,14 @@ namespace D1U.Presentation
         AudioClip clip;
         static bool hintLogged;
 
+        /// <summary>Music level (Settings ▸ Audio), 0..1. Rides on top of the
+        /// master (AudioListener) gain.</summary>
+        public float Volume
+        {
+            get => source != null ? source.volume : 0.45f;
+            set { if (source != null) source.volume = Mathf.Clamp01(value); }
+        }
+
         public MusicPlayer(GameObject host)
         {
             source = host.AddComponent<AudioSource>();

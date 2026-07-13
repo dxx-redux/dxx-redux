@@ -11,6 +11,11 @@ namespace D1U.Presentation
     /// </summary>
     public sealed class SoundFactory : IDisposable
     {
+        /// <summary>Global SFX gain (Settings ▸ Audio). Static because clips are
+        /// fired and forgotten via <see cref="AudioSource.PlayClipAtPoint"/>, so
+        /// the level scale is folded in at play time and survives rebuilds.</summary>
+        public static float MasterVolume = 1f;
+
         readonly BaseDxu dxu;
         readonly byte[] gameSoundMap; // pig SoundIDs: game id -> raw index (255 = none)
         readonly Dictionary<int, AudioClip> cache = new Dictionary<int, AudioClip>();
@@ -30,7 +35,7 @@ namespace D1U.Presentation
                 return;
             var clip = GetClip(raw);
             if (clip != null)
-                AudioSource.PlayClipAtPoint(clip, position, volume);
+                AudioSource.PlayClipAtPoint(clip, position, volume * MasterVolume);
         }
 
         AudioClip GetClip(int raw)

@@ -104,7 +104,10 @@ namespace D1U.Presentation
         ControlsConfig controls => controlsCfg ??= new ControlsConfig();
         GraphicsConfig gfxCfg;
         GraphicsConfig gfx => gfxCfg ??= new GraphicsConfig();
-        int menuPage;                 // 0 = main menu, 1 = controls, 2 = video
+        GameConfig gameCfg;
+        GameConfig game => gameCfg ??= new GameConfig();
+        int menuPage;                 // 0 main · 1 controls · 2 video · 3 audio · 4 game
+        float fpsSmooth = 60f;        // Settings ▸ Game FPS readout (unscaled EMA)
         GameAction? rebinding;        // waiting for a key press for this action
 
         /// <summary>Settings → Controls: rebind keys, tune mouse direction/speed.</summary>
@@ -290,6 +293,112 @@ namespace D1U.Presentation
             }
         }
 
+        /// <summary>Settings → Audio: master / SFX / music volume, applied live.</summary>
+        void DrawAudioMenu(float x, float y, float w)
+        {
+            GUI.Label(new Rect(x, y, w, 26), "AUDIO  —  changes apply immediately");
+            var g = game;
+            float rowH = 40f;
+            int row = 0;
+
+            float Slider(string label, float val)
+            {
+                float ry = y + 34 + row++ * rowH;
+                GUI.Label(new Rect(x, ry, 220, 24), $"{label}: {Mathf.RoundToInt(val * 100)}%");
+                return GUI.HorizontalSlider(new Rect(x + 210, ry + 6, w - 210, 20), val, 0f, 1f);
+            }
+
+            float m = Slider("Master volume", g.MasterVolume);
+            float s = Slider("Sound FX volume", g.SfxVolume);
+            float mu = Slider("Music volume", g.MusicVolume);
+            if (!Mathf.Approximately(m, g.MasterVolume) ||
+                !Mathf.Approximately(s, g.SfxVolume) ||
+                !Mathf.Approximately(mu, g.MusicVolume))
+            {
+                g.MasterVolume = m;
+                g.SfxVolume = s;
+                g.MusicVolume = mu;
+                g.ApplyAudio(music);
+                g.Save();
+            }
+
+            float by = y + 34 + row * rowH + 14;
+            if (GUI.Button(new Rect(x, by, 220, 30), "RESET TO DEFAULTS"))
+            {
+                g.ResetDefaults();
+                g.ApplyAudio(music);
+            }
+            if (GUI.Button(new Rect(x + 240, by, 220, 30), "BACK") ||
+                (Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Escape))
+                menuPage = 0;
+        }
+
+        /// <summary>Settings → Game: difficulty and the HUD toggles the engine
+        /// can already back (FPS readout, reticle).</summary>
+        void DrawGameMenu(float x, float y, float w)
+        {
+            GUI.Label(new Rect(x, y, w, 26), "GAME");
+            var g = game;
+            float rowH = 40f;
+            int row = 0;
+
+            // difficulty shares the d1u_difficulty pref the main menu writes
+            float dy = y + 34 + row++ * rowH;
+            GUI.Label(new Rect(x, dy, 220, 26), "Difficulty");
+            if (GUI.Button(new Rect(x + 210, dy, w - 210, 28),
+                    DifficultyNames[D1U.Game.ObjectSystem.Difficulty]))
+            {
+                D1U.Game.ObjectSystem.Difficulty = (D1U.Game.ObjectSystem.Difficulty + 1) % 5;
+                PlayerPrefs.SetInt("d1u_difficulty", D1U.Game.ObjectSystem.Difficulty);
+                PlayerPrefs.Save();
+            }
+
+            float fy = y + 34 + row++ * rowH;
+            bool nf = GUI.Toggle(new Rect(x, fy, w, 26), g.ShowFps, "  Show FPS counter");
+            float ry2 = y + 34 + row++ * rowH;
+            bool nr = GUI.Toggle(new Rect(x, ry2, w, 26), g.ShowReticle, "  Show reticle (crosshair)");
+            if (nf != g.ShowFps || nr != g.ShowReticle)
+            {
+                g.ShowFps = nf;
+                g.ShowReticle = nr;
+                g.Save();
+            }
+
+            float by = y + 34 + row * rowH + 14;
+            if (GUI.Button(new Rect(x, by, 220, 30), "RESET TO DEFAULTS"))
+                g.ResetDefaults();
+            if (GUI.Button(new Rect(x + 240, by, 220, 30), "BACK") ||
+                (Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Escape))
+                menuPage = 0;
+        }
+
+        /// <summary>Row of settings tabs (Video / Audio / Controls / Game).
+        /// Returns true and switches page when one is clicked so the caller can
+        /// stop drawing the rest of its layout this frame.</summary>
+        bool DrawSettingsTabs(float x, float y, float w)
+        {
+            float gap = 6f;
+            float bw = (w - 3 * gap) / 4f;
+            if (GUI.Button(new Rect(x + 0 * (bw + gap), y, bw, 30), "VIDEO")) { menuPage = 2; return true; }
+            if (GUI.Button(new Rect(x + 1 * (bw + gap), y, bw, 30), "AUDIO")) { menuPage = 3; return true; }
+            if (GUI.Button(new Rect(x + 2 * (bw + gap), y, bw, 30), "CONTROLS")) { menuPage = 1; rebinding = null; return true; }
+            if (GUI.Button(new Rect(x + 3 * (bw + gap), y, bw, 30), "GAME")) { menuPage = 4; return true; }
+            return false;
+        }
+
+        /// <summary>Route the active settings sub-page (1..4) to its drawer.</summary>
+        void DrawSettingsPage(float x, float y, float w)
+        {
+            switch (menuPage)
+            {
+                case 1: DrawControlsMenu(x, y, w); break;
+                case 2: DrawVideoMenu(x, y, w); break;
+                case 3: DrawAudioMenu(x, y, w); break;
+                case 4: DrawGameMenu(x, y, w); break;
+                default: menuPage = 0; break;
+            }
+        }
+
         /// <summary>In-level Esc menu: resume / save / load / settings / quit.
         /// Single-player pauses the sim; a netgame keeps running behind it.</summary>
         void DrawPauseMenu(float vw, float vh)
@@ -305,14 +414,9 @@ namespace D1U.Presentation
             var title = new GUIStyle(GUI.skin.label) { fontSize = 30, alignment = TextAnchor.MiddleCenter };
             GUI.Label(new Rect(0, y - 70, vw, 50), "PAUSED", title);
 
-            if (menuPage == 1)
+            if (menuPage != 0)
             {
-                DrawControlsMenu(x, y, w);
-                return;
-            }
-            if (menuPage == 2)
-            {
-                DrawVideoMenu(x, y, w);
+                DrawSettingsPage(x, y, w);
                 return;
             }
 
@@ -345,25 +449,18 @@ namespace D1U.Presentation
                 return;
             }
             GUI.enabled = true;
-            if (GUI.Button(new Rect(x, y + 144, w, 34), "SETTINGS ▸ CONTROLS"))
-            {
-                menuPage = 1;
-                rebinding = null;
+            GUI.Label(new Rect(x, y + 138, w, 22), "SETTINGS",
+                new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter });
+            if (DrawSettingsTabs(x, y + 164, w))
                 return;
-            }
-            if (GUI.Button(new Rect(x, y + 188, w, 34), "SETTINGS ▸ VIDEO"))
-            {
-                menuPage = 2;
-                return;
-            }
-            if (GUI.Button(new Rect(x, y + 248, w, 34), "QUIT TO MAIN MENU"))
+            if (GUI.Button(new Rect(x, y + 212, w, 34), "QUIT TO MAIN MENU"))
             {
                 carryLaserLevel = 0;
                 carryQuad = false;
                 OpenMenu();
                 return;
             }
-            GUI.Label(new Rect(0, y + 300, vw, 24),
+            GUI.Label(new Rect(0, y + 264, vw, 24),
                 netSession != null ? "netgame keeps running while this menu is open" : "game paused",
                 new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter });
         }
@@ -413,6 +510,7 @@ namespace D1U.Presentation
                     Mathf.Clamp(PlayerPrefs.GetInt("d1u_difficulty", 2), 0, 4);
                 gfx.ApplyQuality();
                 gfx.ApplyDisplay();
+                game.ApplyAudio(music); // master + sfx now; music volume set on song load
                 LevelTextureFactory.DefaultFilter = gfx.Filter;
                 var cam0 = Camera.main;
                 if (cam0 != null)
@@ -508,13 +606,14 @@ namespace D1U.Presentation
         }
 
         /// <summary>`-d1u-menu-shots <dir>`: screenshot every menu page (main,
-        /// controls, video, pause layout) and quit — layout self-verification.</summary>
+        /// controls, video, audio, game, pause layout) and quit — layout
+        /// self-verification.</summary>
         System.Collections.IEnumerator MenuShots(string dir)
         {
             Directory.CreateDirectory(dir);
             OpenMenu();
             yield return new WaitForSeconds(1f);
-            for (int page = 0; page <= 2; page++)
+            for (int page = 0; page <= 4; page++)
             {
                 menuPage = page;
                 yield return new WaitForEndOfFrame();
@@ -862,14 +961,9 @@ namespace D1U.Presentation
             var title = new GUIStyle(GUI.skin.label) { fontSize = 30, alignment = TextAnchor.MiddleCenter };
             GUI.Label(new Rect(0, y - 70, vw, 50), "D1X-UNITY", title);
 
-            if (menuPage == 1)
+            if (menuPage != 0)
             {
-                DrawControlsMenu(x, y, w);
-                return;
-            }
-            if (menuPage == 2)
-            {
-                DrawVideoMenu(x, y, w);
+                DrawSettingsPage(x, y, w);
                 return;
             }
 
@@ -905,19 +999,12 @@ namespace D1U.Presentation
                 PlayerPrefs.SetInt("d1u_difficulty", D1U.Game.ObjectSystem.Difficulty);
             }
 
-            if (GUI.Button(new Rect(x, rowY + 38, w / 2 - 5, 30), "SETTINGS ▸ CONTROLS"))
-            {
-                menuPage = 1;
-                rebinding = null;
+            GUI.Label(new Rect(x, rowY + 38, w, 20), "SETTINGS",
+                new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter });
+            if (DrawSettingsTabs(x, rowY + 60, w))
                 return;
-            }
-            if (GUI.Button(new Rect(x + w / 2 + 5, rowY + 38, w / 2 - 5, 30), "SETTINGS ▸ VIDEO"))
-            {
-                menuPage = 2;
-                return;
-            }
 
-            if (GUI.Button(new Rect(x, rowY + 74, w, 40), "START") ||
+            if (GUI.Button(new Rect(x, rowY + 100, w, 40), "START") ||
                 Input.GetKeyDown(KeyCode.Return))
             {
                 missionKey = selected.CacheKey;
@@ -931,7 +1018,7 @@ namespace D1U.Presentation
                 StartLevel(menuLevel);
                 return;
             }
-            float helpY = rowY + 124;
+            float helpY = rowY + 150;
             if (netSession == null)
             {
                 bool haveSave = File.Exists(SavePath);
@@ -1285,6 +1372,8 @@ namespace D1U.Presentation
         void Update()
         {
             UpdateCursor();
+            if (Time.unscaledDeltaTime > 0f) // Settings ▸ Game FPS readout
+                fpsSmooth = Mathf.Lerp(fpsSmooth, 1f / Time.unscaledDeltaTime, 0.1f);
             if (netSession != null)
             {
                 netSession.Update(Time.timeAsDouble);
@@ -1825,6 +1914,7 @@ namespace D1U.Presentation
 
             if (music == null)
                 music = new MusicPlayer(gameObject);
+            music.Volume = game.MusicVolume; // Settings ▸ Audio
             music.PlayLevelSong(dir, baseDxuData, levelNumber);
 
             if (pendingLoad != null)
@@ -2410,8 +2500,8 @@ namespace D1U.Presentation
                     "Tab close · mouse orbit · wheel zoom");
             }
 
-            // reticle
-            if (!automapOpen && shipController != null && !shipController.IsDead && !player.ExitReached)
+            // reticle (Settings ▸ Game)
+            if (game.ShowReticle && !automapOpen && shipController != null && !shipController.IsDead && !player.ExitReached)
             {
                 float cx = vw / 2f, cy = vh / 2f;
                 GUI.color = new UnityEngine.Color(0.4f, 1f, 0.4f, 0.8f);
@@ -2420,6 +2510,16 @@ namespace D1U.Presentation
                 GUI.DrawTexture(new Rect(cx - 1, cy - 6, 2, 4), Texture2D.whiteTexture);
                 GUI.DrawTexture(new Rect(cx - 1, cy + 2, 2, 4), Texture2D.whiteTexture);
                 GUI.color = UnityEngine.Color.white;
+            }
+
+            if (game.ShowFps) // Settings ▸ Game
+            {
+                var fstyle = new GUIStyle(GUI.skin.label)
+                {
+                    alignment = TextAnchor.UpperRight,
+                    normal = { textColor = new UnityEngine.Color(0.6f, 1f, 0.6f) },
+                };
+                GUI.Label(new Rect(vw - 120, 6, 108, 22), $"{Mathf.RoundToInt(fpsSmooth)} FPS", fstyle);
             }
 
             int y = 40;
