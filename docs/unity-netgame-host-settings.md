@@ -44,7 +44,7 @@ an approximation, the row says so.
 | Original | Unity | Notes |
 |---|---|---|
 | Allowed Items (13-bit mask) | **now** | disallowed powerups become shield boosts at level prep (`bash_to_shield`); the prep also ports the rest of `multi_prep_level`: hostages & keys → shield boosts, extra-life → invuln, invuln/cloak capped at 3 |
-| Low Vulcan | **now** | strips loose ammo boxes (the per-object gun-ammo halving has no port equivalent — pickups grant fixed ammo) |
+| Low Vulcan | **now** | strips loose ammo boxes at prep, and a picked-up vulcan gun grants half ammo (98, powerup.c:390) |
 | Homing Update Rate (20..30) | **now** | sets the NEWHOMER turn cadence (SP stays 25 Hz); the original's trackability-cone scaling is not applied |
 | Extra Primaries / Secondaries (×1..8) | **now** | clones dupable powerups at prep (multi.c:4180); prep is deterministic so clone ids align on every peer and pickups replicate |
 | Cap Secondaries (uncapped/6/2) | **now** | caps homing+smart units in the mine, downgrading 4-packs that partially fit (multi.c:4223) |
@@ -84,6 +84,18 @@ and inert; otherwise they're out until their subsystem lands (see the tiered
 Every dialog value is a PlayerPref (`d1u_net_*`), written on START HOST and on
 BACK, loaded in the `NetGameConfig` constructor — the equivalent of the pilot
 `.ngp`. Defaults match D1's `netgame_set_defaults()` except Reactor Life (see A).
+
+## Pickup-cap fidelity (2026-07-15 audit)
+Every powerup pickup was audited against `do_powerup`/`pick_up_*`: caps
+(concs 20, homing 10, prox 10, smart 5, mega 5, vulcan 784, laser L4,
+energy/shields 200) all hold and at-cap powerups stay in the world. Six
+deviations found and fixed: duplicate/maxed weapons in netgames now **stay**
+instead of converting to energy (laser/quad/spread/plasma/fusion); a duplicate
+vulcan in MP takes nothing and stays; MP homing overflow re-drops singles at
+random segments (weapon.c:537); a spare key of a held colour stays in SP; an SP
+duplicate vulcan grabs one box (98) not the gun amount; Low Vulcan halves the
+gun-pickup grant. Refusal messages are throttled viewer-side (HM_REDUNDANT
+analogue). Smoke §22b asserts all of it.
 
 ## Verification
 PresentationCheck (compile mirror) + Smoke: §22 asserts the rules propagate

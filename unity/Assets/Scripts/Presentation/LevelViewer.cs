@@ -1214,6 +1214,20 @@ namespace D1U.Presentation
             GUI.Label(new Rect(x, helpY + 78, w, 20), $"build {Application.version}");
         }
 
+        /// <summary>HM_REDUNDANT|HM_MAYDUPL analogue (powerup.c HUD flags): a ship
+        /// resting on a maxed or duplicate powerup re-fires its refusal message
+        /// every frame — show it once a second instead of sixty times.</summary>
+        void AddHudMessage(string text)
+        {
+            if (messages.Count > 0)
+            {
+                var last = messages[messages.Count - 1];
+                if (last.text == text && Time.time - last.time < 1f)
+                    return;
+            }
+            messages.Add((Time.time, text));
+        }
+
         void CreateObjectView(D1U.Game.GameObj obj)
         {
             if (objectsParent == null || obj.Dead)
@@ -1887,7 +1901,7 @@ namespace D1U.Presentation
             nextEggNetId = 1;
             objectSystem.ExtraLife += () => lives++;
             Runtime.SideBlocked = objectSystem.AnyObjectPokesSide; // doors won't scissor objects
-            objectSystem.Message += text => messages.Add((Time.time, text));
+            objectSystem.Message += AddHudMessage; // throttled: refusals repeat per frame
             objectSystem.Sound += (soundId, pos) => sounds?.PlayAt(soundId, ToUnity(pos), 0.7f);
             Runtime.MatcenTriggered += objectSystem.TriggerMatcen;
             Runtime.CountdownSound += soundId =>

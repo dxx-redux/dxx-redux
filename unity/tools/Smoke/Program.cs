@@ -1220,9 +1220,46 @@ try
         int boxesDropped = CountObj(7, 22) - boxesBefore;
         Console.WriteLine($"  netgame vulcan steady: boxes dropped={boxesDropped} (expected 3)");
 
+        // pickup-cap fidelity: duplicates stay in netgames, SP quirks match do_powerup
+        var pkP = new D1U.Game.PlayerState { Energy = 50f };
+        var pkW = new D1U.Game.PlayerWeapons { HasFusion = true, HasVulcan = true, VulcanAmmo = 0, Homings = 8 };
+        D1U.Game.NetGameRules.Active = new D1U.Game.NetGameRules();
+        var dupFusion = objsP.AddNetEgg(16, basePos, default);   // (a) MP dup fusion: stays, no energy
+        objsP.TryPickup(dupFusion, pkP, pkW);
+        bool dupStaysMp = !dupFusion.Dead && Math.Abs(pkP.Energy - 50f) < 0.001f;
+        var dupVulc = objsP.AddNetEgg(13, basePos, default);     // (b) MP dup vulcan: stays, no ammo
+        objsP.TryPickup(dupVulc, pkP, pkW);
+        bool vulcStaysMp = !dupVulc.Dead && pkW.VulcanAmmo == 0;
+        int homingRedrops = 0;                                   // (c) MP homing overflow re-drops
+        objsP.NetEggCreated += e => { if (e.SubId == 18) homingRedrops++; };
+        var pack4 = objsP.AddNetEgg(19, basePos, default);
+        objsP.TryPickup(pack4, pkP, pkW);
+        bool homingRedrop = pack4.Dead && pkW.Homings == 10 && homingRedrops == 2;
+        D1U.Game.NetGameRules.Active = new D1U.Game.NetGameRules { LowVulcan = true };
+        var lowW = new D1U.Game.PlayerWeapons();                 // (d) LowVulcan halves the gun grant
+        var gunEgg = objsP.AddNetEgg(13, basePos, default);
+        objsP.TryPickup(gunEgg, pkP, lowW);
+        bool lowVulcanHalf = gunEgg.Dead &&
+                             lowW.VulcanAmmo == D1U.Game.PlayerWeapons.VulcanWeaponAmmo / 2;
+        objsP.Multiplayer = false;                               // (e) SP: dup key stays; dup vulcan = ONE box
+        D1U.Game.NetGameRules.Active = new D1U.Game.NetGameRules();
+        pkP.Keys = 2;
+        var dupKey = objsP.AddNetEgg(4, basePos, default);
+        objsP.TryPickup(dupKey, pkP, pkW);
+        var spVulc = objsP.AddNetEgg(13, basePos, default);
+        var spW = new D1U.Game.PlayerWeapons { HasVulcan = true, VulcanAmmo = 0 };
+        objsP.TryPickup(spVulc, pkP, spW);
+        bool spQuirks = !dupKey.Dead && spVulc.Dead &&
+                        spW.VulcanAmmo == D1U.Game.PlayerWeapons.VulcanAmmoPickup;
+        objsP.Multiplayer = true;
+        Console.WriteLine($"  pickup caps: MP dup fusion stays={dupStaysMp}, dup vulcan stays={vulcStaysMp}, " +
+                          $"homing overflow redrop={homingRedrop} ({homingRedrops}), lowVulcan gun={lowW.VulcanAmmo} (98), " +
+                          $"SP key stays + vulcan box={spQuirks}");
+
         D1U.Game.NetGameRules.Active = new D1U.Game.NetGameRules(); // restore defaults
         if (!prepOk || !gateHeld || !reactorDies || !ackackBoom || !oldBombInert ||
-            !flareBoom || !concRespawn || boxesDropped != 3)
+            !flareBoom || !concRespawn || boxesDropped != 3 ||
+            !dupStaysMp || !vulcStaysMp || !homingRedrop || !lowVulcanHalf || !spQuirks)
             errors++;
     }
 

@@ -1953,17 +1953,26 @@ namespace D1U.Game
                         return true;
                     }
                     Message?.Invoke("Your laser is maxed out!");
-                    return PickUpEnergy(player); // maxed weapon pickups become energy (do_powerup)
-                // keys are never consumed in multiplayer — every player can take
+                    // SP: maxed pickups become energy; MP: they stay for the
+                    // others (do_powerup, powerup.c:290 `!GM_MULTI` guard)
+                    return !Multiplayer && PickUpEnergy(player);
+                // keys: a spare of a colour you hold always stays (powerup.c:301),
+                // and multiplayer never consumes them — every player can take
                 // them (do_powerup, powerup.c:309-312)
                 case 4:
-                    if ((player.Keys & 2) == 0) { player.Keys |= 2; Message?.Invoke("Blue key!"); }
+                    if ((player.Keys & 2) != 0) return false;
+                    player.Keys |= 2;
+                    Message?.Invoke("Blue key!");
                     return !Multiplayer;
                 case 5:
-                    if ((player.Keys & 4) == 0) { player.Keys |= 4; Message?.Invoke("Red key!"); }
+                    if ((player.Keys & 4) != 0) return false;
+                    player.Keys |= 4;
+                    Message?.Invoke("Red key!");
                     return !Multiplayer;
                 case 6:
-                    if ((player.Keys & 8) == 0) { player.Keys |= 8; Message?.Invoke("Yellow key!"); }
+                    if ((player.Keys & 8) != 0) return false;
+                    player.Keys |= 8;
+                    Message?.Invoke("Yellow key!");
                     return !Multiplayer;
                 case 10: // 1 concussion
                     if (weapons == null || weapons.Concussions >= 20) return false;
@@ -1987,10 +1996,16 @@ namespace D1U.Game
                     Message?.Invoke("Homing missile!");
                     return true;
                 case 19:
+                {
                     if (weapons == null || weapons.Homings >= 10) return false;
+                    int hBefore = weapons.Homings;
                     weapons.Homings = Math.Min(10, weapons.Homings + 4);
+                    if (Multiplayer) // netgame overflow re-drops as singles (weapon.c:537-541)
+                        for (int i = 0; i < 4 - (weapons.Homings - hBefore); i++)
+                            MaybeDropNetPowerup(18);
                     Message?.Invoke("4 homing missiles!");
                     return true;
+                }
                 case 12:
                     if (weapons == null) return false;
                     if (!weapons.Quad)
@@ -2000,27 +2015,43 @@ namespace D1U.Game
                         return true;
                     }
                     Message?.Invoke("You already have quad lasers!");
-                    return PickUpEnergy(player);
+                    // duplicates become energy only in SP; a netgame leaves them
+                    // for the others (do_powerup, powerup.c:366 `!GM_MULTI`)
+                    return !Multiplayer && PickUpEnergy(player);
                 case 13:
+                {
                     if (weapons == null) return false;
                     if (!weapons.HasVulcan)
                     {
                         weapons.HasVulcan = true;
+                        // Low Vulcan halves what a picked-up gun carries (powerup.c:390-392)
+                        int grant = Multiplayer && NetGameRules.Active.LowVulcan
+                            ? PlayerWeapons.VulcanWeaponAmmo / 2
+                            : PlayerWeapons.VulcanWeaponAmmo;
                         weapons.VulcanAmmo = Math.Min(PlayerWeapons.VulcanAmmoMax,
-                            weapons.VulcanAmmo + PlayerWeapons.VulcanWeaponAmmo);
+                            weapons.VulcanAmmo + grant);
                         Message?.Invoke("Vulcan cannon!");
                         return true;
                     }
-                    // already owned: grab the powerup's ammo instead (do_powerup:369-423)
+                    // already owned. Netgame: take nothing — the gun stays for
+                    // someone else (powerup.c:378-385, non-duplicating styles).
+                    if (Multiplayer)
+                    {
+                        Message?.Invoke("You already have the Vulcan cannon!");
+                        return false;
+                    }
+                    // single player: grab one box worth of its ammo instead
+                    // (pick_up_vulcan_ammo, powerup.c:420-422)
                     if (weapons.VulcanAmmo >= PlayerWeapons.VulcanAmmoMax)
                     {
                         Message?.Invoke("Your ammo is maxed out!");
                         return false;
                     }
                     weapons.VulcanAmmo = Math.Min(PlayerWeapons.VulcanAmmoMax,
-                        weapons.VulcanAmmo + PlayerWeapons.VulcanWeaponAmmo);
+                        weapons.VulcanAmmo + PlayerWeapons.VulcanAmmoPickup);
                     Message?.Invoke("Vulcan ammo!");
                     return true;
+                }
                 case 14:
                     if (weapons == null) return false;
                     if (!weapons.HasSpread)
@@ -2029,7 +2060,8 @@ namespace D1U.Game
                         Message?.Invoke("Spreadfire cannon!");
                         return true;
                     }
-                    return PickUpEnergy(player);
+                    Message?.Invoke("You already have the Spreadfire cannon!");
+                    return !Multiplayer && PickUpEnergy(player);
                 case 15:
                     if (weapons == null) return false;
                     if (!weapons.HasPlasma)
@@ -2038,7 +2070,8 @@ namespace D1U.Game
                         Message?.Invoke("Plasma cannon!");
                         return true;
                     }
-                    return PickUpEnergy(player);
+                    Message?.Invoke("You already have the Plasma cannon!");
+                    return !Multiplayer && PickUpEnergy(player);
                 case 16:
                     if (weapons == null) return false;
                     if (!weapons.HasFusion)
@@ -2047,7 +2080,8 @@ namespace D1U.Game
                         Message?.Invoke("Fusion cannon!");
                         return true;
                     }
-                    return PickUpEnergy(player);
+                    Message?.Invoke("You already have the Fusion cannon!");
+                    return !Multiplayer && PickUpEnergy(player);
                 case 22:
                     if (weapons == null || weapons.VulcanAmmo >= PlayerWeapons.VulcanAmmoMax) return false;
                     weapons.VulcanAmmo = Math.Min(PlayerWeapons.VulcanAmmoMax,
