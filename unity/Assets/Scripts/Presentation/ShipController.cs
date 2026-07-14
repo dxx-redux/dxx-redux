@@ -329,7 +329,9 @@ namespace D1U.Presentation
                 Runtime.Player.Shields = 100f;
                 Runtime.Player.Energy = 100f;
                 Runtime.Player.CloakTime = 0f;
-                Runtime.Player.InvulnTime = 0f;
+                // netgame spawn style grants brief reborn invulnerability
+                Runtime.Player.InvulnTime = (Objects != null && Objects.Multiplayer)
+                    ? D1U.Game.NetGameRules.Active.SpawnInvulnSeconds : 0f;
                 Runtime.Player.HostagesOnBoard = 0; // carried hostages are lost
             }
             Weapons.ResetForRespawn(); // fresh ship — go re-collect your gear

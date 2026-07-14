@@ -1066,14 +1066,20 @@ try
         errors++;
 
     // --- 22. netgame loopback: join, state, fire, door, pickup, frags ---
-    using (var host = D1U.Game.NetSession.Host("firststrike", 7, "HOST", 28650))
+    var netRules = new D1U.Game.NetGameRules
+    {
+        KillGoal = 3, MaxTime = 2, ReducedFlash = true, MaxPlayers = 6, SpawnStyle = 2,
+        AllowedItems = (ushort)(D1U.Game.NetGameRules.AllItemsMask & ~(1 << D1U.Game.NetGameRules.BitFusion)),
+    };
+    using (var host = D1U.Game.NetSession.Host("firststrike", 7, "HOST", netRules, 28650))
     using (var client = D1U.Game.NetSession.Join("127.0.0.1", "PILOT42", 28650))
     {
         var clientSawFire = new List<(int slot, byte weapon)>();
-        int clientDoor = -1, hostPickup = -1;
+        int clientDoor = -1, hostPickup = -1, matchWinner = -99;
         client.RemoteFire += (slot, weapon, p, d) => clientSawFire.Add((slot, weapon));
         client.RemoteDoor += w => clientDoor = w;
         host.RemotePickup += id => hostPickup = id;
+        host.MatchOver += w => matchWinner = w;
 
         double now = 0;
         void Pump(double seconds)
@@ -1100,10 +1106,23 @@ try
                          Math.Abs(hostGhost.Pos.X - 10f) < 0.01f;
         bool fireSeen = clientSawFire.Count == 1 && clientSawFire[0] == (0, (byte)11);
         bool frags = host.LocalFrags == 1 && client.Players[0].Frags == 1;
+
+        // netgame rules propagate host -> client through the Welcome handshake
+        bool rulesSynced = client.Rules.KillGoal == 3 && client.Rules.MaxTime == 2 &&
+                           client.Rules.ReducedFlash && client.Rules.MaxPlayers == 6 &&
+                           client.Rules.SpawnStyle == 2 &&
+                           !client.Rules.ItemAllowed(D1U.Game.NetGameRules.BitFusion) &&
+                           client.Rules.ItemAllowed(D1U.Game.NetGameRules.BitLaser);
+        host.EndMatch(0);
+        bool matchEnds = matchWinner == 0;
+
         Console.WriteLine($"  netgame: joined={joined} (slot {client.LocalSlot}), host state seen={stateSeen}, " +
                           $"fire relayed={fireSeen}, door={clientDoor}, pickup={hostPickup}, " +
                           $"host frags={host.LocalFrags}/client-view={client.Players[0].Frags}");
-        if (!joined || !stateSeen || !fireSeen || clientDoor != 42 || hostPickup != 123 || !frags)
+        Console.WriteLine($"  netgame rules: synced={rulesSynced} killgoal={client.Rules.KillGoal} maxtime={client.Rules.MaxTime} " +
+                          $"fusion-allowed={client.Rules.ItemAllowed(D1U.Game.NetGameRules.BitFusion)} spawnInvul={client.Rules.SpawnInvulnSeconds:F1}s matchEnd={matchEnds}");
+        if (!joined || !stateSeen || !fireSeen || clientDoor != 42 || hostPickup != 123 || !frags ||
+            !rulesSynced || !matchEnds)
             errors++;
     }
 
@@ -1213,7 +1232,7 @@ try
 
     // (d) MsgEggs roundtrip + a malformed datagram must not wedge the pump
     bool eggsOk;
-    using (var host2 = D1U.Game.NetSession.Host("firststrike", 1, "H", 28652))
+    using (var host2 = D1U.Game.NetSession.Host("firststrike", 1, "H", port: 28652))
     using (var client2 = D1U.Game.NetSession.Join("127.0.0.1", "C", 28652))
     {
         (int netId, byte subId, System.Numerics.Vector3 pos, System.Numerics.Vector3 vel)[] gotEggs = null;

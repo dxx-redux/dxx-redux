@@ -106,8 +106,14 @@ namespace D1U.Presentation
         GraphicsConfig gfx => gfxCfg ??= new GraphicsConfig();
         GameConfig gameCfg;
         GameConfig game => gameCfg ??= new GameConfig();
-        int menuPage;                 // 0 main · 1 controls · 2 video · 3 audio · 4 game
+        NetGameConfig netCfg;
+        NetGameConfig NetCfg => netCfg ??= new NetGameConfig();
+        int menuPage;                 // 0 main · 1 controls · 2 video · 3 audio · 4 game · 5 host · 6 host-items
         float fpsSmooth = 60f;        // Settings ▸ Game FPS readout (unscaled EMA)
+        // netgame match end (kill-goal winner or time limit)
+        bool matchEnded;
+        string matchEndMsg;
+        float matchEndTime, netLevelStart;
         GameAction? rebinding;        // waiting for a key press for this action
 
         /// <summary>Settings → Controls: rebind keys, tune mouse direction/speed.</summary>
@@ -386,7 +392,7 @@ namespace D1U.Presentation
             return false;
         }
 
-        /// <summary>Route the active settings sub-page (1..4) to its drawer.</summary>
+        /// <summary>Route the active settings sub-page to its drawer.</summary>
         void DrawSettingsPage(float x, float y, float w)
         {
             switch (menuPage)
@@ -395,8 +401,145 @@ namespace D1U.Presentation
                 case 2: DrawVideoMenu(x, y, w); break;
                 case 3: DrawAudioMenu(x, y, w); break;
                 case 4: DrawGameMenu(x, y, w); break;
+                case 5: DrawHostMenu(x, y, w); break;
+                case 6: DrawHostItemsMenu(x, y, w); break;
                 default: menuPage = 0; break;
             }
+        }
+
+        static byte StepClamp(int v, int dir, int lo, int hi)
+            => (byte)Mathf.Clamp(v + dir, lo, hi);
+
+        static bool EscDown() =>
+            Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Escape;
+
+        // labels for the 13 AllowedItems bits (NetGameRules.Bit*)
+        static readonly string[] AllowLabels =
+        {
+            "Laser upgrade", "Quad lasers", "Vulcan cannon", "Vulcan ammo",
+            "Spreadfire", "Plasma cannon", "Fusion cannon", "Homing missiles",
+            "Proximity bombs", "Smart missiles", "Mega missiles", "Cloaking", "Invulnerability",
+        };
+
+        /// <summary>HOST setup (net_udp_setup_game): match rules + a link to the
+        /// weapons/items page. Every value persists to PlayerPrefs on Start/Back.</summary>
+        void DrawHostMenu(float x, float y, float w)
+        {
+            GUI.Label(new Rect(x, y, w, 26), "HOST GAME  —  options are saved for next time");
+            var c = NetCfg;
+            var r = c.Rules;
+            var mid = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter };
+            float rowH = 31f;
+            int row = 0;
+            float RowY() => y + 30 + row++ * rowH;
+
+            float gy = RowY();
+            GUI.Label(new Rect(x, gy, 140, 26), "Game name");
+            r.GameName = GUI.TextField(new Rect(x + 140, gy, w - 140, 26), r.GameName ?? "", 15);
+            float ny = RowY();
+            GUI.Label(new Rect(x, ny, 140, 26), "Your name");
+            c.PlayerName = GUI.TextField(new Rect(x + 140, ny, w - 140, 26), c.PlayerName ?? "", 12);
+
+            int Cycle(string label, string value)
+            {
+                float ry = RowY();
+                GUI.Label(new Rect(x, ry, 150, 26), label);
+                int dir = 0;
+                if (GUI.Button(new Rect(x + 150, ry, 28, 26), "<")) dir = -1;
+                GUI.Label(new Rect(x + 180, ry, w - 212, 26), value, mid);
+                if (GUI.Button(new Rect(x + w - 28, ry, 28, 26), ">")) dir = 1;
+                return dir;
+            }
+
+            int d = Cycle("Difficulty", DifficultyNames[r.Difficulty]);
+            if (d != 0) r.Difficulty = (byte)(((r.Difficulty + d) % 5 + 5) % 5);
+            r.KillGoal = StepClamp(r.KillGoal, Cycle("Kill goal", r.KillGoal == 0 ? "NONE" : $"{r.KillGoal * 10} kills"), 0, 10);
+            r.MaxTime = StepClamp(r.MaxTime, Cycle("Max time", r.MaxTime == 0 ? "NONE" : $"{r.MaxTime * 5} min"), 0, 10);
+            r.ReactorLife = StepClamp(r.ReactorLife, Cycle("Reactor life", r.ReactorLife == 0 ? "INDESTRUCTIBLE" : $"{r.ReactorLife * 5} min"), 0, 10);
+            r.MaxPlayers = StepClamp(r.MaxPlayers, Cycle("Max players", r.MaxPlayers.ToString()), 2, 8);
+            d = Cycle("Access", r.ClosedGame ? "CLOSED" : "OPEN");
+            if (d != 0) r.ClosedGame = !r.ClosedGame;
+            r.SpawnStyle = StepClamp(r.SpawnStyle, Cycle("Spawn invuln",
+                r.SpawnStyle == 0 ? "NONE" : r.SpawnStyle == 1 ? "0.5 sec" : r.SpawnStyle == 2 ? "2 sec" : "PREVIEW*"), 0, 3);
+
+            float poy = RowY();
+            GUI.Label(new Rect(x, poy, 140, 26), "Port");
+            if (int.TryParse(GUI.TextField(new Rect(x + 140, poy, 110, 26), c.Port.ToString(), 5), out int pv))
+                c.Port = Mathf.Clamp(pv, 1, 65535);
+
+            float by = y + 30 + row * rowH + 8;
+            if (GUI.Button(new Rect(x, by, w, 28), "WEAPONS & ITEMS  ▸")) { c.Save(); menuPage = 6; return; }
+            if (GUI.Button(new Rect(x, by + 34, w / 2 - 5, 34), "START HOST"))
+            {
+                c.Save();
+                menuPage = 0;
+                StartHost(menuMissions[menuMissionIndex]);
+                return;
+            }
+            if (GUI.Button(new Rect(x + w / 2 + 5, by + 34, w / 2 - 5, 34), "BACK") || EscDown())
+            {
+                c.Save();
+                menuPage = 0;
+            }
+        }
+
+        /// <summary>HOST weapons/items (net_udp_more_game_options): the 13
+        /// AllowedItems toggles plus the weapon/spawn/cosmetic switches.</summary>
+        void DrawHostItemsMenu(float x, float y, float w)
+        {
+            GUI.Label(new Rect(x, y, w, 26), "WEAPONS & ITEMS  —  * = synced, effect coming");
+            var c = NetCfg;
+            var r = c.Rules;
+            float colW = w / 2f - 8f;
+            float lx = x, rx = x + w / 2f + 8f;
+
+            // left column: the 13 allowed-powerup toggles
+            GUI.Label(new Rect(lx, y + 28, colW, 22), "Allowed items:");
+            for (int bit = 0; bit < D1U.Game.NetGameRules.AllowedItemBits; bit++)
+            {
+                bool on = r.ItemAllowed(bit);
+                bool nv = GUI.Toggle(new Rect(lx, y + 50 + bit * 24, colW, 22), on, " " + AllowLabels[bit]);
+                if (nv != on)
+                    r.AllowedItems = (ushort)(nv ? r.AllowedItems | (1 << bit) : r.AllowedItems & ~(1 << bit));
+            }
+
+            // right column: weapon / spawn / cosmetic options
+            int rr = 0;
+            float RY() => y + 28 + rr++ * 26f;
+            var mid = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, wordWrap = false, clipping = TextClipping.Clip };
+            int Cyc(string label, string value)
+            {
+                float ry = RY();
+                GUI.Label(new Rect(rx, ry, 118, 22), label);
+                int dir = 0;
+                if (GUI.Button(new Rect(rx + 116, ry, 24, 22), "<")) dir = -1;
+                GUI.Label(new Rect(rx + 142, ry, colW - 168, 22), value, mid);
+                if (GUI.Button(new Rect(rx + colW - 24, ry, 24, 22), ">")) dir = 1;
+                return dir;
+            }
+            bool Chk(string label, bool val) => GUI.Toggle(new Rect(rx, RY(), colW, 22), val, " " + label);
+
+            r.LowVulcan = Chk("Low vulcan ammo", r.LowVulcan);
+            r.PrimaryDup = StepClamp(r.PrimaryDup, Cyc("Extra primary*", r.PrimaryDup <= 1 ? "NONE" : $"x{r.PrimaryDup}"), 1, 8);
+            r.SecondaryDup = StepClamp(r.SecondaryDup, Cyc("Extra second.*", r.SecondaryDup <= 1 ? "NONE" : $"x{r.SecondaryDup}"), 1, 8);
+            r.SecondaryCap = StepClamp(r.SecondaryCap, Cyc("Cap second.*", r.SecondaryCap == 0 ? "UNCAP" : r.SecondaryCap == 1 ? "MAX 6" : "MAX 2"), 0, 2);
+            r.VulcanStyle = StepClamp(r.VulcanStyle, Cyc("Vulcan style*", r.VulcanStyle == 0 ? "DUP" : r.VulcanStyle == 1 ? "DEPL" : r.VulcanStyle == 2 ? "DROP" : "RESP"), 0, 3);
+            r.HomingRate = StepClamp(r.HomingRate, Cyc("Homing rate*", r.HomingRate.ToString()), 20, 30);
+            r.AckAckMode = Chk("Vulcan ack-ack*", r.AckAckMode);
+            r.BombFlareTimer = StepClamp(r.BombFlareTimer, Cyc("Bomb-flare*", r.BombFlareTimer == 0 ? "NEVER" : r.BombFlareTimer == 4 ? "ALWAYS" : $"{(int)r.BombFlareSeconds}s"), 0, 4);
+            r.RespawnConcs = Chk("Respawn concs*", r.RespawnConcs);
+            r.NewSpawnAlgo = Chk("New spawn algo*", r.NewSpawnAlgo);
+            r.BrightShips = Chk("Bright ships*", r.BrightShips);
+            r.ShowEnemyNames = Chk("Enemy names*", r.ShowEnemyNames);
+            r.ReducedFlash = Chk("Reduced flash", r.ReducedFlash);
+
+            if (GUI.Button(new Rect(x, y + 50 + D1U.Game.NetGameRules.AllowedItemBits * 24 + 8, w / 2 - 5, 30), "◂ BACK") || EscDown())
+            {
+                c.Save();
+                menuPage = 5;
+            }
+            if (GUI.Button(new Rect(x + w / 2 + 5, y + 50 + D1U.Game.NetGameRules.AllowedItemBits * 24 + 8, w / 2 - 5, 30), "RESET DEFAULTS"))
+                c.ResetDefaults();
         }
 
         /// <summary>In-level Esc menu: resume / save / load / settings / quit.
@@ -613,7 +756,7 @@ namespace D1U.Presentation
             Directory.CreateDirectory(dir);
             OpenMenu();
             yield return new WaitForSeconds(1f);
-            for (int page = 0; page <= 4; page++)
+            for (int page = 0; page <= 6; page++)
             {
                 menuPage = page;
                 yield return new WaitForEndOfFrame();
@@ -1050,7 +1193,7 @@ namespace D1U.Presentation
                 {
                     carryLaserLevel = 0;
                     carryQuad = false;
-                    StartHost(selected);
+                    menuPage = 5; // open the host setup dialog before hosting
                     return;
                 }
                 if (GUI.Button(new Rect(x + 352, helpY, 90, 28), "JOIN"))
@@ -1385,6 +1528,19 @@ namespace D1U.Presentation
                     netSession.SendState(s.Pos, s.Orient, s.Vel);
                 }
                 UpdateNetShips();
+
+                // time limit: every peer ends off its own level clock (consistent)
+                if (netSession.Connected && !matchEnded && !menuMode && !briefingMode &&
+                    D1U.Game.NetGameRules.Active.MaxTimeSeconds > 0 &&
+                    Time.time - netLevelStart >= D1U.Game.NetGameRules.Active.MaxTimeSeconds)
+                    netSession.EndMatch(-1);
+                // after the match-over banner, drop back to the menu
+                if (matchEnded && Time.time - matchEndTime > 6f)
+                {
+                    CloseNet();
+                    OpenMenu();
+                    return;
+                }
             }
             if (menuMode || briefingMode)
                 return;
@@ -2136,12 +2292,16 @@ namespace D1U.Presentation
             CloseNet();
             try
             {
-                netSession = D1U.Game.NetSession.Host(selected.CacheKey, menuLevel, "HOST");
+                var cfg = NetCfg;
+                netSession = D1U.Game.NetSession.Host(selected.CacheKey, menuLevel, cfg.PlayerName, cfg.Rules, cfg.Port);
                 WireNetSession();
                 missionKey = selected.CacheKey;
                 returnAfterSecret = 0;
-                menuNetStatus = $"Hosting on UDP {D1U.Game.NetSession.DefaultPort}";
+                menuNetStatus = $"Hosting on UDP {cfg.Port}";
                 menuMode = false;
+                netLevelStart = Time.time;
+                matchEnded = false;
+                matchEndMsg = null;
                 StartLevel(menuLevel, briefing: false);
             }
             catch (Exception e)
@@ -2156,7 +2316,7 @@ namespace D1U.Presentation
             CloseNet();
             try
             {
-                netSession = D1U.Game.NetSession.Join(joinIp.Trim(), $"PILOT{UnityEngine.Random.Range(10, 99)}");
+                netSession = D1U.Game.NetSession.Join(joinIp.Trim(), NetCfg.PlayerName, NetCfg.Port);
                 WireNetSession();
                 menuNetStatus = "";
             }
@@ -2177,7 +2337,19 @@ namespace D1U.Presentation
                 carryQuad = false;
                 menuNetStatus = "";
                 menuMode = false;
+                netLevelStart = Time.time;
+                matchEnded = false;
+                matchEndMsg = null;
                 StartLevel(netSession.LevelNumber, briefing: false);
+            };
+            netSession.MatchOver += winner =>
+            {
+                matchEnded = true;
+                matchEndTime = Time.time;
+                matchEndMsg = winner == netSession.LocalSlot ? "YOU WIN!"
+                    : winner >= 0 ? $"{NetName(winner)} WINS THE MATCH"
+                    : "TIME UP — MATCH OVER";
+                messages.Add((Time.time, matchEndMsg));
             };
             netSession.JoinFailed += why =>
             {
@@ -2472,6 +2644,16 @@ namespace D1U.Presentation
                 $"{((player.Keys & 2) != 0 ? " BLUE" : "")}{((player.Keys & 4) != 0 ? " RED" : "")}{((player.Keys & 8) != 0 ? " YELLOW" : "")}" +
                 ammo + robots);
 
+            // netgame time-limit clock (top centre)
+            if (netSession != null && netSession.Connected && !matchEnded &&
+                D1U.Game.NetGameRules.Active.MaxTimeSeconds > 0)
+            {
+                int left = Mathf.Max(0, Mathf.CeilToInt(
+                    D1U.Game.NetGameRules.Active.MaxTimeSeconds - (Time.time - netLevelStart)));
+                GUI.Label(new Rect(0, 8, vw, 22), $"TIME {left / 60}:{left % 60:00}",
+                    new GUIStyle(GUI.skin.label) { alignment = TextAnchor.UpperCenter });
+            }
+
             // self-destruct countdown (gamerend.c "T-%d s") + whiteout after zero
             if (Runtime.CountdownActive && !player.ExitReached)
             {
@@ -2484,6 +2666,8 @@ namespace D1U.Presentation
                 GUI.Label(new Rect(0, vh * 0.13f, vw, 40),
                     $"T-{Mathf.Max(0, Runtime.CountdownSecondsLeft)} s", tstyle);
                 float flash = Runtime.MineFlash;
+                if (netSession != null && D1U.Game.NetGameRules.Active.ReducedFlash)
+                    flash *= 0.3f; // netgame "reduced flash effects"
                 if (flash > 0f)
                 {
                     GUI.color = new UnityEngine.Color(1f, 1f, 1f, flash);
@@ -2531,7 +2715,12 @@ namespace D1U.Presentation
                 y += 20;
             }
 
-            if (player.ExitReached)
+            if (matchEnded && !string.IsNullOrEmpty(matchEndMsg))
+            {
+                GUI.Label(new Rect(0, vh / 2 - 40, vw, 80), matchEndMsg,
+                    new GUIStyle(GUI.skin.label) { fontSize = 40, alignment = TextAnchor.MiddleCenter });
+            }
+            else if (player.ExitReached)
             {
                 var style = new GUIStyle(GUI.skin.label) { fontSize = 40, alignment = TextAnchor.MiddleCenter };
                 string banner = levelNumber == missionLevelCount ? "MISSION COMPLETE"

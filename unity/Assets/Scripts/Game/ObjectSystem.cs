@@ -653,6 +653,37 @@ namespace D1U.Game
                     Remove(obj);
             RobotsAlive = 0;
             matcens.Clear();
+            ApplyNetgameItems(NetGameRules.Active);
+        }
+
+        /// <summary>Netgame item rules: powerups the host disallowed (AllowedItems)
+        /// and — with Low Vulcan — standalone vulcan-ammo boxes become shield
+        /// boosts, mirroring multi_prep_level's bash_to_shield. Runs before the
+        /// presentation builds powerup sprites, so the swap is visible too.</summary>
+        public void ApplyNetgameItems(NetGameRules r)
+        {
+            if (r == null)
+                return;
+            foreach (var obj in Objects)
+            {
+                if (obj.Dead || obj.Type != 7)
+                    continue;
+                int id = obj.SubId;
+                if (r.LowVulcan && id == 22) // POW_VULCAN_AMMO
+                {
+                    BashToShield(obj);
+                    continue;
+                }
+                int bit = NetGameRules.PowerupBit(id);
+                if (bit >= 0 && !r.ItemAllowed(bit))
+                    BashToShield(obj);
+            }
+        }
+
+        void BashToShield(GameObj obj)
+        {
+            obj.SubId = 2; // POW_SHIELD_BOOST
+            obj.Size = PowerupSize(2, obj.Size);
         }
 
         public void Damage(GameObj obj, float damage, Vector3 hitPos)

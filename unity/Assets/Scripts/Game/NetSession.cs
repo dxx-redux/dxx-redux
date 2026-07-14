@@ -31,8 +31,9 @@ namespace D1U.Game
     public sealed class NetSession : IDisposable
     {
         public const int DefaultPort = 28342;
-        public const byte ProtocolVersion = 2;
+        public const byte ProtocolVersion = 3; // bump on any handshake change (netgame rules)
         public const int MaxPlayers = 8;
+        const double JoinGraceSeconds = 45.0; // "closed" games lock after this
 
         const byte MsgJoin = 1, MsgWelcome = 2, MsgJoined = 3, MsgLeft = 4,
                    MsgState = 5, MsgFire = 6, MsgDied = 7, MsgDoor = 8,
@@ -53,6 +54,12 @@ namespace D1U.Game
         public int LevelNumber { get; private set; } = 1;
         public int LocalFrags;
         public string LocalName = "PILOT";
+        /// <summary>Host-configured options; carried to clients in the Welcome.</summary>
+        public NetGameRules Rules = new NetGameRules();
+        /// <summary>Fired once when the match ends: winner slot, or -1 for the
+        /// time limit. Kill-goal is detected identically on every peer.</summary>
+        public event Action<int> MatchOver;
+        bool matchEnded;
         /// <summary>Remote players by slot (never contains the local player).</summary>
         public IReadOnlyDictionary<int, NetPlayer> Players => players;
 
@@ -73,7 +80,7 @@ namespace D1U.Game
         /// under the shared (netId, subId) ids so pickups resolve everywhere.</summary>
         public event Action<int, (int netId, byte subId, Vector3 pos, Vector3 vel)[]> RemoteEggs;
 
-        double lastStateSend, lastJoinSend, lastPingSend, joinStarted, hostLastHeard;
+        double lastStateSend, lastJoinSend, lastPingSend, joinStarted, hostLastHeard, gameStartTime;
         Vector3 pendingPos, pendingVel;
         Mat3 pendingOrient = Mat3.Identity;
         bool statePending;
@@ -94,15 +101,20 @@ namespace D1U.Game
             }
         }
 
-        public static NetSession Host(string missionKey, int levelNumber, string name, int port = DefaultPort)
+        public static NetSession Host(string missionKey, int levelNumber, string name,
+                                      NetGameRules rules = null, int port = DefaultPort)
         {
             var udp = new UdpClient(port);
+            rules ??= new NetGameRules();
+            NetGameRules.Active = rules;
+            ObjectSystem.Difficulty = rules.Difficulty;
             return new NetSession(true, udp, null)
             {
                 MissionKey = missionKey,
                 LevelNumber = levelNumber,
                 LocalName = name,
                 LocalSlot = 0,
+                Rules = rules,
             };
         }
 
@@ -137,6 +149,8 @@ namespace D1U.Game
         {
             if (Failed)
                 return;
+            if (IsHost && gameStartTime == 0)
+                gameStartTime = now;
 
             if (!IsHost && !Connected)
             {
@@ -342,10 +356,13 @@ namespace D1U.Game
                     SendWelcome(existing); // duplicate knock: re-welcome
                     return;
                 }
-                if (version != ProtocolVersion || players.Count + 1 >= MaxPlayers)
+                bool full = players.Count + 1 >= Math.Min(MaxPlayers, Math.Max(2, (int)Rules.MaxPlayers));
+                bool closed = Rules.ClosedGame && gameStartTime > 0 && now - gameStartTime > JoinGraceSeconds;
+                if (version != ProtocolVersion || full || closed)
                 {
                     var reject = NewPacket(MsgReject);
-                    reject.bw.Write(version != ProtocolVersion ? "version mismatch" : "game is full");
+                    reject.bw.Write(version != ProtocolVersion ? "version mismatch"
+                                    : closed ? "game is closed" : "game is full");
                     SendTo(reject, from);
                     return;
                 }
@@ -403,7 +420,9 @@ namespace D1U.Game
                     LocalSlot = br.ReadByte();
                     MissionKey = br.ReadString();
                     LevelNumber = br.ReadInt32();
-                    ObjectSystem.Difficulty = Math.Min(4, Math.Max(0, (int)br.ReadByte()));
+                    Rules = NetGameRules.Deserialize(br); // netgame options from host
+                    NetGameRules.Active = Rules;
+                    ObjectSystem.Difficulty = Rules.Difficulty;
                     int count = br.ReadByte();
                     for (int i = 0; i < count; i++)
                     {
@@ -546,15 +565,19 @@ namespace D1U.Game
             return player;
         }
 
-        /// <summary>Anarchy scoring: kill +1 to the killer, suicide -1 to the victim.</summary>
+        /// <summary>Anarchy scoring: kill +1 to the killer, suicide -1 to the victim.
+        /// Every peer runs this identically off the Died messages, so the kill-goal
+        /// winner is detected the same everywhere with no extra traffic.</summary>
         void ApplyDeathToScore(int victim, int killer)
         {
+            int scorerFrags = int.MinValue, scorerSlot = -1;
             if (killer >= 0 && killer != victim)
             {
                 if (killer == LocalSlot)
-                    LocalFrags++;
+                    scorerFrags = ++LocalFrags;
                 else if (players.TryGetValue(killer, out var k))
-                    k.Frags++;
+                    scorerFrags = ++k.Frags;
+                scorerSlot = killer;
             }
             else
             {
@@ -563,6 +586,20 @@ namespace D1U.Game
                 else if (players.TryGetValue(victim, out var v))
                     v.Frags--;
             }
+
+            int goal = Rules.KillGoalCount;
+            if (goal > 0 && scorerFrags >= goal)
+                EndMatch(scorerSlot);
+        }
+
+        /// <summary>End the match once (kill-goal winner slot, or -1 for the time
+        /// limit / manual end). Fires <see cref="MatchOver"/> exactly once.</summary>
+        public void EndMatch(int winnerSlot = -1)
+        {
+            if (matchEnded)
+                return;
+            matchEnded = true;
+            MatchOver?.Invoke(winnerSlot);
         }
 
         // ------------------------------------------------------------------
@@ -574,7 +611,7 @@ namespace D1U.Game
             p.bw.Write((byte)to.Slot);
             p.bw.Write(MissionKey);
             p.bw.Write(LevelNumber);
-            p.bw.Write((byte)Math.Min(4, Math.Max(0, ObjectSystem.Difficulty)));
+            Rules.Serialize(p.bw); // netgame options (includes difficulty)
             var everyone = players.Values.Where(pl => pl.Slot != to.Slot).ToList();
             p.bw.Write((byte)(everyone.Count + 1));
             p.bw.Write((byte)LocalSlot); // the host itself
