@@ -25,18 +25,17 @@ client in the `MsgWelcome` handshake. `NetSession.ProtocolVersion` bumps **2→3
 
 ## Option coverage (original → Unity)
 
-Effort: **now** = live gameplay effect in this feature · **sync**/**B2** = in the
-dialog + persisted + synced host→client now, gameplay effect is a follow-up
-(shown with a `*` in the dialog) · **defer** = needs a mode/subsystem not in the
-port. Every option — now, sync, and B2 alike — is persisted and travels to
-clients; the split is only about whether the *effect* is wired yet.
+**Status: every option below is live** — in the dialog, persisted, synced
+host→client, and driving gameplay (second increment, 2026-07-14). **defer** =
+needs a mode/subsystem not in the port. Where the port's simpler models forced
+an approximation, the row says so.
 
 ### A · Core match rules
 | Original (field) | Unity | Notes |
 |---|---|---|
 | Game name (`game_name`) | **now** | Shown in host status / join info |
 | Difficulty | **now** | already `ObjectSystem.Difficulty`; now in the dialog |
-| Reactor Life (`control_invul_time`, 0..10 ×5 min) | **sync** | in the dialog + persisted + synced. Effect deferred: the port's MP reactor is indestructible, and making it destructible + ending the match on its death needs cross-peer reactor sync (a follow-up). **0 = indestructible** in the port (default); >0 will mean "destructible after N×5 min" once that lands. |
+| Reactor Life (`control_invul_time`, 0..10 ×5 min) | **now** | reactor invulnerable for N×5 min ("Reactor invulnerable for M:SS" to the shooter, collide.c:727), destructible after; the kill is announced (`MsgReactor`) so every peer starts the countdown, and the blast ends the match ("THE MINE HAS BEEN DESTROYED"). **0 = indestructible (port default)** — *deviates from D1, where 0 = vulnerable at once; chosen so default MP behaviour is unchanged.* Known limit: a client that joins mid-countdown doesn't see the reactor already dead. |
 | Max Time (`PlayTimeAllowed`, 0..10 ×5 min) | **now** | level clock; at limit → match over |
 | Kill Goal (`KillGoal`, 0..10 ×10) | **now** | first to N frags wins → match over |
 | Level / Game mode | n/a | anarchy only; level chosen on the main menu |
@@ -44,31 +43,31 @@ clients; the split is only about whether the *effect* is wired yet.
 ### B · Weapons & items
 | Original | Unity | Notes |
 |---|---|---|
-| Allowed Items (13-bit mask) | **now** | disallowed powerups become shield boosts at level prep (`bash_to_shield`) |
-| Low Vulcan | **now** | halves vulcan powerup ammo, strips ammo boxes |
-| Homing Update Rate (20..30) | **now** | scales homing tracking rate |
-| Extra Primaries / Secondaries (×1..8) | **B2** | clone dupable powerups at prep |
-| Cap Secondaries (uncapped/6/2) | **B2** | cap homing+smart counts in the mine |
-| Vulcan Ammo Style (Gauss, 4-way) | **B2** | death-drop/regen policy; port has a simpler vulcan model |
-| Ack-Ack (vulcan detonates mega) | **B2** | needs weapon-vs-weapon collision |
-| Bomb-flare Mega timer (5-way) | **B2** | needs weapon-vs-weapon collision |
+| Allowed Items (13-bit mask) | **now** | disallowed powerups become shield boosts at level prep (`bash_to_shield`); the prep also ports the rest of `multi_prep_level`: hostages & keys → shield boosts, extra-life → invuln, invuln/cloak capped at 3 |
+| Low Vulcan | **now** | strips loose ammo boxes (the per-object gun-ammo halving has no port equivalent — pickups grant fixed ammo) |
+| Homing Update Rate (20..30) | **now** | sets the NEWHOMER turn cadence (SP stays 25 Hz); the original's trackability-cone scaling is not applied |
+| Extra Primaries / Secondaries (×1..8) | **now** | clones dupable powerups at prep (multi.c:4180); prep is deterministic so clone ids align on every peer and pickups replicate |
+| Cap Secondaries (uncapped/6/2) | **now** | caps homing+smart units in the mine, downgrading 4-packs that partially fit (multi.c:4223) |
+| Vulcan Ammo Style (Gauss, 4-way) | **now**¹ | steady styles (RECHARGING/RESPAWNING) drop exactly the ammo boxes collected this life on death; ¹DUP and DEPLETE are indistinguishable in the port's fixed-ammo pickup model and both behave as DEPLETE |
+| Ack-Ack (vulcan detonates mega) | **now** | a vulcan round touching a mega badass-detonates it (collide.c:1728); contact is a ~3-unit proximity test, not swept collision |
+| Bomb-flare Mega timer (5-way) | **now** | a prox bomb younger than the window detonates a mega on contact, taking the bomb with it (collide.c:1738) |
 
 ### C · Spawn / respawn
 | Original | Unity | Notes |
 |---|---|---|
 | Spawn Style invuln (none/½s/2s) | **now** | reborn invulnerability on respawn (`Player.InvulnTime`) |
-| Spawn Style = Preview | **defer** | needs the dead-cam free-look |
-| New Spawn Algorithm | **now** | farthest-from-others spawn pick |
-| Respawn Concussions | **now** | infinite concs (re-drop on fire) |
+| Spawn Style = Preview | **defer** | needs the dead-cam free-look (marked `*` in the dialog) |
+| New Spawn Algorithm | **now** | weighted pick among the half of starts farthest from enemy ships, ≤2× likelihood fudge (gameseq.c:1315); straight-line distances — the original also path-finds |
+| Respawn Concussions | **now** | concs pocketed this life re-drop a POW_MISSILE_1 at a random segment when fired (weapon.c:551, laser.c:1523, fireball.c:679); pickup overflow past the 20-cap re-drops immediately |
 
 ### E · Access / cosmetic / network
 | Original | Unity | Notes |
 |---|---|---|
 | Max Players (2..8) | **now** | join gate |
-| Access: Open / Closed | **now** | Closed = no join after start (Restricted deferred) |
+| Access: Open / Closed | **now** | Closed = no join after a 45 s grace (Restricted deferred) |
 | Network port | **now** | host bind port |
-| Bright player ships | **now** | remote ships rendered fullbright |
-| Show enemy names | **now** | name tag over remote ships |
+| Bright player ships | **now** | on (default): remote ships stay fullbright; off: they tint with the mine's static+dynamic light like any object |
+| Show enemy names | **now** | name tag projected over remote ships |
 | Reduced flash | **now** | scales screen/palette flashes |
 
 ## Deferred (need a mode or subsystem the port lacks)
@@ -87,6 +86,9 @@ BACK, loaded in the `NetGameConfig` constructor — the equivalent of the pilot
 `.ngp`. Defaults match D1's `netgame_set_defaults()` except Reactor Life (see A).
 
 ## Verification
-PresentationCheck (compile mirror) + Smoke (its loopback netgame section is
-extended to assert the rules propagate host→client through Welcome) + a player
-build driven by `-d1u-menu-shots` to eyeball the dialog, then deploy.
+PresentationCheck (compile mirror) + Smoke: §22 asserts the rules propagate
+host→client through Welcome and MatchOver fires; §22b exercises the gameplay
+effects on a real level (prep conversions/dup/cap, reactor-life gate + kill,
+ack-ack, bomb-flare window, respawn concs, steady vulcan drops). Player build
+driven by `-d1u-menu-shots`, then deploy. `ProtocolVersion` history: 3 = rules
+in Welcome, 4 = MsgReactor.

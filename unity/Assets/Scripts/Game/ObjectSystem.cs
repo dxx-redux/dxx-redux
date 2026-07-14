@@ -109,8 +109,14 @@ namespace D1U.Game
         public LevelRuntime Runtime;
         /// <summary>Player loadout, for the drop replacement rules (fireball.c:778).</summary>
         public PlayerWeapons Loadout;
-        /// <summary>Anarchy game: reactor is indestructible, drops stay local.</summary>
+        /// <summary>Anarchy game: netgame rules apply (NetGameRules.Active).</summary>
         public bool Multiplayer;
+        /// <summary>Seconds since the level started (reactor-invuln window etc.).</summary>
+        public float LevelTime;
+        /// <summary>NEWHOMER cadence; the netgame host option scales it 20..30
+        /// (object.c set_homing_update_rate), single player stays at 25.</summary>
+        public static int HomerFps = 25;
+        float lastReactorMsg = -10f; // throttle for the reactor-invulnerable HUD line
 
         // player mirror (set by the controller every frame)
         public Vector3 PlayerPos;
@@ -142,6 +148,9 @@ namespace D1U.Game
         public event Action<GameObj> PickedUp;
         /// <summary>POW_EXTRA_LIFE collected.</summary>
         public event Action ExtraLife;
+        /// <summary>A netgame powerup respawned into the mine (maybe_drop_net_powerup)
+        /// — the presentation announces it to the peers like a death egg.</summary>
+        public event Action<GameObj> NetEggCreated;
 
         public int RobotsAlive { get; private set; }
         public int HostagesRescued { get; private set; }
@@ -330,6 +339,7 @@ namespace D1U.Game
 
         public void MoveWeapons(float dt)
         {
+            LevelTime += dt; // once per frame — MoveWeapons is the per-frame pump
             for (int i = 0; i < Objects.Count; i++)
             {
                 var weapon = Objects[i];
@@ -346,6 +356,12 @@ namespace D1U.Game
 
                 if (weapon.Homing)
                     UpdateHoming(weapon, dt);
+
+                // netgame anti-mega tweaks (collide_weapon_and_weapon,
+                // collide.c:1725-1764): ack-ack vulcan rounds and freshly
+                // dropped prox bombs detonate megas on contact
+                if (Multiplayer && weapon.SubId == 18 && CheckMegaDetonators(weapon))
+                    continue;
 
                 // proximity bombs: drift to rest, detonate on approach after arming
                 if (weapon.SubId == 16)
@@ -399,7 +415,7 @@ namespace D1U.Game
                         var victim = Objects[hitInfo.HitObject];
                         Exploded?.Invoke(weapon, hitInfo.HitPoint);
                         Remove(weapon);
-                        Damage(victim, weapon.Shields, hitInfo.HitPoint);
+                        Damage(victim, weapon.Shields, hitInfo.HitPoint, weapon.ParentId < 0);
                         BadassDamage(weapon, hitInfo.HitPoint);
                         break;
 
@@ -432,12 +448,51 @@ namespace D1U.Game
             }
         }
 
-        /// <summary>NEWHOMER homing: fixed 25 Hz turn cadence (object.c:1893-1908).</summary>
+        /// <summary>Netgame anti-mega rules: an ack-ack vulcan round, or a prox
+        /// bomb younger than the bomb-flare window, badass-detonates a mega it
+        /// touches (collide.c:1725-1764). Returns true if the mega died.</summary>
+        bool CheckMegaDetonators(GameObj mega)
+        {
+            var r = NetGameRules.Active;
+            if (!r.AckAckMode && r.BombFlareSeconds <= 0f)
+                return false;
+            for (int j = 0; j < Objects.Count; j++)
+            {
+                var other = Objects[j];
+                if (other.Dead || other.Type != 5 || other.Id == mega.Id)
+                    continue;
+                bool ackack = r.AckAckMode && other.SubId == 11;               // VULCAN_ID
+                bool flare = other.SubId == 16 && other.Age <= r.BombFlareSeconds; // PROXIMITY_ID
+                if (!ackack && !flare)
+                    continue;
+                if (Vector3.DistanceSquared(other.Pos, mega.Pos) > 9f) // ~contact (original
+                    continue;                                          // used physics collision)
+                Exploded?.Invoke(mega, mega.Pos);
+                Remove(mega);
+                BadassDamage(mega, mega.Pos);
+                if (flare) // the bomb goes up with it (collide.c:1757)
+                {
+                    Exploded?.Invoke(other, other.Pos);
+                    Remove(other);
+                    BadassDamage(other, other.Pos);
+                }
+                else
+                {
+                    Remove(other); // the vulcan round is spent
+                }
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>NEWHOMER homing: fixed-cadence turns — 25 Hz in single player,
+        /// the host's Homing Rate option (20..30) in netgames (object.c:1893-1908,
+        /// set_homing_update_rate object.c:2293).</summary>
         void UpdateHoming(GameObj weapon, float dt)
         {
             if (weapon.Age < 0.125f) // HOMING_MISSILE_STRAIGHT_TIME (laser.h:65)
                 return;
-            const float homerTick = 1f / 25f;
+            float homerTick = 1f / Math.Max(1, HomerFps);
             weapon.HomerAccum = Math.Min(weapon.HomerAccum + dt, 3 * homerTick);
             float speed = weapon.Vel.Length();
             if (speed < 1e-3f)
@@ -649,44 +704,171 @@ namespace D1U.Game
         {
             Multiplayer = true;
             foreach (var obj in Objects)
-                if (!obj.Dead && (obj.Type == 2 || obj.Type == 3))
-                    Remove(obj);
+                if (!obj.Dead && obj.Type == 2)
+                    Remove(obj); // hostages are handled by the prep pass below
             RobotsAlive = 0;
             matcens.Clear();
             ApplyNetgameItems(NetGameRules.Active);
         }
 
-        /// <summary>Netgame item rules: powerups the host disallowed (AllowedItems)
-        /// and — with Low Vulcan — standalone vulcan-ammo boxes become shield
-        /// boosts, mirroring multi_prep_level's bash_to_shield. Runs before the
-        /// presentation builds powerup sprites, so the swap is visible too.</summary>
+        /// <summary>Netgame level prep, the multi_prep_level port (multi.c:4055-4261).
+        /// Deterministic — no RNG — so every peer running it over the same baked
+        /// level with the same synced rules produces identical object ids, which
+        /// keeps pickup replication working for the created clones.</summary>
         public void ApplyNetgameItems(NetGameRules r)
         {
             if (r == null)
                 return;
-            foreach (var obj in Objects)
+            int originalCount = Objects.Count;
+            int invCount = 0, cloakCount = 0;
+
+            // pass 1 (multi.c:4055-4152): hostages and keys become shield boosts,
+            // extra lives become invulnerability, invuln/cloak cap at 3 apiece,
+            // and every disallowed powerup class is bashed to a shield boost.
+            for (int i = 0; i < originalCount; i++)
             {
-                if (obj.Dead || obj.Type != 7)
+                var obj = Objects[i];
+                if (obj.Dead)
                     continue;
-                int id = obj.SubId;
-                if (r.LowVulcan && id == 22) // POW_VULCAN_AMMO
+                if (obj.Type == 3) // hostage -> shield boost (multi.c:4061-4075)
                 {
-                    BashToShield(obj);
+                    CreatePowerup(2, obj.Pos, obj.Segnum);
+                    Remove(obj);
                     continue;
                 }
-                int bit = NetGameRules.PowerupBit(id);
+                if (obj.Type != 7)
+                    continue;
+                if (obj.SubId == 0) // extra life (multi.c:4079-4093)
+                    RebashPowerup(obj, r.ItemAllowed(NetGameRules.BitInvul) ? 25 : 2);
+                if (obj.SubId >= 4 && obj.SubId <= 6) // keys (multi.c:4096-4102)
+                    RebashPowerup(obj, 2);
+                if (obj.SubId == 25) // invuln: cap 3 (multi.c:4104-4111)
+                {
+                    if (invCount >= 3 || !r.ItemAllowed(NetGameRules.BitInvul))
+                        RebashPowerup(obj, 2);
+                    else
+                        invCount++;
+                }
+                if (obj.SubId == 23) // cloak: cap 3 (multi.c:4113-4120)
+                {
+                    if (cloakCount >= 3 || !r.ItemAllowed(NetGameRules.BitCloak))
+                        RebashPowerup(obj, 2);
+                    else
+                        cloakCount++;
+                }
+                if (r.LowVulcan && obj.SubId == 22) // loose ammo boxes (multi.c:4136-4141)
+                {
+                    RebashPowerup(obj, 2);
+                    continue;
+                }
+                int bit = NetGameRules.PowerupBit(obj.SubId);
                 if (bit >= 0 && !r.ItemAllowed(bit))
-                    BashToShield(obj);
+                    RebashPowerup(obj, 2);
+            }
+
+            // pass 2 (multi.c:4180-4218): extra primaries/secondaries — clone each
+            // (post-bash) dupable powerup factor-1 times at the same spot.
+            if (r.PrimaryDup > 1 || r.SecondaryDup > 1)
+            {
+                for (int i = 0; i < originalCount; i++)
+                {
+                    var obj = Objects[i];
+                    if (obj.Dead || obj.Type != 7)
+                        continue;
+                    int extra = IsDupablePrimary(obj.SubId) ? r.PrimaryDup - 1
+                        : IsDupableSecondary(obj.SubId) ? r.SecondaryDup - 1 : 0;
+                    for (int d = 0; d < extra; d++)
+                        CreatePowerup(obj.SubId, obj.Pos, obj.Segnum);
+                }
+            }
+
+            // pass 3 (multi.c:4223-4260): cap homing/smart counts over everything,
+            // downgrading a 4-pack to a single when it partially fits.
+            if (r.SecondaryCap > 0)
+            {
+                int max = r.SecondaryCap == 1 ? 6 : 2;
+                int homers = 0, smarts = 0;
+                for (int i = 0; i < Objects.Count; i++)
+                {
+                    var obj = Objects[i];
+                    if (obj.Dead || obj.Type != 7)
+                        continue;
+                    if (obj.SubId == 18)
+                    {
+                        if (homers < max) homers++;
+                        else RebashPowerup(obj, 2);
+                    }
+                    else if (obj.SubId == 19)
+                    {
+                        if (homers + 4 <= max) homers += 4;
+                        else if (homers + 1 <= max) { RebashPowerup(obj, 18); homers++; }
+                        else RebashPowerup(obj, 2);
+                    }
+                    else if (obj.SubId == 20)
+                    {
+                        if (smarts < max) smarts++;
+                        else RebashPowerup(obj, 2);
+                    }
+                }
             }
         }
 
-        void BashToShield(GameObj obj)
+        static bool IsDupablePrimary(int id)   // is_dupable_primary (multi.c:3943)
+            => id == 3 || id == 12 || id == 13 || id == 22 || id == 14 || id == 15 || id == 16;
+        static bool IsDupableSecondary(int id) // is_dupable_secondary (multi.c:3959)
+            => id == 10 || id == 11 || id == 18 || id == 19 || id == 17 || id == 20 || id == 21;
+
+        GameObj CreatePowerup(int id, Vector3 pos, int segnum)
         {
-            obj.SubId = 2; // POW_SHIELD_BOOST
-            obj.Size = PowerupSize(2, obj.Size);
+            var p = new GameObj
+            {
+                Type = 7,
+                SubId = (byte)id,
+                Pos = pos,
+                Segnum = segnum,
+                Size = PowerupSize(id),
+                VClipNum = -2,
+                ExplVClip = 62,
+            };
+            Add(p);
+            return p;
         }
 
-        public void Damage(GameObj obj, float damage, Vector3 hitPos)
+        void RebashPowerup(GameObj obj, int id) // bash_to_shield and friends
+        {
+            obj.SubId = (byte)id;
+            obj.Size = PowerupSize(id, obj.Size);
+        }
+
+        /// <summary>maybe_drop_net_powerup (fireball.c:679): respawn a powerup at
+        /// a random segment (never the reactor's). Fires NetEggCreated so the
+        /// presentation announces it to the peers like a death egg.</summary>
+        public GameObj MaybeDropNetPowerup(int id)
+        {
+            if (!Multiplayer || world.SegmentCount <= 1)
+                return null;
+            int reactorSeg = -1;
+            foreach (var o in Objects)
+                if (!o.Dead && o.Type == 9)
+                {
+                    reactorSeg = o.Segnum;
+                    break;
+                }
+            int seg = -1;
+            for (int tries = 0; tries < 16 && seg < 0; tries++)
+            {
+                int cand = DRand() % world.SegmentCount;
+                if (cand != reactorSeg)
+                    seg = cand;
+            }
+            if (seg < 0)
+                return null;
+            var drop = AddNetEgg((byte)id, world.SegmentCenter(seg), Vector3.Zero);
+            NetEggCreated?.Invoke(drop);
+            return drop;
+        }
+
+        public void Damage(GameObj obj, float damage, Vector3 hitPos, bool fromLocal = true)
         {
             if (obj.Dead)
                 return;
@@ -697,7 +879,23 @@ namespace D1U.Game
                 reactorBeenHit = true; // wakes the defense guns (Control_center_been_hit)
             }
             if (Multiplayer && obj.Type == 9)
-                return; // the reactor can't be destroyed in anarchy games
+            {
+                var rules = NetGameRules.Active;
+                if (!rules.ReactorDestructible)
+                    return; // Reactor Life 0: classic anarchy, the reactor is scenery
+                if (LevelTime < rules.ReactorInvulnSeconds)
+                {
+                    // apply_damage_to_controlcen (collide.c:727-735): invulnerable
+                    // until the window elapses; tell the local shooter how long
+                    if (fromLocal && LevelTime - lastReactorMsg >= 1f)
+                    {
+                        lastReactorMsg = LevelTime;
+                        int left = (int)(rules.ReactorInvulnSeconds - LevelTime);
+                        Message?.Invoke($"Reactor invulnerable for {left / 60}:{left % 60:00}");
+                    }
+                    return;
+                }
+            }
             obj.Shields -= damage;
             if (obj.Type == 2)
             {
@@ -723,13 +921,30 @@ namespace D1U.Game
             }
             else if (obj.Type == 9)
             {
-                Score += 5000; // CONTROL_CEN_SCORE (scores.h:86)
-                Exploded?.Invoke(obj, obj.Pos);
-                // the dead reactor stays as a solid corpse spewing fireballs
-                // during the countdown (cntrlcen.c:117-124 Dead_controlcen_object_num)
-                obj.Shields = -1f;
-                Runtime?.DestroyReactor();
+                KillReactor(obj);
             }
+        }
+
+        void KillReactor(GameObj obj)
+        {
+            Score += 5000; // CONTROL_CEN_SCORE (scores.h:86)
+            Exploded?.Invoke(obj, obj.Pos);
+            // the dead reactor stays as a solid corpse spewing fireballs
+            // during the countdown (cntrlcen.c:117-124 Dead_controlcen_object_num)
+            obj.Shields = -1f;
+            Runtime?.DestroyReactor();
+        }
+
+        /// <summary>Netgame: a peer announced the reactor kill — apply it locally,
+        /// bypassing the invuln window (their sim already validated it).</summary>
+        public void ForceDestroyReactor()
+        {
+            foreach (var obj in Objects)
+                if (!obj.Dead && obj.Type == 9 && obj.Shields >= 0f)
+                {
+                    KillReactor(obj);
+                    return;
+                }
         }
 
         /// <summary>Death drops (explode_object secondary explosion, fireball.c:1218-1234).</summary>
@@ -902,8 +1117,14 @@ namespace D1U.Game
             if (w.HasVulcan)
             {
                 DropEgg(7, 13, 1, pos, vel, segnum);
-                int extraBoxes = Math.Max(0,
-                    (w.VulcanAmmo - PlayerWeapons.VulcanWeaponAmmo) / PlayerWeapons.VulcanAmmoPickup);
+                // vulcan ammo style (collide.c:1215-1277): the steady styles give
+                // back exactly the boxes collected this life; the classic styles
+                // spill the carried surplus
+                bool steady = Multiplayer && NetGameRules.Active.VulcanStyle >= 2;
+                int extraBoxes = steady
+                    ? w.VulcanBoxesPickedUp
+                    : Math.Max(0,
+                        (w.VulcanAmmo - PlayerWeapons.VulcanWeaponAmmo) / PlayerWeapons.VulcanAmmoPickup);
                 if (extraBoxes > 0)
                     DropEgg(7, 22, extraBoxes, pos, vel, segnum);
             }
@@ -924,6 +1145,17 @@ namespace D1U.Game
             DropEgg(7, 1, 1, pos, vel, segnum);
             eggCollector = null;
             return spilled;
+        }
+
+        /// <summary>Respawn Concs bookkeeping (weapon.c:543-552): count concussions
+        /// actually pocketed this life; overflow past the 20-cap re-drops at once.</summary>
+        void NoteConcussionsPickedUp(PlayerWeapons weapons, int picked, int overflow)
+        {
+            if (!Multiplayer || !NetGameRules.Active.RespawnConcs)
+                return;
+            weapons.RespawningConcs += picked;
+            for (int i = 0; i < overflow; i++)
+                MaybeDropNetPowerup(10);
         }
 
         /// <summary>Spawn a remote player's death drop (MsgEggs) locally.</summary>
@@ -1736,13 +1968,19 @@ namespace D1U.Game
                 case 10: // 1 concussion
                     if (weapons == null || weapons.Concussions >= 20) return false;
                     weapons.Concussions = Math.Min(20, weapons.Concussions + 1);
+                    NoteConcussionsPickedUp(weapons, 1, 0);
                     Message?.Invoke("Concussion missile!");
                     return true;
                 case 11: // 4-pack
+                {
                     if (weapons == null || weapons.Concussions >= 20) return false;
+                    int before = weapons.Concussions;
                     weapons.Concussions = Math.Min(20, weapons.Concussions + 4);
+                    int picked = weapons.Concussions - before;
+                    NoteConcussionsPickedUp(weapons, picked, 4 - picked);
                     Message?.Invoke("4 concussion missiles!");
                     return true;
+                }
                 case 18:
                     if (weapons == null || weapons.Homings >= 10) return false;
                     weapons.Homings = Math.Min(10, weapons.Homings + 1);
@@ -1814,6 +2052,8 @@ namespace D1U.Game
                     if (weapons == null || weapons.VulcanAmmo >= PlayerWeapons.VulcanAmmoMax) return false;
                     weapons.VulcanAmmo = Math.Min(PlayerWeapons.VulcanAmmoMax,
                         weapons.VulcanAmmo + PlayerWeapons.VulcanAmmoPickup);
+                    if (Multiplayer)
+                        weapons.VulcanBoxesPickedUp++; // VulcanAmmoBoxesOnBoard (steady styles)
                     Message?.Invoke("Vulcan ammo!");
                     return true;
                 case 17:

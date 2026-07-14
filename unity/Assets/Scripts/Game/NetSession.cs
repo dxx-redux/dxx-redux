@@ -31,13 +31,14 @@ namespace D1U.Game
     public sealed class NetSession : IDisposable
     {
         public const int DefaultPort = 28342;
-        public const byte ProtocolVersion = 3; // bump on any handshake change (netgame rules)
+        public const byte ProtocolVersion = 4; // bump on any handshake/message change (v4: MsgReactor)
         public const int MaxPlayers = 8;
         const double JoinGraceSeconds = 45.0; // "closed" games lock after this
 
         const byte MsgJoin = 1, MsgWelcome = 2, MsgJoined = 3, MsgLeft = 4,
                    MsgState = 5, MsgFire = 6, MsgDied = 7, MsgDoor = 8,
-                   MsgPickup = 9, MsgPing = 10, MsgReject = 11, MsgEggs = 12;
+                   MsgPickup = 9, MsgPing = 10, MsgReject = 11, MsgEggs = 12,
+                   MsgReactor = 13;
         const double StateInterval = 1.0 / 15;
         const double TimeoutSeconds = 8.0;
         const int MaxEggsPerPacket = 32;
@@ -79,6 +80,8 @@ namespace D1U.Game
         /// <summary>(senderSlot, eggs) — spawn the sender's death drops locally
         /// under the shared (netId, subId) ids so pickups resolve everywhere.</summary>
         public event Action<int, (int netId, byte subId, Vector3 pos, Vector3 vel)[]> RemoteEggs;
+        /// <summary>A peer's sim destroyed the reactor — apply it locally.</summary>
+        public event Action RemoteReactor;
 
         double lastStateSend, lastJoinSend, lastPingSend, joinStarted, hostLastHeard, gameStartTime;
         Vector3 pendingPos, pendingVel;
@@ -272,6 +275,17 @@ namespace D1U.Game
             var p = NewPacket(MsgPickup);
             p.bw.Write((byte)LocalSlot);
             p.bw.Write(objectId);
+            Broadcast(p);
+        }
+
+        /// <summary>Announce that our local sim destroyed the reactor (netgames
+        /// with a Reactor Life setting) — every peer starts the countdown.</summary>
+        public void SendReactorDestroyed()
+        {
+            if (!Connected)
+                return;
+            var p = NewPacket(MsgReactor);
+            p.bw.Write((byte)LocalSlot);
             Broadcast(p);
         }
 
@@ -548,6 +562,13 @@ namespace D1U.Game
                     int slot = br.ReadByte();
                     if (slot != LocalSlot)
                         GetOrTrack(slot, now).LastHeard = now;
+                    return true;
+                }
+                case MsgReactor:
+                {
+                    int slot = br.ReadByte();
+                    if (slot != LocalSlot)
+                        RemoteReactor?.Invoke();
                     return true;
                 }
                 default:

@@ -1126,6 +1126,106 @@ try
             errors++;
     }
 
+    // --- 22b. netgame host options drive gameplay (multi_prep_level & co.) ---
+    {
+        var prepRules = new D1U.Game.NetGameRules
+        {
+            PrimaryDup = 2,
+            SecondaryCap = 2,
+            LowVulcan = true,
+            AllowedItems = (ushort)(D1U.Game.NetGameRules.AllItemsMask &
+                                    ~(1 << D1U.Game.NetGameRules.BitFusion)),
+        };
+        D1U.Game.NetGameRules.Active = prepRules;
+        var worldP = new D1U.Game.SegmentWorld(lvl3);
+        var objsP = new D1U.Game.ObjectSystem(worldP,
+            record => { var v = D1U.Convert.ObjectVisuals.Resolve(pig, record); return (v.ModelNum, v.VClipNum); },
+            robotStats, 200f) { Runtime = new D1U.Game.LevelRuntime(worldP, clips3) };
+        objsP.SetWeaponTable(allWeaponStats);
+        int CountObj(int type, int id = -1)
+            => objsP.Objects.Count(o => !o.Dead && o.Type == type && (id < 0 || o.SubId == id));
+        int hostagesBefore = CountObj(3);
+        int fusionBefore = CountObj(7, 16);
+        int lasersBefore = CountObj(7, 3);
+        int keysBefore = CountObj(7, 4) + CountObj(7, 5) + CountObj(7, 6);
+        objsP.StripForAnarchy(); // runs ApplyNetgameItems with prepRules
+        int homerUnits = CountObj(7, 18) + 4 * CountObj(7, 19);
+        bool prepOk = CountObj(3) == 0 && CountObj(2) == 0 && CountObj(7, 16) == 0 &&
+                      (lasersBefore == 0 || CountObj(7, 3) == lasersBefore * 2) &&
+                      CountObj(7, 4) + CountObj(7, 5) + CountObj(7, 6) == 0 &&
+                      homerUnits <= 2;
+        Console.WriteLine($"  netgame prep: hostages {hostagesBefore}->0, fusion {fusionBefore}->0, " +
+                          $"lasers {lasersBefore}->{CountObj(7, 3)} (x2), keys {keysBefore}->0, homer units {homerUnits}<=2 -> ok={prepOk}");
+
+        // reactor life: invulnerable inside the window, destructible after it
+        var reactorRules = new D1U.Game.NetGameRules { ReactorLife = 1 }; // 5 min
+        D1U.Game.NetGameRules.Active = reactorRules;
+        var reactorP = objsP.Objects.FirstOrDefault(o => o.Type == 9 && !o.Dead);
+        string invulMsg = null;
+        objsP.Message += t => { if (t.Contains("invulnerable")) invulMsg ??= t; };
+        objsP.Damage(reactorP, 99999f, reactorP.Pos);
+        bool gateHeld = reactorP.Shields >= 0f && invulMsg != null;
+        objsP.LevelTime = 301f; // past the 5-minute window
+        objsP.Damage(reactorP, 99999f, reactorP.Pos);
+        bool reactorDies = reactorP.Shields < 0f && objsP.Runtime.CountdownActive;
+        Console.WriteLine($"  netgame reactor life: gate held={gateHeld} (\"{invulMsg}\"), " +
+                          $"destructible after window={reactorDies}");
+
+        // ack-ack + bomb-flare: vulcan rounds / fresh prox bombs detonate megas
+        objsP.PlayerAlive = false; // keep prox arming logic out of the picture
+        var aaRules = new D1U.Game.NetGameRules { AckAckMode = true, BombFlareTimer = 2 }; // 5 s
+        D1U.Game.NetGameRules.Active = aaRules;
+        var basePos = worldP.SegmentCenter(0);
+        var fwd = new System.Numerics.Vector3(0f, 0f, 1f);
+        var mega = objsP.FireWeapon(allWeaponStats[18], 18, basePos, fwd, 0);
+        mega.Vel = default;
+        var round = objsP.FireWeapon(allWeaponStats[11], 11, basePos + new System.Numerics.Vector3(1f, 0f, 0f), fwd, 0);
+        round.Vel = default;
+        objsP.MoveWeapons(1f / 60f);
+        bool ackackBoom = mega.Dead && round.Dead;
+        var mega2 = objsP.FireWeapon(allWeaponStats[18], 18, basePos, fwd, 0);
+        mega2.Vel = default;
+        var oldBomb = objsP.FireWeapon(allWeaponStats[16], 16, basePos + new System.Numerics.Vector3(1f, 0f, 0f), fwd, 0);
+        oldBomb.Vel = default;
+        oldBomb.Age = 30f; // stale: outside the 5 s bomb-flare window
+        objsP.MoveWeapons(1f / 60f);
+        bool oldBombInert = !mega2.Dead;
+        var freshBomb = objsP.FireWeapon(allWeaponStats[16], 16, basePos + new System.Numerics.Vector3(1f, 0f, 0f), fwd, 0);
+        freshBomb.Vel = default;
+        objsP.MoveWeapons(1f / 60f);
+        bool flareBoom = mega2.Dead && freshBomb.Dead;
+        Console.WriteLine($"  netgame anti-mega: ackack={ackackBoom}, stale bomb inert={oldBombInert}, fresh bomb boom={flareBoom}");
+
+        // respawn concs: firing a pocketed concussion puts one back in the mine
+        var rcRules = new D1U.Game.NetGameRules { RespawnConcs = true };
+        D1U.Game.NetGameRules.Active = rcRules;
+        D1U.Game.GameObj rcEgg = null;
+        objsP.NetEggCreated += e => rcEgg = e;
+        var rcW = new D1U.Game.PlayerWeapons { Concussions = 3, RespawningConcs = 2 };
+        var rcShip = new D1U.Game.ShipState();
+        rcShip.Pos = basePos;
+        rcShip.Segnum = 0;
+        rcShip.Orient = D1U.Game.Mat3.Identity;
+        int rcFired = rcW.TryFireSecondary(objsP, allWeaponStats, rcShip,
+            new System.Numerics.Vector3[8], false);
+        bool concRespawn = rcFired == 8 && rcW.RespawningConcs == 1 &&
+                           rcEgg != null && rcEgg.SubId == 10 && !rcEgg.Dead;
+        Console.WriteLine($"  netgame respawn concs: fired id={rcFired}, counter 2->{rcW.RespawningConcs}, egg respawned={rcEgg != null}");
+
+        // vulcan steady style: death gives back exactly the boxes collected
+        D1U.Game.NetGameRules.Active = new D1U.Game.NetGameRules { VulcanStyle = 3 };
+        var vsW = new D1U.Game.PlayerWeapons { HasVulcan = true, VulcanAmmo = 392, VulcanBoxesPickedUp = 3 };
+        int boxesBefore = CountObj(7, 22);
+        objsP.DropPlayerEggs(basePos, default, 0, vsW, new D1U.Game.PlayerState());
+        int boxesDropped = CountObj(7, 22) - boxesBefore;
+        Console.WriteLine($"  netgame vulcan steady: boxes dropped={boxesDropped} (expected 3)");
+
+        D1U.Game.NetGameRules.Active = new D1U.Game.NetGameRules(); // restore defaults
+        if (!prepOk || !gateHeld || !reactorDies || !ackackBoom || !oldBombInert ||
+            !flareBoom || !concRespawn || boxesDropped != 3)
+            errors++;
+    }
+
     // --- 21. reactor self-destruct countdown: T-n, voices, mine explosion ---
     // runtime3 destroyed its reactor earlier and ticked ~4 s since
     int secondsAtStart = runtime3.CountdownSecondsLeft;

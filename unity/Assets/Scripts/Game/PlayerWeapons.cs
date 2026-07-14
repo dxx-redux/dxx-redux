@@ -45,6 +45,14 @@ namespace D1U.Game
         /// <summary>Use the multiplayer fusion scale/halving (laser.c:249-263).</summary>
         public bool MultiplayerScale;
 
+        // netgame per-life counters (reset on respawn)
+        /// <summary>Respawn Concs: concussions pocketed this life; each conc fired
+        /// re-drops a POW_MISSILE_1 into the mine (weapon.c:551, laser.c:1523).</summary>
+        public int RespawningConcs;
+        /// <summary>Vulcan ammo boxes collected this life (VulcanAmmoBoxesOnBoard) —
+        /// the steady ammo styles give exactly these back on death.</summary>
+        public int VulcanBoxesPickedUp;
+
         /// <summary>HUD text from auto-select ("&lt;name&gt; selected!", weapon.c:319).</summary>
         public event Action<string> Message;
 
@@ -106,6 +114,8 @@ namespace D1U.Game
             FusionCharge = 0f;
             Concussions = 3;
             Homings = Proxies = Smarts = Megas = 0;
+            RespawningConcs = 0;      // per-life netgame counters (gameseq.c:415)
+            VulcanBoxesPickedUp = 0;
         }
 
         public void Save(BinaryWriter bw)
@@ -374,6 +384,13 @@ namespace D1U.Game
             var muzzle = ship.Pos + ship.Orient.TransformRow(gunPoints[gun]);
             objects.FireWeapon(stats, (byte)weaponId, muzzle, ship.Orient.Forward, ship.Segnum);
             LastFiredId = weaponId;
+            // Respawn Concs (laser.c:1523-1527): every conc fired puts one back
+            if (slot == 0 && RespawningConcs > 0 &&
+                objects.Multiplayer && NetGameRules.Active.RespawnConcs)
+            {
+                RespawningConcs--;
+                objects.MaybeDropNetPowerup(10);
+            }
             // select the next missile once this one runs out (laser.c:1585-1587);
             // skipped when the shot was redirected off the selected slot.
             if (slot == SelectedSecondary)

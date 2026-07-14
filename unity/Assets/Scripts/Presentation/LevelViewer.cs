@@ -487,7 +487,7 @@ namespace D1U.Presentation
         /// AllowedItems toggles plus the weapon/spawn/cosmetic switches.</summary>
         void DrawHostItemsMenu(float x, float y, float w)
         {
-            GUI.Label(new Rect(x, y, w, 26), "WEAPONS & ITEMS  —  * = synced, effect coming");
+            GUI.Label(new Rect(x, y, w, 26), "WEAPONS & ITEMS");
             var c = NetCfg;
             var r = c.Rules;
             float colW = w / 2f - 8f;
@@ -520,17 +520,17 @@ namespace D1U.Presentation
             bool Chk(string label, bool val) => GUI.Toggle(new Rect(rx, RY(), colW, 22), val, " " + label);
 
             r.LowVulcan = Chk("Low vulcan ammo", r.LowVulcan);
-            r.PrimaryDup = StepClamp(r.PrimaryDup, Cyc("Extra primary*", r.PrimaryDup <= 1 ? "NONE" : $"x{r.PrimaryDup}"), 1, 8);
-            r.SecondaryDup = StepClamp(r.SecondaryDup, Cyc("Extra second.*", r.SecondaryDup <= 1 ? "NONE" : $"x{r.SecondaryDup}"), 1, 8);
-            r.SecondaryCap = StepClamp(r.SecondaryCap, Cyc("Cap second.*", r.SecondaryCap == 0 ? "UNCAP" : r.SecondaryCap == 1 ? "MAX 6" : "MAX 2"), 0, 2);
-            r.VulcanStyle = StepClamp(r.VulcanStyle, Cyc("Vulcan style*", r.VulcanStyle == 0 ? "DUP" : r.VulcanStyle == 1 ? "DEPL" : r.VulcanStyle == 2 ? "DROP" : "RESP"), 0, 3);
-            r.HomingRate = StepClamp(r.HomingRate, Cyc("Homing rate*", r.HomingRate.ToString()), 20, 30);
-            r.AckAckMode = Chk("Vulcan ack-ack*", r.AckAckMode);
-            r.BombFlareTimer = StepClamp(r.BombFlareTimer, Cyc("Bomb-flare*", r.BombFlareTimer == 0 ? "NEVER" : r.BombFlareTimer == 4 ? "ALWAYS" : $"{(int)r.BombFlareSeconds}s"), 0, 4);
-            r.RespawnConcs = Chk("Respawn concs*", r.RespawnConcs);
-            r.NewSpawnAlgo = Chk("New spawn algo*", r.NewSpawnAlgo);
-            r.BrightShips = Chk("Bright ships*", r.BrightShips);
-            r.ShowEnemyNames = Chk("Enemy names*", r.ShowEnemyNames);
+            r.PrimaryDup = StepClamp(r.PrimaryDup, Cyc("Extra primary", r.PrimaryDup <= 1 ? "NONE" : $"x{r.PrimaryDup}"), 1, 8);
+            r.SecondaryDup = StepClamp(r.SecondaryDup, Cyc("Extra second.", r.SecondaryDup <= 1 ? "NONE" : $"x{r.SecondaryDup}"), 1, 8);
+            r.SecondaryCap = StepClamp(r.SecondaryCap, Cyc("Cap second.", r.SecondaryCap == 0 ? "UNCAP" : r.SecondaryCap == 1 ? "MAX 6" : "MAX 2"), 0, 2);
+            r.VulcanStyle = StepClamp(r.VulcanStyle, Cyc("Vulcan style", r.VulcanStyle == 0 ? "DUP" : r.VulcanStyle == 1 ? "DEPL" : r.VulcanStyle == 2 ? "DROP" : "RESP"), 0, 3);
+            r.HomingRate = StepClamp(r.HomingRate, Cyc("Homing rate", r.HomingRate.ToString()), 20, 30);
+            r.AckAckMode = Chk("Vulcan ack-ack", r.AckAckMode);
+            r.BombFlareTimer = StepClamp(r.BombFlareTimer, Cyc("Bomb-flare", r.BombFlareTimer == 0 ? "NEVER" : r.BombFlareTimer == 4 ? "ALWAYS" : $"{(int)r.BombFlareSeconds}s"), 0, 4);
+            r.RespawnConcs = Chk("Respawn concs", r.RespawnConcs);
+            r.NewSpawnAlgo = Chk("New spawn algo", r.NewSpawnAlgo);
+            r.BrightShips = Chk("Bright ships", r.BrightShips);
+            r.ShowEnemyNames = Chk("Enemy names", r.ShowEnemyNames);
             r.ReducedFlash = Chk("Reduced flash", r.ReducedFlash);
 
             if (GUI.Button(new Rect(x, y + 50 + D1U.Game.NetGameRules.AllowedItemBits * 24 + 8, w / 2 - 5, 30), "◂ BACK") || EscDown())
@@ -635,6 +635,8 @@ namespace D1U.Presentation
         readonly List<(Vector3 pos, float i0, float start, float dur)> flashLights =
             new List<(Vector3, float, float, float)>();
         readonly Dictionary<int, Renderer[]> objectRenderers = new Dictionary<int, Renderer[]>();
+        readonly Dictionary<int, Renderer[]> netShipRenderers = new Dictionary<int, Renderer[]>();
+        readonly Dictionary<int, float> netShipLastTint = new Dictionary<int, float>();
         readonly Dictionary<int, float> objectLastTint = new Dictionary<int, float>();
         MaterialPropertyBlock tintBlock;
         int lastLightCount;
@@ -1216,6 +1218,8 @@ namespace D1U.Presentation
         {
             if (objectsParent == null || obj.Dead)
                 return;
+            if (objectViews.ContainsKey(obj.Id))
+                return; // netgame prep clones get Spawned + swept by the build loop
             float light = obj.Segnum >= 0 && obj.Segnum < LoadedLevel.Segments.Length
                 ? Mathf.Clamp(LoadedLevel.Segments[obj.Segnum].Light, 0.25f, 1f)
                 : 1f;
@@ -1550,6 +1554,14 @@ namespace D1U.Presentation
                 Build(); // the LOADING frame was drawn by OnGUI last frame
                 return;
             }
+            if (mineExplodedPending && netSession != null)
+            {
+                // netgame: the blast ends the match for everyone (each peer's
+                // countdown runs off the same synced reactor kill)
+                mineExplodedPending = false;
+                netSession.EndMatch(-2);
+                return;
+            }
             if (mineExplodedPending)
             {
                 // caught by the self-destruct: the ship is lost with the mine
@@ -1867,7 +1879,9 @@ namespace D1U.Presentation
                 },
                 robotStats, reactorShields, powerupSizes)
             { Runtime = Runtime };
-            bakedObjectCount = objectSystem.Objects.Count; // ids below this are shared net-wide
+            // bakedObjectCount is captured AFTER StripForAnarchy below: netgame
+            // prep (dup clones, hostage conversions) is deterministic, so the
+            // post-prep ids align on every peer and count as shared net ids
             netEggLocal.Clear();
             netEggIds.Clear();
             nextEggNetId = 1;
@@ -1913,6 +1927,23 @@ namespace D1U.Presentation
                     netSession.SendPickup(netId);
             };
             objectSystem.Exploded += OnExplosion;
+            objectSystem.Exploded += (obj, pos) =>
+            {
+                // destructible-reactor netgames: announce our locally-simulated kill
+                if (obj.Type == 9 && netSession != null && !applyingRemote)
+                    netSession.SendReactorDestroyed();
+            };
+            objectSystem.NetEggCreated += drop =>
+            {
+                // respawned powerups (respawn concs / steady vulcan) replicate
+                // exactly like death eggs: shared (netId, subId) across peers
+                if (netSession == null || applyingRemote)
+                    return;
+                int netId = (netSession.LocalSlot + 1) * 100000 + nextEggNetId++;
+                netEggIds[drop.Id] = netId;
+                netEggLocal[netId] = drop.Id;
+                netSession.SendEggs(new[] { (netId, drop.SubId, drop.Pos, drop.Vel) });
+            };
             objectSystem.Spawned += CreateObjectView;
             objectSystem.Spawned += obj =>
             {
@@ -1927,9 +1958,13 @@ namespace D1U.Presentation
 
             if (netSession != null)
             {
-                objectSystem.StripForAnarchy(); // no robots/hostages/matcens in anarchy
+                // no robots/matcens; hostages/keys convert, host item rules apply
+                objectSystem.StripForAnarchy();
                 Runtime.DisableExit = true;
             }
+            bakedObjectCount = objectSystem.Objects.Count; // ids below this are shared net-wide
+            D1U.Game.ObjectSystem.HomerFps =
+                netSession != null ? D1U.Game.NetGameRules.Active.HomingRate : 25;
 
             foreach (var obj in objectSystem.Objects)
                 CreateObjectView(obj);
@@ -1971,12 +2006,16 @@ namespace D1U.Presentation
             }
             else
             {
-                // anarchy: infinite ships, respawn at a random player start
+                // anarchy: infinite ships, respawn at a random player start —
+                // or, with the host's New Spawn Algorithm, weighted toward the
+                // starts farthest from the other ships (choose_multi_spawn_point)
                 controller.PickRespawn = () =>
                 {
                     if (playerStarts.Count == 0)
                         return null;
-                    var s = playerStarts[UnityEngine.Random.Range(0, playerStarts.Count)];
+                    var s = D1U.Game.NetGameRules.Active.NewSpawnAlgo
+                        ? PickFarSpawn()
+                        : playerStarts[UnityEngine.Random.Range(0, playerStarts.Count)];
                     var o = new D1U.Game.Mat3
                     {
                         Right = new System.Numerics.Vector3(s.Orientation[0], s.Orientation[1], s.Orientation[2]),
@@ -2348,8 +2387,17 @@ namespace D1U.Presentation
                 matchEndTime = Time.time;
                 matchEndMsg = winner == netSession.LocalSlot ? "YOU WIN!"
                     : winner >= 0 ? $"{NetName(winner)} WINS THE MATCH"
+                    : winner == -2 ? "THE MINE HAS BEEN DESTROYED"
                     : "TIME UP — MATCH OVER";
                 messages.Add((Time.time, matchEndMsg));
+            };
+            netSession.RemoteReactor += () =>
+            {
+                if (objectSystem == null)
+                    return;
+                applyingRemote = true;
+                objectSystem.ForceDestroyReactor(); // idempotent; no re-broadcast
+                applyingRemote = false;
             };
             netSession.JoinFailed += why =>
             {
@@ -2434,6 +2482,39 @@ namespace D1U.Presentation
                 seg >= 0 ? seg : hint, 1000 + slot);
         }
 
+        /// <summary>choose_multi_spawn_point (gameseq.c:1315): weight the starts
+        /// by distance to the nearest enemy ship and pick among the farthest
+        /// half, fudged so the likeliest is at most ~2x the least likely.
+        /// (Straight-line distances; the original also path-finds.)</summary>
+        ObjectRecord PickFarSpawn()
+        {
+            int n = playerStarts.Count;
+            var dist = new float[n];
+            for (int i = 0; i < n; i++)
+            {
+                float best = float.MaxValue;
+                foreach (var p in netSession.Players.Values)
+                    best = Mathf.Min(best,
+                        System.Numerics.Vector3.Distance(p.Pos, playerStarts[i].Position));
+                dist[i] = best == float.MaxValue ? 1000f : best;
+            }
+            var order = Enumerable.Range(0, n).OrderByDescending(i => dist[i]).ToArray();
+            int cand = Mathf.Max(1, n / 2);
+            float minD = dist[order[cand - 1]], maxD = dist[order[0]];
+            float adj = maxD > 2f * minD ? maxD - 2f * minD : 0f;
+            float total = 0f;
+            for (int k = 0; k < cand; k++)
+                total += dist[order[k]] + adj;
+            float roll = UnityEngine.Random.value * total;
+            for (int k = 0; k < cand; k++)
+            {
+                roll -= dist[order[k]] + adj;
+                if (roll <= 0f)
+                    return playerStarts[order[k]];
+            }
+            return playerStarts[order[0]];
+        }
+
         void UpdateNetShips()
         {
             if (netSession == null || objectsParent == null || modelFactory == null ||
@@ -2458,7 +2539,41 @@ namespace D1U.Presentation
                         Quaternion.LookRotation(fwd, up), t);
                 p.Segnum = shipWorld.FindPointSeg(p.Pos,
                     p.Segnum >= 0 ? p.Segnum : shipController != null ? shipController.State.Segnum : 0);
+                // host option "bright player ships" (default): leave fullbright;
+                // off = tint by mine light like any other object
+                if (!D1U.Game.NetGameRules.Active.BrightShips)
+                    TintNetShip(p, view);
             }
+        }
+
+        void TintNetShip(D1U.Game.NetPlayer p, GameObject view)
+        {
+            float baseLight = p.Segnum >= 0 && LoadedLevel != null &&
+                              p.Segnum < LoadedLevel.Segments.Length
+                ? LoadedLevel.Segments[p.Segnum].Light
+                : 1f;
+            float dyn = 0f;
+            var pos = view.transform.position;
+            for (int i = 0; i < lastLightCount; i++)
+            {
+                var L = lightBuf[i];
+                float d = Vector3.Distance(pos, L);
+                if (d < L.w * 64f)
+                    dyn += L.w / Mathf.Max(d, 4f);
+            }
+            float lit = Mathf.Clamp01(Mathf.Clamp(baseLight * currentFlashScale + dyn, 0.25f, 1f)
+                                      * gfx.Brightness);
+            if (netShipLastTint.TryGetValue(p.Slot, out float last) && Mathf.Abs(last - lit) < 0.02f)
+                return;
+            netShipLastTint[p.Slot] = lit;
+            if (!netShipRenderers.TryGetValue(p.Slot, out var rends) ||
+                rends == null || rends.Length == 0 || rends[0] == null)
+                netShipRenderers[p.Slot] = rends = view.GetComponentsInChildren<Renderer>(true);
+            tintBlock ??= new MaterialPropertyBlock();
+            tintBlock.SetColor(BaseColorProp, new UnityEngine.Color(lit, lit, lit, 1f));
+            foreach (var r in rends)
+                if (r != null)
+                    r.SetPropertyBlock(tintBlock);
         }
 
         void CloseNet()
@@ -2469,6 +2584,8 @@ namespace D1U.Presentation
                 if (view != null)
                     Destroy(view);
             netShips.Clear();
+            netShipRenderers.Clear();
+            netShipLastTint.Clear();
         }
 
         void ToggleAutomap()
@@ -2694,6 +2811,31 @@ namespace D1U.Presentation
                 GUI.DrawTexture(new Rect(cx - 1, cy - 6, 2, 4), Texture2D.whiteTexture);
                 GUI.DrawTexture(new Rect(cx - 1, cy + 2, 2, 4), Texture2D.whiteTexture);
                 GUI.color = UnityEngine.Color.white;
+            }
+
+            // host option "show enemy names": name tags over the other ships
+            if (netSession != null && netSession.Connected && !automapOpen &&
+                D1U.Game.NetGameRules.Active.ShowEnemyNames)
+            {
+                var cam = Camera.main;
+                if (cam != null)
+                {
+                    var nameStyle = new GUIStyle(GUI.skin.label)
+                    {
+                        alignment = TextAnchor.MiddleCenter,
+                        normal = { textColor = new UnityEngine.Color(0.5f, 0.9f, 1f, 0.9f) },
+                    };
+                    foreach (var kv in netShips)
+                    {
+                        if (kv.Value == null)
+                            continue;
+                        var sp = cam.WorldToScreenPoint(kv.Value.transform.position + Vector3.up * 4f);
+                        if (sp.z <= 0f)
+                            continue; // behind the camera
+                        float gx = sp.x / uiScale, gy = (Screen.height - sp.y) / uiScale;
+                        GUI.Label(new Rect(gx - 80, gy - 12, 160, 22), NetName(kv.Key), nameStyle);
+                    }
+                }
             }
 
             if (game.ShowFps) // Settings ▸ Game
