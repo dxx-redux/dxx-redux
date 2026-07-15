@@ -117,16 +117,18 @@ pages, reachable from both the main menu and the pause menu.
 - Restructure the four settings entries (Video/Audio/Controls/Game) into a
   compact tab row on both menus. **S.**
 
-### Tier 1 — High-impact gameplay/UX parity
-- **Weapon autoselect** (primary/secondary priority order + auto-switch on
-  pickup/empty) + weapon-box swap feedback. **M.** *(playsave.c autoselect tables)*
-- **Damage & pickup palette flashes** (red on hit, tint on pickup, cloak
-  darken). **S–M.** *(gauges.c / powerup.c flash_effect)*
-- **Reticle styles** (classic/cross/angle/dot + size + colour) wired to the new
-  Game page. **S.**
-- **Hostage feedback** (blue screen flash + rescue sound + HUD line). **S.**
-- **Cockpit / HUD modes** (F3 cycle: status-bar / full-screen / minimal). **M**
-  (no cockpit *art* — do the layout modes only).
+### Tier 1 — High-impact gameplay/UX parity ✅ *(done 2026-07-15)*
+- **Weapon autoselect** ✅ — primary/secondary priority order + auto-switch on
+  empty/pickup (PlayerWeapons.MaybeAutoSelect*), "&lt;name&gt; selected!" HUD line.
+- **Damage & pickup palette flashes** ✅ — `ScreenFlash` port of PALETTE_FLASH_ADD +
+  diminish_palette_towards_normal; red on damage (×4), per-powerup pickup tints
+  from the C tables, cloak screen-dim.
+- **Reticle styles** ✅ — GameConfig ReticleStyle/Size/Color (classic/cross/angle/
+  dot), cyclers on Settings ▸ Game; classic pixel-identical at defaults.
+- **Hostage feedback** ✅ — blue flash `(0,0,25)` + SOUND_HOSTAGE_RESCUED + HUD line
+  (hostage.c:62-70); ObjectSystem.HostageRescued event, Smoke-asserted.
+- **HUD modes** ✅ — GameConfig HudMode full/minimal/hidden, F3 cycles + Game-page
+  cycler; layout only (no cockpit art). FPS readout already present.
 
 ### Tier 2 — Presentation & polish
 - **Player-death sequence** — external orbit cam + tumbling ship + submodel
