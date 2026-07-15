@@ -89,7 +89,8 @@ does **not** interoperate with DXX — so the original's wire options don't map
 | Glitz score/bonus screen | ❌ | Inline score tally only |
 | High-score table | ❌ | — |
 | Demo record / playback | ❌ | — |
-| Rear-view | ❌ | — |
+| Rear-view mirror PiP (RearMirror) | ✅ | Settings ▸ Game; R toggles; flipped rear camera, sizes/positions (2026-07-15) |
+| Live HUD minimap PiP (HudMinimap) | ✅ | Settings ▸ Game; F4 toggles; minimap.c port — auto-leveled tilted top-down wireframe, hop ranges, heading/north-up, opacity (2026-07-15) |
 | Cheats (16) | ❌ | — |
 | Screenshots (user) | 🟡 | Autopilot capture only; no user key |
 | Pause | ✅ | Esc pause menu |
@@ -149,7 +150,7 @@ pages, reachable from both the main menu and the pause menu.
 
 ### Tier 4 — Large / optional
 - **Demo record & playback.** **L.**
-- **Rear-view**, **user screenshots**, **cheat console.** **S–M.**
+- ~~Rear-view~~ *(done 2026-07-15 as the mirror PiP)*, **user screenshots**, **cheat console.** **S–M.**
 - **Full pilot system** (.plr-style records, per-pilot binds/colours). **L.**
 - Endlevel **flythrough/escape cinematic.** **L.**
 

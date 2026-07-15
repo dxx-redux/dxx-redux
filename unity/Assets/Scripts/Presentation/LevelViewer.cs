@@ -71,6 +71,12 @@ namespace D1U.Presentation
         int playerShipModel = -1;
         List<ObjectRecord> playerStarts = new List<ObjectRecord>();
         AutomapView automapView;
+        // PiP views: rear-view mirror (RearMirror) + live minimap (HudMinimap)
+        MinimapView minimapView;
+        Camera mirrorCam;
+        RenderTexture mirrorRt;
+        bool mirrorVisible = true;         // R toggles while MirrorMode is on
+        static readonly int[] PipDivisors = { 6, 4, 3 }; // small, medium, large
         bool automapOpen;
         bool[] visitedSegs;
         int playerStartSeg;
@@ -339,38 +345,91 @@ namespace D1U.Presentation
                 menuPage = 0;
         }
 
-        /// <summary>Settings → Game: difficulty and the HUD toggles the engine
-        /// can already back (FPS readout, reticle).</summary>
+        /// <summary>Settings → Game: difficulty, HUD toggles, and the two PiPs
+        /// (rear-view mirror, live minimap — RearMirror/HudMinimap ports).</summary>
         void DrawGameMenu(float x, float y, float w)
         {
             GUI.Label(new Rect(x, y, w, 26), "GAME");
             var g = game;
-            float rowH = 40f;
+            var mid = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter };
+            float rowH = 32f;
             int row = 0;
+            float RowY() => y + 30 + row++ * rowH;
+            bool dirty = false;
+
+            int Cycle(string label, string value)
+            {
+                float ry = RowY();
+                GUI.Label(new Rect(x, ry, 190, 26), label);
+                int dir = 0;
+                if (GUI.Button(new Rect(x + 190, ry, 28, 26), "<")) dir = -1;
+                GUI.Label(new Rect(x + 220, ry, w - 252, 26), value, mid);
+                if (GUI.Button(new Rect(x + w - 28, ry, 28, 26), ">")) dir = 1;
+                dirty |= dir != 0;
+                return dir;
+            }
+            int Wrap(int v, int d, int n) => ((v + d) % n + n) % n;
 
             // difficulty shares the d1u_difficulty pref the main menu writes
-            float dy = y + 34 + row++ * rowH;
-            GUI.Label(new Rect(x, dy, 220, 26), "Difficulty");
-            if (GUI.Button(new Rect(x + 210, dy, w - 210, 28),
-                    DifficultyNames[D1U.Game.ObjectSystem.Difficulty]))
+            int dd = Cycle("Difficulty", DifficultyNames[D1U.Game.ObjectSystem.Difficulty]);
+            if (dd != 0)
             {
-                D1U.Game.ObjectSystem.Difficulty = (D1U.Game.ObjectSystem.Difficulty + 1) % 5;
+                D1U.Game.ObjectSystem.Difficulty = Wrap(D1U.Game.ObjectSystem.Difficulty, dd, 5);
                 PlayerPrefs.SetInt("d1u_difficulty", D1U.Game.ObjectSystem.Difficulty);
-                PlayerPrefs.Save();
             }
 
-            float fy = y + 34 + row++ * rowH;
-            bool nf = GUI.Toggle(new Rect(x, fy, w, 26), g.ShowFps, "  Show FPS counter");
-            float ry2 = y + 34 + row++ * rowH;
-            bool nr = GUI.Toggle(new Rect(x, ry2, w, 26), g.ShowReticle, "  Show reticle (crosshair)");
-            if (nf != g.ShowFps || nr != g.ShowReticle)
+            float fy = RowY();
+            bool nf = GUI.Toggle(new Rect(x, fy, w / 2, 26), g.ShowFps, "  FPS counter");
+            bool nr = GUI.Toggle(new Rect(x + w / 2, fy, w / 2, 26), g.ShowReticle, "  Reticle");
+            dirty |= nf != g.ShowFps || nr != g.ShowReticle;
+            g.ShowFps = nf;
+            g.ShowReticle = nr;
+
+            // rear-view mirror PiP (off/small/medium/large + position)
+            string[] pipSizes = { "OFF", "SMALL", "MEDIUM", "LARGE" };
+            int mv = g.MirrorMode ? g.MirrorSize + 1 : 0;
+            int d = Cycle("Rear-view mirror (R)", pipSizes[mv]);
+            if (d != 0)
             {
-                g.ShowFps = nf;
-                g.ShowReticle = nr;
-                g.Save();
+                mv = Wrap(mv, d, 4);
+                g.MirrorMode = mv > 0;
+                if (mv > 0) g.MirrorSize = mv - 1;
+                mirrorVisible = true;
+            }
+            d = Cycle("Mirror position", g.MirrorPos == 0 ? "LEFT" : g.MirrorPos == 2 ? "RIGHT" : "CENTER");
+            if (d != 0) g.MirrorPos = Wrap(g.MirrorPos, d, 3);
+
+            // live minimap PiP
+            int mm = g.MinimapMode ? g.MinimapSize + 1 : 0;
+            d = Cycle("Minimap (F4)", pipSizes[mm]);
+            if (d != 0)
+            {
+                mm = Wrap(mm, d, 4);
+                g.MinimapMode = mm > 0;
+                if (mm > 0) g.MinimapSize = mm - 1;
+            }
+            string[] mapPos = { "TOP LEFT", "TOP RIGHT", "BOTTOM LEFT", "BOTTOM RIGHT", "CENTER" };
+            d = Cycle("Minimap position", mapPos[Mathf.Clamp(g.MinimapPos, 0, 4)]);
+            if (d != 0) g.MinimapPos = Wrap(g.MinimapPos, d, 5);
+            d = Cycle("Minimap range", g.MinimapRange == 0 ? "NEAR" : g.MinimapRange == 2 ? "FAR" : "MEDIUM");
+            if (d != 0) g.MinimapRange = Wrap(g.MinimapRange, d, 3);
+            d = Cycle("Minimap rotation", g.MinimapNorthUp ? "NORTH-UP" : "HEADING-UP");
+            if (d != 0) g.MinimapNorthUp = !g.MinimapNorthUp;
+
+            float oy = RowY();
+            GUI.Label(new Rect(x, oy, 190, 26), $"Minimap opacity: {g.MinimapOpacity * 10}%");
+            int newOp = Mathf.RoundToInt(GUI.HorizontalSlider(new Rect(x + 200, oy + 8, w - 200, 20),
+                g.MinimapOpacity, 1f, 10f));
+            if (newOp != g.MinimapOpacity)
+            {
+                g.MinimapOpacity = newOp;
+                dirty = true;
             }
 
-            float by = y + 34 + row * rowH + 14;
+            if (dirty)
+                g.Save();
+
+            float by = y + 30 + row * rowH + 12;
             if (GUI.Button(new Rect(x, by, 220, 30), "RESET TO DEFAULTS"))
                 g.ResetDefaults();
             if (GUI.Button(new Rect(x + 240, by, 220, 30), "BACK") ||
@@ -695,6 +754,12 @@ namespace D1U.Presentation
             int.TryParse(args[at + 2], out int level);
             lives = 3;
             menuMode = false;
+            if (Array.IndexOf(args, "-d1u-pip") >= 0)
+            {
+                // verification: force both PiPs on for this run (not persisted)
+                game.MirrorMode = true;
+                game.MinimapMode = true;
+            }
             StartLevel(Mathf.Max(1, level), briefing: false);
             if (!string.IsNullOrEmpty(shotsDir))
                 StartCoroutine(AutoShots(shotsDir));
@@ -778,6 +843,13 @@ namespace D1U.Presentation
         {
             CloseNet();
             Clear();
+            if (mirrorCam != null)
+                Destroy(mirrorCam.gameObject); // parented under the scene camera
+            if (mirrorRt != null)
+            {
+                mirrorRt.Release();
+                Destroy(mirrorRt);
+            }
         }
 
         /// <summary>Locked+hidden during play, free over the IMGUI menu. Applied
@@ -1719,6 +1791,20 @@ namespace D1U.Presentation
                     automapView.UpdateView(Camera.main,
                         new Vector3(shipController.State.Pos.X, shipController.State.Pos.Y, shipController.State.Pos.Z),
                         shipController.State.Orient);
+
+                // PiP toggles: R = rear mirror when enabled (game.c:840),
+                // F4 = minimap on/off (persisted)
+                if (!pauseMode && !automapOpen)
+                {
+                    if (game.MirrorMode && Input.GetKeyDown(KeyCode.R))
+                        mirrorVisible = !mirrorVisible;
+                    if (Input.GetKeyDown(KeyCode.F4))
+                    {
+                        game.MinimapMode = !game.MinimapMode;
+                        game.Save();
+                    }
+                }
+                UpdatePips();
             }
 
             if (objectSystem == null)
@@ -2602,6 +2688,120 @@ namespace D1U.Presentation
             netShipLastTint.Clear();
         }
 
+        /// <summary>Maintain the PiP cameras: the rear-view mirror renders the
+        /// world from the main camera turned 180° (render.c Mirror_view; the
+        /// horizontal flip happens at draw time), the minimap renders its own
+        /// layer through MinimapView. Both self-disable outside gameplay.</summary>
+        void UpdatePips()
+        {
+            bool inGame = shipMode && !menuMode && !briefingMode && !automapOpen && !pauseMode &&
+                          shipController != null && Runtime != null &&
+                          !shipController.IsDead && !Runtime.Player.ExitReached;
+
+            bool mirrorOn = inGame && game.MirrorMode && mirrorVisible;
+            var main = Camera.main;
+            if (mirrorOn && main != null)
+            {
+                if (mirrorCam == null)
+                {
+                    var go = new GameObject("MirrorCam");
+                    mirrorCam = go.AddComponent<Camera>();
+                    mirrorCam.enabled = false;
+                }
+                if (mirrorCam.transform.parent != main.transform)
+                {
+                    mirrorCam.transform.SetParent(main.transform, false);
+                    mirrorCam.transform.localPosition = Vector3.zero;
+                    mirrorCam.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
+                }
+                mirrorCam.fieldOfView = main.fieldOfView;
+                mirrorCam.nearClipPlane = main.nearClipPlane;
+                mirrorCam.farClipPlane = main.farClipPlane;
+                mirrorCam.cullingMask = main.cullingMask & ~(1 << MinimapView.Layer);
+                int div = PipDivisors[Mathf.Clamp(game.MirrorSize, 0, 2)];
+                int mw = Mathf.Max(64, Screen.width / div);
+                int mh = Mathf.Max(36, Screen.height / div);
+                if (mirrorRt == null || mirrorRt.width != mw || mirrorRt.height != mh)
+                {
+                    mirrorCam.targetTexture = null;
+                    if (mirrorRt != null) { mirrorRt.Release(); Destroy(mirrorRt); }
+                    mirrorRt = new RenderTexture(mw, mh, 16) { name = "mirror_rt" };
+                    mirrorCam.targetTexture = mirrorRt;
+                }
+            }
+            else
+            {
+                mirrorOn = false;
+            }
+            if (mirrorCam != null)
+                mirrorCam.enabled = mirrorOn;
+
+            bool mapOn = inGame && game.MinimapMode;
+            if (mapOn)
+            {
+                if (minimapView == null && LoadedLevel != null && shipWorld != null && levelShader != null)
+                    minimapView = MinimapView.Create(transform, LoadedLevel, shipWorld, wclips, levelShader);
+                if (minimapView == null)
+                {
+                    mapOn = false;
+                }
+                else
+                {
+                    if (main != null)
+                        main.cullingMask &= ~(1 << MinimapView.Layer); // never in the ship view
+                    int div = PipDivisors[Mathf.Clamp(game.MinimapSize, 0, 2)];
+                    minimapView.EnsureTexture(Mathf.Max(64, Screen.height / div));
+                    var s = shipController.State;
+                    minimapView.UpdateView(
+                        new Vector3(s.Pos.X, s.Pos.Y, s.Pos.Z), s.Orient, s.Segnum,
+                        Time.deltaTime, game.MinimapRange, game.MinimapNorthUp,
+                        netSession != null ? netShips : null);
+                }
+            }
+            minimapView?.SetEnabled(mapOn);
+        }
+
+        /// <summary>Draw the PiP textures into the HUD (gamerend.c:492 mirror
+        /// strip, minimap.c:254 translucent square). The mirror image is
+        /// horizontally flipped — the original negates the view right vector.</summary>
+        void DrawPips(float vw, float vh)
+        {
+            float mgn = Mathf.Max(2f, vh / 64f);
+            if (mirrorCam != null && mirrorCam.enabled && mirrorRt != null)
+            {
+                float div = PipDivisors[Mathf.Clamp(game.MirrorSize, 0, 2)];
+                float mw = vw / div, mh = vh / div;
+                float mx = game.MirrorPos == 0 ? mgn
+                    : game.MirrorPos == 2 ? vw - mw - mgn
+                    : (vw - mw) / 2f;
+                GUI.DrawTextureWithTexCoords(new Rect(mx, mgn, mw, mh), mirrorRt,
+                    new Rect(1f, 0f, -1f, 1f)); // true mirror: flipped x
+                float bt = Mathf.Max(2f, vh / 360f);
+                GUI.color = new UnityEngine.Color(24 / 63f, 24 / 63f, 24 / 63f);
+                GUI.DrawTexture(new Rect(mx, mgn, mw, bt), Texture2D.whiteTexture);
+                GUI.DrawTexture(new Rect(mx, mgn + mh - bt, mw, bt), Texture2D.whiteTexture);
+                GUI.DrawTexture(new Rect(mx, mgn, bt, mh), Texture2D.whiteTexture);
+                GUI.DrawTexture(new Rect(mx + mw - bt, mgn, bt, mh), Texture2D.whiteTexture);
+                GUI.color = UnityEngine.Color.white;
+            }
+            if (minimapView != null && minimapView.Active && minimapView.Texture != null)
+            {
+                float side = vh / PipDivisors[Mathf.Clamp(game.MinimapSize, 0, 2)];
+                float mx, my;
+                switch (game.MinimapPos)
+                {
+                    case 0: mx = mgn; my = mgn; break;                             // top left
+                    case 2: mx = mgn; my = vh - side - mgn; break;                 // bottom left
+                    case 3: mx = vw - side - mgn; my = vh - side - mgn; break;     // bottom right
+                    case 4: mx = (vw - side) / 2f; my = (vh - side) / 2f; break;   // center
+                    default: mx = vw - side - mgn; my = mgn; break;                // top right
+                }
+                GUI.color = new UnityEngine.Color(1f, 1f, 1f, Mathf.Clamp(game.MinimapOpacity, 1, 10) / 10f);
+                GUI.DrawTexture(new Rect(mx, my, side, side), minimapView.Texture);
+                GUI.color = UnityEngine.Color.white;
+            }
+        }
+
         void ToggleAutomap()
         {
             if (automapOpen)
@@ -2770,6 +2970,8 @@ namespace D1U.Presentation
             string timers = (player.CloakTime > 0f ? $"   CLOAK {player.CloakTime:F0}" : "") +
                             (player.InvulnTime > 0f ? $"   INVULN {player.InvulnTime:F0}" : "");
             robots += timers;
+            if (!automapOpen)
+                DrawPips(vw, vh); // under the HUD text
             GUI.Label(new Rect(12, 8, 900, 24),
                 $"Shields {player.Shields:F0}   Energy {player.Energy:F0}   Keys:" +
                 $"{((player.Keys & 2) != 0 ? " BLUE" : "")}{((player.Keys & 4) != 0 ? " RED" : "")}{((player.Keys & 8) != 0 ? " YELLOW" : "")}" +
@@ -2938,6 +3140,9 @@ namespace D1U.Presentation
             automapHidden.Clear();
             camAutomapParent = null;
             visitedSegs = null;
+            minimapView = null; // destroyed with the children; its RT goes with it
+            if (mirrorCam != null)
+                mirrorCam.enabled = false; // survives level swaps under the camera
             exitTimer = 0f;
             music?.Stop();
             Runtime = null;
