@@ -20,6 +20,14 @@ namespace D1U.Presentation
         public bool ShowFps;
         public bool ShowReticle = true;
 
+        // reticle appearance (drawn in LevelViewer.OnGUI)
+        public int ReticleStyle;       // 0 classic 4-pip, 1 cross/plus, 2 angle-brackets, 3 dot
+        public int ReticleSize = 1;    // 0 small, 1 medium, 2 large
+        public int ReticleColor;       // 0 green, 1 white, 2 red, 3 amber
+
+        // cockpit/HUD layout mode (F3 cycles; no cockpit art, layout only)
+        public int HudMode;            // 0 full, 1 minimal (shields/energy), 2 hidden
+
         // rear-view mirror PiP (the C port's RearMirror; R toggles in game)
         public bool MirrorMode;
         public int MirrorPos = 1;      // 0 left, 1 center, 2 right
@@ -40,6 +48,10 @@ namespace D1U.Presentation
             MusicVolume = Mathf.Clamp01(PlayerPrefs.GetFloat("d1u_vol_music", 0.45f));
             ShowFps = PlayerPrefs.GetInt("d1u_hud_fps", 0) != 0;
             ShowReticle = PlayerPrefs.GetInt("d1u_hud_reticle", 1) != 0;
+            ReticleStyle = Mathf.Clamp(PlayerPrefs.GetInt("d1u_ret_style", 0), 0, 3);
+            ReticleSize = Mathf.Clamp(PlayerPrefs.GetInt("d1u_ret_size", 1), 0, 2);
+            ReticleColor = Mathf.Clamp(PlayerPrefs.GetInt("d1u_ret_color", 0), 0, 3);
+            HudMode = Mathf.Clamp(PlayerPrefs.GetInt("d1u_hud_mode", 0), 0, 2);
             MirrorMode = PlayerPrefs.GetInt("d1u_pip_mirror", 0) != 0;
             MirrorPos = Mathf.Clamp(PlayerPrefs.GetInt("d1u_pip_mirrorpos", 1), 0, 2);
             MirrorSize = Mathf.Clamp(PlayerPrefs.GetInt("d1u_pip_mirrorsize", 1), 0, 2);
@@ -58,6 +70,10 @@ namespace D1U.Presentation
             PlayerPrefs.SetFloat("d1u_vol_music", MusicVolume);
             PlayerPrefs.SetInt("d1u_hud_fps", ShowFps ? 1 : 0);
             PlayerPrefs.SetInt("d1u_hud_reticle", ShowReticle ? 1 : 0);
+            PlayerPrefs.SetInt("d1u_ret_style", ReticleStyle);
+            PlayerPrefs.SetInt("d1u_ret_size", ReticleSize);
+            PlayerPrefs.SetInt("d1u_ret_color", ReticleColor);
+            PlayerPrefs.SetInt("d1u_hud_mode", HudMode);
             PlayerPrefs.SetInt("d1u_pip_mirror", MirrorMode ? 1 : 0);
             PlayerPrefs.SetInt("d1u_pip_mirrorpos", MirrorPos);
             PlayerPrefs.SetInt("d1u_pip_mirrorsize", MirrorSize);
@@ -89,6 +105,10 @@ namespace D1U.Presentation
             MusicVolume = 0.45f;
             ShowFps = false;
             ShowReticle = true;
+            ReticleStyle = 0;
+            ReticleSize = 1;
+            ReticleColor = 0;
+            HudMode = 0;
             MirrorMode = false;
             MirrorPos = 1;
             MirrorSize = 1;

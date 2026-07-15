@@ -116,6 +116,8 @@ namespace D1U.Presentation
         NetGameConfig NetCfg => netCfg ??= new NetGameConfig();
         int menuPage;                 // 0 main · 1 controls · 2 video · 3 audio · 4 game · 5 host · 6 host-items
         float fpsSmooth = 60f;        // Settings ▸ Game FPS readout (unscaled EMA)
+        // damage/pickup/hostage palette flash + cloak dim (game.c PALETTE_FLASH_ADD)
+        readonly ScreenFlash screenFlash = new ScreenFlash();
         // netgame match end (kill-goal winner or time limit)
         bool matchEnded;
         string matchEndMsg;
@@ -384,6 +386,21 @@ namespace D1U.Presentation
             dirty |= nf != g.ShowFps || nr != g.ShowReticle;
             g.ShowFps = nf;
             g.ShowReticle = nr;
+
+            // reticle appearance (style / size / colour) — drawn in OnGUI
+            string[] retStyles = { "CLASSIC", "CROSS", "ANGLE", "DOT" };
+            int rd = Cycle("Reticle style", retStyles[Mathf.Clamp(g.ReticleStyle, 0, 3)]);
+            if (rd != 0) g.ReticleStyle = Wrap(g.ReticleStyle, rd, 4);
+            rd = Cycle("Reticle size", g.ReticleSize == 0 ? "SMALL" : g.ReticleSize == 2 ? "LARGE" : "MEDIUM");
+            if (rd != 0) g.ReticleSize = Wrap(g.ReticleSize, rd, 3);
+            string[] retColors = { "GREEN", "WHITE", "RED", "AMBER" };
+            rd = Cycle("Reticle colour", retColors[Mathf.Clamp(g.ReticleColor, 0, 3)]);
+            if (rd != 0) g.ReticleColor = Wrap(g.ReticleColor, rd, 4);
+
+            // HUD layout mode (F3 in game)
+            string[] hudModes = { "FULL", "MINIMAL", "HIDDEN" };
+            rd = Cycle("HUD mode (F3)", hudModes[Mathf.Clamp(g.HudMode, 0, 2)]);
+            if (rd != 0) g.HudMode = Wrap(g.HudMode, rd, 3);
 
             // rear-view mirror PiP (off/small/medium/large + position)
             string[] pipSizes = { "OFF", "SMALL", "MEDIUM", "LARGE" };
@@ -1607,6 +1624,12 @@ namespace D1U.Presentation
             UpdateCursor();
             if (Time.unscaledDeltaTime > 0f) // Settings ▸ Game FPS readout
                 fpsSmooth = Mathf.Lerp(fpsSmooth, 1f / Time.unscaledDeltaTime, 0.1f);
+
+            // palette flash: decay every frame; the cloak dim tracks CloakTime and
+            // clears the moment the local player uncloaks (powerup dims the palette)
+            screenFlash.Update(Time.deltaTime);
+            screenFlash.SetDim(Runtime != null && Runtime.Player != null && Runtime.Player.CloakTime > 0f
+                ? 0.28f : 0f);
             if (netSession != null)
             {
                 netSession.Update(Time.timeAsDouble);
@@ -1803,6 +1826,14 @@ namespace D1U.Presentation
                         game.MinimapMode = !game.MinimapMode;
                         game.Save();
                     }
+                    // F3 cycles the HUD layout mode (gauges.c HUD_MODE toggle)
+                    if (Input.GetKeyDown(KeyCode.F3))
+                    {
+                        game.HudMode = (game.HudMode + 1) % 3;
+                        game.Save();
+                        messages.Add((Time.time, "HUD: " + (game.HudMode == 0 ? "FULL"
+                            : game.HudMode == 1 ? "MINIMAL" : "HIDDEN")));
+                    }
                 }
                 UpdatePips();
             }
@@ -1989,6 +2020,12 @@ namespace D1U.Presentation
             Runtime.SideBlocked = objectSystem.AnyObjectPokesSide; // doors won't scissor objects
             objectSystem.Message += AddHudMessage; // throttled: refusals repeat per frame
             objectSystem.Sound += (soundId, pos) => sounds?.PlayAt(soundId, ToUnity(pos), 0.7f);
+            objectSystem.HostageRescued += pos =>
+            {
+                // SOUND_HOSTAGE_RESCUED (sounds.h:207) + small blue flash (hostage.c:62-70)
+                sounds?.PlayAt(91, ToUnity(pos), 1f);
+                screenFlash.Add(0f, 0f, 25f);
+            };
             Runtime.MatcenTriggered += objectSystem.TriggerMatcen;
             Runtime.CountdownSound += soundId =>
             {
@@ -2017,6 +2054,29 @@ namespace D1U.Presentation
             };
             objectSystem.PickedUp += obj =>
             {
+                // pickup palette flash (powerup.c powerup_basic / weapon.c pickup
+                // flashes) — per-powerup colours in engine palette units
+                var (fr, fg, fb) = obj.SubId switch
+                {
+                    0 => (15f, 15f, 15f),          // extra life (powerup.c:250)
+                    1 => (15f, 15f, 7f),           // energy     (powerup.c:178)
+                    2 => (0f, 0f, 15f),            // shield     (powerup.c:266)
+                    3 => (10f, 0f, 10f),           // laser      (powerup.c:282)
+                    4 => (0f, 0f, 15f),            // blue key   (powerup.c:308)
+                    5 => (15f, 0f, 0f),            // red key    (powerup.c:326)
+                    6 => (15f, 15f, 7f),           // gold key   (powerup.c:344)
+                    12 => (15f, 15f, 7f),          // quad fire  (powerup.c:357)
+                    13 => (7f, 14f, 21f),          // vulcan     (powerup.c:198)
+                    22 => (7f, 14f, 21f),          // vulcan ammo(powerup.c:398)
+                    14 or 15 or 16 or 17 => (7f, 14f, 21f), // primary weapons (weapon.c:748)
+                    11 or 19 => (15f, 15f, 15f),   // secondary 4-pack (weapon.c:594)
+                    10 or 18 or 20 or 21 => (10f, 10f, 10f), // single secondary (weapon.c:599)
+                    23 => (0f, 0f, 0f),            // cloak dims the palette (handled by SetDim)
+                    25 => (7f, 14f, 21f),          // invulnerability (powerup.c:493)
+                    _ => (10f, 10f, 10f),
+                };
+                screenFlash.Add(fr, fg, fb);
+
                 // CONSUMED here: gone for everyone (mere expiry is never broadcast)
                 if (netSession == null || applyingRemote)
                     return;
@@ -2085,6 +2145,9 @@ namespace D1U.Presentation
             // muzzle flash: 3.0 light fading over 1/3 s at the firing position
             // (lighting.c cast_muzzle_flash_light, FLASH_LEN F1_0/3, scale 3)
             controller.Fired += p => flashLights.Add((p, 3f, Time.time, 1f / 3f));
+            // red screen flash scaled by the damage taken (collide.c:1356 uses
+            // PALETTE_FLASH_ADD(f2i(damage)*4, ...); clamped to MAX_PALETTE_ADD)
+            controller.DamageFlash += dmg => screenFlash.Add(dmg * 4f, 0f, 0f);
             controller.EggsSpilled += eggs =>
             {
                 if (netSession == null || eggs.Count == 0)
@@ -2945,6 +3008,8 @@ namespace D1U.Presentation
             if (Runtime == null || !Application.isPlaying)
                 return;
             var player = Runtime.Player;
+            // damage/pickup/hostage palette flash + cloak dim, under the HUD
+            screenFlash.Draw(vw, vh);
             string ammo = "";
             if (shipController != null)
             {
@@ -2972,13 +3037,18 @@ namespace D1U.Presentation
             robots += timers;
             if (!automapOpen)
                 DrawPips(vw, vh); // under the HUD text
-            GUI.Label(new Rect(12, 8, 900, 24),
-                $"Shields {player.Shields:F0}   Energy {player.Energy:F0}   Keys:" +
-                $"{((player.Keys & 2) != 0 ? " BLUE" : "")}{((player.Keys & 4) != 0 ? " RED" : "")}{((player.Keys & 8) != 0 ? " YELLOW" : "")}" +
-                ammo + robots);
+            // HUD layout mode (F3): 0 full text HUD, 1 minimal shields/energy, 2 hidden
+            if (game.HudMode == 0)
+                GUI.Label(new Rect(12, 8, 900, 24),
+                    $"Shields {player.Shields:F0}   Energy {player.Energy:F0}   Keys:" +
+                    $"{((player.Keys & 2) != 0 ? " BLUE" : "")}{((player.Keys & 4) != 0 ? " RED" : "")}{((player.Keys & 8) != 0 ? " YELLOW" : "")}" +
+                    ammo + robots);
+            else if (game.HudMode == 1)
+                GUI.Label(new Rect(12, 8, 900, 24),
+                    $"Shields {player.Shields:F0}   Energy {player.Energy:F0}");
 
             // netgame time-limit clock (top centre)
-            if (netSession != null && netSession.Connected && !matchEnded &&
+            if (game.HudMode < 2 && netSession != null && netSession.Connected && !matchEnded &&
                 D1U.Game.NetGameRules.Active.MaxTimeSeconds > 0)
             {
                 int left = Mathf.Max(0, Mathf.CeilToInt(
@@ -3017,20 +3087,12 @@ namespace D1U.Presentation
                     "Tab close · mouse orbit · wheel zoom");
             }
 
-            // reticle (Settings ▸ Game)
+            // reticle (Settings ▸ Game: style / size / colour)
             if (game.ShowReticle && !automapOpen && shipController != null && !shipController.IsDead && !player.ExitReached)
-            {
-                float cx = vw / 2f, cy = vh / 2f;
-                GUI.color = new UnityEngine.Color(0.4f, 1f, 0.4f, 0.8f);
-                GUI.DrawTexture(new Rect(cx - 6, cy - 1, 4, 2), Texture2D.whiteTexture);
-                GUI.DrawTexture(new Rect(cx + 2, cy - 1, 4, 2), Texture2D.whiteTexture);
-                GUI.DrawTexture(new Rect(cx - 1, cy - 6, 2, 4), Texture2D.whiteTexture);
-                GUI.DrawTexture(new Rect(cx - 1, cy + 2, 2, 4), Texture2D.whiteTexture);
-                GUI.color = UnityEngine.Color.white;
-            }
+                DrawReticle(vw / 2f, vh / 2f);
 
             // host option "show enemy names": name tags over the other ships
-            if (netSession != null && netSession.Connected && !automapOpen &&
+            if (game.HudMode < 2 && netSession != null && netSession.Connected && !automapOpen &&
                 D1U.Game.NetGameRules.Active.ShowEnemyNames)
             {
                 var cam = Camera.main;
@@ -3064,13 +3126,16 @@ namespace D1U.Presentation
                 GUI.Label(new Rect(vw - 120, 6, 108, 22), $"{Mathf.RoundToInt(fpsSmooth)} FPS", fstyle);
             }
 
-            int y = 40;
-            for (int i = messages.Count - 1; i >= 0 && i >= messages.Count - 4; i--)
+            if (game.HudMode < 2) // hidden mode = reticle only
             {
-                if (Time.time - messages[i].time > 5f)
-                    continue;
-                GUI.Label(new Rect(12, y, 600, 24), messages[i].text);
-                y += 20;
+                int y = 40;
+                for (int i = messages.Count - 1; i >= 0 && i >= messages.Count - 4; i--)
+                {
+                    if (Time.time - messages[i].time > 5f)
+                        continue;
+                    GUI.Label(new Rect(12, y, 600, 24), messages[i].text);
+                    y += 20;
+                }
             }
 
             if (matchEnded && !string.IsNullOrEmpty(matchEndMsg))
@@ -3110,6 +3175,59 @@ namespace D1U.Presentation
                         $"Final score {scoreCarried + (objectSystem?.Score ?? 0) + player.Score}", sub);
                 }
             }
+        }
+
+        /// <summary>Draw the aiming reticle in the chosen style/size/colour.
+        /// Style 0 (classic 4-pip cross) at size 1 / colour 0 is pixel-identical to
+        /// the original centre cross; the others are thin GUI-drawn primitives.</summary>
+        void DrawReticle(float cx, float cy)
+        {
+            float s = game.ReticleSize == 0 ? 0.75f : game.ReticleSize == 2 ? 1.5f : 1f;
+            GUI.color = game.ReticleColor switch
+            {
+                1 => new UnityEngine.Color(1f, 1f, 1f, 0.8f),      // white
+                2 => new UnityEngine.Color(1f, 0.3f, 0.3f, 0.85f), // red
+                3 => new UnityEngine.Color(1f, 0.8f, 0.2f, 0.85f), // amber
+                _ => new UnityEngine.Color(0.4f, 1f, 0.4f, 0.8f),  // green (classic)
+            };
+            var tex = Texture2D.whiteTexture;
+            void Q(float x, float y, float w, float h) => GUI.DrawTexture(new Rect(x, y, w, h), tex);
+
+            switch (game.ReticleStyle)
+            {
+                case 1: // cross / plus: a solid cross through centre
+                {
+                    float t = 2f * s, half = 7f * s;
+                    Q(cx - half, cy - t / 2f, half * 2f, t);
+                    Q(cx - t / 2f, cy - half, t, half * 2f);
+                    break;
+                }
+                case 2: // angle-brackets: four corner marks forming a target box
+                {
+                    float t = 2f * s, d = 6f * s, len = 4f * s;
+                    Q(cx - d, cy - d, len, t); Q(cx - d, cy - d, t, len);             // top-left
+                    Q(cx + d - len, cy - d, len, t); Q(cx + d - t, cy - d, t, len);   // top-right
+                    Q(cx - d, cy + d - t, len, t); Q(cx - d, cy + d - len, t, len);   // bottom-left
+                    Q(cx + d - len, cy + d - t, len, t); Q(cx + d - t, cy + d - len, t, len); // bottom-right
+                    break;
+                }
+                case 3: // dot: a small filled square at centre
+                {
+                    float r = 2.5f * s;
+                    Q(cx - r, cy - r, r * 2f, r * 2f);
+                    break;
+                }
+                default: // classic 4-pip cross (gap in the middle) — matches original at s=1
+                {
+                    float t = 2f * s, len = 4f * s, gap = 2f * s;
+                    Q(cx - gap - len, cy - t / 2f, len, t);
+                    Q(cx + gap, cy - t / 2f, len, t);
+                    Q(cx - t / 2f, cy - gap - len, t, len);
+                    Q(cx - t / 2f, cy + gap, t, len);
+                    break;
+                }
+            }
+            GUI.color = UnityEngine.Color.white;
         }
 
         public void Clear()

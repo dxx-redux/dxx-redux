@@ -71,9 +71,14 @@ namespace D1U.Presentation
             if (Runtime == null || deathTimer > 0f || Runtime.Player.InvulnTime > 0f)
                 return;
             Runtime.Player.Shields -= damage;
+            DamageFlash?.Invoke(damage); // red palette flash (collide.c:1356 PALETTE_FLASH_ADD)
             if (Runtime.Player.Shields <= 0f)
                 Die();
         }
+
+        /// <summary>Damage that actually landed on the player, for the red screen
+        /// flash (apply_damage_to_player's PALETTE_FLASH_ADD, collide.c:1356).</summary>
+        public event Action<float> DamageFlash;
 
         /// <summary>The ship is lost (weapon, claw, or the mine going up).</summary>
         public void Die()

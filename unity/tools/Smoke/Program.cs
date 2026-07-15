@@ -1256,10 +1256,21 @@ try
                           $"homing overflow redrop={homingRedrop} ({homingRedrops}), lowVulcan gun={lowW.VulcanAmmo} (98), " +
                           $"SP key stays + vulcan box={spQuirks}");
 
+        // hostage rescue fires HostageRescued (blue flash + rescue sound) and bumps
+        // the counter (hostage.c:55-70) — the Presentation hook for Tier-1 feedback
+        bool hostRescued = false;
+        objsP.HostageRescued += _ => hostRescued = true;
+        int hostBefore = objsP.HostagesRescued;
+        var hostageObj = new D1U.Game.GameObj { Type = 3, Pos = basePos, Segnum = 0 };
+        objsP.TryPickup(hostageObj, new D1U.Game.PlayerState(), null);
+        bool hostageOk = hostRescued && hostageObj.Dead && objsP.HostagesRescued == hostBefore + 1;
+        Console.WriteLine($"  hostage rescue: event fired={hostRescued}, removed={hostageObj.Dead}, count {hostBefore}->{objsP.HostagesRescued}");
+
         D1U.Game.NetGameRules.Active = new D1U.Game.NetGameRules(); // restore defaults
         if (!prepOk || !gateHeld || !reactorDies || !ackackBoom || !oldBombInert ||
             !flareBoom || !concRespawn || boxesDropped != 3 ||
-            !dupStaysMp || !vulcStaysMp || !homingRedrop || !lowVulcanHalf || !spQuirks)
+            !dupStaysMp || !vulcStaysMp || !homingRedrop || !lowVulcanHalf || !spQuirks ||
+            !hostageOk)
             errors++;
     }
 

@@ -146,6 +146,9 @@ namespace D1U.Game
         public event Action<string> Message;
         /// <summary>The local player consumed a powerup (for net pickup replication).</summary>
         public event Action<GameObj> PickedUp;
+        /// <summary>The local player rescued a hostage (blue flash + rescue sound);
+        /// carries the pickup position (hostage.c:62-70).</summary>
+        public event Action<Vector3> HostageRescued;
         /// <summary>POW_EXTRA_LIFE collected.</summary>
         public event Action ExtraLife;
         /// <summary>A netgame powerup respawned into the mine (maybe_drop_net_powerup)
@@ -1901,6 +1904,7 @@ namespace D1U.Game
                 if (player != null)
                     player.HostagesOnBoard++; // scored at the exit, lost on death (gameseq.c:758)
                 Message?.Invoke("Hostage rescued!");
+                HostageRescued?.Invoke(obj.Pos); // blue flash + SOUND_HOSTAGE_RESCUED (hostage.c:62-70)
                 Remove(obj);
                 return;
             }
