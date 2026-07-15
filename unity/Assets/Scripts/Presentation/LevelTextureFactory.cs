@@ -25,14 +25,8 @@ namespace D1U.Presentation
         public LevelTextureFactory(BaseDxu baseDxu)
         {
             this.baseDxu = baseDxu;
-            for (int i = 0; i < 256; i++)
-            {
-                // palette.256 is 6-bit VGA
-                byte r = (byte)(baseDxu.PaletteRaw[i * 3 + 0] * 255 / 63);
-                byte g = (byte)(baseDxu.PaletteRaw[i * 3 + 1] * 255 / 63);
-                byte b = (byte)(baseDxu.PaletteRaw[i * 3 + 2] * 255 / 63);
-                palette[i] = new Color32(r, g, b, 255);
-            }
+            // palette.256 is 6-bit VGA
+            PaletteUtil.FillRgba256(baseDxu.PaletteRaw, palette);
         }
 
         public Texture2D Get(int baseBitmap, int overlayBitmap, int rotation)

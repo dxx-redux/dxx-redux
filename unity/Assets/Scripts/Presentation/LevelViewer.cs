@@ -94,7 +94,6 @@ namespace D1U.Presentation
         int menuMissionIndex;
         int menuLevel = 1;
         readonly Dictionary<int, GameObject> objectViews = new Dictionary<int, GameObject>();
-        readonly Dictionary<int, RobotAnimator> objectAnimators = new Dictionary<int, RobotAnimator>();
         readonly Dictionary<int, Quaternion[][]> robotPoseCache = new Dictionary<int, Quaternion[][]>();
         Transform objectsParent;
         readonly List<(Material material, RenderChunk chunk)> allSurfaces
@@ -1170,7 +1169,7 @@ namespace D1U.Presentation
                 Log($"animated wall surfaces: {animator.Entries.Count}");
         }
 
-        static Vector3 ToUnity(System.Numerics.Vector3 v) => new Vector3(v.X, v.Y, v.Z);
+        static Vector3 ToUnity(System.Numerics.Vector3 v) => v.ToUnity();
 
         Vector3 SideCenter(int segIndex, int sideIndex)
         {
@@ -1375,7 +1374,6 @@ namespace D1U.Presentation
             {
                 var animator = view.AddComponent<RobotAnimator>();
                 animator.Poses = GetRobotPoses(obj.SubId);
-                objectAnimators[obj.Id] = animator;
             }
         }
 
@@ -1689,7 +1687,7 @@ namespace D1U.Presentation
                 StartLevel(levelNumber, briefing: false);
                 return;
             }
-            if (Application.isPlaying && shipMode && Input.GetKeyDown(KeyCode.Escape))
+            if (shipMode && Input.GetKeyDown(KeyCode.Escape))
             {
                 if (automapOpen)
                 {
@@ -1710,7 +1708,7 @@ namespace D1U.Presentation
             }
 
             // level progression: pause on the LEVEL COMPLETE banner, then advance
-            if (Application.isPlaying && shipMode && Runtime != null && Runtime.Player.ExitReached)
+            if (shipMode && Runtime != null && Runtime.Player.ExitReached)
             {
                 exitTimer += Time.deltaTime;
                 if (exitTimer > 3f)
@@ -1729,7 +1727,7 @@ namespace D1U.Presentation
                             hostagePoints += onBoard * 1000 * (diff + 1); // full-rescue bonus
                         if (hostagePoints > 0)
                             messages.Add((Time.time, $"{onBoard} hostage(s) delivered: +{hostagePoints}"));
-                        scoreCarried += hostagePoints + (objectSystem?.Score ?? 0) + Runtime.Player.Score;
+                        scoreCarried += hostagePoints + (objectSystem?.Score ?? 0);
                     }
                     if (levelNumber > missionLevelCount)
                     {
@@ -1770,10 +1768,10 @@ namespace D1U.Presentation
             }
 
             // lives: extra ship every 50k points; out of ships = game over
-            if (Application.isPlaying && shipMode && shipController != null &&
+            if (shipMode && shipController != null &&
                 objectSystem != null && Runtime != null)
             {
-                int total = scoreCarried + objectSystem.Score + Runtime.Player.Score;
+                int total = scoreCarried + objectSystem.Score;
                 if (total / 50000 > lastTotalScore / 50000)
                 {
                     lives += total / 50000 - lastTotalScore / 50000;
@@ -1793,7 +1791,7 @@ namespace D1U.Presentation
             }
 
             // automap: track visited segments, Tab toggles the wireframe view
-            if (Application.isPlaying && shipMode && shipController != null && visitedSegs != null)
+            if (shipMode && shipController != null && visitedSegs != null)
             {
                 int shipSeg = shipController.State.Segnum;
                 if (shipSeg >= 0 && shipSeg < visitedSegs.Length)
@@ -1867,7 +1865,9 @@ namespace D1U.Presentation
                 {
                     view.transform.rotation = Quaternion.LookRotation(
                         ToUnity(obj.Orient.Forward), ToUnity(obj.Orient.Up));
-                    if (objectAnimators.TryGetValue(obj.Id, out var animator) && animator != null)
+                    // the RobotAnimator is a component on this same view GameObject
+                    var animator = view.GetComponent<RobotAnimator>();
+                    if (animator != null)
                         animator.TargetState = obj.Aware
                             ? (obj.NextFire > 0f && obj.NextFire < 0.35f ? 2 : 1)  // fire vs alert
                             : 0;                                                   // rest
@@ -2050,7 +2050,6 @@ namespace D1U.Presentation
                 if (objectViews.TryGetValue(obj.Id, out var view) && view != null)
                     Destroy(view);
                 objectViews.Remove(obj.Id);
-                objectAnimators.Remove(obj.Id);
             };
             objectSystem.PickedUp += obj =>
             {
@@ -2266,6 +2265,7 @@ namespace D1U.Presentation
                 cam.transform.localRotation = Quaternion.identity;
                 cam.nearClipPlane = 0.1f;
                 cam.farClipPlane = 4000f;
+                BillboardSprite.SharedCamera = cam; // billboards face this without a per-frame tag lookup
             }
             Log($"ship spawned at segment {start.Segnum} (mass={shipParams.Mass:F2} drag={shipParams.Drag:F4} " +
                 $"maxThrust={shipParams.MaxThrust:F2} size={shipParams.Size:F2})");
@@ -2297,7 +2297,7 @@ namespace D1U.Presentation
                 using (var bw = new System.IO.BinaryWriter(File.Create(SavePath)))
                 {
                     bw.Write(0x56533144); // "D1SV"
-                    bw.Write(4);          // save format version (v4: linked doors, hostages)
+                    bw.Write(5);          // save format version (v5: dropped dead Player.Score field)
                     bw.Write(missionKey ?? "");
                     bw.Write(levelNumber);
                     bw.Write(returnAfterSecret);
@@ -2337,7 +2337,7 @@ namespace D1U.Presentation
             try
             {
                 var br = new System.IO.BinaryReader(new MemoryStream(File.ReadAllBytes(SavePath)));
-                if (br.ReadInt32() != 0x56533144 || br.ReadInt32() != 4)
+                if (br.ReadInt32() != 0x56533144 || br.ReadInt32() != 5)
                     throw new InvalidDataException("not a D1X-Unity savegame (or an older format)");
                 missionKey = br.ReadString();
                 levelNumber = br.ReadInt32();
@@ -2384,7 +2384,7 @@ namespace D1U.Presentation
                 Runtime.EmitVisualSync();
                 RebuildObjectViews();
                 // don't re-earn extra lives for score the save already banked
-                lastTotalScore = scoreCarried + objectSystem.Score + Runtime.Player.Score;
+                lastTotalScore = scoreCarried + objectSystem.Score;
                 messages.Add((Time.time, "Game restored"));
             }
             catch (Exception e)
@@ -2404,7 +2404,6 @@ namespace D1U.Presentation
                 if (view != null)
                     Destroy(view);
             objectViews.Clear();
-            objectAnimators.Clear();
             foreach (var obj in objectSystem.Objects)
                 if (!obj.Dead)
                     CreateObjectView(obj);
@@ -2978,6 +2977,145 @@ namespace D1U.Presentation
                     go.SetActive(!hidden);
         }
 
+        // Cached IMGUI HUD styles. GUI.skin is only valid inside OnGUI, so these
+        // are built lazily on the first HUD frame instead of reallocating a
+        // GUIStyle for every label on every OnGUI event (Layout + Repaint each
+        // frame). All are constant, so one copy is reused every frame.
+        bool hudStylesBuilt;
+        GUIStyle styleTimeTop, styleCountdown, styleAutomap, styleNameTag,
+                 styleFps, styleBanner40, styleTally20, styleGameOver;
+
+        void EnsureHudStyles()
+        {
+            if (hudStylesBuilt)
+                return;
+            hudStylesBuilt = true;
+            styleTimeTop = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.UpperCenter };
+            styleCountdown = new GUIStyle(GUI.skin.label)
+            {
+                fontSize = 30,
+                alignment = TextAnchor.MiddleCenter,
+                normal = { textColor = new UnityEngine.Color(1f, 0.3f, 0.2f) },
+            };
+            styleAutomap = new GUIStyle(GUI.skin.label) { fontSize = 22, alignment = TextAnchor.MiddleCenter };
+            styleNameTag = new GUIStyle(GUI.skin.label)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                normal = { textColor = new UnityEngine.Color(0.5f, 0.9f, 1f, 0.9f) },
+            };
+            styleFps = new GUIStyle(GUI.skin.label)
+            {
+                alignment = TextAnchor.UpperRight,
+                normal = { textColor = new UnityEngine.Color(0.6f, 1f, 0.6f) },
+            };
+            styleBanner40 = new GUIStyle(GUI.skin.label) { fontSize = 40, alignment = TextAnchor.MiddleCenter };
+            styleTally20 = new GUIStyle(GUI.skin.label) { fontSize = 20, alignment = TextAnchor.MiddleCenter };
+            styleGameOver = new GUIStyle(GUI.skin.label)
+            {
+                fontSize = 36,
+                alignment = TextAnchor.MiddleCenter,
+                normal = { textColor = new UnityEngine.Color(1f, 0.3f, 0.2f) },
+            };
+        }
+
+        // (item 1) HUD line cache. OnGUI fires several events per frame with
+        // identical values; the interpolated shields/energy/ammo/frags line is
+        // rebuilt only when a feeding input actually changes.
+        string hudTextFull = "", hudTextMinimal = "";
+        bool hudTextValid;
+        float htShields, htEnergy, htCloak, htInvuln, htFusion;
+        int htKeys, htSelPrim, htVulcanAmmo, htSelSec, htSecCount,
+            htLocalFrags, htRobotsAlive, htScore, htLives;
+        bool htQuad, htHasShip, htNetConn, htHasObjs;
+        readonly List<(int frags, string name)> htNetPlayers = new List<(int, string)>();
+
+        void UpdateHudText(D1U.Game.PlayerState player)
+        {
+            var w = shipController != null ? shipController.Weapons : null;
+            bool hasShip = w != null;
+            int selPrim = hasShip ? w.SelectedPrimary : 0;
+            bool quad = hasShip && w.Quad;
+            int vulcanAmmo = hasShip ? w.VulcanAmmo : 0;
+            float fusion = hasShip ? w.FusionCharge : 0f;
+            int selSec = hasShip ? w.SelectedSecondary : 0;
+            int secCount = hasShip ? w.SecondaryCount(selSec) : 0;
+            bool netConn = netSession != null && netSession.Connected;
+            int localFrags = netConn ? netSession.LocalFrags : 0;
+            bool hasObjs = objectSystem != null;
+            int robotsAlive = hasObjs ? objectSystem.RobotsAlive : 0;
+            int score = hasObjs ? scoreCarried + objectSystem.Score : 0;
+            int livesVal = lives;
+            float cloak = player.CloakTime, invuln = player.InvulnTime;
+
+            bool changed = !hudTextValid ||
+                htShields != player.Shields || htEnergy != player.Energy || htKeys != player.Keys ||
+                htHasShip != hasShip || htSelPrim != selPrim || htQuad != quad ||
+                htVulcanAmmo != vulcanAmmo || htFusion != fusion || htSelSec != selSec ||
+                htSecCount != secCount || htNetConn != netConn || htLocalFrags != localFrags ||
+                htHasObjs != hasObjs || htRobotsAlive != robotsAlive || htScore != score ||
+                htLives != livesVal || htCloak != cloak || htInvuln != invuln;
+
+            if (!changed && netConn) // the per-player frags line is dynamic too
+            {
+                int idx = 0;
+                foreach (var p in netSession.Players.Values)
+                {
+                    if (idx >= htNetPlayers.Count || htNetPlayers[idx].frags != p.Frags ||
+                        htNetPlayers[idx].name != p.Name)
+                    {
+                        changed = true;
+                        break;
+                    }
+                    idx++;
+                }
+                if (!changed && idx != htNetPlayers.Count)
+                    changed = true;
+            }
+
+            if (!changed)
+                return;
+
+            hudTextValid = true;
+            htShields = player.Shields; htEnergy = player.Energy; htKeys = player.Keys;
+            htHasShip = hasShip; htSelPrim = selPrim; htQuad = quad; htVulcanAmmo = vulcanAmmo;
+            htFusion = fusion; htSelSec = selSec; htSecCount = secCount;
+            htNetConn = netConn; htLocalFrags = localFrags;
+            htHasObjs = hasObjs; htRobotsAlive = robotsAlive; htScore = score; htLives = livesVal;
+            htCloak = cloak; htInvuln = invuln;
+            htNetPlayers.Clear();
+            if (netConn)
+                foreach (var p in netSession.Players.Values)
+                    htNetPlayers.Add((p.Frags, p.Name));
+
+            // rebuild the exact same strings the inline interpolation produced
+            string ammo = "";
+            if (hasShip)
+                ammo = $"   [{w.PrimaryName}{(quad && selPrim == 0 ? " QUAD" : "")}" +
+                       $"{(selPrim == 1 ? $" {(vulcanAmmo * 835968L) >> 16}" : "")}" + // VULCAN_AMMO_SCALE
+                       $"{(selPrim == 4 && fusion > 0f ? $" charge {fusion:F1}" : "")}]" +
+                       $"   [{w.SecondaryName} {secCount}]";
+            string robots;
+            if (netConn)
+            {
+                robots = $"   Frags {localFrags}";
+                foreach (var p in netSession.Players.Values)
+                    robots += $"   {p.Name}: {p.Frags}";
+            }
+            else
+            {
+                robots = hasObjs
+                    ? $"   Robots {robotsAlive}   Score {score}   Lives {Mathf.Max(0, livesVal)}"
+                    : "";
+            }
+            robots += (cloak > 0f ? $"   CLOAK {cloak:F0}" : "") +
+                      (invuln > 0f ? $"   INVULN {invuln:F0}" : "");
+            hudTextFull =
+                $"Shields {player.Shields:F0}   Energy {player.Energy:F0}   Keys:" +
+                $"{((player.Keys & 2) != 0 ? " BLUE" : "")}{((player.Keys & 4) != 0 ? " RED" : "")}{((player.Keys & 8) != 0 ? " YELLOW" : "")}" +
+                ammo + robots;
+            hudTextMinimal = $"Shields {player.Shields:F0}   Energy {player.Energy:F0}";
+        }
+
         void OnGUI()
         {
             // resolution-independent UI: lay out in a virtual 720p-height space
@@ -2987,65 +3125,38 @@ namespace D1U.Presentation
             GUI.matrix = Matrix4x4.Scale(new Vector3(uiScale, uiScale, 1f));
             float vw = Screen.width / uiScale, vh = Screen.height / uiScale;
 
-            if (buildQueued && Application.isPlaying)
+            if (buildQueued)
             {
                 GUI.Label(new Rect(vw / 2f - 170, vh / 2f - 12, 340, 26),
                     "PREPARING MISSION — a rebuild can take a minute...");
                 return;
             }
-            if (menuMode && Application.isPlaying)
+            if (menuMode)
             {
                 DrawMenu(vw, vh);
                 return;
             }
-            if (pauseMode && Application.isPlaying)
+            if (pauseMode)
             {
                 DrawPauseMenu(vw, vh);
                 return;
             }
             if (briefingMode)
                 return; // BriefingView draws itself
-            if (Runtime == null || !Application.isPlaying)
+            if (Runtime == null)
                 return;
             var player = Runtime.Player;
             // damage/pickup/hostage palette flash + cloak dim, under the HUD
             screenFlash.Draw(vw, vh);
-            string ammo = "";
-            if (shipController != null)
-            {
-                var w = shipController.Weapons;
-                ammo = $"   [{w.PrimaryName}{(w.Quad && w.SelectedPrimary == 0 ? " QUAD" : "")}" +
-                       $"{(w.SelectedPrimary == 1 ? $" {(w.VulcanAmmo * 835968L) >> 16}" : "")}" + // VULCAN_AMMO_SCALE
-                       $"{(w.SelectedPrimary == 4 && w.FusionCharge > 0f ? $" charge {w.FusionCharge:F1}" : "")}]" +
-                       $"   [{w.SecondaryName} {w.SecondaryCount(w.SelectedSecondary)}]";
-            }
-            string robots;
-            if (netSession != null && netSession.Connected)
-            {
-                robots = $"   Frags {netSession.LocalFrags}";
-                foreach (var p in netSession.Players.Values)
-                    robots += $"   {p.Name}: {p.Frags}";
-            }
-            else
-            {
-                robots = objectSystem != null
-                    ? $"   Robots {objectSystem.RobotsAlive}   Score {scoreCarried + objectSystem.Score + player.Score}   Lives {Mathf.Max(0, lives)}"
-                    : "";
-            }
-            string timers = (player.CloakTime > 0f ? $"   CLOAK {player.CloakTime:F0}" : "") +
-                            (player.InvulnTime > 0f ? $"   INVULN {player.InvulnTime:F0}" : "");
-            robots += timers;
+            EnsureHudStyles();
+            UpdateHudText(player); // (item 1) rebuilt only when a feeding value changes
             if (!automapOpen)
                 DrawPips(vw, vh); // under the HUD text
             // HUD layout mode (F3): 0 full text HUD, 1 minimal shields/energy, 2 hidden
             if (game.HudMode == 0)
-                GUI.Label(new Rect(12, 8, 900, 24),
-                    $"Shields {player.Shields:F0}   Energy {player.Energy:F0}   Keys:" +
-                    $"{((player.Keys & 2) != 0 ? " BLUE" : "")}{((player.Keys & 4) != 0 ? " RED" : "")}{((player.Keys & 8) != 0 ? " YELLOW" : "")}" +
-                    ammo + robots);
+                GUI.Label(new Rect(12, 8, 900, 24), hudTextFull);
             else if (game.HudMode == 1)
-                GUI.Label(new Rect(12, 8, 900, 24),
-                    $"Shields {player.Shields:F0}   Energy {player.Energy:F0}");
+                GUI.Label(new Rect(12, 8, 900, 24), hudTextMinimal);
 
             // netgame time-limit clock (top centre)
             if (game.HudMode < 2 && netSession != null && netSession.Connected && !matchEnded &&
@@ -3053,21 +3164,14 @@ namespace D1U.Presentation
             {
                 int left = Mathf.Max(0, Mathf.CeilToInt(
                     D1U.Game.NetGameRules.Active.MaxTimeSeconds - (Time.time - netLevelStart)));
-                GUI.Label(new Rect(0, 8, vw, 22), $"TIME {left / 60}:{left % 60:00}",
-                    new GUIStyle(GUI.skin.label) { alignment = TextAnchor.UpperCenter });
+                GUI.Label(new Rect(0, 8, vw, 22), $"TIME {left / 60}:{left % 60:00}", styleTimeTop);
             }
 
             // self-destruct countdown (gamerend.c "T-%d s") + whiteout after zero
             if (Runtime.CountdownActive && !player.ExitReached)
             {
-                var tstyle = new GUIStyle(GUI.skin.label)
-                {
-                    fontSize = 30,
-                    alignment = TextAnchor.MiddleCenter,
-                    normal = { textColor = new UnityEngine.Color(1f, 0.3f, 0.2f) },
-                };
                 GUI.Label(new Rect(0, vh * 0.13f, vw, 40),
-                    $"T-{Mathf.Max(0, Runtime.CountdownSecondsLeft)} s", tstyle);
+                    $"T-{Mathf.Max(0, Runtime.CountdownSecondsLeft)} s", styleCountdown);
                 float flash = Runtime.MineFlash;
                 if (netSession != null && D1U.Game.NetGameRules.Active.ReducedFlash)
                     flash *= 0.3f; // netgame "reduced flash effects"
@@ -3081,8 +3185,7 @@ namespace D1U.Presentation
 
             if (automapOpen)
             {
-                var amStyle = new GUIStyle(GUI.skin.label) { fontSize = 22, alignment = TextAnchor.MiddleCenter };
-                GUI.Label(new Rect(0, 34, vw, 30), "— AUTOMAP —", amStyle);
+                GUI.Label(new Rect(0, 34, vw, 30), "— AUTOMAP —", styleAutomap);
                 GUI.Label(new Rect(12, vh - 30, 600, 24),
                     "Tab close · mouse orbit · wheel zoom");
             }
@@ -3098,11 +3201,6 @@ namespace D1U.Presentation
                 var cam = Camera.main;
                 if (cam != null)
                 {
-                    var nameStyle = new GUIStyle(GUI.skin.label)
-                    {
-                        alignment = TextAnchor.MiddleCenter,
-                        normal = { textColor = new UnityEngine.Color(0.5f, 0.9f, 1f, 0.9f) },
-                    };
                     foreach (var kv in netShips)
                     {
                         if (kv.Value == null)
@@ -3111,19 +3209,14 @@ namespace D1U.Presentation
                         if (sp.z <= 0f)
                             continue; // behind the camera
                         float gx = sp.x / uiScale, gy = (Screen.height - sp.y) / uiScale;
-                        GUI.Label(new Rect(gx - 80, gy - 12, 160, 22), NetName(kv.Key), nameStyle);
+                        GUI.Label(new Rect(gx - 80, gy - 12, 160, 22), NetName(kv.Key), styleNameTag);
                     }
                 }
             }
 
             if (game.ShowFps) // Settings ▸ Game
             {
-                var fstyle = new GUIStyle(GUI.skin.label)
-                {
-                    alignment = TextAnchor.UpperRight,
-                    normal = { textColor = new UnityEngine.Color(0.6f, 1f, 0.6f) },
-                };
-                GUI.Label(new Rect(vw - 120, 6, 108, 22), $"{Mathf.RoundToInt(fpsSmooth)} FPS", fstyle);
+                GUI.Label(new Rect(vw - 120, 6, 108, 22), $"{Mathf.RoundToInt(fpsSmooth)} FPS", styleFps);
             }
 
             if (game.HudMode < 2) // hidden mode = reticle only
@@ -3140,39 +3233,29 @@ namespace D1U.Presentation
 
             if (matchEnded && !string.IsNullOrEmpty(matchEndMsg))
             {
-                GUI.Label(new Rect(0, vh / 2 - 40, vw, 80), matchEndMsg,
-                    new GUIStyle(GUI.skin.label) { fontSize = 40, alignment = TextAnchor.MiddleCenter });
+                GUI.Label(new Rect(0, vh / 2 - 40, vw, 80), matchEndMsg, styleBanner40);
             }
             else if (player.ExitReached)
             {
-                var style = new GUIStyle(GUI.skin.label) { fontSize = 40, alignment = TextAnchor.MiddleCenter };
                 string banner = levelNumber == missionLevelCount ? "MISSION COMPLETE"
                     : Runtime.Player.SecretExitReached && levelNumber <= missionLevelCount ? "SECRET EXIT!"
                     : "LEVEL COMPLETE";
-                GUI.Label(new Rect(0, vh / 2 - 40, vw, 80), banner, style);
+                GUI.Label(new Rect(0, vh / 2 - 40, vw, 80), banner, styleBanner40);
                 if (objectSystem != null)
                 {
-                    var tally = new GUIStyle(GUI.skin.label) { fontSize = 20, alignment = TextAnchor.MiddleCenter };
                     GUI.Label(new Rect(0, vh / 2 + 24, vw, 40),
-                        $"Score {objectSystem.Score + player.Score}   ·   Hostages {objectSystem.HostagesRescued}",
-                        tally);
+                        $"Score {objectSystem.Score}   ·   Hostages {objectSystem.HostagesRescued}",
+                        styleTally20);
                 }
             }
             else if (shipController != null && (shipController.IsDead || shipController.GameOver))
             {
-                var style = new GUIStyle(GUI.skin.label)
-                {
-                    fontSize = 36,
-                    alignment = TextAnchor.MiddleCenter,
-                    normal = { textColor = new UnityEngine.Color(1f, 0.3f, 0.2f) },
-                };
                 GUI.Label(new Rect(0, vh / 2 - 40, vw, 80),
-                    shipController.GameOver ? "GAME OVER" : "SHIP DESTROYED", style);
+                    shipController.GameOver ? "GAME OVER" : "SHIP DESTROYED", styleGameOver);
                 if (shipController.GameOver)
                 {
-                    var sub = new GUIStyle(GUI.skin.label) { fontSize = 20, alignment = TextAnchor.MiddleCenter };
                     GUI.Label(new Rect(0, vh / 2 + 24, vw, 40),
-                        $"Final score {scoreCarried + (objectSystem?.Score ?? 0) + player.Score}", sub);
+                        $"Final score {scoreCarried + (objectSystem?.Score ?? 0)}", styleTally20);
                 }
             }
         }
@@ -3242,7 +3325,6 @@ namespace D1U.Presentation
             allSurfaces.Clear();
             messages.Clear();
             objectViews.Clear();
-            objectAnimators.Clear();
             objectSystem = null;
             objectsParent = null;
             shipController = null;

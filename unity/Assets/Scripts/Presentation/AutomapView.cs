@@ -290,6 +290,9 @@ namespace D1U.Presentation
         readonly List<Vector3> markerPos = new List<Vector3>();
         readonly List<Color32> markerCol = new List<Color32>();
         int staticMarkerCount;
+        // reused identity index buffer for the marker line mesh (0..N-1); the
+        // values are position-invariant, so it's only refilled when it grows
+        int[] markerIndices = Array.Empty<int>();
 
         void BuildMarkers(bool[] visited, ObjectSystem objects)
         {
@@ -341,9 +344,9 @@ namespace D1U.Presentation
             // ship arrow (player marker)
             markerPos.RemoveRange(staticMarkerCount, markerPos.Count - staticMarkerCount);
             markerCol.RemoveRange(staticMarkerCount, markerCol.Count - staticMarkerCount);
-            var fwd = new Vector3(shipOrient.Forward.X, shipOrient.Forward.Y, shipOrient.Forward.Z);
-            var right = new Vector3(shipOrient.Right.X, shipOrient.Right.Y, shipOrient.Right.Z);
-            var up = new Vector3(shipOrient.Up.X, shipOrient.Up.Y, shipOrient.Up.Z);
+            var fwd = shipOrient.Forward.ToUnity();
+            var right = shipOrient.Right.ToUnity();
+            var up = shipOrient.Up.ToUnity();
             var nose = shipPos + fwd * 8f;
             var tailL = shipPos - fwd * 5f - right * 4f;
             var tailR = shipPos - fwd * 5f + right * 4f;
@@ -362,13 +365,17 @@ namespace D1U.Presentation
             markerMesh.Clear();
             markerMesh.SetVertices(markerPos);
             markerMesh.SetColors(markerCol);
-            var indices = new int[markerPos.Count];
-            for (int i = 0; i < indices.Length; i++)
-                indices[i] = i;
-            markerMesh.SetIndices(indices, MeshTopology.Lines, 0);
+            int markerCount = markerPos.Count;
+            if (markerIndices.Length < markerCount)
+            {
+                markerIndices = new int[markerCount];
+                for (int i = 0; i < markerCount; i++)
+                    markerIndices[i] = i;
+            }
+            markerMesh.SetIndices(markerIndices, 0, markerCount, MeshTopology.Lines, 0);
             markerMesh.RecalculateBounds();
         }
 
-        static Vector3 ToUnity(System.Numerics.Vector3 v) => new Vector3(v.X, v.Y, v.Z);
+        static Vector3 ToUnity(System.Numerics.Vector3 v) => v.ToUnity();
     }
 }

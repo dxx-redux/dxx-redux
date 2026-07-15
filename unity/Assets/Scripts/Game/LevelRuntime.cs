@@ -20,7 +20,6 @@ namespace D1U.Game
         public int Keys;            // wall key bits: 2 blue, 4 red, 8 gold
         public float CloakTime;     // seconds remaining
         public float InvulnTime;
-        public int Score;
         public bool ExitReached;
         public bool SecretExitReached;
         /// <summary>Rescued hostages ride along; scored at the exit, lost on death.</summary>
@@ -72,7 +71,9 @@ namespace D1U.Game
         // self-destruct countdown (cntrlcen.c do_controlcen_dead_frame)
         static readonly int[] ReactorTimes = { 50, 45, 40, 35, 30 }; // Alan_pavlish_reactor_times
         public bool CountdownActive { get; private set; }
-        public int CountdownSecondsLeft { get; private set; } = 127;
+        // Derived from countdownTimer (f2i(t + 7/8)); 127 = "no countdown", matching
+        // the DOS gauge. Computed on read so there's no stored copy to keep in sync.
+        public int CountdownSecondsLeft => CountdownActive ? (int)Math.Floor(countdownTimer + 7f / 8f) : 127;
         public int TotalCountdown { get; private set; }
         float countdownTimer;
         bool mineExploded;
@@ -177,15 +178,15 @@ namespace D1U.Game
             {
                 float old = countdownTimer;
                 countdownTimer -= dt;
-                CountdownSecondsLeft = (int)Math.Floor(countdownTimer + 7f / 8f); // f2i(t + 7/8)
+                int secondsLeft = (int)Math.Floor(countdownTimer + 7f / 8f); // f2i(t + 7/8)
 
                 if (old > 12.75f && countdownTimer <= 12.75f)
                     CountdownSound?.Invoke(114); // "self-destruct sequence activated"
-                if ((int)Math.Floor(old + 7f / 8f) != CountdownSecondsLeft)
+                if ((int)Math.Floor(old + 7f / 8f) != secondsLeft)
                 {
-                    if (CountdownSecondsLeft >= 0 && CountdownSecondsLeft < 10)
-                        CountdownSound?.Invoke(100 + CountdownSecondsLeft);
-                    if (CountdownSecondsLeft == TotalCountdown - 1)
+                    if (secondsLeft >= 0 && secondsLeft < 10)
+                        CountdownSound?.Invoke(100 + secondsLeft);
+                    if (secondsLeft == TotalCountdown - 1)
                         CountdownSound?.Invoke(32); // warning siren
                 }
 
@@ -474,7 +475,6 @@ namespace D1U.Game
 
             TotalCountdown = ReactorTimes[Math.Min(4, Math.Max(0, ObjectSystem.Difficulty))];
             countdownTimer = TotalCountdown;
-            CountdownSecondsLeft = TotalCountdown;
             CountdownActive = true;
             Message?.Invoke("Control center destroyed! Get to the exit!");
         }
@@ -538,7 +538,6 @@ namespace D1U.Game
             bw.Write(Player.Keys);
             bw.Write(Player.CloakTime);
             bw.Write(Player.InvulnTime);
-            bw.Write(Player.Score);
             bw.Write(Player.ExitReached);
             bw.Write(Player.SecretExitReached);
             bw.Write(Player.HostagesOnBoard);
@@ -577,13 +576,11 @@ namespace D1U.Game
             countdownTimer = br.ReadSingle();
             TotalCountdown = br.ReadInt32();
             mineExploded = br.ReadBoolean();
-            CountdownSecondsLeft = CountdownActive ? (int)Math.Floor(countdownTimer + 7f / 8f) : 127;
             Player.Shields = br.ReadSingle();
             Player.Energy = br.ReadSingle();
             Player.Keys = br.ReadInt32();
             Player.CloakTime = br.ReadSingle();
             Player.InvulnTime = br.ReadSingle();
-            Player.Score = br.ReadInt32();
             Player.ExitReached = br.ReadBoolean();
             Player.SecretExitReached = br.ReadBoolean();
             Player.HostagesOnBoard = br.ReadInt32();

@@ -31,11 +31,7 @@ namespace D1U.Presentation
             this.baseDxu = baseDxu;
             this.textures = textures;
             this.shader = shader;
-            for (int i = 0; i < 256; i++)
-                palette[i] = new Color32(
-                    (byte)(baseDxu.PaletteRaw[i * 3 + 0] * 255 / 63),
-                    (byte)(baseDxu.PaletteRaw[i * 3 + 1] * 255 / 63),
-                    (byte)(baseDxu.PaletteRaw[i * 3 + 2] * 255 / 63), 255);
+            PaletteUtil.FillRgba256(baseDxu.PaletteRaw, palette); // palette.256 is 6-bit VGA
         }
 
         /// <summary>

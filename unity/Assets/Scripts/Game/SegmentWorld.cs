@@ -140,6 +140,12 @@ namespace D1U.Game
         public static float DistToPlane(Vector3 point, Vector3 normal, Vector3 planePoint)
             => Vector3.Dot(normal, point - planePoint);
 
+        // NOTE: deliberately NOT shared with SideTriangulator.FaceNormal /
+        // LevelBaker.FaceNormal. The degenerate fallback differs on purpose:
+        // here a collapsed face yields UnitY (a valid unit normal, so plane
+        // math never sees NaN), whereas SideTriangulator returns Zero because
+        // its caller uses `== Vector3.Zero` to detect degeneracy and pick the
+        // Quad split. Unifying them would change one path's behaviour.
         static Vector3 FaceNormal(Vector3 a, Vector3 b, Vector3 c)
         {
             var cross = Vector3.Cross(b - a, c - a);
@@ -209,6 +215,12 @@ namespace D1U.Game
 
         public bool PointInSeg(Vector3 p, int segnum) => GetSegMasks(p, segnum, 0f).CenterMask == 0;
 
+        // Pooled scratch for FindPointSeg's BFS fallback. Single-threaded, so
+        // clearing and reusing these instance collections is safe and avoids a
+        // HashSet+Queue allocation on every cache miss.
+        readonly HashSet<int> findVisited = new HashSet<int>();
+        readonly Queue<int> findQueue = new Queue<int>();
+
         /// <summary>find_point_seg equivalent: local breadth-first search, then full scan.</summary>
         public int FindPointSeg(Vector3 p, int startSeg)
         {
@@ -217,21 +229,22 @@ namespace D1U.Game
                 if (PointInSeg(p, startSeg))
                     return startSeg;
 
-                var visited = new HashSet<int> { startSeg };
-                var queue = new Queue<int>();
-                queue.Enqueue(startSeg);
+                findVisited.Clear();
+                findQueue.Clear();
+                findVisited.Add(startSeg);
+                findQueue.Enqueue(startSeg);
                 int budget = 96;
-                while (queue.Count > 0 && budget-- > 0)
+                while (findQueue.Count > 0 && budget-- > 0)
                 {
-                    int seg = queue.Dequeue();
+                    int seg = findQueue.Dequeue();
                     for (int side = 0; side < 6; side++)
                     {
                         int child = Sides[seg][side].Child;
-                        if (child < 0 || !visited.Add(child))
+                        if (child < 0 || !findVisited.Add(child))
                             continue;
                         if (PointInSeg(p, child))
                             return child;
-                        queue.Enqueue(child);
+                        findQueue.Enqueue(child);
                     }
                 }
             }

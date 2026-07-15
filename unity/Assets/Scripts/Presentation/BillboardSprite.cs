@@ -10,6 +10,12 @@ namespace D1U.Presentation
     {
         static Mesh sharedQuad;
 
+        /// <summary>Camera every billboard faces. Set when the ship camera is
+        /// wired (LevelViewer.SpawnShip) so each sprite avoids a Camera.main tag
+        /// lookup per LateUpdate; falls back to (and caches) Camera.main if unset
+        /// or if the cached camera was torn down.</summary>
+        public static Camera SharedCamera;
+
         Texture2D[] frames;
         float frameTime;
         Material material;
@@ -56,7 +62,7 @@ namespace D1U.Presentation
 
         void LateUpdate()
         {
-            var cam = Camera.main;
+            var cam = SharedCamera != null ? SharedCamera : (SharedCamera = Camera.main);
             if (cam != null)
                 transform.rotation = cam.transform.rotation;
 

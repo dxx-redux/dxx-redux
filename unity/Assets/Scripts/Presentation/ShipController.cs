@@ -206,7 +206,7 @@ namespace D1U.Presentation
                         Weapons.SelectedSecondary = key;
                 }
 
-                var shipPos = new Vector3(state.Pos.X, state.Pos.Y, state.Pos.Z);
+                var shipPos = state.Pos.ToUnity();
                 bool trigger = Controls.Held(GameAction.FirePrimary);
                 if (Weapons.SelectedPrimary == 4)
                 {
@@ -265,8 +265,7 @@ namespace D1U.Presentation
                     {
                         float volume = Mathf.Clamp01((hit.HitSpeed - 128f / 3f) / 20f);
                         if (volume > 0f && WallBonkSound >= 0)
-                            Sounds?.PlayAt(WallBonkSound,
-                                new Vector3(hit.Point.X, hit.Point.Y, hit.Point.Z), volume);
+                            Sounds?.PlayAt(WallBonkSound, hit.Point.ToUnity(), volume);
                         if (Runtime.Player.InvulnTime <= 0f && Runtime.Player.Shields > 10f)
                             ApplyPlayerDamage(damage);
                     }
@@ -360,10 +359,9 @@ namespace D1U.Presentation
 
         void SyncTransform()
         {
-            transform.position = new Vector3(state.Pos.X, state.Pos.Y, state.Pos.Z);
+            transform.position = state.Pos.ToUnity();
             transform.rotation = Quaternion.LookRotation(
-                new Vector3(state.Orient.Forward.X, state.Orient.Forward.Y, state.Orient.Forward.Z),
-                new Vector3(state.Orient.Up.X, state.Orient.Up.Y, state.Orient.Up.Z));
+                state.Orient.Forward.ToUnity(), state.Orient.Up.ToUnity());
         }
     }
 }
