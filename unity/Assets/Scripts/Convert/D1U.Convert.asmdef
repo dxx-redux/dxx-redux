@@ -1,0 +1,16 @@
+{
+    "name": "D1U.Convert",
+    "rootNamespace": "D1U.Convert",
+    "references": [
+        "LibDescent.Data"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

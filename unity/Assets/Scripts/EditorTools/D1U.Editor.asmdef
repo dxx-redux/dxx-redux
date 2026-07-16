@@ -1,0 +1,20 @@
+{
+    "name": "D1U.Editor",
+    "rootNamespace": "D1U",
+    "references": [
+        "LibDescent.Data",
+        "D1U.Convert",
+        "D1U.Presentation"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -1,0 +1,19 @@
+{
+    "name": "D1U.Presentation",
+    "rootNamespace": "D1U.Presentation",
+    "references": [
+        "LibDescent.Data",
+        "D1U.Convert",
+        "D1U.Game",
+        "MeltySynth"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

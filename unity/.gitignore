@@ -1,0 +1,26 @@
+# Unity generated directories
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Ll]ogs/
+/[Uu]serSettings/
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+/[Bb]uild/
+/[Bb]uilds/
+
+# Unity-generated IDE solution/projects (project root only — tools/ has real ones)
+/*.csproj
+/*.sln
+/*.slnx
+/.vsconfig
+/.idea/
+/.vs/
+
+# tools build output
+tools/**/bin/
+tools/**/obj/
+
+# crash reports
+sysinfo.txt
+*.stackdump

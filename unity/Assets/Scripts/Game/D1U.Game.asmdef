@@ -1,0 +1,16 @@
+{
+    "name": "D1U.Game",
+    "rootNamespace": "D1U.Game",
+    "references": [
+        "D1U.Convert"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}
