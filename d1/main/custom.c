@@ -566,12 +566,7 @@ void load_hxm(char *hxmname)
 				if (pm->model_data)
 					d_free(pm->model_data);
 
-				if (PHYSFS_read(f, pm, sizeof(polymodel), 1) < 1)
-				{
-					pm->model_data = NULL;
-					PHYSFS_close(f);
-					return;
-				}
+				polymodel_read_n(pm, 1, f);
 
 				if (!(pm->model_data = d_malloc(pm->model_data_size)))
 				{
