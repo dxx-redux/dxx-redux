@@ -1061,7 +1061,14 @@ int net_udp_game_connect(direct_join *dj)
 	
 	if (Netgame.protocol.udp.valid == -1)
 	{
-		nm_messagebox(TXT_ERROR,1,TXT_OK,"Version mismatch! Cannot join Game.\nHost game version: %i.%i.%i\nHost game protocol: %i\nYour game version: %s\nYour game protocol: %i",Netgame.protocol.udp.program_iver[0],Netgame.protocol.udp.program_iver[1],Netgame.protocol.udp.program_iver[2],Netgame.protocol.udp.program_iver[3],VERSION, MULTI_PROTO_VERSION);
+		if (nm_messagebox(TXT_ERROR,2,TXT_OK,"Get Latest","Version mismatch! Cannot join Game.\nHost game version: %i.%i.%i\nHost game protocol: %i\nYour game version: %s\nYour game protocol: %i",Netgame.protocol.udp.program_iver[0],Netgame.protocol.udp.program_iver[1],Netgame.protocol.udp.program_iver[2],Netgame.protocol.udp.program_iver[3],VERSION, MULTI_PROTO_VERSION) == 1)
+#ifdef _WIN32
+			system("start https://www.dxx-redux.com");
+#elif defined(__APPLE__)
+			system("open https://www.dxx-redux.com");
+#else
+			system("xdg-open https://www.dxx-redux.com");
+#endif
 		dj->connecting = 0;
 		return 0;
 	}
