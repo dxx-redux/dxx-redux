@@ -321,6 +321,12 @@ void collide_player_and_wall( object * player, fix hitspeed, short hitseg, short
 					con_printf(CON_NORMAL, "You took %.1f damage from hitting a wall, shields now %.1f\n", f2fl(damage), f2fl(Players[Player_num].shields - damage));
 
 					multi_send_damage(damage, Players[Player_num].shields, OBJ_WALL, 0, DAMAGE_WALL, NULL);
+					
+					// Record wall collision kill
+					if (Players[Player_num].shields - damage < 0)
+					{
+						multi_record_killer_weapon(Player_num, 3, 0);  // 3 = environment
+					}
 				}
 			  	#endif
 			  	apply_damage_to_player( player, player, damage, 0 );			  	
@@ -355,6 +361,12 @@ void scrape_player_on_wall(object *obj, short hitseg, short hitside, vms_vector 
 				con_printf(CON_NORMAL, "You took %.1f damage from lava, shields now %.1f\n", f2fl(damage), f2fl(Players[Player_num].shields - damage));
 
 				multi_send_damage(damage, Players[Player_num].shields, OBJ_WALL, 0, DAMAGE_LAVA, NULL);
+				
+				// Record lava kill
+				if (Players[Player_num].shields - damage < 0)
+				{
+					multi_record_killer_weapon(Player_num, 3, 1);  // 3 = environment, 1 = lava
+				}
 			}
 			#endif
 			  	
@@ -1526,6 +1538,12 @@ void collide_player_and_weapon( object * player, object * weapon, vms_vector *co
 						f2fl(damage), killer_name, weapon_name, f2fl(Players[Player_num].shields - damage));
 
 					multi_send_damage(damage, Players[Player_num].shields, killer->type, killer->id, DAMAGE_WEAPON, weapon);
+					
+					// Record the weapon info for accurate kill logging
+					if (Players[Player_num].shields - damage < 0)
+					{
+						multi_record_killer_weapon(Player_num, 0, weapon->id);  // 0 = weapon kill
+					}
 				}
 				#endif
 			}
@@ -1562,6 +1580,12 @@ void collide_player_and_nasty_robot( object * player, object * robot, vms_vector
 			con_printf(CON_NORMAL, "You took %.1f damage from bumping a robot, shields now %.1f\n", f2fl(damage), f2fl(Players[Player_num].shields - damage));
 
 			multi_send_damage(damage, Players[Player_num].shields, OBJ_ROBOT, 0, DAMAGE_COLLISION, NULL);
+			
+			// Record robot melee kill
+			if (Players[Player_num].shields - damage < 0)
+			{
+				multi_record_killer_weapon(Player_num, 1, robot->id);  // 1 = robot kill
+			}
 		}
 	#endif
 	apply_damage_to_player( player, robot, damage, 0);
@@ -1602,6 +1626,16 @@ void collide_player_and_materialization_center(object *objp)
 
 	bump_one_object(objp, &exit_dir, 64*F1_0);
 
+	#ifdef NETWORK
+	if (Game_mode & GM_MULTI)
+	{
+		// Record materialization center kill
+		if (Players[Player_num].shields - 4*F1_0 < 0)
+		{
+			multi_record_killer_weapon(Player_num, 3, 2);  // 3 = environment, 2 = matcen
+		}
+	}
+	#endif
 	apply_damage_to_player( objp, NULL, 4*F1_0, 0);
 
 	return;
