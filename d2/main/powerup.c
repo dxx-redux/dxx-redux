@@ -269,9 +269,12 @@ int do_powerup(object *obj)
 
 	switch (obj->id) {
 		case POW_EXTRA_LIFE:
-			Players[Player_num].lives++;
-			powerup_basic(15, 15, 15, 0, "%s", TXT_EXTRA_LIFE);
-			used=1;
+			if (Players[Player_num].lives < MAX_LIVES) {
+				Players[Player_num].lives++;
+				powerup_basic(15, 15, 15, 0, TXT_EXTRA_LIFE);
+				used=1;
+			} else
+				HUD_init_message(HM_DEFAULT|HM_REDUNDANT|HM_MAYDUPL, "Your lives are maxed out!");
 			break;
 		case POW_ENERGY:
 			used = pick_up_energy();
