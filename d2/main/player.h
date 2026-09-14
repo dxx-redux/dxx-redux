@@ -39,6 +39,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #define MAX_SHIELDS     i2f(200)
 
 #define INITIAL_LIVES               3   // start off with 3 lives
+#define MAX_LIVES                   255
 
 // Values for special flags
 #define PLAYER_FLAGS_INVULNERABLE   1       // Player is invincible

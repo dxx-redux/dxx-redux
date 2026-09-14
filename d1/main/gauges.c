@@ -1405,10 +1405,14 @@ void add_points_to_score(int points)
 
 	if (Players[Player_num].score/EXTRA_SHIP_SCORE != prev_score/EXTRA_SHIP_SCORE) {
 		int snd;
-		Players[Player_num].lives += Players[Player_num].score/EXTRA_SHIP_SCORE - prev_score/EXTRA_SHIP_SCORE;
-		powerup_basic(20, 20, 20, 0, TXT_EXTRA_LIFE);
-		if ((snd=Powerup_info[POW_EXTRA_LIFE].hit_sound) > -1 )
-			digi_play_sample( snd, F1_0 );
+		int new_lives = min(MAX_LIVES, Players[Player_num].lives +
+			Players[Player_num].score/EXTRA_SHIP_SCORE - prev_score/EXTRA_SHIP_SCORE);
+		if (new_lives != Players[Player_num].lives) {
+			Players[Player_num].lives = new_lives;
+			powerup_basic(20, 20, 20, 0, TXT_EXTRA_LIFE);
+			if ((snd=Powerup_info[POW_EXTRA_LIFE].hit_sound) > -1 )
+				digi_play_sample( snd, F1_0 );
+		}
 	}
 }
 
@@ -1434,9 +1438,13 @@ void add_bonus_points_to_score(int points)
 
 	if (Players[Player_num].score/EXTRA_SHIP_SCORE != prev_score/EXTRA_SHIP_SCORE) {
 		int snd;
-		Players[Player_num].lives += Players[Player_num].score/EXTRA_SHIP_SCORE - prev_score/EXTRA_SHIP_SCORE;
-		if ((snd=Powerup_info[POW_EXTRA_LIFE].hit_sound) > -1 )
-			digi_play_sample( snd, F1_0 );
+		int new_lives = min(MAX_LIVES, Players[Player_num].lives +
+			Players[Player_num].score/EXTRA_SHIP_SCORE - prev_score/EXTRA_SHIP_SCORE);
+		if (new_lives != Players[Player_num].lives) {
+			Players[Player_num].lives = new_lives;
+			if ((snd=Powerup_info[POW_EXTRA_LIFE].hit_sound) > -1 )
+				digi_play_sample( snd, F1_0 );
+		}
 	}
 }
 
