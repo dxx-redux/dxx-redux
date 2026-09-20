@@ -69,3 +69,55 @@ Building in msys2 / Linux
   `cmake --build build`
 
   (add `-j4` to use 4 cores)
+
+Building in OS X
+-------------------------
+
+- Install the required packages
+  - Xcode Command Line Tools
+
+    `xcode-select --install`
+
+  - Homebrew
+
+    `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`
+
+  - Git
+
+    `brew install git`
+
+- Install build dependencies
+
+  `brew install --formula dylibbundler`
+
+- Install library dependencies
+
+  `brew install --formula sdl2 sdl12-compat physfs glew libogg mpg123 flac fluid-synth`
+
+- Get the source code from github
+
+  `git clone https://github.com/dxx-redux/dxx-redux`
+
+- Enter the dxx-redux directory
+
+  `cd dxx-redux`
+
+- Build
+
+  - D1
+
+    ```sh
+    cmake -S d1 -B buildd -DCMAKE_BUILD_TYPE=RelWithDebInfo
+    cmake --build buildd1
+    ```
+
+  - D2
+
+    ```sh
+    cmake -S d2 -B buildd2 -DCMAKE_BUILD_TYPE=RelWithDebInfo
+    cmake --build buildd2
+    ```
+
+- Create package (optional)
+
+  `./contrib/packaging/macos/build_package.sh`
