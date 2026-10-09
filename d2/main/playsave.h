@@ -60,6 +60,8 @@ typedef struct player_config
     int MouseOverrun[6];
 	int MouseFSDead;
 	int MouseFSIndicator;
+    int MouseUncapped;
+    int MousePitchUnlocked;
 	int PreferredCockpitMode;
 	int CurrentCockpitMode; // Also includes letterbox/rear, which are not persisted in the player profile
 	int Cockpit3DView[2];

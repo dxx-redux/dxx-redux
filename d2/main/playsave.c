@@ -104,6 +104,8 @@ int new_player_config()
     PlayerCfg.MouseOverrun[0] = PlayerCfg.MouseOverrun[1] = PlayerCfg.MouseOverrun[2] = PlayerCfg.MouseOverrun[3] = PlayerCfg.MouseOverrun[4] = PlayerCfg.MouseOverrun[5] = 0;
 	PlayerCfg.MouseFSDead = 0;
 	PlayerCfg.MouseFSIndicator = 1;
+    PlayerCfg.MouseUncapped = 0;
+    PlayerCfg.MousePitchUnlocked = 0;
 	PlayerCfg.CurrentCockpitMode = PlayerCfg.PreferredCockpitMode = CM_FULL_COCKPIT;
 	PlayerCfg.Cockpit3DView[0]=CV_NONE;
 	PlayerCfg.Cockpit3DView[1]=CV_NONE;
@@ -320,6 +322,10 @@ int read_player_d2x(char *filename)
 					PlayerCfg.MouseFSDead = atoi(line);
 				if(!strcmp(word,"FSINDI"))
 					PlayerCfg.MouseFSIndicator = atoi(line);
+                if(!strcmp(word,"MOUSEUNCAPPED"))
+                    PlayerCfg.MouseUncapped = atoi(line);
+                if(!strcmp(word,"MOUSEPITCHUNLOCKED"))
+                    PlayerCfg.MousePitchUnlocked = atoi(line);
 				d_free(word);
 				PHYSFSX_fgets(line,50,f);
 				word=splitword(line,'=');
@@ -667,6 +673,8 @@ int write_player_d2x(char *filename)
         PHYSFSX_printf(fout,"overrun5=%d\n",PlayerCfg.MouseOverrun[5]);
 		PHYSFSX_printf(fout,"fsdead=%d\n",PlayerCfg.MouseFSDead);
 		PHYSFSX_printf(fout,"fsindi=%d\n",PlayerCfg.MouseFSIndicator);
+        PHYSFSX_printf(fout,"mouseuncapped=%d\n",PlayerCfg.MouseUncapped);
+        PHYSFSX_printf(fout,"mousepitchunlocked=%d\n",PlayerCfg.MousePitchUnlocked);
 		PHYSFSX_printf(fout,"[end]\n");
 		PHYSFSX_printf(fout,"[weapon keys v2]\n");
 		PHYSFSX_printf(fout,"1=0x%x,0x%x,0x%x\n",PlayerCfg.KeySettingsD2X[0],PlayerCfg.KeySettingsD2X[1],PlayerCfg.KeySettingsD2X[2]);

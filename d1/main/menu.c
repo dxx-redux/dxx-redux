@@ -1067,7 +1067,7 @@ void input_config_sensitivity()
 	PlayerCfg.MouseImpulse = m[mouseimpulse].value; /* Old School Mouse */ 
 }
 
-static int opt_ic_usejoy = 0, opt_ic_usemouse = 0, opt_ic_confkey = 0, opt_ic_confjoy = 0, opt_ic_confmouse = 0, opt_ic_confweap = 0, opt_ic_mouseflightsim = 0, opt_ic_joymousesens = 0, opt_ic_grabinput = 0, opt_ic_mousefsgauge = 0, opt_ic_stickyrear = 0, opt_ic_help0 = 0, opt_ic_help1 = 0, opt_ic_help2 = 0;
+static int opt_ic_usejoy = 0, opt_ic_usemouse = 0, opt_ic_confkey = 0, opt_ic_confjoy = 0, opt_ic_confmouse = 0, opt_ic_confweap = 0, opt_ic_mouseflightsim = 0, opt_ic_joymousesens = 0, opt_ic_grabinput = 0, opt_ic_mousefsgauge = 0, opt_ic_stickyrear = 0, opt_ic_help0 = 0, opt_ic_help1 = 0, opt_ic_help2 = 0; opt_ic_mouseuncapped = 0; opt_ic_mousepitchunlocked = 0;
 int input_config_menuset(newmenu *menu, d_event *event, void *userdata)
 {
 	newmenu_item *items = newmenu_get_items(menu);
@@ -1093,6 +1093,10 @@ int input_config_menuset(newmenu *menu, d_event *event, void *userdata)
 				GameCfg.Grabinput = items[citem].value;
 			if (citem == opt_ic_mousefsgauge)
 				PlayerCfg.MouseFSIndicator = items[citem].value;
+            if (citem == opt_ic_mouseuncapped)
+                PlayerCfg.MouseUncapped = items[citem].value;
+            if (citem == opt_ic_mousepitchunlocked)
+                PlayerCfg.MousePitchUnlocked = items[citem].value;
 			if (citem == opt_ic_stickyrear)			
 				PlayerCfg.StickyRearview = items[citem].value;			
 			break;
@@ -1126,7 +1130,7 @@ int input_config_menuset(newmenu *menu, d_event *event, void *userdata)
 
 void input_config()
 {
-	newmenu_item m[23];
+	newmenu_item m[25]; // 23
 	int nitems = 0;
 
 	opt_ic_usejoy = nitems;
@@ -1149,6 +1153,11 @@ void input_config()
 	m[nitems].type = NM_TYPE_RADIO; m[nitems].text = "Rebirth"; m[nitems].value = PlayerCfg.MouseControlStyle == MOUSE_CONTROL_REBIRTH; m[nitems].group = 0; nitems++;
 	m[nitems].type = NM_TYPE_RADIO; m[nitems].text = "FlightSim"; m[nitems].value = PlayerCfg.MouseControlStyle == MOUSE_CONTROL_FLIGHT_SIM; m[nitems].group = 0; nitems++;
 	m[nitems].type = NM_TYPE_RADIO; m[nitems].text = "Old school"; m[nitems].value = PlayerCfg.MouseControlStyle == MOUSE_CONTROL_OLDSCHOOL; m[nitems].group = 0; nitems++;
+	m[nitems].type = NM_TYPE_TEXT; m[nitems].text = ""; nitems++;
+    opt_ic_mouseuncapped = nitems;
+    m[nitems].type = NM_TYPE_CHECK; m[nitems].text = "UNCAPPED MOUSE TURNING"; m[nitems].value = (PlayerCfg.MouseUncapped); nitems++;
+    opt_ic_mousepitchunlocked = nitems;
+    m[nitems].type = NM_TYPE_CHECK; m[nitems].text = "UNLOCK MOUSE PITCH"; m[nitems].value = (PlayerCfg.MousePitchUnlocked); nitems++;
 	m[nitems].type = NM_TYPE_TEXT; m[nitems].text = ""; nitems++;
 	opt_ic_joymousesens = nitems;
 	m[nitems].type = NM_TYPE_MENU; m[nitems].text = "SENSITIVITY & DEADZONE"; nitems++;
