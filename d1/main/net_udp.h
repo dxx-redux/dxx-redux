@@ -24,6 +24,8 @@ int net_udp_level_sync();
 void net_udp_send_mdata_direct(ubyte *data, int data_len, int pnum, int priority);
 void net_udp_send_netgame_update();
 void net_udp_send_obs_quit();
+void net_udp_send_gamelog_kill(int killer_id, int killed_id, int weapon_type, int weapon_id);
+void net_udp_send_gamelog_chat(int player_id, const char *message);
 
 // Some defines
 #ifdef IPv6
@@ -93,6 +95,9 @@ void net_udp_send_obs_quit();
 #define UPID_OBSDATA 29
 #define UPID_OBSQUIT 30
 #define UPID_OBSQUIT_SIZE (1 + 4 + 4)
+#define UPID_GAMELOG_KILL 31
+#define UPID_GAMELOG_KILL_SIZE (1 + 8 + 1 + 1 + 1 + 1)
+#define UPID_GAMELOG_CHAT 32
 
 // Structure keeping lite game infos (for netlist, etc.)
 typedef struct UDP_netgame_info_lite
