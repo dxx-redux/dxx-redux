@@ -494,6 +494,7 @@ void kconfig_draw(kc_menu *menu)
 	grd_curcanv->cv_font = GAME_FONT;
 	gr_set_fontcolor( BM_XRGB(28,28,28), -1 );
 	gr_string( 0x8000, FSPACY(21), "Enter changes, ctrl-d deletes, ctrl-r resets defaults, ESC exits");
+	gr_string( 0x8000, FSPACY(189), "lshift-d clears all");
 	gr_set_fontcolor( BM_XRGB(28,28,28), -1 );
 
 	if ( menu->items == kc_keyboard )
@@ -687,6 +688,13 @@ int kconfig_key_command(window *wind, d_event *event, kc_menu *menu)
 			return 1;
 		case KEY_DELETE:
 			menu->items[menu->citem].value=255;
+			return 1;
+		case KEY_SHIFTED+KEY_D:
+			if (!keyd_pressed[KEY_LSHIFT])
+				return 0;
+			for (i = 0; i < menu->nitems; i++)
+				if (menu->items[i].type != BT_INVERT)
+					menu->items[i].value = 255;
 			return 1;
 		case KEY_UP: 		
 		case KEY_PAD8:
